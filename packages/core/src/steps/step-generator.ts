@@ -1,4 +1,5 @@
 import { detectCdnPopCity, detectCdnRegion, detectGfw, detectNode, detectOriginRegion, detectThirdPartyRegion, hasThirdParties } from "../inference/node-detector.js";
+import { analyzeCacheForHar } from "../inference/cache-analyzer.js";
 import type {
   DiagramNode,
   DiagramPath,
@@ -374,5 +375,7 @@ export function generateFlow(pages: PageFlow[]): Flow {
     thirdPartyRegion,
   });
 
-  return { pages, steps: allSteps, nodes, paths };
+  const cacheReport = analyzeCacheForHar(pages[0].har);
+
+  return { pages, steps: allSteps, nodes, paths, cacheReport };
 }

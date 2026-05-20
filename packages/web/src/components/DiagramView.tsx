@@ -5,6 +5,7 @@ import { NodeRenderer } from "./NodeRenderer.js";
 import { StepPanel } from "./StepPanel.js";
 import { ResourceSidebar } from "./ResourceSidebar.js";
 import { CacheSidebar } from "./CacheSidebar.js";
+import { CachePanel } from "./CachePanel.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -41,6 +42,7 @@ export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
   const step = flow.steps[state.stepIndex];
   const [sidebarResources, setSidebarResources] = useState<HarEntry[] | null>(null);
+  const [showCachePanel, setShowCachePanel] = useState(false);
 
   const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
   const closeSidebar = () => setSidebarResources(null);
@@ -103,6 +105,20 @@ export function DiagramView({ flow }: Props) {
             documentHostname={new URL(flow.pages[0].har.documentEntry.url).hostname}
           />
         )}
+        {showCachePanel && (
+          <CachePanel
+            report={flow.cacheReport}
+            onClose={() => setShowCachePanel(false)}
+          />
+        )}
+        <button
+          className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
+          onClick={() => setShowCachePanel((v) => !v)}
+          aria-label="Toggle cache analysis"
+          title="Cache Analysis"
+        >
+          Cache
+        </button>
       </div>
       <StepPanel state={state} onOpenResources={openSidebar} />
     </div>

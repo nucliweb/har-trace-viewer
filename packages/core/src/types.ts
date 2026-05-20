@@ -129,6 +129,44 @@ export interface Flow {
   steps: DiagramStep[];
   nodes: DiagramNode[];
   paths: DiagramPath[];
+  cacheReport: CacheReport;
+}
+
+// ── Cache analysis ────────────────────────────────────────────────────────────
+
+export type CdnCacheStatus = "hit" | "miss" | "stale" | "bypass" | "unknown";
+
+export interface ResourceCacheProfile {
+  cdnStatus: CdnCacheStatus;
+  maxAge: number | null;
+  age: number | null;
+  immutable: boolean;
+  mustRevalidate: boolean;
+  noStore: boolean;
+}
+
+export interface CacheRecommendation {
+  label: string;
+  description: string;
+  severity: "good" | "info" | "warning" | "critical";
+}
+
+export interface CacheReport {
+  document: ResourceCacheProfile;
+  ownResources: {
+    total: number;
+    cdnHits: number;
+    cdnHitRatio: number;
+    immutableCount: number;
+    immutableRatio: number;
+  };
+  browser: {
+    total: number;
+    fromDisk: number;
+    fromMemory: number;
+    hitRatio: number;
+  };
+  recommendations: CacheRecommendation[];
 }
 
 // ── Node detection ────────────────────────────────────────────────────────────
