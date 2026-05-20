@@ -1,0 +1,129 @@
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 26px;
+  letter-spacing: 0.06em;
+  color: var(--color-cyan);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--color-cyan) 40%, transparent);
+}
+
+.logo span {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text2);
+  letter-spacing: 0.1em;
+  margin-left: 12px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.resetButton {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 32px;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.resetButton:hover {
+  border-color: var(--color-orange, #f97316);
+  color: var(--color-orange, #f97316);
+}
+
+.traceButton {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 32px;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.traceButton:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.traceLoaded {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.traceLoaded:hover {
+  border-color: var(--color-green);
+  color: var(--color-green);
+  opacity: 0.8;
+}
+
+.traceError {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-error, var(--color-orange));
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.themeToggle {
+  font-size: 18px;
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  width: 36px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.themeToggle:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.main {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.builderWrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  overflow-y: auto;
+}

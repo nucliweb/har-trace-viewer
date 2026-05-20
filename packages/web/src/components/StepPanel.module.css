@@ -1,0 +1,197 @@
+.panel {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-sm) var(--space-lg) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  min-height: var(--panel-height);
+}
+
+/* Step track */
+.track {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.trackDot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  border: 1.5px solid var(--color-border2);
+  color: var(--color-muted);
+  background: transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trackDot:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.trackDot.active {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 12%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-cyan) 40%, transparent);
+}
+
+.trackDot.done {
+  border-color: var(--color-green);
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 8%, transparent);
+}
+
+/* Info card */
+.info {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.infoMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepCounter {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.title {
+  font-size: var(--fs-step-title);
+  font-weight: 700;
+  color: var(--color-cyan);
+  margin-bottom: 4px;
+}
+
+.description {
+  font-size: var(--fs-body);
+  color: var(--color-text2);
+  line-height: 1.4;
+}
+
+/* Metrics */
+.metrics {
+  display: flex;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.metricLabel {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metricValue {
+  font-size: var(--fs-metric);
+  font-weight: 700;
+  color: var(--color-yellow);
+}
+
+.resourcesBtn {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+  margin-left: calc(-1 * var(--space-sm));
+}
+
+.resourcesBtn:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.btn {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  color: var(--color-text2);
+  font-size: var(--fs-meta);
+  font-family: var(--font-mono);
+  background: transparent;
+  letter-spacing: 0.05em;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.btnPlay {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
+}
+
+.btnPlay.playing {
+  border-color: var(--color-yellow);
+  color: var(--color-yellow);
+  background: color-mix(in srgb, var(--color-yellow) 8%, transparent);
+}
+
+.speedWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.speedLabel {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  letter-spacing: 0.1em;
+}
+
+.speedSelect {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  color: var(--color-text2);
+  padding: 4px 8px;
+  font-size: var(--fs-meta);
+}

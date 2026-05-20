@@ -1,0 +1,12 @@
+.svg {
+  display: block;
+}
+
+.node {
+  transition: opacity var(--transition-slow);
+}
+
+.pathLabel {
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}

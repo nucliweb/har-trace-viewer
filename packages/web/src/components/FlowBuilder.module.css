@@ -1,0 +1,309 @@
+.builder {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.06em;
+  color: var(--color-cyan);
+  font-weight: 400;
+  margin: 0;
+}
+
+.hint {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  margin: 0;
+}
+
+/* ── Page list ─────────────────────────────────────────────────────────────── */
+
+.pages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ── Row ───────────────────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border2);
+  border-radius: 8px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.rowDragging {
+  border-color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 5%, var(--color-panel));
+}
+
+/* ── Order buttons ─────────────────────────────────────────────────────────── */
+
+.rowOrder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.orderBtn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 3px;
+  width: 24px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.orderBtn:not(:disabled):hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.orderBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* ── Name input ────────────────────────────────────────────────────────────── */
+
+.nameInput {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  width: 160px;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.nameInput:focus {
+  outline: none;
+  border-color: var(--color-cyan);
+}
+
+.nameInput::placeholder {
+  color: var(--color-muted);
+}
+
+/* ── HAR zone ──────────────────────────────────────────────────────────────── */
+
+.harZone {
+  flex: 1;
+  min-width: 0;
+}
+
+.harBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border2);
+  border-radius: 4px;
+  height: 34px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+  overflow: hidden;
+}
+
+.harBtn:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  border-style: solid;
+}
+
+.harLoaded {
+  border-style: solid;
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.harLoaded:hover {
+  border-color: var(--color-green);
+  color: var(--color-green);
+  opacity: 0.8;
+}
+
+.harError {
+  border-style: solid;
+  border-color: var(--color-red);
+  color: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 6%, var(--color-surface));
+}
+
+.harIcon {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.harName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.errorText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Trace zone ────────────────────────────────────────────────────────────── */
+
+.traceZone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.traceBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.traceBtn:not(:disabled):hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.traceBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.traceLoaded {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.traceLoaded:hover {
+  opacity: 0.8;
+}
+
+.traceErrorText {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-red);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Remove button ─────────────────────────────────────────────────────────── */
+
+.removeBtn {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.removeBtn:not(:disabled):hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.removeBtn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+/* ── Footer actions ─────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 var(--space-md);
+  height: 34px;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.addBtn:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.generateBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-cyan);
+  border: none;
+  border-radius: 4px;
+  padding: 0 var(--space-lg);
+  height: 38px;
+  transition: opacity var(--transition-fast);
+}
+
+.generateBtn:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.generateBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Shared ─────────────────────────────────────────────────────────────────── */
+
+.hiddenInput {
+  display: none;
+}

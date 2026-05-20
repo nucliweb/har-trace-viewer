@@ -1,0 +1,21 @@
+{
+  "name": "@htv/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "htv": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests in cli'"
+  },
+  "dependencies": {
+    "@htv/core": "*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}

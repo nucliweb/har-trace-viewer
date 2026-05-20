@@ -1,0 +1,236 @@
+.sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border2);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  animation: slideIn 180ms ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-cyan);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.headerCount {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.closeBtn:hover {
+  color: var(--color-text);
+}
+
+.body {
+  overflow-y: auto;
+  flex: 1;
+  padding: var(--space-sm) 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border2) transparent;
+}
+
+/* Type groups */
+.group {
+  margin-bottom: var(--space-xs);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 4px var(--space-md);
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+}
+
+.typeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.groupLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.groupCount {
+  font-size: 10px;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* Type colors */
+.type_document   { color: var(--color-cyan); }
+.type_stylesheet { color: var(--color-cyan); }
+.type_script     { color: var(--color-yellow); }
+.type_image      { color: var(--color-green); }
+.type_font       { color: var(--color-text2); }
+.type_fetch      { color: var(--color-orange); }
+.type_other      { color: var(--color-muted); }
+
+.group:has(.type_document)   .groupLabel { color: var(--color-cyan); }
+.group:has(.type_stylesheet) .groupLabel { color: var(--color-cyan); }
+.group:has(.type_script)     .groupLabel { color: var(--color-yellow); }
+.group:has(.type_image)      .groupLabel { color: var(--color-green); }
+.group:has(.type_font)       .groupLabel { color: var(--color-text2); }
+.group:has(.type_fetch)      .groupLabel { color: var(--color-orange); }
+.group:has(.type_other)      .groupLabel { color: var(--color-muted); }
+
+/* Resource rows */
+.rows {
+  padding: 0 var(--space-sm) 4px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-sm);
+  align-items: center;
+  padding: 3px var(--space-xs);
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.row:hover {
+  background: var(--color-panel);
+}
+
+.rowUrl {
+  color: var(--color-text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.rowSize {
+  color: var(--color-muted);
+  text-align: right;
+  white-space: nowrap;
+  font-size: 9px;
+}
+
+.rowDur {
+  color: var(--color-yellow);
+  text-align: right;
+  white-space: nowrap;
+  min-width: 40px;
+}
+
+/* Domain rows */
+.domainRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 3px var(--space-xs);
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.domainRow:hover {
+  background: var(--color-panel);
+}
+
+.domainName {
+  color: var(--color-text2);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.preconnectBadge {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-green) 15%, transparent);
+  color: var(--color-green);
+  border: 1px solid color-mix(in srgb, var(--color-green) 40%, transparent);
+}
+
+.preconnectBadgeEH {
+  background: color-mix(in srgb, var(--color-cyan) 15%, transparent);
+  color: var(--color-cyan);
+  border-color: color-mix(in srgb, var(--color-cyan) 40%, transparent);
+}
+
+/* Preconnect tip */
+.preconnectTip {
+  display: flex;
+  gap: 6px;
+  margin: 4px var(--space-sm) 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-yellow) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-yellow) 25%, transparent);
+}
+
+.tipIcon {
+  font-size: 11px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.tipText {
+  font-size: 10px;
+  color: var(--color-text2);
+  line-height: 1.5;
+}
+
+.tipText strong {
+  color: var(--color-text);
+  font-weight: 600;
+}

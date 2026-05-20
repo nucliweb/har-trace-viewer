@@ -1,0 +1,3444 @@
+{
+  "log": {
+    "version": "1.2",
+    "pages": [
+      {
+        "startedDateTime": "2026-05-19T10:36:02.424Z",
+        "id": "page_1",
+        "title": "https://webperf-snippets.nucliweb.net/",
+        "pageTimings": {
+          "onContentLoad": 263.75699997879565,
+          "onLoad": 479.8810000065714
+        }
+      }
+    ],
+    "entries": [
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.423Z",
+        "time": 52.28399997577071,
+        "_resourceType": "document",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "468968"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=0, must-revalidate"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "text/html; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"5802d900c47992030283858205678216\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 00:19:54 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::pt4z5-1779186962459-6cff682e889a"
+            }
+          ],
+          "content": {
+            "mimeType": "text/html",
+            "size": 112507
+          }
+        },
+        "timings": {
+          "blocked": 1.821000001810491,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.09900000000000009,
+          "wait": 48.713999982900916,
+          "receive": 1.6499999910593033,
+          "_blocked_queueing": 0.9940000018104911,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.478Z",
+        "time": 58.264999999664724,
+        "_resourceType": "stylesheet",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"4f18b1ac3f22924b.css\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "text/css; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"2bcb26a3819bc4c88cb5d36143199822\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/css/4f18b1ac3f22924b.css"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::whzr5-1779186962522-f99fb3dee46a"
+            }
+          ],
+          "content": {
+            "mimeType": "text/css",
+            "size": 1720
+          }
+        },
+        "timings": {
+          "blocked": 10.024999894373119,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.532,
+          "wait": 47.36500005465746,
+          "receive": 0.34300005063414574,
+          "_blocked_queueing": 6.758999894373119,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.478Z",
+        "time": 54.22799999359995,
+        "_resourceType": "stylesheet",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/445c4173ffc2bf04.css",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"445c4173ffc2bf04.css\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "text/css; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"f5c0f7492dc67c4f7f20e18d161f8f2f\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/css/445c4173ffc2bf04.css"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::cqqgp-1779186962522-d4d069cbf556"
+            }
+          ],
+          "content": {
+            "mimeType": "text/css",
+            "size": 69156
+          }
+        },
+        "timings": {
+          "blocked": 10.27599999948591,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.4339999999999997,
+          "wait": 43.09800005565584,
+          "receive": 0.41999993845820427,
+          "_blocked_queueing": 7.04799999948591,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.478Z",
+        "time": 64.05499996617436,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"webpack-c91b25dd0d525e84.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"c712816745be42f33cf6ba966db71fcc\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/webpack-c91b25dd0d525e84.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::cqqgp-1779186962535-1664337d20dd"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 6062
+          }
+        },
+        "timings": {
+          "blocked": 22.321000063918532,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.32299999999999995,
+          "wait": 40.74899998373538,
+          "receive": 0.6619999185204506,
+          "_blocked_queueing": 19.53200006391853,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 91.80100006051362,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/framework-9387e000915d7b64.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"framework-9387e000915d7b64.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"7987165586b92bb62b19c7e7f7efbac7\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/framework-9387e000915d7b64.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::7x88l-1779186962534-cd4a046abaf2"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 141022
+          }
+        },
+        "timings": {
+          "blocked": 22.88499998691678,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.2330000000000001,
+          "wait": 65.5590000346452,
+          "receive": 3.1240000389516354,
+          "_blocked_queueing": 20.85199998691678,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 88.69700005743653,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/main-93d7eb3c1c216c38.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"main-93d7eb3c1c216c38.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"f39065a24054e4128c8c824b8e754210\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/main-93d7eb3c1c216c38.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::kklhx-1779186962538-13c3fc05931d"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 130922
+          }
+        },
+        "timings": {
+          "blocked": 26.169000032290818,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.8009999999999993,
+          "wait": 46.39400003668666,
+          "receive": 15.33299998845905,
+          "_blocked_queueing": 21.072000032290816,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 103.38899993803352,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/_app-902a809acbbe7cc9.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"_app-902a809acbbe7cc9.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"03e6476f3940a91c775f6f27cdc33af3\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/_app-902a809acbbe7cc9.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::5w58j-1779186962538-3e04f011222a"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 8662
+          }
+        },
+        "timings": {
+          "blocked": 26.234999947197736,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.7189999999999994,
+          "wait": 69.31999994684011,
+          "receive": 7.115000043995678,
+          "_blocked_queueing": 21.228999947197735,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 194.81299992185086,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/591-937c757170f2c1cd.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"591-937c757170f2c1cd.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"566e0bb9deca2c1218edcd45ab1f63d3\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/591-937c757170f2c1cd.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::9vt9g-1779186962538-656430223efd"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 316167
+          }
+        },
+        "timings": {
+          "blocked": 26.359999932989478,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.5760000000000005,
+          "wait": 64.76200004172325,
+          "receive": 103.11499994713813,
+          "_blocked_queueing": 21.272999932989478,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 74.13800002541393,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/1098-5895b6765c60e0c1.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"1098-5895b6765c60e0c1.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"6430e8d1b562b8390c1bf8f881e28148\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/1098-5895b6765c60e0c1.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::f9wlx-1779186962538-014cddb7ca65"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 89322
+          }
+        },
+        "timings": {
+          "blocked": 25.38300000693649,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 1.2240000000000002,
+          "wait": 46.50500000583381,
+          "receive": 1.0260000126436353,
+          "_blocked_queueing": 21.29800000693649,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 72.74299999698997,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/index-953771fe3825fa29.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476150"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"index-953771fe3825fa29.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"2d23418da0de702b547bca2876434e22\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:12 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/index-953771fe3825fa29.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::whzr5-1779186962538-4b4f101a2d30"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 49770
+          }
+        },
+        "timings": {
+          "blocked": 26.49800000254065,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.40200000000000014,
+          "wait": 41.67000000055134,
+          "receive": 4.1729999938979745,
+          "_blocked_queueing": 21.328000002540648,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 88.93199998419732,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/Ssnu0sFGh6UAVvqPLv-Oh/_buildManifest.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476150"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"_buildManifest.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"0642ed2b670c77f87353e0aee8786ee9\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:12 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/Ssnu0sFGh6UAVvqPLv-Oh/_buildManifest.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::2qdwm-1779186962538-d5984db2b804"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 8747
+          }
+        },
+        "timings": {
+          "blocked": 26.625000084102155,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.2610000000000001,
+          "wait": 61.617000009521846,
+          "receive": 0.4289998905733228,
+          "_blocked_queueing": 21.354000084102154,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 69.71499999053776,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/Ssnu0sFGh6UAVvqPLv-Oh/_ssgManifest.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "accept-ranges",
+              "value": "bytes"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476150"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"_ssgManifest.js\""
+            },
+            {
+              "name": "content-length",
+              "value": "77"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "\"b6652df95db52feb4daf4eca35380933\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:11 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/Ssnu0sFGh6UAVvqPLv-Oh/_ssgManifest.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::cqqgp-1779186962540-c4b1d7146355"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 77
+          }
+        },
+        "timings": {
+          "blocked": 26.81000000897795,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1120000000000001,
+          "wait": 41.5539999768436,
+          "receive": 1.2390000047162175,
+          "_blocked_queueing": 21.39000000897795,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.479Z",
+        "time": 62.80499999411404,
+        "_resourceType": "image",
+        "request": {
+          "url": "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "accept-ranges",
+              "value": "bytes"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "access-control-expose-headers",
+              "value": "Content-Length,ETag,Server-Timing,Vary,X-Content-Type-Options"
+            },
+            {
+              "name": "cache-control",
+              "value": "private, no-transform, immutable, max-age=2592000"
+            },
+            {
+              "name": "content-length",
+              "value": "68218"
+            },
+            {
+              "name": "content-type",
+              "value": "image/avif"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "\"d7adcee66a6b7ebd38ba239314fa5c99\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 06 Jul 2023 08:41:51 GMT"
+            },
+            {
+              "name": "server",
+              "value": "Cloudinary"
+            },
+            {
+              "name": "server-timing",
+              "value": "cld-fastly;dur=2;cpu=1;start=2026-05-19T10:36:02.514Z;desc=hit,rtt;dur=19,content-info;desc=\"width=1200,height=749,owidth=3456,oheight=2158,obytes=233360\""
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=604800"
+            },
+            {
+              "name": "timing-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "vary",
+              "value": "Save-Data"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            }
+          ],
+          "content": {
+            "mimeType": "image/avif",
+            "size": 68218
+          }
+        },
+        "timings": {
+          "blocked": 10.34999997664243,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.20899999999999963,
+          "wait": 24.426000058151782,
+          "receive": 27.81999995931983,
+          "_blocked_queueing": 7.04499997664243,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.711Z",
+        "time": 54.71000005491078,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://cdn.debugbear.com/BK73p0yToVVP.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "access-control-expose-headers",
+              "value": "Content-Type"
+            },
+            {
+              "name": "age",
+              "value": "3170"
+            },
+            {
+              "name": "alt-svc",
+              "value": "h3=\":443\"; ma=86400"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=14400"
+            },
+            {
+              "name": "cf-cache-status",
+              "value": "HIT"
+            },
+            {
+              "name": "cf-ray",
+              "value": "9fe275551a882177-MAD"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cross-origin-resource-policy",
+              "value": "cross-origin"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"29527f3c38f63851b0888cb4a5fc50aa\""
+            },
+            {
+              "name": "expires",
+              "value": "Tue, 19 May 2026 10:43:12 GMT"
+            },
+            {
+              "name": "last-modified",
+              "value": "Tue, 14 Apr 2026 14:41:58 GMT"
+            },
+            {
+              "name": "priority",
+              "value": "u=3,i=?0"
+            },
+            {
+              "name": "server",
+              "value": "cloudflare"
+            },
+            {
+              "name": "server-timing",
+              "value": "cfExtPri"
+            },
+            {
+              "name": "via",
+              "value": "1.1 google"
+            },
+            {
+              "name": "x-goog-generation",
+              "value": "1776177718967890"
+            },
+            {
+              "name": "x-goog-hash",
+              "value": "crc32c=jMlAug=="
+            },
+            {
+              "name": "x-goog-hash",
+              "value": "md5=KVJ/PDj2OFGwiIy0pfxQqg=="
+            },
+            {
+              "name": "x-goog-metageneration",
+              "value": "1"
+            },
+            {
+              "name": "x-goog-storage-class",
+              "value": "STANDARD"
+            },
+            {
+              "name": "x-goog-stored-content-encoding",
+              "value": "identity"
+            },
+            {
+              "name": "x-goog-stored-content-length",
+              "value": "34992"
+            },
+            {
+              "name": "x-guploader-uploadid",
+              "value": "AAVLpEjIwD53m66BhBI3Mw1FDvFRralmBihq2uQOkmapfzkiwQmJdKcfzQ9UgxuHYOrxLhG6"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 34992
+          }
+        },
+        "timings": {
+          "blocked": 2.287999972373247,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.2350000000000001,
+          "wait": 26.29600002682954,
+          "receive": 25.89100005570799,
+          "_blocked_queueing": 1.0359999723732471,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.711Z",
+        "time": 96.75200004130602,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://www.googletagmanager.com/gtag/js?id=G-NNX9SYKEV2",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-credentials",
+              "value": "true"
+            },
+            {
+              "name": "access-control-allow-headers",
+              "value": "Cache-Control"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "alt-svc",
+              "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+            },
+            {
+              "name": "cache-control",
+              "value": "private, max-age=900"
+            },
+            {
+              "name": "content-encoding",
+              "value": "zstd"
+            },
+            {
+              "name": "content-length",
+              "value": "161781"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=UTF-8"
+            },
+            {
+              "name": "cross-origin-resource-policy",
+              "value": "cross-origin"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "expires",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "server",
+              "value": "Google Tag Manager"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=31536000; includeSubDomains"
+            },
+            {
+              "name": "vary",
+              "value": "Accept-Encoding"
+            },
+            {
+              "name": "x-xss-protection",
+              "value": "0"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 477390
+          }
+        },
+        "timings": {
+          "blocked": 1.989000094048679,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.17699999999999994,
+          "wait": 49.51899997725338,
+          "receive": 45.06699997000396,
+          "_blocked_queueing": 1.1590000940486789,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 55.05900003481656,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/9033-7e9e3f9d4a3d8186.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"9033-7e9e3f9d4a3d8186.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"e1f347a2979a6e0d3aeec854991cddf7\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/9033-7e9e3f9d4a3d8186.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::7x88l-1779186962776-6d13fc410c06"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 2.1280000741854312,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.25,
+          "wait": 51.666000031746925,
+          "receive": 1.0149999288842082,
+          "_blocked_queueing": 0.606000074185431,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 54.70199999399483,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/9610-5c18a75c49a9513f.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"9610-5c18a75c49a9513f.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"2f24d6357d0edd815e515b9d596907c3\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/9610-5c18a75c49a9513f.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::v6vfk-1779186962782-6fed4f3b23c9"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 2.0899999686032533,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.18599999999999994,
+          "wait": 51.63200003308058,
+          "receive": 0.7939999923110008,
+          "_blocked_queueing": 0.6379999686032534,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 49.5299999602139,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/CoreWebVitals/LCP-ff79908572171774.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"LCP-ff79908572171774.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"a0e5d8ccc49427d440324e074d3b235d\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/CoreWebVitals/LCP-ff79908572171774.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::tsz84-1779186962777-f2b17d5d1509"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.6999999919980766,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.6439999999999997,
+          "wait": 44.611000013664366,
+          "receive": 0.5749999545514584,
+          "_blocked_queueing": 1.0079999919980764,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 46.77100002299994,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/1a001d9d-d1ad1d66024adf38.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"1a001d9d-d1ad1d66024adf38.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"15614570a68392d95adab7bff8dbce60\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/1a001d9d-d1ad1d66024adf38.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::27n44-1779186962777-b6e3d58fa4f4"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.8109999678209423,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.4770000000000003,
+          "wait": 41.445999958775936,
+          "receive": 1.0370000964030623,
+          "_blocked_queueing": 1.1729999678209424,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 56.084000039845705,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/169-7c4f23f868dd8b78.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"169-7c4f23f868dd8b78.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"ff2eaca8ae43b2daef77d58ad1a59a78\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/169-7c4f23f868dd8b78.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::5w58j-1779186962777-a85422b2669e"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.9370000938922165,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.2950000000000004,
+          "wait": 49.57000003197789,
+          "receive": 2.2819999139755964,
+          "_blocked_queueing": 1.2660000938922167,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 46.43500002566725,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/Loading/TTFB-8c60f813cd42c5b3.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"TTFB-8c60f813cd42c5b3.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"564d1fc0d537c944f3c2443642d2d883\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/Loading/TTFB-8c60f813cd42c5b3.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::52vml-1779186962777-dde76dc502ca"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.9259999947473405,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.242,
+          "wait": 41.40599999409914,
+          "receive": 0.8610000368207693,
+          "_blocked_queueing": 1.3599999947473407,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.740Z",
+        "time": 49.177999957464635,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/Interaction/Long-Animation-Frames-27b2df0e9557ac8c.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"Long-Animation-Frames-27b2df0e9557ac8c.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"758df8e4789ffdb9ffd604c67cc74ec0\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/Interaction/Long-Animation-Frames-27b2df0e9557ac8c.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::666bj-1779186962777-ff028ed757ee"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.9320000434964895,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.17300000000000004,
+          "wait": 44.55699994301051,
+          "receive": 0.5159999709576368,
+          "_blocked_queueing": 1.5040000434964895,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.751Z",
+        "time": 46.864000032655895,
+        "_resourceType": "other",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/CLI-095a0b2ab0eb8ff9.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476150"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"CLI-095a0b2ab0eb8ff9.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"1c429bce2f3a0f27a0b53eecceb5f856\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:12 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/CLI-095a0b2ab0eb8ff9.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::tsz84-1779186962787-8c347a0751f4"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 3.149000062175095,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1900000000000004,
+          "wait": 42.71599998036772,
+          "receive": 0.8089999901130795,
+          "_blocked_queueing": 0.6350000621750951,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.754Z",
+        "time": 43.273999937810004,
+        "_resourceType": "fetch",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/445c4173ffc2bf04.css",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"445c4173ffc2bf04.css\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "text/css; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"f5c0f7492dc67c4f7f20e18d161f8f2f\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/css/445c4173ffc2bf04.css"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::666bj-1779186962787-df7768c2d49d"
+            }
+          ],
+          "content": {
+            "mimeType": "text/css",
+            "size": 69156
+          }
+        },
+        "timings": {
+          "blocked": 0.8719999218955636,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.064,
+          "wait": 39.25599994752556,
+          "receive": 3.0820000683888793,
+          "_blocked_queueing": 0.5859999218955636,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.790Z",
+        "time": 43.08400000445545,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/1a001d9d-d1ad1d66024adf38.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"1a001d9d-d1ad1d66024adf38.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"15614570a68392d95adab7bff8dbce60\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/1a001d9d-d1ad1d66024adf38.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::nzbc6-1779186962823-7f622147b509"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 150853
+          }
+        },
+        "timings": {
+          "blocked": 1.1520000169575213,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.132,
+          "wait": 39.654999952554704,
+          "receive": 2.145000034943223,
+          "_blocked_queueing": 0.30800001695752144,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.790Z",
+        "time": 61.135000083595514,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/9033-7e9e3f9d4a3d8186.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"9033-7e9e3f9d4a3d8186.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"e1f347a2979a6e0d3aeec854991cddf7\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/9033-7e9e3f9d4a3d8186.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::p2dx8-1779186962825-b8a0423315e3"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 27137
+          }
+        },
+        "timings": {
+          "blocked": 1.2660000646859406,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.04500000000000004,
+          "wait": 59.12899996552616,
+          "receive": 0.69500005338341,
+          "_blocked_queueing": 0.40600006468594074,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.790Z",
+        "time": 43.46700001042336,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/169-7c4f23f868dd8b78.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"169-7c4f23f868dd8b78.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"ff2eaca8ae43b2daef77d58ad1a59a78\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/169-7c4f23f868dd8b78.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::52vml-1779186962825-20f6315cd253"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 168825
+          }
+        },
+        "timings": {
+          "blocked": 1.3560000210404395,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.049000000000000044,
+          "wait": 39.48000000295043,
+          "receive": 2.5819999864324927,
+          "_blocked_queueing": 0.4920000210404396,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.790Z",
+        "time": 47.870000009424984,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/9610-5c18a75c49a9513f.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476119"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"9610-5c18a75c49a9513f.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"2f24d6357d0edd815e515b9d596907c3\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:43 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/9610-5c18a75c49a9513f.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::j9hmx-1779186962827-58327cf3cf01"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 18367
+          }
+        },
+        "timings": {
+          "blocked": 1.4510000142902135,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.030999999999999917,
+          "wait": 45.64600004953146,
+          "receive": 0.7419999456033111,
+          "_blocked_queueing": 0.6440000142902136,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.790Z",
+        "time": 47.689000028185546,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/Interaction/Long-Animation-Frames-27b2df0e9557ac8c.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"Long-Animation-Frames-27b2df0e9557ac8c.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"758df8e4789ffdb9ffd604c67cc74ec0\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/Interaction/Long-Animation-Frames-27b2df0e9557ac8c.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::vr5fc-1779186962827-e1c973366ff1"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 30784
+          }
+        },
+        "timings": {
+          "blocked": 1.604000055424869,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.052000000000000046,
+          "wait": 45.39399999654293,
+          "receive": 0.6389999762177467,
+          "_blocked_queueing": 0.7870000554248691,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.795Z",
+        "time": 46.021999907679856,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/CoreWebVitals/LCP-ff79908572171774.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"LCP-ff79908572171774.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"a0e5d8ccc49427d440324e074d3b235d\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/CoreWebVitals/LCP-ff79908572171774.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::b9ncj-1779186962833-79f26246323c"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 20253
+          }
+        },
+        "timings": {
+          "blocked": 2.9169999131113293,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.16299999999999992,
+          "wait": 42.471000017017126,
+          "receive": 0.47099997755140066,
+          "_blocked_queueing": 2.128999913111329,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.796Z",
+        "time": 44.63200003374368,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/Loading/TTFB-8c60f813cd42c5b3.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "435174"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"TTFB-8c60f813cd42c5b3.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"564d1fc0d537c944f3c2443642d2d883\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Thu, 14 May 2026 09:43:08 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/Loading/TTFB-8c60f813cd42c5b3.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::wkqht-1779186962833-ab7a9fd7d894"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 28004
+          }
+        },
+        "timings": {
+          "blocked": 1.7419999801442028,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.04699999999999993,
+          "wait": 42.421999991111456,
+          "receive": 0.42100006248801947,
+          "_blocked_queueing": 0.9299999801442027,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:02.809Z",
+        "time": 41.7870000237599,
+        "_resourceType": "script",
+        "request": {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/pages/CLI-095a0b2ab0eb8ff9.js",
+          "method": "GET"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            },
+            {
+              "name": "age",
+              "value": "476150"
+            },
+            {
+              "name": "cache-control",
+              "value": "public,max-age=31536000,immutable"
+            },
+            {
+              "name": "content-disposition",
+              "value": "inline; filename=\"CLI-095a0b2ab0eb8ff9.js\""
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "content-type",
+              "value": "application/javascript; charset=utf-8"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:02 GMT"
+            },
+            {
+              "name": "etag",
+              "value": "W/\"1c429bce2f3a0f27a0b53eecceb5f856\""
+            },
+            {
+              "name": "last-modified",
+              "value": "Wed, 13 May 2026 22:20:12 GMT"
+            },
+            {
+              "name": "referrer-policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "name": "server",
+              "value": "Vercel"
+            },
+            {
+              "name": "strict-transport-security",
+              "value": "max-age=63072000"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "x-frame-options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "name": "x-matched-path",
+              "value": "/_next/static/chunks/pages/CLI-095a0b2ab0eb8ff9.js"
+            },
+            {
+              "name": "x-vercel-cache",
+              "value": "HIT"
+            },
+            {
+              "name": "x-vercel-id",
+              "value": "cdg1::b9ncj-1779186962843-117d172a90c8"
+            }
+          ],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 49249
+          }
+        },
+        "timings": {
+          "blocked": 0.8260000027492642,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.08300000000000007,
+          "wait": 40.281000015355644,
+          "receive": 0.5970000056549907,
+          "_blocked_queueing": 0.35200000274926424,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:07.831Z",
+        "time": 123.23200004175305,
+        "_resourceType": "fetch",
+        "request": {
+          "url": "https://region1.google-analytics.com/g/collect?v=2&tid=G-NNX9SYKEV2&gtm=45je65f1v9164996844za200zd9164996844&_p=1779186962711&gcd=13l3l3l2l1l1&npa=1&dma_cps=a&dma=1&_eu=AAAAAAQ&are=1&cid=1403848601.1770921786&frm=0&pscdl=noapi&rcb=6&sr=1470x956&uaa=arm&uab=64&uafvl=Google%2520Chrome%3B147.0.7727.138%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.138&uam=&uamb=0&uap=macOS&uapv=26.3.1&uaw=0&ul=en-us&_s=1&tag_exp=0~115616986~115938466~115938468&sid=1779186946&sct=95&seg=1&dl=https%3A%2F%2Fwebperf-snippets.nucliweb.net%2F&dt=WebPerf%20Snippets%20%7C%20WebPerf%20Snippets&en=page_view&_ee=1&tfd=5410",
+          "method": "POST"
+        },
+        "response": {
+          "status": 204,
+          "headers": [
+            {
+              "name": "access-control-allow-credentials",
+              "value": "true"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "https://webperf-snippets.nucliweb.net"
+            },
+            {
+              "name": "alt-svc",
+              "value": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache, no-store, must-revalidate"
+            },
+            {
+              "name": "content-length",
+              "value": "0"
+            },
+            {
+              "name": "content-security-policy-report-only",
+              "value": "script-src 'none'; form-action 'none'; frame-src 'none'; report-uri https://csp.withgoogle.com/csp/scaffolding/ascnsrsggc:138:0"
+            },
+            {
+              "name": "content-type",
+              "value": "text/plain"
+            },
+            {
+              "name": "cross-origin-opener-policy-report-only",
+              "value": "same-origin; report-to=ascnsrsggc:138:0"
+            },
+            {
+              "name": "cross-origin-resource-policy",
+              "value": "cross-origin"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:07 GMT"
+            },
+            {
+              "name": "expires",
+              "value": "Fri, 01 Jan 1990 00:00:00 GMT"
+            },
+            {
+              "name": "pragma",
+              "value": "no-cache"
+            },
+            {
+              "name": "report-to",
+              "value": "{\"group\":\"ascnsrsggc:138:0\",\"max_age\":2592000,\"endpoints\":[{\"url\":\"https://csp.withgoogle.com/csp/report-to/scaffolding/ascnsrsggc:138:0\"}],}"
+            },
+            {
+              "name": "server",
+              "value": "Golfe2"
+            }
+          ],
+          "content": {
+            "mimeType": "text/plain",
+            "size": 0
+          }
+        },
+        "timings": {
+          "blocked": 0.7650000296756625,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.171,
+          "wait": 121.63099995429813,
+          "receive": 0.6650000577792525,
+          "_blocked_queueing": 0.5390000296756625,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T10:36:10.776Z",
+        "time": 999.1650000447407,
+        "_resourceType": "fetch",
+        "request": {
+          "url": "https://data.debugbear.com/",
+          "method": "POST"
+        },
+        "response": {
+          "status": 200,
+          "headers": [
+            {
+              "name": "alt-svc",
+              "value": "h3=\":443\"; ma=86400"
+            },
+            {
+              "name": "cf-cache-status",
+              "value": "DYNAMIC"
+            },
+            {
+              "name": "cf-ray",
+              "value": "9fe275878f5a0311-MAD"
+            },
+            {
+              "name": "content-length",
+              "value": "2"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "name": "cross-origin-resource-policy",
+              "value": "cross-origin"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:36:11 GMT"
+            },
+            {
+              "name": "priority",
+              "value": "u=1,i"
+            },
+            {
+              "name": "server",
+              "value": "cloudflare"
+            },
+            {
+              "name": "server-timing",
+              "value": "cfExtPri"
+            },
+            {
+              "name": "via",
+              "value": "1.1 google"
+            },
+            {
+              "name": "x-cloud-trace-context",
+              "value": "20e8978b23f7e3ded452dc89e751d4da"
+            }
+          ],
+          "content": {
+            "mimeType": "application/json",
+            "size": 2
+          }
+        },
+        "timings": {
+          "blocked": 1.163000032581389,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 2.877,
+          "wait": 993.9810000323281,
+          "receive": 1.1439999798312783,
+          "_blocked_queueing": 0.784000032581389,
+          "_workerStart": -1,
+          "_workerReady": -1,
+          "_workerFetchStart": -1,
+          "_workerRespondWithSettled": -1
+        }
+      }
+    ]
+  }
+}
