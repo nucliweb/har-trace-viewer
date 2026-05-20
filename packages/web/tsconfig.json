@@ -1,10 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@htv/core/types.js": ["../core/src/types.ts"],
+      "@htv/core/parsers/har-parser.js": ["../core/src/parsers/har-parser.ts"],
+      "@htv/core/parsers/trace-parser.js": ["../core/src/parsers/trace-parser.ts"],
+      "@htv/core/inference/node-detector.js": ["../core/src/inference/node-detector.ts"],
+      "@htv/core/steps/step-generator.js": ["../core/src/steps/step-generator.ts"],
+      "@htv/core": ["../core/src/index.ts"]
+    }
   },
   "include": ["src"]
 }
