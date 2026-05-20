@@ -86,12 +86,12 @@ export function CachePanel({ report, onClose }: Props) {
                 <span className={`${styles.rowValue} ${styles.mono}`}>{docCacheControl}</span>
               </div>
             )}
-            {doc.age !== null && (
-              <div className={styles.row}>
-                <span className={styles.rowLabel}>CDN Age</span>
-                <span className={styles.rowValue}>{formatAge(doc.age)}</span>
-              </div>
-            )}
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>CDN Age</span>
+              <span className={styles.rowValue}>
+                {doc.age !== null ? formatAge(doc.age) : "—"}
+              </span>
+            </div>
           </div>
         </section>
 
