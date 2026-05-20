@@ -87,7 +87,7 @@
 
 .traceError {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-error, var(--color-orange));
   max-width: 240px;
   white-space: nowrap;

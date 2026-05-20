@@ -383,7 +383,7 @@ function ZoneBands({ nodes, hasCdn, hasGfw }: { nodes: DiagramNode[]; hasCdn: bo
             />
             <text
               x={zone.x + zone.w / 2} y={labelY}
-              fontSize={10} fontFamily="var(--font-mono)"
+              fontSize={12} fontFamily="var(--font-mono)"
               fill={fill} opacity={0.5}
               letterSpacing="0.06em" textAnchor="middle"
             >
@@ -414,7 +414,7 @@ function ZoneBands({ nodes, hasCdn, hasGfw }: { nodes: DiagramNode[]; hasCdn: bo
       />
       <text
         x={clientOrChinaZone.x + clientOrChinaZone.w / 2} y={svgH - 8}
-        fontSize={9} fontFamily="var(--font-mono)"
+        fontSize={12} fontFamily="var(--font-mono)"
         fill="var(--color-cyan)" opacity={0.35}
         letterSpacing="0.06em" textAnchor="middle"
       >
@@ -425,7 +425,7 @@ function ZoneBands({ nodes, hasCdn, hasGfw }: { nodes: DiagramNode[]; hasCdn: bo
       {hasGfw && (
         <text
           x={clientOrChinaZone.x + clientOrChinaZone.w / 2} y={CACHE_SUBZONE_Y - 8}
-          fontSize={8} fontFamily="var(--font-mono)"
+          fontSize={12} fontFamily="var(--font-mono)"
           fill="var(--color-red)" opacity={0.5}
           letterSpacing="0.08em" textAnchor="middle"
         >
@@ -512,7 +512,7 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
                 {histTiming && histLabelPos && (
                   <g>
                     <rect x={histLabelPos.x - histLabelWidth / 2 - 4} y={histLabelPos.y - 14} width={histLabelWidth} height={14} rx={3} fill="var(--color-bg)" opacity={0.7} />
-                    <text x={histLabelPos.x} y={histLabelPos.y} textAnchor="middle" fontSize={9} fontFamily="var(--font-mono)" fill={color} opacity={0.5} className={styles.pathLabel}>{histTiming}</text>
+                    <text x={histLabelPos.x} y={histLabelPos.y} textAnchor="middle" fontSize={12} fontFamily="var(--font-mono)" fill={color} opacity={0.5} className={styles.pathLabel}>{histTiming}</text>
                   </g>
                 )}
               </g>
@@ -541,7 +541,7 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
               {timing && lp && (
                 <g>
                   <rect x={lp.x - labelWidth / 2 - 4} y={lp.below ? lp.y - 11 : lp.y - 14} width={labelWidth} height={14} rx={3} fill="var(--color-bg)" opacity={0.85} />
-                  <text x={lp.x} y={lp.y} textAnchor="middle" fontSize={9} fontFamily="var(--font-mono)" fill={color} opacity={0.9} className={styles.pathLabel}>{timing}</text>
+                  <text x={lp.x} y={lp.y} textAnchor="middle" fontSize={12} fontFamily="var(--font-mono)" fill={color} opacity={0.9} className={styles.pathLabel}>{timing}</text>
                 </g>
               )}
             </g>
@@ -568,7 +568,7 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
             {timing && activeLabelPos && (
               <g>
                 <rect x={activeLabelPos.x - labelWidth / 2 - 4} y={activeLabelPos.y - 14} width={labelWidth} height={14} rx={3} fill="var(--color-bg)" opacity={0.85} />
-                <text x={activeLabelPos.x} y={activeLabelPos.y} textAnchor="middle" fontSize={9} fontFamily="var(--font-mono)" fill={color} opacity={0.9} className={styles.pathLabel}>{timing}</text>
+                <text x={activeLabelPos.x} y={activeLabelPos.y} textAnchor="middle" fontSize={12} fontFamily="var(--font-mono)" fill={color} opacity={0.9} className={styles.pathLabel}>{timing}</text>
               </g>
             )}
           </g>
@@ -595,7 +595,7 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
               x={pos.x} y={pos.y + labelOffsetY}
               textAnchor="middle"
               fill={isActive ? NODE_COLORS[node.id] : "var(--color-text2)"}
-              fontSize={node.id === "gfw" ? 11 : 13}
+              fontSize={node.id === "gfw" ? 12 : 13}
               fontFamily="var(--font-mono)"
             >
               {nodeLabel}
@@ -605,7 +605,7 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
                 x={pos.x} y={pos.y + labelOffsetY + 13}
                 textAnchor="middle"
                 fill="var(--color-text2)"
-                fontSize={8}
+                fontSize={12}
                 fontFamily="var(--font-mono)"
                 opacity={0.55}
               >

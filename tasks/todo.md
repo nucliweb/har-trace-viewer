@@ -63,9 +63,9 @@ Home + Login FedEx → diagrama continuo con pasos de transición y FCP/LCP de c
 
 ## Fase 6 — Accesibilidad y light mode
 
-- [ ] **6.1** Light mode completo + toggle (responde a `prefers-color-scheme`)
-- [ ] **6.2** Auditoría tipografía — garantizar mínimos del spec
-- [ ] **6.3** Contraste WCAG AA verificado en dark y light mode
+- [x] **6.1** Light mode completo + toggle (responde a `prefers-color-scheme`)
+- [x] **6.2** Auditoría tipografía — garantizar mínimos del spec
+- [x] **6.3** Contraste WCAG AA verificado en dark y light mode
 
 ---
 
