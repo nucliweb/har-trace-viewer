@@ -88,7 +88,10 @@ export function CachePanel({ report, onClose }: Props) {
             )}
             <div className={styles.row}>
               <span className={styles.rowLabel}>CDN Age</span>
-              <span className={styles.rowValue}>
+              <span
+                className={styles.rowValue}
+                title={doc.age !== null ? `${doc.age}s` : undefined}
+              >
                 {doc.age !== null ? formatAge(doc.age) : "—"}
               </span>
             </div>
