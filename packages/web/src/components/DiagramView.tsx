@@ -21,6 +21,13 @@ const BADGE_LABELS: Record<string, string> = {
   onload: "onLoad",
 };
 
+// Strip "N items · " prefix from path timing labels when shown as historical context.
+// Historical paths already have node-level resource stats; keeping per-step counts
+// creates misleading comparisons (e.g. "45 secondary resources" vs "102 3rd-party req").
+function toHistoricalTiming(timing: string): string {
+  return timing.replace(/^\d+ .+ · (avg .+)$/, "$1");
+}
+
 function computeHistoricalPaths(
   steps: Flow["steps"],
   currentStepIndex: number
@@ -29,8 +36,9 @@ function computeHistoricalPaths(
   for (let i = 0; i < currentStepIndex; i++) {
     const s = steps[i];
     for (const pathId of s.activePaths) {
+      const raw = s.pathTimings?.[pathId as PathId];
       history[pathId as PathId] = {
-        timing: s.pathTimings?.[pathId as PathId],
+        timing: raw ? toHistoricalTiming(raw) : raw,
         direction: s.pathDirections?.[pathId as PathId],
       };
     }

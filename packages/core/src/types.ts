@@ -78,6 +78,7 @@ export interface DiagramNode {
   subLabel?: string;
   present: boolean;
   region?: NetworkRegion;
+  resourceStats?: { count: number; avgMs?: number; label?: string };
 }
 
 export type PathId =

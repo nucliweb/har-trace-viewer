@@ -1,5 +1,5 @@
 import { detectCdnPopCity, detectCdnRegion, detectGfw, detectNode, detectOriginRegion, detectThirdPartyRegion, hasThirdParties } from "../inference/node-detector.js";
-import { analyzeCacheForHar } from "../inference/cache-analyzer.js";
+import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import type {
   DiagramNode,
   DiagramPath,
@@ -374,6 +374,36 @@ export function generateFlow(pages: PageFlow[]): Flow {
     originSubLabel,
     thirdPartyRegion,
   });
+
+  const ownNonDocNetwork = firstPageEntries.filter(
+    (e) => !e.isDocument && getRootDomain(e.url) === documentRoot && e.fromCache === false
+  );
+  const cdnHitEntries = hasCdn
+    ? ownNonDocNetwork.filter((e) => detectCdnCacheStatus(e.responseHeaders) === "hit")
+    : [];
+  const originEntries = hasCdn
+    ? ownNonDocNetwork.filter((e) => detectCdnCacheStatus(e.responseHeaders) !== "hit")
+    : ownNonDocNetwork;
+  const browserCacheEntries = firstPageEntries.filter(
+    (e) => !e.isDocument && e.fromCache !== false
+  );
+  const thirdPartyNetworkEntries = allThirdPartyEntries.filter((e) => e.fromCache === false);
+
+  for (const node of nodes) {
+    if (node.id === "browser" && browserCacheEntries.length > 0) {
+      node.resourceStats = { count: browserCacheEntries.length };
+    } else if (node.id === "edge" && hasCdn && cdnHitEntries.length > 0) {
+      node.resourceStats = { count: cdnHitEntries.length, avgMs: avgMs(cdnHitEntries), label: "CDN hit" };
+    } else if (node.id === "origin" && originEntries.length > 0) {
+      node.resourceStats = {
+        count: originEntries.length,
+        avgMs: avgMs(originEntries),
+        label: hasCdn ? "CDN miss" : undefined,
+      };
+    } else if (node.id === "third-parties" && thirdPartyNetworkEntries.length > 0) {
+      node.resourceStats = { count: thirdPartyNetworkEntries.length, avgMs: avgMs(thirdPartyNetworkEntries) };
+    }
+  }
 
   const cacheReport = analyzeCacheForHar(pages[0].har);
 

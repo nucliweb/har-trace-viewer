@@ -222,6 +222,127 @@ describe("generateFlow — cache classification", () => {
   });
 });
 
+describe("generateFlow — node resourceStats", () => {
+  function makeEntry(overrides: Partial<HarEntry> = {}): HarEntry {
+    return {
+      url: "https://example.com/style.css",
+      startTime: 100,
+      duration: 50,
+      timing: { dns: 0, connect: 0, ssl: 0, send: 1, wait: 10, receive: 5, blocked: 0 },
+      ttfb: 10,
+      status: 200,
+      mimeType: "text/css",
+      resourceType: "stylesheet",
+      priority: "VeryHigh",
+      responseHeaders: {},
+      transferSize: 1024,
+      isDocument: false,
+      fromCache: false,
+      ...overrides,
+    };
+  }
+
+  function makeHar(entries: HarEntry[], docHeaders: Record<string, string> = {}): ParsedHar {
+    const docEntry = makeEntry({
+      url: "https://example.com/",
+      mimeType: "text/html",
+      isDocument: true,
+      resourceType: "document",
+      timing: { dns: 10, connect: 20, ssl: 0, send: 1, wait: 50, receive: 5, blocked: 0 },
+      ttfb: 50,
+      responseHeaders: docHeaders,
+    });
+    return {
+      pages: [{ id: "p1", title: "Example", onContentLoad: 300, onLoad: 500 }],
+      entries: [docEntry, ...entries],
+      documentEntry: docEntry,
+      preconnectHints: {},
+    };
+  }
+
+  it("browser node gets resourceStats when browser cache hits exist", () => {
+    const cached = makeEntry({ fromCache: "disk" });
+    const network = makeEntry({ url: "https://example.com/b.css", fromCache: false });
+    const flow = generateFlow([{ name: "Page", har: makeHar([cached, network]) }]);
+
+    const browser = flow.nodes.find((n) => n.id === "browser")!;
+    expect(browser.resourceStats?.count).toBe(1);
+    expect(browser.resourceStats?.avgMs).toBeUndefined();
+  });
+
+  it("browser node has no resourceStats when no cache hits", () => {
+    const network = makeEntry({ fromCache: false });
+    const flow = generateFlow([{ name: "Page", har: makeHar([network]) }]);
+
+    const browser = flow.nodes.find((n) => n.id === "browser")!;
+    expect(browser.resourceStats).toBeUndefined();
+  });
+
+  it("edge node gets CDN hit stats when CDN is present", () => {
+    const cdnHit = makeEntry({
+      url: "https://example.com/app.js",
+      duration: 40,
+      fromCache: false,
+      responseHeaders: { "cf-cache-status": "HIT" },
+    });
+    const cdnMiss = makeEntry({
+      url: "https://example.com/api.js",
+      duration: 200,
+      fromCache: false,
+      responseHeaders: { "cf-cache-status": "MISS" },
+    });
+    const cfDocHeaders = { "cf-ray": "abc123-LHR" };
+    const flow = generateFlow([{ name: "Page", har: makeHar([cdnHit, cdnMiss], cfDocHeaders) }]);
+
+    const edge = flow.nodes.find((n) => n.id === "edge")!;
+    expect(edge.present).toBe(true);
+    expect(edge.resourceStats?.count).toBe(1);
+    expect(edge.resourceStats?.avgMs).toBe(40);
+    expect(edge.resourceStats?.label).toBe("CDN hit");
+  });
+
+  it("origin node gets CDN miss label when CDN is present", () => {
+    const cdnMiss = makeEntry({
+      url: "https://example.com/api.js",
+      duration: 200,
+      fromCache: false,
+      responseHeaders: { "cf-cache-status": "MISS" },
+    });
+    const cfDocHeaders = { "cf-ray": "abc123-LHR" };
+    const flow = generateFlow([{ name: "Page", har: makeHar([cdnMiss], cfDocHeaders) }]);
+
+    const origin = flow.nodes.find((n) => n.id === "origin")!;
+    expect(origin.resourceStats?.count).toBe(1);
+    expect(origin.resourceStats?.avgMs).toBe(200);
+    expect(origin.resourceStats?.label).toBe("CDN miss");
+  });
+
+  it("origin node has no label when no CDN", () => {
+    const req1 = makeEntry({ url: "https://example.com/a.css", duration: 100, fromCache: false });
+    const req2 = makeEntry({ url: "https://example.com/b.js", duration: 200, fromCache: false });
+    const flow = generateFlow([{ name: "Page", har: makeHar([req1, req2]) }]);
+
+    const origin = flow.nodes.find((n) => n.id === "origin")!;
+    expect(origin.resourceStats?.count).toBe(2);
+    expect(origin.resourceStats?.avgMs).toBe(150);
+    expect(origin.resourceStats?.label).toBeUndefined();
+  });
+
+  it("third-parties node gets resourceStats for external network requests", () => {
+    const ownEntry = makeEntry({ url: "https://example.com/a.css", fromCache: false });
+    const thirdParty = makeEntry({
+      url: "https://cdn.analytics.com/script.js",
+      duration: 120,
+      fromCache: false,
+    });
+    const flow = generateFlow([{ name: "Page", har: makeHar([ownEntry, thirdParty]) }]);
+
+    const thirdParties = flow.nodes.find((n) => n.id === "third-parties")!;
+    expect(thirdParties.resourceStats?.count).toBe(1);
+    expect(thirdParties.resourceStats?.avgMs).toBe(120);
+  });
+});
+
 describe("generateFlow — two pages", () => {
   it("inserts a transition step between pages", () => {
     const har = loadHar();

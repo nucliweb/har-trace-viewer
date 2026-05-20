@@ -612,6 +612,23 @@ export function NodeRenderer({ nodes, paths, activeNodes, activePaths, pathTimin
                 {node.subLabel}
               </text>
             )}
+            {node.resourceStats && (
+              <text
+                x={pos.x} y={pos.y + labelOffsetY + (node.subLabel ? 26 : 13)}
+                textAnchor="middle"
+                fill={isActive ? NODE_COLORS[node.id] : "var(--color-text2)"}
+                fontSize={11}
+                fontFamily="var(--font-mono)"
+                opacity={0.7}
+              >
+                {node.id === "browser"
+                  ? `${node.resourceStats.count} cached`
+                  : node.resourceStats.avgMs !== undefined
+                    ? `${node.resourceStats.count} ${node.resourceStats.label ?? "req"} · avg ${Math.round(node.resourceStats.avgMs)}ms`
+                    : `${node.resourceStats.count} ${node.resourceStats.label ?? "req"}`
+                }
+              </text>
+            )}
           </g>
         );
       })}
