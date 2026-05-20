@@ -268,16 +268,16 @@ Encadenar múltiples páginas en un diagrama continuo.
 
 ### Checkpoint final
 **Criterio de paso:** Todos los criterios de aceptación del spec verificados:
-- [ ] Flujo de 3 páginas encadenado correctamente
-- [ ] Badges FCP/LCP en el paso correcto
-- [ ] Nodo Akamai detectado en HARs de FedEx
-- [ ] CLI `--bundle` genera HTML sin servidor
-- [ ] Sin Trace: no hay pasos FCP/LCP, sin errores
-- [ ] TTFB coincide con valores del HAR
-- [ ] Funciona offline
-- [ ] Ningún texto < 12px
-- [ ] Light/dark mode funciona en web y CLI output
-- [ ] WCAG AA en ambos modos
+- [x] Flujo de 3 páginas encadenado correctamente (FedEx Home × 2 + Login = 29 pasos)
+- [x] Badges FCP/LCP en el paso correcto (FCP paso 5, badge 876ms)
+- [x] Nodo Akamai detectado en HARs de FedEx (label "Akamai Edge")
+- [x] CLI `--bundle` genera HTML sin servidor (file:// sin errores)
+- [x] Sin Trace: no hay pasos FCP/LCP, sin errores (solo TTFB + onLoad)
+- [x] TTFB coincide con valores del HAR (HAR wait 160ms = badge 160ms)
+- [x] Funciona offline (file:// bundle sin red)
+- [x] Ningún texto < 12px (0 violaciones en DOM + SVG)
+- [x] Light/dark mode funciona en web y CLI output (toggle operativo)
+- [x] WCAG AA en ambos modos (Lighthouse Accessibility 100/100 dark y light)
 
 ---
 
