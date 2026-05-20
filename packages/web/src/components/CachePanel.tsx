@@ -6,22 +6,46 @@ interface Props {
   onClose: () => void;
 }
 
+const MINUTE = 60;
+const HOUR   = 3_600;
+const DAY    = 86_400;
+const MONTH  = 2_592_000;   // 30 days
+const YEAR   = 31_536_000;  // 365 days
+
+function formatDuration(seconds: number): string {
+  if (seconds < MINUTE) return `${seconds}s`;
+  if (seconds < HOUR) {
+    const m = Math.floor(seconds / MINUTE);
+    const s = seconds % MINUTE;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  }
+  if (seconds < DAY) {
+    const h = Math.floor(seconds / HOUR);
+    const m = Math.floor((seconds % HOUR) / MINUTE);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  if (seconds < MONTH) {
+    const d = Math.floor(seconds / DAY);
+    const h = Math.floor((seconds % DAY) / HOUR);
+    return h > 0 ? `${d}d ${h}h` : `${d}d`;
+  }
+  if (seconds < YEAR) {
+    const mo = Math.floor(seconds / MONTH);
+    const d  = Math.floor((seconds % MONTH) / DAY);
+    return d > 0 ? `${mo}mo ${d}d` : `${mo}mo`;
+  }
+  const y  = Math.floor(seconds / YEAR);
+  const mo = Math.floor((seconds % YEAR) / MONTH);
+  return mo > 0 ? `${y}y ${mo}mo` : `${y}y`;
+}
+
 function formatAge(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  return `${h}h ${m}m`;
+  return formatDuration(seconds);
 }
 
 function formatMaxAge(seconds: number): string {
   if (seconds === 0) return "0 (no browser cache)";
-  if (seconds >= 31536000) return `${Math.round(seconds / 31536000)}y`;
-  if (seconds >= 86400) return `${Math.round(seconds / 86400)}d`;
-  if (seconds >= 3600) return `${Math.round(seconds / 3600)}h`;
-  return `${seconds}s`;
+  return formatDuration(seconds);
 }
 
 function pct(ratio: number): string {
