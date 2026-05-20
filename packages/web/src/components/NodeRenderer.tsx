@@ -110,26 +110,26 @@ const PATH_DATA_RESPONSE: Partial<Record<PathId, string>> = {
 };
 
 const PATH_LABEL_POS: Partial<Record<PathId, { x: number; y: number; below?: boolean }>> = {
-  "browser-gfw":           { x: 153, y: 228 },
-  "gfw-edge":              { x: 305, y: 228 },
+  "browser-gfw":           { x: 153, y: 205 },
+  "gfw-edge":              { x: 305, y: 205 },
   "browser-edge":          { x: 265, y: 228 },
   "edge-origin":           { x: 550, y: 210 },
   "browser-origin":        { x: 415, y: 212 },
-  "browser-third-parties": { x: 415, y: 294, below: true },
+  "browser-third-parties": { x: 415, y: 308, below: true },
 };
 
 const PATH_LABEL_POS_REQUEST: Partial<Record<PathId, { x: number; y: number }>> = {
-  "browser-gfw":           { x: 153, y: 222 },
-  "gfw-edge":              { x: 305, y: 222 },
+  "browser-gfw":           { x: 153, y: 205 },
+  "gfw-edge":              { x: 305, y: 205 },
   "browser-edge":          { x: 265, y: 222 },
   "edge-origin":           { x: 550, y: 202 },
   "browser-origin":        { x: 415, y: 204 },
-  "browser-third-parties": { x: 415, y: 288 },
+  "browser-third-parties": { x: 415, y: 308 },
 };
 
 const PATH_LABEL_POS_RESPONSE: Partial<Record<PathId, { x: number; y: number }>> = {
-  "browser-gfw":           { x: 153, y: 262 },
-  "gfw-edge":              { x: 305, y: 262 },
+  "browser-gfw":           { x: 153, y: 205 },
+  "gfw-edge":              { x: 305, y: 205 },
   "browser-edge":          { x: 265, y: 262 },
   "edge-origin":           { x: 550, y: 242 },
   "browser-origin":        { x: 415, y: 244 },
@@ -159,22 +159,22 @@ const PATH_DATA_4ZONE_RESPONSE: Partial<Record<PathId, string>> = {
   "browser-third-parties": "M 93,249 C 220,269 390,300 518,315",
 };
 const PATH_LABEL_POS_4ZONE: Partial<Record<PathId, { x: number; y: number; below?: boolean }>> = {
-  "browser-gfw":           { x: 128, y: 228 },
-  "gfw-edge":              { x: 249, y: 228 },
+  "browser-gfw":           { x: 128, y: 205 },
+  "gfw-edge":              { x: 249, y: 205 },
   "edge-origin":           { x: 546, y: 214 },
   "browser-origin":        { x: 423, y: 216 },
-  "browser-third-parties": { x: 305, y: 292, below: true },
+  "browser-third-parties": { x: 305, y: 308, below: true },
 };
 const PATH_LABEL_POS_4ZONE_REQUEST: Partial<Record<PathId, { x: number; y: number }>> = {
-  "browser-gfw":           { x: 128, y: 222 },
-  "gfw-edge":              { x: 249, y: 222 },
+  "browser-gfw":           { x: 128, y: 205 },
+  "gfw-edge":              { x: 249, y: 205 },
   "edge-origin":           { x: 546, y: 208 },
   "browser-origin":        { x: 423, y: 210 },
-  "browser-third-parties": { x: 305, y: 286 },
+  "browser-third-parties": { x: 305, y: 308 },
 };
 const PATH_LABEL_POS_4ZONE_RESPONSE: Partial<Record<PathId, { x: number; y: number }>> = {
-  "browser-gfw":           { x: 128, y: 260 },
-  "gfw-edge":              { x: 249, y: 260 },
+  "browser-gfw":           { x: 128, y: 205 },
+  "gfw-edge":              { x: 249, y: 205 },
   "edge-origin":           { x: 546, y: 246 },
   "browser-origin":        { x: 423, y: 248 },
   "browser-third-parties": { x: 305, y: 330 },

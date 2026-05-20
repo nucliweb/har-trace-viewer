@@ -15,7 +15,7 @@
 /* Metric badges row */
 .badgeRow {
   position: absolute;
-  top: var(--space-md);
+  top: 44px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
