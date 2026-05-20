@@ -9,8 +9,12 @@ function getInitialTheme(): "dark" | "light" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+declare global {
+  interface Window { __HTV_FLOW__?: Flow }
+}
+
 export function App() {
-  const [flow, setFlow] = useState<Flow | null>(null);
+  const [flow, setFlow] = useState<Flow | null>(() => window.__HTV_FLOW__ ?? null);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const initial = getInitialTheme();
     document.documentElement.setAttribute("data-theme", initial);

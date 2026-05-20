@@ -4,6 +4,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
+  base: "./",
   resolve: {
     alias: [
       { find: "@htv/core/types.js",                      replacement: resolve(__dirname, "../core/src/types.ts") },

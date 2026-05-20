@@ -71,9 +71,9 @@ Home + Login FedEx → diagrama continuo con pasos de transición y FCP/LCP de c
 
 ## Fase 7 — CLI
 
-- [ ] **7.1** CLI básico `htv --page --har --output`
-- [ ] **7.2** Flag `--bundle` (HTML autocontenido, fuentes base64)
-- [ ] **7.3** CLI multi-página
+- [x] **7.1** CLI básico `htv --page --har --output`
+- [x] **7.2** Flag `--bundle` (HTML autocontenido, fuentes base64)
+- [x] **7.3** CLI multi-página
 
 ### ✓ Checkpoint final
 Todos los criterios de aceptación del spec verificados
