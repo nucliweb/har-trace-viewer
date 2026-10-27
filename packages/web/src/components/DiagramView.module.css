@@ -111,3 +111,11 @@
   color: var(--color-cyan);
   background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .badge,
+  .cacheBtn {
+    animation: none;
+    transition: none;
+  }
+}

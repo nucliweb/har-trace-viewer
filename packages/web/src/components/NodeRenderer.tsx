@@ -1,4 +1,6 @@
+import { memo } from "react";
 import type { DiagramNode, DiagramPath, NetworkRegion, NodeId, PathId } from "@htv/core/types.js";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion.js";
 import type { HistoricalPath } from "../types.js";
 import styles from "./NodeRenderer.module.css";
 
@@ -571,7 +573,7 @@ function ZoneBands({
   );
 }
 
-export function NodeRenderer({
+function NodeRendererView({
   nodes,
   paths,
   activeNodes,
@@ -580,6 +582,7 @@ export function NodeRenderer({
   pathDirections,
   historicalPaths,
 }: Props) {
+  const reducedMotion = usePrefersReducedMotion();
   const activeNodeSet = new Set(activeNodes);
   const activePathSet = new Set(activePaths);
   const hasCdn = nodes.find((n) => n.id === "edge")?.present ?? false;
@@ -740,8 +743,8 @@ export function NodeRenderer({
                 opacity={0.8}
                 filter={glowFilter ? `url(#${glowFilter})` : undefined}
               />
-              <ForwardPacket pathRef={`path-${path.id}`} color={color} />
-              <ReturnPacket pathRef={`path-${path.id}`} color={color} />
+              {!reducedMotion && <ForwardPacket pathRef={`path-${path.id}`} color={color} />}
+              {!reducedMotion && <ReturnPacket pathRef={`path-${path.id}`} color={color} />}
               {timing && lp && (
                 <g>
                   <rect
@@ -799,11 +802,12 @@ export function NodeRenderer({
               opacity={0.85}
               filter={PATH_GLOW_FILTER[path.id] ? `url(#${PATH_GLOW_FILTER[path.id]})` : undefined}
             />
-            {isRequest ? (
-              <ForwardPacket pathRef={activePathRef} color={color} />
-            ) : (
-              <ReturnPacket pathRef={activePathRef} color={color} />
-            )}
+            {!reducedMotion &&
+              (isRequest ? (
+                <ForwardPacket pathRef={activePathRef} color={color} />
+              ) : (
+                <ReturnPacket pathRef={activePathRef} color={color} />
+              ))}
             {timing && activeLabelPos && (
               <g>
                 <rect
@@ -897,3 +901,5 @@ export function NodeRenderer({
     </svg>
   );
 }
+
+export const NodeRenderer = memo(NodeRendererView);
