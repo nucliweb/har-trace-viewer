@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Flow, HarEntry, PathId } from "@htv/core/types.js";
+import { getStepCacheResources, getStepResources } from "@htv/core/steps/step-generator.js";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import type { HistoricalPath } from "../types.js";
 import { NodeRenderer } from "./NodeRenderer.js";
@@ -50,8 +51,15 @@ function computeHistoricalPaths(
 
 export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
-  const step = flow.steps[state.stepIndex];
+  const { stepIndex } = state;
+  const step = flow.steps[stepIndex];
   const { pageIndex } = step;
+  // Steps reference their page entries by index: resolve them once per step.
+  const resources = useMemo(() => getStepResources(flow, flow.steps[stepIndex]), [flow, stepIndex]);
+  const cacheResources = useMemo(
+    () => getStepCacheResources(flow, flow.steps[stepIndex]),
+    [flow, stepIndex]
+  );
   // Indexing keeps the analysis reference stable while the user stays on a page.
   const analysis = flow.pageAnalyses[pageIndex];
   const page = flow.pages[pageIndex];
@@ -61,7 +69,10 @@ export function DiagramView({ flow }: Props) {
   const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
   const closeSidebar = () => setSidebarResources(null);
 
-  const historicalPaths = computeHistoricalPaths(flow.steps, state.stepIndex);
+  const historicalPaths = useMemo(
+    () => computeHistoricalPaths(flow.steps, stepIndex),
+    [flow.steps, stepIndex]
+  );
 
   // Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad.
   const allBadges = useMemo(() => {
@@ -108,9 +119,7 @@ export function DiagramView({ flow }: Props) {
             ))}
           </div>
         )}
-        {step.cacheResources && step.cacheResources.length > 0 && (
-          <CacheSidebar resources={step.cacheResources} />
-        )}
+        {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}
         {sidebarResources && (
           <ResourceSidebar
             resources={sidebarResources}
@@ -136,7 +145,7 @@ export function DiagramView({ flow }: Props) {
           Cache
         </button>
       </div>
-      <StepPanel state={state} onOpenResources={openSidebar} />
+      <StepPanel state={state} resources={resources} onOpenResources={openSidebar} />
     </div>
   );
 }

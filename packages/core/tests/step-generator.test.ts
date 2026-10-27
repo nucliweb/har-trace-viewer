@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { parseHar, parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { FLOW_VERSION, generateFlow, normalizeFlow } from "../src/steps/step-generator.js";
+import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import { firefoxHar } from "./helpers/firefox-har.js";
 import type { DiagramStep, Flow, HarEntry, ParsedHar } from "../src/types.js";
 
@@ -178,8 +179,23 @@ describe("generateFlow — cache classification", () => {
     const flow = generateFlow([{ name: "Page", har }]);
 
     const criticalStep = flow.steps.find((s) => s.title.includes("Critical"))!;
-    expect(criticalStep.resources?.map((e) => e.url)).toEqual([networkCss.url]);
-    expect(criticalStep.cacheResources?.map((e) => e.url)).toEqual([cachedCss.url]);
+    expect(getStepResources(flow, criticalStep).map((e) => e.url)).toEqual([networkCss.url]);
+    expect(getStepCacheResources(flow, criticalStep).map((e) => e.url)).toEqual([cachedCss.url]);
+  });
+
+  it("references the page entries by index instead of copying them", () => {
+    const networkCss = makeEntry({ url: "https://example.com/a.css", fromCache: false });
+    const cachedCss = makeEntry({ url: "https://example.com/b.css", fromCache: "disk" });
+    const har = makeHar([networkCss, cachedCss]);
+    const flow = generateFlow([{ name: "Page", har }]);
+
+    const criticalStep = flow.steps.find((s) => s.title.includes("Critical"))!;
+    expect(criticalStep.resourceRefs).toEqual([1]);
+    expect(criticalStep.cacheResourceRefs).toEqual([2]);
+    expect(getStepResources(flow, criticalStep)[0]).toBe(har.entries[1]);
+    expect(getStepCacheResources(flow, criticalStep)[0]).toBe(har.entries[2]);
+    expect(criticalStep).not.toHaveProperty("resources");
+    expect(criticalStep).not.toHaveProperty("cacheResources");
   });
 
   it("memory-cached resources go to cacheResources", () => {
@@ -188,9 +204,10 @@ describe("generateFlow — cache classification", () => {
     const flow = generateFlow([{ name: "Page", har }]);
 
     const criticalStep = flow.steps.find((s) => s.title.includes("Critical"))!;
-    expect(criticalStep.resources).toBeUndefined();
-    expect(criticalStep.cacheResources?.length).toBe(1);
-    expect(criticalStep.cacheResources?.[0].fromCache).toBe("memory");
+    expect(criticalStep.resourceRefs).toBeUndefined();
+    expect(getStepResources(flow, criticalStep)).toEqual([]);
+    expect(criticalStep.cacheResourceRefs).toHaveLength(1);
+    expect(getStepCacheResources(flow, criticalStep)[0].fromCache).toBe("memory");
   });
 
   it("when all critical resources are from cache, resources is undefined", () => {
@@ -200,8 +217,8 @@ describe("generateFlow — cache classification", () => {
     const flow = generateFlow([{ name: "Page", har }]);
 
     const criticalStep = flow.steps.find((s) => s.title.includes("Critical"))!;
-    expect(criticalStep.resources).toBeUndefined();
-    expect(criticalStep.cacheResources).toHaveLength(2);
+    expect(criticalStep.resourceRefs).toBeUndefined();
+    expect(criticalStep.cacheResourceRefs).toHaveLength(2);
   });
 
   it("secondary resource cache classification works independently of critical", () => {
@@ -221,8 +238,8 @@ describe("generateFlow — cache classification", () => {
     const flow = generateFlow([{ name: "Page", har }]);
 
     const secondaryStep = flow.steps.find((s) => s.title.includes("Secondary"))!;
-    expect(secondaryStep.resources?.map((e) => e.url)).toEqual([networkImg.url]);
-    expect(secondaryStep.cacheResources?.map((e) => e.url)).toEqual([cachedImg.url]);
+    expect(getStepResources(flow, secondaryStep).map((e) => e.url)).toEqual([networkImg.url]);
+    expect(getStepCacheResources(flow, secondaryStep).map((e) => e.url)).toEqual([cachedImg.url]);
   });
 });
 
@@ -509,15 +526,17 @@ describe("generateFlow — Firefox-style HAR (no priority, onLoad not fired)", (
   }
 
   it("yields critical resources from stylesheets", () => {
-    const step = firefoxFlow().steps.find((s) => s.title.includes("Critical"))!;
+    const flow = firefoxFlow();
+    const step = flow.steps.find((s) => s.title.includes("Critical"))!;
 
-    expect(step.resources?.map((e) => e.resourceType)).toEqual(["stylesheet"]);
+    expect(getStepResources(flow, step).map((e) => e.resourceType)).toEqual(["stylesheet"]);
   });
 
   it("yields secondary resources without relying on priority", () => {
-    const step = firefoxFlow().steps.find((s) => s.title.includes("Secondary"))!;
+    const flow = firefoxFlow();
+    const step = flow.steps.find((s) => s.title.includes("Secondary"))!;
 
-    expect(step.resources?.length).toBeGreaterThan(0);
+    expect(getStepResources(flow, step).length).toBeGreaterThan(0);
     expect(step.metrics.find((m) => m.label === "Resources")?.value).toBe("3");
   });
 
@@ -577,7 +596,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(2);
+    expect(FLOW_VERSION).toBe(3);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 
@@ -727,5 +746,143 @@ describe("normalizeFlow", () => {
     const current = generateFlow([{ name: "Home", har: loadHar() }], { clientRegion: "cn" });
 
     expect(normalizeFlow(current)).toEqual(current);
+  });
+});
+
+// The two real recordings of the root fixtures: same site, without and with browser cache.
+const rootFixtures = join(__dirname, "../../../fixtures");
+function loadRootHar(name: "Disable-Cache-20260519T123602" | "Cache-20260519T123746") {
+  return parseHarJson(
+    readFileSync(join(rootFixtures, `webperf-snippets.nucliweb.net_${name}.har`), "utf8")
+  );
+}
+
+function recordedTwoPageFlow(): Flow {
+  return generateFlow([
+    { name: "Disable cache", har: loadRootHar("Disable-Cache-20260519T123602") },
+    { name: "Cache", har: loadRootHar("Cache-20260519T123746") },
+  ]);
+}
+
+describe("step resource references", () => {
+  it("resolve every step's references within the entries of its own page", () => {
+    const flow = recordedTwoPageFlow();
+
+    let referenced = 0;
+    for (const step of flow.steps) {
+      const { entries } = flow.pages[step.pageIndex].har;
+      const resolved = [...getStepResources(flow, step), ...getStepCacheResources(flow, step)];
+      const refs = [...(step.resourceRefs ?? []), ...(step.cacheResourceRefs ?? [])];
+      expect(resolved).toEqual(refs.map((ref) => entries[ref]));
+      for (const entry of resolved) expect(entries).toContain(entry);
+      referenced += refs.length;
+    }
+    expect(referenced).toBeGreaterThan(0);
+    expect(flow.steps.some((s) => (s.cacheResourceRefs?.length ?? 0) > 0)).toBe(true);
+  });
+
+  it("returns no resources for steps without references", () => {
+    const flow = recordedTwoPageFlow();
+    const dns = flow.steps[0];
+
+    expect(getStepResources(flow, dns)).toEqual([]);
+    expect(getStepCacheResources(flow, dns)).toEqual([]);
+  });
+
+  it("survive a JSON round trip: hydrated resources equal the original ones", () => {
+    const flow = recordedTwoPageFlow();
+
+    const restored = normalizeFlow(JSON.parse(JSON.stringify(flow)) as Flow);
+
+    expect(restored.steps.map((s) => getStepResources(restored, s))).toEqual(
+      flow.steps.map((s) => getStepResources(flow, s))
+    );
+    expect(restored.steps.map((s) => getStepCacheResources(restored, s))).toEqual(
+      flow.steps.map((s) => getStepCacheResources(flow, s))
+    );
+  });
+});
+
+describe("normalizeFlow — version 2 inline resources", () => {
+  type InlineStep = DiagramStep & { resources?: HarEntry[]; cacheResources?: HarEntry[] };
+
+  // Shape of a version-2 flow after JSON: steps carry copies of their entries.
+  function versionTwoFlow(current: Flow): Flow {
+    const legacy = JSON.parse(JSON.stringify(current)) as Flow;
+    legacy.version = 2;
+    legacy.steps = current.steps.map((step) => {
+      const inline: InlineStep = JSON.parse(JSON.stringify(step));
+      delete inline.resourceRefs;
+      delete inline.cacheResourceRefs;
+      const resources = getStepResources(current, step);
+      const cacheResources = getStepCacheResources(current, step);
+      if (resources.length > 0) inline.resources = JSON.parse(JSON.stringify(resources));
+      if (cacheResources.length > 0)
+        inline.cacheResources = JSON.parse(JSON.stringify(cacheResources));
+      return inline;
+    });
+    return legacy;
+  }
+
+  it("converts inline resources into references to the page entries", () => {
+    const current = recordedTwoPageFlow();
+
+    const normalized = normalizeFlow(versionTwoFlow(current));
+
+    expect(normalized.version).toBe(2);
+    normalized.steps.forEach((step, i) => {
+      expect(step.resourceRefs).toEqual(current.steps[i].resourceRefs);
+      expect(step.cacheResourceRefs).toEqual(current.steps[i].cacheResourceRefs);
+      expect(step).not.toHaveProperty("resources");
+      expect(step).not.toHaveProperty("cacheResources");
+    });
+    normalized.pages.forEach((page, i) => {
+      expect(page.har.entries).toHaveLength(current.pages[i].har.entries.length);
+    });
+  });
+
+  it("appends an inline resource missing from the page entries and references it", () => {
+    const current = generateFlow([{ name: "Home", har: loadHar() }]);
+    const legacy = versionTwoFlow(current);
+    const critical = legacy.steps.find((s) => s.title.includes("Critical")) as InlineStep;
+    const orphan = { ...critical.resources![0], url: "https://example.com/orphan.css" };
+    critical.resources!.push(orphan);
+    const entryCount = legacy.pages[0].har.entries.length;
+
+    const normalized = normalizeFlow(legacy);
+
+    const { entries } = normalized.pages[0].har;
+    expect(entries).toHaveLength(entryCount + 1);
+    expect(entries.at(-1)).toEqual(orphan);
+    const step = normalized.steps.find((s) => s.title.includes("Critical"))!;
+    expect(step.resourceRefs?.at(-1)).toBe(entryCount);
+    expect(getStepResources(normalized, step).at(-1)).toEqual(orphan);
+    expect(legacy.pages[0].har.entries).toHaveLength(entryCount);
+  });
+
+  it("maps repeated url and startTime pairs to distinct entries in order", () => {
+    const entry = loadHar().entries[1];
+    const twin = { ...entry, duration: entry.duration + 1 };
+    const har = loadHar();
+    har.entries = [har.documentEntry, entry, twin];
+    const legacy = {
+      ...generateFlow([{ name: "Home", har }]),
+      version: 2,
+      steps: [
+        {
+          pageIndex: 0,
+          title: "Critical resources loading",
+          description: "",
+          activeNodes: [],
+          activePaths: [],
+          metrics: [],
+          resources: [entry, twin],
+        } as InlineStep,
+      ],
+    } as Flow;
+
+    const normalized = normalizeFlow(JSON.parse(JSON.stringify(legacy)) as Flow);
+
+    expect(normalized.steps[0].resourceRefs).toEqual([1, 2]);
   });
 });

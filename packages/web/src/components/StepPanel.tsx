@@ -4,6 +4,8 @@ import styles from "./StepPanel.module.css";
 
 interface Props {
   state: DiagramState;
+  // Network requests of the current step.
+  resources: HarEntry[];
   onOpenResources: (resources: HarEntry[]) => void;
 }
 
@@ -50,7 +52,7 @@ function ResourceListIcon() {
   );
 }
 
-export function StepPanel({ state, onOpenResources }: Props) {
+export function StepPanel({ state, resources, onOpenResources }: Props) {
   const { flow, stepIndex, isPlaying, speed, goTo, prev, next, togglePlay, setSpeed } = state;
   const step = flow.steps[stepIndex];
   const total = flow.steps.length;
@@ -94,10 +96,10 @@ export function StepPanel({ state, onOpenResources }: Props) {
                 <span className={styles.metricValue}>{m.value}</span>
               </div>
             ))}
-            {step.resources && step.resources.length > 0 && (
+            {resources.length > 0 && (
               <button
                 className={styles.resourcesBtn}
-                onClick={() => onOpenResources(step.resources!)}
+                onClick={() => onOpenResources(resources)}
                 aria-label="View resource list"
                 title="View resource list"
               >

@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 const output = resolve(import.meta.dirname, ".output");
 const bundleUrl = pathToFileURL(resolve(output, "bundle/index.html")).href;
 const plainUrl = pathToFileURL(resolve(output, "plain/index.html")).href;
+const cachedUrl = pathToFileURL(resolve(output, "cached/index.html")).href;
 
 const MIME: Record<string, string> = {
   ".html": "text/html",
@@ -95,6 +96,80 @@ test("step navigation moves through every step and highlights the diagram", asyn
 
   await page.getByRole("tab", { name: new RegExp(`^Step ${total}:`) }).click();
   await expect(stepLabel(page)).toHaveText(`Step ${total} / ${total}`);
+});
+
+interface StepResources {
+  title: string;
+  resources: string[];
+  cacheResources: string[];
+}
+
+// URLs each step references, resolved from the flow embedded in the report.
+function embeddedStepResources(page: Page): Promise<StepResources[]> {
+  return page.evaluate(() => {
+    interface EmbeddedFlow {
+      pages: { har: { entries: { url: string }[] } }[];
+      steps: {
+        title: string;
+        pageIndex: number;
+        resourceRefs?: number[];
+        cacheResourceRefs?: number[];
+      }[];
+    }
+    const flow = (window as unknown as { __HTV_FLOW__: EmbeddedFlow }).__HTV_FLOW__;
+    return flow.steps.map((step) => {
+      const { entries } = flow.pages[step.pageIndex].har;
+      return {
+        title: step.title,
+        resources: (step.resourceRefs ?? []).map((ref) => entries[ref].url),
+        cacheResources: (step.cacheResourceRefs ?? []).map((ref) => entries[ref].url),
+      };
+    });
+  });
+}
+
+test("each step's resource list shows the entries the step references", async ({ page }) => {
+  const collected = await open(page, bundleUrl);
+  const steps = await embeddedStepResources(page);
+  expect(steps.some((s) => s.resources.length > 0)).toBe(true);
+
+  for (const [i, step] of steps.entries()) {
+    await page.getByRole("tab", { name: `Step ${i + 1}: ${step.title}` }).click();
+    const openList = page.getByRole("button", { name: "View resource list" });
+    if (step.resources.length === 0) {
+      await expect(openList).toHaveCount(0);
+      continue;
+    }
+    await openList.click();
+    await expect(
+      page.getByText(`${step.resources.length} resources`, { exact: true })
+    ).toBeVisible();
+    for (const url of step.resources) {
+      await expect(page.locator(`[title="${url}"]`).first()).toBeAttached();
+    }
+    await page.getByRole("button", { name: "Close" }).click();
+  }
+  expect(collected.errors).toEqual([]);
+});
+
+test("each step's cache list shows the cache hits the step references", async ({ page }) => {
+  const collected = await open(page, cachedUrl);
+  const steps = await embeddedStepResources(page);
+  expect(steps.some((s) => s.cacheResources.length > 0)).toBe(true);
+
+  for (const [i, step] of steps.entries()) {
+    await page.getByRole("tab", { name: `Step ${i + 1}: ${step.title}` }).click();
+    const header = page.getByText(/^\d+ resources$/);
+    if (step.cacheResources.length === 0) {
+      await expect(header).toHaveCount(0);
+      continue;
+    }
+    await expect(header).toHaveText(`${step.cacheResources.length} resources`);
+    for (const url of step.cacheResources) {
+      await expect(page.locator(`[title="${url}"]`).first()).toBeAttached();
+    }
+  }
+  expect(collected.errors).toEqual([]);
 });
 
 test("theme toggle flips data-theme and the body background", async ({ page }) => {
@@ -223,4 +298,35 @@ test("non-bundled report served over HTTP loads its relative assets without erro
   } finally {
     server.close();
   }
+});
+
+test("bundled report falls back to main-thread parsing when the worker chunk is missing", async ({
+  page,
+}) => {
+  const collected = await open(page, bundleUrl);
+  await page.getByRole("button", { name: "↩ Reset" }).click();
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "fixture.har", // the builder only accepts the .har extension
+      mimeType: "application/json",
+      buffer: await readFile(
+        resolve(
+          import.meta.dirname,
+          "../packages/core/tests/fixtures/webperf-snippets.har.fixture.json"
+        )
+      ),
+    });
+  const generate = page.getByRole("button", { name: /Generate diagram/ });
+  await expect(generate).toBeEnabled();
+  await generate.click();
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  // Chrome logs a failed worker script load itself ("Failed to load resource" for a
+  // file:// URL, plus the equivalent for blocked module workers). That native log is the
+  // missing chunk the fallback handles, so only those exact messages are ignored.
+  const unexpected = collected.errors.filter(
+    (e) => !/Failed to load resource|Failed to construct 'Worker'/.test(e)
+  );
+  expect(unexpected).toEqual([]);
 });

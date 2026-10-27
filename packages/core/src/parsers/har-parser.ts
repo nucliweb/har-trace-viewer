@@ -75,6 +75,70 @@ function parseTiming(raw: RawHarTiming): HarTiming {
   };
 }
 
+// Response headers that the analyzers read, or that describe how a response was
+// cached and served. Every other header is dropped while parsing: the parsed HAR is
+// embedded in each report, and most of a HAR's headers are never looked at.
+export const RESPONSE_HEADER_ALLOW_LIST: readonly string[] = [
+  // HTTP caching and content
+  "age",
+  "cache-control",
+  "content-encoding",
+  "content-length",
+  "content-type",
+  "date",
+  "etag",
+  "expires",
+  "last-modified",
+  "vary",
+  // Server, proxies and resource hints
+  "link",
+  "server",
+  "via",
+  // CDN cache status
+  "cache-status",
+  "cdn-cache",
+  "x-check-cacheable",
+  // CDN and hosting identification (provider, PoP and region detection)
+  "fly-request-id",
+  "x-amz-id-2",
+  "x-amz-request-id",
+  "x-azure-ref",
+  "x-fastly-request-id",
+  "x-iinfo",
+  "x-ms-request-id",
+  "x-msedge-ref",
+  "x-nf-request-id",
+  "x-served-by",
+];
+
+// Families of CDN headers kept whole, e.g. x-cache-hits, cf-ray, x-amz-cf-pop.
+export const RESPONSE_HEADER_ALLOW_PREFIXES: readonly string[] = [
+  "x-cache",
+  "x-akamai",
+  "cf-",
+  "x-amz-cf",
+  "x-vercel",
+];
+
+const ALLOWED_HEADERS = new Set(RESPONSE_HEADER_ALLOW_LIST);
+
+function isAllowedHeader(name: string): boolean {
+  return (
+    ALLOWED_HEADERS.has(name) ||
+    RESPONSE_HEADER_ALLOW_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
+
+/** Returns the allow-listed response headers, with lowercased names. */
+export function pickResponseHeaders(headers: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    const key = name.toLowerCase();
+    if (isAllowedHeader(key)) result[key] = value;
+  }
+  return result;
+}
+
 function headersToRecord(headers: { name: string; value: string }[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const h of headers) {
@@ -247,7 +311,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     const timing = parseTiming(rawTimings);
     const ttfb = normalizeMs(rawTimings.wait);
     const startTime = new Date(e.startedDateTime).getTime() - pageOrigin;
-    const responseHeaders = headersToRecord(e.response.headers);
+    const responseHeaders = pickResponseHeaders(headersToRecord(e.response.headers));
     const mimeType = e.response.content.mimeType ?? "";
 
     return {

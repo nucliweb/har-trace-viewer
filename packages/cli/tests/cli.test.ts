@@ -141,7 +141,8 @@ describe("end to end without --bundle (built CLI)", () => {
     expect(res.status, res.stderr).toBe(0);
 
     const assets = readdirSync(join(out, "assets"));
-    expect(assets.filter((f) => f.endsWith(".js"))).toHaveLength(1);
+    expect(assets.filter((f) => /^index-.*\.js$/.test(f))).toHaveLength(1);
+    expect(assets.filter((f) => /^parse\.worker-.*\.js$/.test(f)).length).toBeLessThanOrEqual(1);
     expect(assets.filter((f) => f.endsWith(".css"))).toHaveLength(1);
 
     const html = readFileSync(join(out, "index.html"), "utf-8");
@@ -154,6 +155,50 @@ describe("end to end without --bundle (built CLI)", () => {
     const payload = html.match(/window\.__HTV_FLOW__ = (.*?);<\/script>/s)![1];
     expect(payload.toLowerCase()).not.toContain("</script");
     expect(JSON.stringify(flow)).toContain("</script><script>alert(1)</script>");
+  });
+});
+
+describe("embedded flow size (built CLI)", () => {
+  interface EmbeddedEntry {
+    url: string;
+    responseHeaders: Record<string, string>;
+  }
+  interface EmbeddedFlow {
+    pages: { har: { entries: EmbeddedEntry[] } }[];
+    steps: Record<string, unknown>[];
+  }
+
+  function generate(): EmbeddedFlow {
+    const out = join(makeTempDir(), "report");
+    const res = runCli(["--page", "Home", "--har", HAR, "--trace", TRACE, "--output", out]);
+    expect(res.status, res.stderr).toBe(0);
+    return extractFlow(readFileSync(join(out, "index.html"), "utf-8")) as unknown as EmbeddedFlow;
+  }
+
+  it("steps reference the page entries by index instead of embedding copies", () => {
+    const flow = generate();
+    const { entries } = flow.pages[0].har;
+
+    const refs = flow.steps.flatMap((step) => [
+      ...((step.resourceRefs as number[] | undefined) ?? []),
+      ...((step.cacheResourceRefs as number[] | undefined) ?? []),
+    ]);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const ref of refs) expect(entries[ref]).toBeDefined();
+    for (const step of flow.steps) {
+      expect(step).not.toHaveProperty("resources");
+      expect(step).not.toHaveProperty("cacheResources");
+    }
+  });
+
+  it("embeds only the allow-listed response headers", () => {
+    const names = new Set(
+      generate().pages[0].har.entries.flatMap((e) => Object.keys(e.responseHeaders))
+    );
+
+    expect(names.has("cache-control")).toBe(true);
+    expect(names.has("x-matched-path")).toBe(false);
+    expect(names.has("content-disposition")).toBe(false);
   });
 });
 
@@ -187,7 +232,7 @@ describe("client region (built CLI)", () => {
     const flow = extractFlow(
       readFileSync(join(out, "index.html"), "utf-8")
     ) as unknown as EmbeddedFlow;
-    expect(flow.version).toBe(2);
+    expect(flow.version).toBe(3);
     expect(flow.clientRegion).toBe("default");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
     expect(flow.nodes.map((n) => n.id)).not.toContain("gfw");

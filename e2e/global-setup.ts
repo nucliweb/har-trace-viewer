@@ -6,26 +6,31 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = resolve(root, "packages/cli/dist/index.js");
 const fixtures = resolve(root, "packages/core/tests/fixtures");
+const recordings = resolve(root, "fixtures");
 
 export const OUTPUT = resolve(root, "e2e/.output");
 
-function generate(dir: string, extraArgs: string[]) {
-  execFileSync(
-    process.execPath,
-    [
-      cli,
-      "--page",
-      "Home",
-      "--har",
-      resolve(fixtures, "webperf-snippets.har.fixture.json"),
-      "--trace",
-      resolve(fixtures, "webperf-snippets.trace.fixture.json"),
-      "--output",
-      dir,
-      ...extraArgs,
-    ],
-    { stdio: "pipe" }
-  );
+const HOME_PAGE = [
+  "--page",
+  "Home",
+  "--har",
+  resolve(fixtures, "webperf-snippets.har.fixture.json"),
+  "--trace",
+  resolve(fixtures, "webperf-snippets.trace.fixture.json"),
+];
+
+// A repeat visit recorded with the browser cache enabled: its steps list cache hits.
+const CACHED_PAGE = [
+  "--page",
+  "Cached",
+  "--har",
+  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har"),
+];
+
+function generate(dir: string, extraArgs: string[], page = HOME_PAGE) {
+  execFileSync(process.execPath, [cli, ...page, "--output", dir, ...extraArgs], {
+    stdio: "pipe",
+  });
 }
 
 export default function globalSetup() {
@@ -36,4 +41,5 @@ export default function globalSetup() {
   mkdirSync(OUTPUT, { recursive: true });
   generate(resolve(OUTPUT, "bundle"), ["--bundle"]);
   generate(resolve(OUTPUT, "plain"), []);
+  generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
 }

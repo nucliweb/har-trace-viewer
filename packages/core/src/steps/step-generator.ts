@@ -8,6 +8,7 @@ import {
   suggestClientRegion,
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
+import { inlineResourcesToRefs } from "./step-resources.js";
 import type {
   ClientRegion,
   DiagramNode,
@@ -25,9 +26,14 @@ import type {
   PathId,
 } from "../types.js";
 
+// Readers of a flow resolve step resources through these.
+export { getStepCacheResources, getStepResources } from "./step-resources.js";
+
 // Bump when the Flow shape changes in a way readers must detect.
 // 2: per-page topology and cache report (Flow.pageAnalyses, DiagramStep.pageIndex).
-export const FLOW_VERSION = 2;
+// 3: steps reference page entries by index (DiagramStep.resourceRefs, cacheResourceRefs)
+//    instead of carrying copies (resources, cacheResources).
+export const FLOW_VERSION = 3;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 
@@ -49,6 +55,7 @@ function withDerivedPageIndex(steps: DiagramStep[]): DiagramStep[] {
 // Fills the fields that older embedded flows lack, so readers can rely on the
 // current shape. Version 0 means "pre-versioning". Version ≤ 1 flows had a
 // single topology and cache report: every page gets a copy of the top-level ones.
+// Version ≤ 2 steps carried copies of their entries: they become references.
 export function normalizeFlow(flow: Flow): Flow {
   const steps = flow.steps.every((step) => typeof step.pageIndex === "number")
     ? flow.steps
@@ -62,13 +69,16 @@ export function normalizeFlow(flow: Flow): Flow {
       cacheReport: flow.cacheReport,
     }));
 
+  const withRefs = inlineResourcesToRefs(flow.pages, steps);
+
   return {
     ...flow,
     version: flow.version ?? 0,
     clientRegion: isClientRegion(flow.clientRegion) ? flow.clientRegion : "default",
     hints: flow.hints ?? {},
     pageAnalyses,
-    steps,
+    pages: withRefs.pages,
+    steps: withRefs.steps,
   };
 }
 
@@ -250,6 +260,11 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const { cdnResult, hasCdn, documentRoot, thirdPartyEntries } = describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
 
+  const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
+  // Steps point at the page entries instead of copying them; empty lists are omitted.
+  const refs = (list: HarEntry[]): number[] | undefined =>
+    list.length > 0 ? list.map((entry) => entryIndex.get(entry)!) : undefined;
+
   const ownEntries = entries.filter((e) => !isThirdParty(e, documentRoot));
   const criticalEntries = ownEntries.filter((e) => !e.isDocument && isCriticalResource(e));
   const secondaryEntries = ownEntries.filter((e) => !e.isDocument && isSecondaryResource(e));
@@ -337,8 +352,8 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     activePaths: serverPaths(hasCdn, hasGfw),
     metrics: criticalMetrics,
     pathTimings: step4PathTimings,
-    resources: criticalNetwork.length > 0 ? criticalNetwork : undefined,
-    cacheResources: criticalCache.length > 0 ? criticalCache : undefined,
+    resourceRefs: refs(criticalNetwork),
+    cacheResourceRefs: refs(criticalCache),
   });
 
   // Steps from trace (FCP / LCP) — inserted chronologically after critical resources
@@ -375,8 +390,8 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     activePaths: serverPaths(hasCdn, hasGfw),
     metrics: secondaryMetrics,
     pathTimings: step5PathTimings,
-    resources: secondaryNetwork.length > 0 ? secondaryNetwork : undefined,
-    cacheResources: secondaryCache.length > 0 ? secondaryCache : undefined,
+    resourceRefs: refs(secondaryNetwork),
+    cacheResourceRefs: refs(secondaryCache),
   });
 
   // LCP (from trace) — inserted after secondary resources
@@ -415,8 +430,8 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
               "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(thirdPartyAvg)}`,
             }
           : {},
-      resources: thirdPartyNetwork.length > 0 ? thirdPartyNetwork : undefined,
-      cacheResources: thirdPartyCache.length > 0 ? thirdPartyCache : undefined,
+      resourceRefs: refs(thirdPartyNetwork),
+      cacheResourceRefs: refs(thirdPartyCache),
     });
   }
 

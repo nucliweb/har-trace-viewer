@@ -116,8 +116,10 @@ export interface DiagramStep {
   metrics: Metric[];
   pathTimings?: Partial<Record<PathId, string>>;
   pathDirections?: Partial<Record<PathId, "request" | "response">>;
-  resources?: HarEntry[];
-  cacheResources?: HarEntry[];
+  // Indices into pages[pageIndex].har.entries; resolve them with getStepResources
+  // and getStepCacheResources. Network requests and browser-cache hits, respectively.
+  resourceRefs?: number[];
+  cacheResourceRefs?: number[];
   badge?: {
     type: "ttfb" | "fcp" | "lcp" | "onload";
     value: string;
