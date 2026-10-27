@@ -7,7 +7,14 @@ import globals from "globals";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "packages/core/tests/fixtures/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "e2e/.output/**",
+      "playwright-report/**",
+      "test-results/**",
+      "packages/core/tests/fixtures/**",
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strict,

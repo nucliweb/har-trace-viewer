@@ -110,20 +110,10 @@ export function StepPanel({ state, onOpenResources }: Props) {
 
       {/* Controls */}
       <div className={styles.controls}>
-        <button
-          className={styles.btn}
-          onClick={prev}
-          disabled={stepIndex === 0}
-          aria-label="Previous step"
-        >
+        <button className={styles.btn} onClick={prev} disabled={stepIndex === 0}>
           ← Prev
         </button>
-        <button
-          className={styles.btn}
-          onClick={next}
-          disabled={stepIndex === total - 1}
-          aria-label="Next step"
-        >
+        <button className={styles.btn} onClick={next} disabled={stepIndex === total - 1}>
           Next →
         </button>
         <button

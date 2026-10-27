@@ -50,6 +50,8 @@ Portable single-file report:
 htv --page "Home" --har home.har --output report/ --bundle
 ```
 
+Without `--bundle`, the report loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`) or use `--bundle` for a file that opens by double-click.
+
 ## Packages
 
 | Package     | Description                                                        |

@@ -4,3 +4,6 @@ package-lock.json
 packages/core/tests/fixtures/
 fixtures/
 tasks/
+e2e/.output/
+playwright-report/
+test-results/

@@ -150,20 +150,20 @@
 }
 
 .mono {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--color-text2);
 }
 
 .pct {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--color-muted);
 }
 
 /* CDN status badge */
 .statusBadge {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.05em;
   padding: 2px 7px;

@@ -95,7 +95,9 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
         </button>
       </div>
 
-      <div className={styles.body}>
+      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className={styles.body} role="region" aria-label="Cache analysis details" tabIndex={0}>
         {/* Document */}
         <section className={styles.section}>
           <div className={styles.sectionTitle}>Document</div>
