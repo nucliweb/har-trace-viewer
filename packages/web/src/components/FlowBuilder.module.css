@@ -360,3 +360,10 @@
 .hiddenInput {
   display: none;
 }
+
+.progressText {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-cyan);
+  white-space: nowrap;
+}

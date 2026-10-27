@@ -1,7 +1,5 @@
 import { useCallback, useId, useRef, useState } from "react";
-import { parseHarPagesJson } from "@htv/core/parsers/har-parser.js";
 import { expandPageFlows } from "@htv/core";
-import { parseTraceJson } from "@htv/core/parsers/trace-parser.js";
 import { isClientRegion } from "@htv/core/steps/step-generator.js";
 import type {
   ClientRegion,
@@ -10,6 +8,8 @@ import type {
   ParsedHar,
   ParsedTrace,
 } from "@htv/core/types.js";
+import { parseInWorker } from "../lib/parse-client.js";
+import type { ParseProgress } from "../lib/parse-protocol.js";
 import styles from "./FlowBuilder.module.css";
 
 interface PageEntry {
@@ -21,6 +21,8 @@ interface PageEntry {
   traceFileName: string;
   harError: string | null;
   traceError: string | null;
+  harProgress: ParseProgress | null;
+  traceProgress: ParseProgress | null;
 }
 
 function makeEntry(name = ""): PageEntry {
@@ -33,33 +35,18 @@ function makeEntry(name = ""): PageEntry {
     traceFileName: "",
     harError: null,
     traceError: null,
+    harProgress: null,
+    traceProgress: null,
   };
 }
 
-async function readTraceFile(file: File): Promise<ParsedTrace> {
-  if (file.name.endsWith(".gz")) {
-    const buffer = await file.arrayBuffer();
-    const ds = new DecompressionStream("gzip");
-    const writer = ds.writable.getWriter();
-    const reader = ds.readable.getReader();
-    writer.write(buffer);
-    writer.close();
-    const chunks: Uint8Array[] = [];
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const merged = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return parseTraceJson(new TextDecoder().decode(merged));
-  }
-  return parseTraceJson(await file.text());
+const PHASE_LABEL = { reading: "Reading", decompressing: "Decompressing", parsing: "Parsing" };
+
+function describeProgress({ phase, loaded, total }: ParseProgress): string {
+  const label = `${PHASE_LABEL[phase]}…`;
+  return phase === "parsing" || total === 0
+    ? label
+    : `${label} ${Math.min(100, Math.round((loaded / total) * 100))} %`;
 }
 
 // ── PageRow ───────────────────────────────────────────────────────────────────
@@ -112,6 +99,7 @@ function PageRow({
       }}
       onDragLeave={onDragLeave}
       onDrop={handleHarDrop}
+      aria-busy={page.harProgress !== null || page.traceProgress !== null}
     >
       <div className={styles.rowOrder}>
         <button
@@ -160,9 +148,14 @@ function PageRow({
         <button
           className={`${styles.harBtn} ${page.har ? styles.harLoaded : ""} ${page.harError ? styles.harError : ""}`}
           onClick={() => harInputRef.current?.click()}
+          disabled={page.harProgress !== null}
           title={page.har ? page.harFileName : "Click or drop a .har file"}
         >
-          {page.har ? (
+          {page.harProgress ? (
+            <span className={styles.progressText} role="status">
+              {describeProgress(page.harProgress)}
+            </span>
+          ) : page.har ? (
             <span className={styles.harName}>
               {page.harFileName}
               {page.har.length > 1 ? ` · ${page.har.length} pages` : ""}
@@ -194,11 +187,16 @@ function PageRow({
         <button
           className={`${styles.traceBtn} ${page.trace ? styles.traceLoaded : ""}`}
           onClick={() => traceInputRef.current?.click()}
-          disabled={!page.har}
+          disabled={!page.har || page.traceProgress !== null}
           title={page.trace ? page.traceFileName : "Load a Chrome DevTools trace (optional)"}
         >
           {page.trace ? "Trace ✓" : "Trace"}
         </button>
+        {page.traceProgress && (
+          <span className={styles.progressText} role="status">
+            {describeProgress(page.traceProgress)}
+          </span>
+        )}
         {page.traceError && <span className={styles.traceErrorText}>{page.traceError}</span>}
       </div>
 
@@ -237,16 +235,15 @@ export function FlowBuilder({ onGenerate }: Props) {
         update(id, { harError: "Only .har files are supported." });
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const har = parseHarPagesJson(e.target?.result as string);
-          update(id, { har, harFileName: file.name, harError: null });
-        } catch {
-          update(id, { harError: "Could not parse HAR file." });
-        }
-      };
-      reader.readAsText(file);
+      update(id, {
+        harProgress: { phase: "reading", loaded: 0, total: file.size },
+        harError: null,
+      });
+      parseInWorker("har", file, (harProgress) => update(id, { harProgress }))
+        .then((har) =>
+          update(id, { har, harFileName: file.name, harError: null, harProgress: null })
+        )
+        .catch(() => update(id, { harError: "Could not parse HAR file.", harProgress: null }));
     },
     [update]
   );
@@ -257,11 +254,17 @@ export function FlowBuilder({ onGenerate }: Props) {
         update(id, { traceError: "Expected .json or .json.gz trace file." });
         return;
       }
+      update(id, {
+        traceProgress: { phase: "reading", loaded: 0, total: file.size },
+        traceError: null,
+      });
       try {
-        const trace = await readTraceFile(file);
-        update(id, { trace, traceFileName: file.name, traceError: null });
+        const trace = await parseInWorker("trace", file, (traceProgress) =>
+          update(id, { traceProgress })
+        );
+        update(id, { trace, traceFileName: file.name, traceError: null, traceProgress: null });
       } catch {
-        update(id, { traceError: "Could not parse trace file." });
+        update(id, { traceError: "Could not parse trace file.", traceProgress: null });
       }
     },
     [update]
@@ -291,7 +294,8 @@ export function FlowBuilder({ onGenerate }: Props) {
     setPages((prev) => [...prev, makeEntry(`Page ${prev.length + 1}`)]);
   };
 
-  const canGenerate = pages.some((p) => p.har !== null);
+  const isParsing = pages.some((p) => p.harProgress !== null || p.traceProgress !== null);
+  const canGenerate = !isParsing && pages.some((p) => p.har !== null);
 
   const handleGenerate = () => {
     const pageFlows: PageFlow[] = pages
