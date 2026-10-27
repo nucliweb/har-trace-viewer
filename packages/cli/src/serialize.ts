@@ -1,0 +1,20 @@
+const ESCAPES: Record<string, string> = {
+  "<": "\\u003c",
+  ">": "\\u003e",
+  "&": "\\u0026",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029",
+};
+
+/**
+ * Serializes a value as JSON that is safe to embed inside an inline <script>
+ * element. Every escape used is a valid JSON string escape, so JSON.parse of
+ * the output equals the input.
+ */
+export function serializeFlowForHtml(flow: unknown): string {
+  return JSON.stringify(flow).replace(/[<>&\u2028\u2029]/g, (ch) => ESCAPES[ch]);
+}
+
+export function buildFlowInjection(flow: unknown): string {
+  return `<script>window.__HTV_FLOW__ = ${serializeFlowForHtml(flow)};</script>`;
+}
