@@ -1,5 +1,5 @@
 {
-  "name": "@htv/cli",
+  "name": "har-trace-viewer",
   "version": "0.1.0",
   "description": "Generate a self-contained HTML performance report from HAR and Chrome trace files",
   "license": "MIT",
@@ -16,7 +16,10 @@
     "har",
     "trace",
     "performance",
+    "web performance",
     "webperf",
+    "cdn",
+    "diagram",
     "chrome-devtools",
     "report",
     "cli"

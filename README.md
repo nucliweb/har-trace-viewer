@@ -54,11 +54,11 @@ Without `--bundle`, the report loads its scripts as ES modules from `assets/`, w
 
 ## Packages
 
-| Package     | Description                                                        |
-| ----------- | ------------------------------------------------------------------ |
-| `@htv/core` | HAR/trace parsing, node detection, cache analysis, flow generation |
-| `@htv/cli`  | `htv` command-line tool                                            |
-| `@htv/web`  | React viewer app embedded in generated reports                     |
+| Package            | Description                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| `@htv/core`        | HAR/trace parsing, node detection, cache analysis, flow generation |
+| `har-trace-viewer` | `htv` command-line tool (`npx har-trace-viewer`)                   |
+| `@htv/web`         | React viewer app embedded in generated reports                     |
 
 ## Development
 
@@ -85,3 +85,16 @@ Build:
 ```bash
 npm run build
 ```
+
+## Releasing
+
+The CLI is published to npm as `har-trace-viewer` by `.github/workflows/release.yml` when a `v*` tag is pushed. The tag must equal `v` plus the version in `packages/cli/package.json`, otherwise the workflow fails.
+
+```bash
+npm version <patch|minor|major> -w har-trace-viewer
+git commit -am "Release v<version>"
+git tag v<version>
+git push --follow-tags
+```
+
+The workflow needs an `NPM_TOKEN` repository secret (an npm automation token), or npm trusted publishing configured for this repository.

@@ -1,10 +1,12 @@
-# htv
+# har-trace-viewer
 
 Command-line tool that turns a HAR file, and optionally a Chrome DevTools trace, into a self-contained HTML performance report.
 
 ```bash
-npx htv --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle] [--region default|cn]
+npx har-trace-viewer --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle] [--region default|cn]
 ```
+
+Install it globally with `npm i -g har-trace-viewer` to get the `htv` command (`htv --page <name> --har <file.har> --output <dir>`).
 
 Pass `--page` once per page you want in the report, each followed by its `--har` and optional `--trace`. A HAR recorded across several navigations (several entries in `log.pages`) is expanded into one flow page per navigation, named after the page titles (prefixed with the `--page` name when given), and its `--trace` is attached to the page whose document URL matches the trace. The output directory receives an `index.html` with the viewer and the analyzed data embedded. With `--bundle`, the JavaScript and CSS are inlined and Google Fonts are embedded, so the report is a single file that opens offline.
 
