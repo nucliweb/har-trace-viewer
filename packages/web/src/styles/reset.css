@@ -1,12 +1,16 @@
 /* ── Reset ──────────────────────────────────────────────────────────────────── */
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -36,7 +40,7 @@ select {
 /* Scanline overlay — dark mode only */
 :root:not([data-theme="light"]) body::after,
 [data-theme="dark"] body::after {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   background: repeating-linear-gradient(

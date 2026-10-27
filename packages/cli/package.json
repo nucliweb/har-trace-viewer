@@ -1,21 +1,47 @@
 {
   "name": "@htv/cli",
-  "version": "0.0.1",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Generate a self-contained HTML performance report from HAR and Chrome trace files",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nucliweb/har-trace-viewer.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/nucliweb/har-trace-viewer#readme",
+  "bugs": {
+    "url": "https://github.com/nucliweb/har-trace-viewer/issues"
+  },
+  "keywords": [
+    "har",
+    "trace",
+    "performance",
+    "webperf",
+    "chrome-devtools",
+    "report",
+    "cli"
+  ],
   "type": "module",
   "bin": {
     "htv": "./dist/index.js"
   },
-  "scripts": {
-    "build": "(cd ../web && npx vite build) && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js && cp -r ../web/dist dist/web",
-    "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests in cli'"
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
   },
-  "dependencies": {
-    "@htv/core": "*"
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist && npm --prefix ../web run build && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js && mkdir -p dist/web && cp -R ../web/dist/. dist/web",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "esbuild": "^0.21.5",
-    "typescript": "^5.4.5"
+    "esbuild": "^0.28.2",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.12"
   }
 }

@@ -1,22 +1,25 @@
 # har-trace-viewer
 
+[![CI](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml)
+
 Generates static HTML reports from HAR and Chrome trace files, visualizing page load steps, network requests, and performance data.
 
 ## Usage
 
 ```bash
-htv --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle]
+htv --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle] [--region default|cn]
 ```
 
 ### Options
 
-| Flag | Description |
-|------|-------------|
-| `--page <name>` | Page label (can be specified multiple times for multi-page reports) |
-| `--har <file>` | HAR file for the preceding `--page` |
-| `--trace <file>` | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page` |
-| `--output <dir>` | Directory where the report is written |
-| `--bundle` | Inline all assets (CSS, JS, fonts) into a single self-contained `index.html` |
+| Flag             | Description                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--page <name>`  | Page label (can be specified multiple times for multi-page reports)                                           |
+| `--har <file>`   | HAR file for the preceding `--page`                                                                           |
+| `--trace <file>` | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                          |
+| `--output <dir>` | Directory where the report is written                                                                         |
+| `--bundle`       | Inline all assets (CSS, JS, fonts) into a single self-contained `index.html`                                  |
+| `--region <id>`  | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server |
 
 ### Examples
 
@@ -35,6 +38,12 @@ htv \
   --output report/
 ```
 
+Client in China (adds the Great Firewall to the diagram; without the flag the CLI only prints a note when latencies suggest it):
+
+```bash
+htv --page "Home" --har home.har --output report/ --region cn
+```
+
 Portable single-file report:
 
 ```bash
@@ -43,11 +52,11 @@ htv --page "Home" --har home.har --output report/ --bundle
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
+| Package     | Description                                                        |
+| ----------- | ------------------------------------------------------------------ |
 | `@htv/core` | HAR/trace parsing, node detection, cache analysis, flow generation |
-| `@htv/cli` | `htv` command-line tool |
-| `@htv/web` | React viewer app embedded in generated reports |
+| `@htv/cli`  | `htv` command-line tool                                            |
+| `@htv/web`  | React viewer app embedded in generated reports                     |
 
 ## Development
 
