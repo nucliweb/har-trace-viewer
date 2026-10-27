@@ -1,5 +1,5 @@
 import { readFileSync, mkdirSync, cpSync, writeFileSync, rmSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
+import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import {
@@ -14,9 +14,6 @@ import type { ClientRegion, PageFlow } from "@htv/core";
 import { buildFlowInjection } from "./serialize";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const CHROME_UA =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 export interface PageArg {
   name: string;
@@ -71,32 +68,39 @@ function readContent(filePath: string): string {
   return filePath.endsWith(".gz") ? gunzipSync(raw).toString("utf-8") : raw.toString("utf-8");
 }
 
-async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { "User-Agent": CHROME_UA } });
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-  return res.text();
+const ASSET_MIME: Record<string, string> = {
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+};
+
+/** Replaces `url(...)` references to local asset files with base64 data URIs. */
+function inlineCssUrls(css: string, cssDir: string): string {
+  return css.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/g, (match, _quote, ref: string) => {
+    const mime = ASSET_MIME[extname(ref.split(/[?#]/)[0]).toLowerCase()];
+    if (!mime || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(ref)) return match;
+    const data = readFileSync(join(cssDir, ref.split(/[?#]/)[0]));
+    return `url(data:${mime};base64,${data.toString("base64")})`;
+  });
 }
 
-async function fetchBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url, { headers: { "User-Agent": CHROME_UA } });
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-export async function bundleHtml(outputDir: string): Promise<void> {
+/** Inlines the built CSS, JS and the assets they reference into index.html. Works fully offline. */
+export function bundleHtml(outputDir: string): void {
   const indexPath = join(outputDir, "index.html");
   let html = readFileSync(indexPath, "utf-8");
 
-  // Inline local CSS assets
+  // Font preloads point at files that are inlined into the CSS below
+  html = html.replace(/<link\s+rel="preload"[^>]*href="\.\/assets\/[^"]+"[^>]*>\s*/g, "");
+
   html = html.replace(
     /<link rel="stylesheet" crossorigin href="(\.\/assets\/[^"]+\.css)">/g,
     (_, href: string) => {
-      const css = readFileSync(join(outputDir, href), "utf-8");
-      return `<style>${css}</style>`;
+      const cssPath = join(outputDir, href);
+      return `<style>${inlineCssUrls(readFileSync(cssPath, "utf-8"), dirname(cssPath))}</style>`;
     }
   );
 
-  // Inline local JS assets
   html = html.replace(
     /<script type="module" crossorigin src="(\.\/assets\/[^"]+\.js)"><\/script>/g,
     (_, src: string) => {
@@ -104,27 +108,6 @@ export async function bundleHtml(outputDir: string): Promise<void> {
       return `<script type="module">${js}</script>`;
     }
   );
-
-  // Embed Google Fonts
-  const fontLinkMatch = html.match(/<link href="(https:\/\/fonts\.googleapis\.com\/[^"]+)"/);
-  if (fontLinkMatch) {
-    process.stdout.write("Embedding fonts...");
-    let fontCss = await fetchText(fontLinkMatch[1]);
-
-    const fontUrls = [...fontCss.matchAll(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/g)].map(
-      (m) => m[1]
-    );
-    for (const url of [...new Set(fontUrls)]) {
-      const data = await fetchBuffer(url);
-      const mime = url.endsWith(".woff2") ? "font/woff2" : "font/woff";
-      fontCss = fontCss.replaceAll(url, `data:${mime};base64,${data.toString("base64")}`);
-    }
-    process.stdout.write(" done\n");
-
-    html = html.replace(/<link rel="preconnect"[^>]+>\s*/g, "");
-    html = html.replace(/<link href="https:\/\/fonts\.googleapis\.com\/[^"]*"[^>]*>/g, "");
-    html = html.replace("</head>", () => `<style>${fontCss}</style>\n</head>`);
-  }
 
   writeFileSync(indexPath, html);
   rmSync(join(outputDir, "assets"), { recursive: true, force: true });
@@ -182,7 +165,7 @@ export async function generateReport(args: Args): Promise<string> {
   writeFileSync(indexPath, html);
 
   if (args.bundle) {
-    await bundleHtml(outputDir);
+    bundleHtml(outputDir);
   }
 
   return indexPath;

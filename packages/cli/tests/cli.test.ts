@@ -224,31 +224,78 @@ describe("client region (built CLI)", () => {
 });
 
 describe("bundleHtml local inlining", () => {
-  it("inlines CSS and JS and removes the assets directory", async () => {
+  it("inlines CSS, JS and CSS font assets and removes the assets directory", () => {
     const dir = makeTempDir();
     mkdirSync(join(dir, "assets"));
-    writeFileSync(join(dir, "assets", "x.css"), "body{color:red}");
+    const font = Buffer.from([0x77, 0x4f, 0x46, 0x32, 1, 2, 3]);
+    writeFileSync(join(dir, "assets", "f-abc.woff2"), font);
+    writeFileSync(
+      join(dir, "assets", "x.css"),
+      '@font-face{font-family:F;src:url(./f-abc.woff2) format("woff2")}body{color:red}'
+    );
     writeFileSync(join(dir, "assets", "x.js"), "console.log('inlined')");
     writeFileSync(
       join(dir, "index.html"),
       `<!doctype html><html><head>
+<link
+  rel="preload"
+  as="font"
+  href="./assets/f-abc.woff2"
+/>
 <script type="module" crossorigin src="./assets/x.js"></script>
 <link rel="stylesheet" crossorigin href="./assets/x.css">
 </head><body></body></html>`
     );
 
-    await bundleHtml(dir);
+    bundleHtml(dir);
 
     const html = readFileSync(join(dir, "index.html"), "utf-8");
     expect(existsSync(join(dir, "assets"))).toBe(false);
-    expect(html).toContain("<style>body{color:red}</style>");
+    expect(html).toContain(`url(data:font/woff2;base64,${font.toString("base64")})`);
+    expect(html).toContain("body{color:red}");
     expect(html).toContain("console.log('inlined')");
     expect(html).not.toContain('<link rel="stylesheet"');
+    expect(html).not.toContain("./assets/");
     expect(html).not.toContain("src=");
   });
 
-  // Needs network until Google Fonts are replaced by self-hosted fonts.
-  it.todo("produces an index.html with no external URLs once fonts are self-hosted");
+  it("leaves no network call in the CLI sources", () => {
+    const srcDir = join(CLI_ROOT, "src");
+    for (const file of readdirSync(srcDir)) {
+      expect(readFileSync(join(srcDir, file), "utf-8"), file).not.toMatch(/\bfetch\(/);
+    }
+  });
+});
+
+describe("--bundle end to end (built CLI)", () => {
+  it("produces a self-contained index.html with embedded fonts and no external URLs", () => {
+    const out = join(makeTempDir(), "report");
+    const res = runCli([
+      "--page",
+      "P",
+      "--har",
+      HAR,
+      "--trace",
+      TRACE,
+      "--output",
+      out,
+      "--bundle",
+    ]);
+    expect(res.status, res.stderr).toBe(0);
+
+    const html = readFileSync(join(out, "index.html"), "utf-8");
+    // The HAR payload and React's error-decoder string legitimately contain "https://", so check loads, not text.
+    const styles = [...html.matchAll(/<style>(.*?)<\/style>/gs)].map((m) => m[1]).join("");
+    expect(styles).not.toMatch(/https?:|@import/);
+    expect(html).not.toMatch(/(?:src|href)="(?:https?:)?\/\//);
+    expect(html).not.toContain('<link rel="stylesheet"');
+    expect(html).not.toContain("fonts.googleapis");
+    expect(html).not.toContain("./assets/");
+    expect(html).not.toContain('rel="preload"');
+    expect(html).toContain("@font-face");
+    expect(html).toContain("data:font/woff2;base64");
+    expect(existsSync(join(out, "assets"))).toBe(false);
+  });
 });
 
 describe("multi-page HAR (built CLI)", () => {
