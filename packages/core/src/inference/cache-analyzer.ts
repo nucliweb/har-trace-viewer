@@ -1,3 +1,4 @@
+import { getRootDomain } from "../utils/domain.js";
 import type {
   CacheReport,
   CacheRecommendation,
@@ -5,15 +6,6 @@ import type {
   ParsedHar,
   ResourceCacheProfile,
 } from "../types.js";
-
-function getRootDomain(url: string): string {
-  try {
-    const parts = new URL(url).hostname.split(".");
-    return parts.slice(-2).join(".");
-  } catch {
-    return url;
-  }
-}
 
 function parseMaxAge(cacheControl: string): number | null {
   const match = cacheControl.match(/\bmax-age=(\d+)/);
@@ -63,7 +55,7 @@ export function profileResourceCache(headers: Record<string, string>): ResourceC
 function buildRecommendations(
   doc: ResourceCacheProfile,
   own: CacheReport["ownResources"],
-  browser: CacheReport["browser"],
+  browser: CacheReport["browser"]
 ): CacheRecommendation[] {
   const recs: CacheRecommendation[] = [];
 
@@ -71,31 +63,36 @@ function buildRecommendations(
   if (doc.noStore) {
     recs.push({
       label: "Document not cached",
-      description: "The document uses no-store, preventing any caching. Consider public, max-age=0, must-revalidate so CDNs can serve it.",
+      description:
+        "The document uses no-store, preventing any caching. Consider public, max-age=0, must-revalidate so CDNs can serve it.",
       severity: "critical",
     });
   } else if (doc.cdnStatus === "miss") {
     recs.push({
       label: "CDN miss on document",
-      description: "The HTML document was not served from CDN cache. Ensure the CDN is configured to cache HTML responses.",
+      description:
+        "The HTML document was not served from CDN cache. Ensure the CDN is configured to cache HTML responses.",
       severity: "warning",
     });
   } else if (doc.cdnStatus === "bypass") {
     recs.push({
       label: "CDN bypassed for document",
-      description: "The CDN is bypassing the cache for the HTML document. Review Vary headers and CDN cache rules.",
+      description:
+        "The CDN is bypassing the cache for the HTML document. Review Vary headers and CDN cache rules.",
       severity: "warning",
     });
   } else if (doc.cdnStatus === "hit" && doc.maxAge === 0 && doc.mustRevalidate) {
     recs.push({
       label: "Document revalidates on every request",
-      description: "The document uses max-age=0, must-revalidate — the browser cannot cache it between navigations. Consider adding stale-while-revalidate for faster perceived navigation.",
+      description:
+        "The document uses max-age=0, must-revalidate — the browser cannot cache it between navigations. Consider adding stale-while-revalidate for faster perceived navigation.",
       severity: "info",
     });
   } else if (doc.cdnStatus === "hit") {
     recs.push({
       label: "Document served from CDN",
-      description: "The HTML document is cached at the CDN edge, reducing origin load and improving latency.",
+      description:
+        "The HTML document is cached at the CDN edge, reducing origin load and improving latency.",
       severity: "good",
     });
   }
@@ -111,7 +108,8 @@ function buildRecommendations(
     } else if (own.immutableRatio < 0.5) {
       recs.push({
         label: "Static assets could use longer TTLs",
-        description: "Less than half of own resources use immutable long-term caching. Consider max-age=31536000, immutable for versioned assets.",
+        description:
+          "Less than half of own resources use immutable long-term caching. Consider max-age=31536000, immutable for versioned assets.",
         severity: "warning",
       });
     }
@@ -142,7 +140,8 @@ function buildRecommendations(
     } else if (browser.hitRatio === 0) {
       recs.push({
         label: "No browser cache hits",
-        description: "No resources were served from the browser cache. This may be a first visit or cache was disabled during recording.",
+        description:
+          "No resources were served from the browser cache. This may be a first visit or cache was disabled during recording.",
         severity: "info",
       });
     } else if (browser.hitRatio < 0.4) {
@@ -163,15 +162,13 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
   const documentRoot = getRootDomain(doc.url);
 
   const ownNonDoc = har.entries.filter(
-    (e) => !e.isDocument && getRootDomain(e.url) === documentRoot,
+    (e) => !e.isDocument && getRootDomain(e.url) === documentRoot
   );
 
-  const cdnHits = ownNonDoc.filter(
-    (e) => detectCdnCacheStatus(e.responseHeaders) === "hit",
-  ).length;
+  const cdnHits = ownNonDoc.filter((e) => detectCdnCacheStatus(e.responseHeaders) === "hit").length;
 
   const immutableCount = ownNonDoc.filter((e) =>
-    (e.responseHeaders["cache-control"] ?? "").includes("immutable"),
+    (e.responseHeaders["cache-control"] ?? "").includes("immutable")
   ).length;
 
   const ownTotal = ownNonDoc.length;

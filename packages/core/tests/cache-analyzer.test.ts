@@ -62,7 +62,7 @@ describe("detectCdnCacheStatus", () => {
   });
 
   it("returns unknown when no recognisable CDN header is present", () => {
-    expect(detectCdnCacheStatus({ "server": "nginx" })).toBe("unknown");
+    expect(detectCdnCacheStatus({ server: "nginx" })).toBe("unknown");
   });
 
   it("returns unknown for empty headers", () => {
@@ -102,7 +102,7 @@ describe("profileResourceCache", () => {
   });
 
   it("parses Age header", () => {
-    const p = profileResourceCache({ "cache-control": "public, max-age=0", "age": "468968" });
+    const p = profileResourceCache({ "cache-control": "public, max-age=0", age: "468968" });
     expect(p.age).toBe(468968);
   });
 
@@ -112,7 +112,10 @@ describe("profileResourceCache", () => {
   });
 
   it("sets cdnStatus from x-vercel-cache", () => {
-    const p = profileResourceCache({ "x-vercel-cache": "HIT", "cache-control": "public, max-age=0" });
+    const p = profileResourceCache({
+      "x-vercel-cache": "HIT",
+      "cache-control": "public, max-age=0",
+    });
     expect(p.cdnStatus).toBe("hit");
   });
 });
@@ -164,7 +167,7 @@ describe("analyzeCacheForHar — fixture", () => {
   it("includes revalidation info recommendation for max-age=0 + CDN HIT", () => {
     const report = analyzeCacheForHar(loadHar());
     const rec = report.recommendations.find(
-      (r) => r.severity === "info" && r.label.toLowerCase().includes("revalidat"),
+      (r) => r.severity === "info" && r.label.toLowerCase().includes("revalidat")
     );
     expect(rec).toBeDefined();
   });
@@ -172,7 +175,7 @@ describe("analyzeCacheForHar — fixture", () => {
   it("includes good recommendation for long-term immutable static assets", () => {
     const report = analyzeCacheForHar(loadHar());
     const rec = report.recommendations.find(
-      (r) => r.severity === "good" && r.label.toLowerCase().includes("long-term"),
+      (r) => r.severity === "good" && r.label.toLowerCase().includes("long-term")
     );
     expect(rec).toBeDefined();
   });
@@ -180,7 +183,7 @@ describe("analyzeCacheForHar — fixture", () => {
   it("includes no-browser-cache info recommendation", () => {
     const report = analyzeCacheForHar(loadHar());
     const rec = report.recommendations.find(
-      (r) => r.severity === "info" && r.label.toLowerCase().includes("browser"),
+      (r) => r.severity === "info" && r.label.toLowerCase().includes("browser")
     );
     expect(rec).toBeDefined();
   });
@@ -190,7 +193,7 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
   function makeEntry(
     url: string,
     headers: Record<string, string>,
-    fromCache: "disk" | "memory" | false = false,
+    fromCache: "disk" | "memory" | false = false
   ) {
     return {
       url,
@@ -204,15 +207,13 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
       priority: "High" as const,
       responseHeaders: headers,
       transferSize: 1024,
+      bodySize: 1024,
       isDocument: false,
       fromCache,
     };
   }
 
-  function makeHar(
-    docHeaders: Record<string, string>,
-    ownEntries: ReturnType<typeof makeEntry>[],
-  ) {
+  function makeHar(docHeaders: Record<string, string>, ownEntries: ReturnType<typeof makeEntry>[]) {
     const doc = {
       ...makeEntry("https://example.com/", docHeaders, false),
       mimeType: "text/html",
@@ -230,14 +231,18 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
   it("CDN miss on document generates warning recommendation", () => {
     const har = makeHar({ "x-vercel-cache": "MISS", "cache-control": "public, max-age=0" }, []);
     const report = analyzeCacheForHar(har);
-    const rec = report.recommendations.find((r) => r.severity === "warning" && r.label.includes("CDN miss"));
+    const rec = report.recommendations.find(
+      (r) => r.severity === "warning" && r.label.includes("CDN miss")
+    );
     expect(rec).toBeDefined();
   });
 
   it("CDN bypass on document generates warning recommendation", () => {
     const har = makeHar({ "x-vercel-cache": "BYPASS", "cache-control": "public, max-age=0" }, []);
     const report = analyzeCacheForHar(har);
-    const rec = report.recommendations.find((r) => r.severity === "warning" && r.label.includes("bypassed"));
+    const rec = report.recommendations.find(
+      (r) => r.severity === "warning" && r.label.includes("bypassed")
+    );
     expect(rec).toBeDefined();
   });
 
@@ -259,7 +264,7 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
     const report = analyzeCacheForHar(har);
     expect(report.browser.hitRatio).toBeCloseTo(0.75, 2);
     const rec = report.recommendations.find(
-      (r) => r.severity === "good" && r.label.toLowerCase().includes("browser"),
+      (r) => r.severity === "good" && r.label.toLowerCase().includes("browser")
     );
     expect(rec).toBeDefined();
   });
@@ -273,7 +278,7 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
     const har = makeHar({ "cache-control": "public, max-age=0" }, entries);
     const report = analyzeCacheForHar(har);
     const rec = report.recommendations.find(
-      (r) => r.severity === "warning" && r.label.toLowerCase().includes("longer ttl"),
+      (r) => r.severity === "warning" && r.label.toLowerCase().includes("longer ttl")
     );
     expect(rec).toBeDefined();
   });

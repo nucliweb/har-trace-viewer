@@ -9,19 +9,43 @@ interface Props {
 
 const SPEEDS: { label: string; value: Speed }[] = [
   { label: "0.5×", value: 2000 },
-  { label: "1×",   value: 1400 },
-  { label: "2×",   value: 800 },
-  { label: "4×",   value: 400 },
+  { label: "1×", value: 1400 },
+  { label: "2×", value: 800 },
+  { label: "4×", value: 400 },
 ];
 
 // Inline SVG icon: a stacked list to suggest "view resource list"
 function ResourceListIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.2"/>
-      <line x1="3" y1="4" x2="9" y2="4" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-      <line x1="3" y1="6" x2="9" y2="6" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-      <line x1="3" y1="8" x2="7" y2="8" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+      <rect x="0.5" y="0.5" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.2" />
+      <line
+        x1="3"
+        y1="4"
+        x2="9"
+        y2="4"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <line
+        x1="3"
+        y1="6"
+        x2="9"
+        y2="6"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+      <line
+        x1="3"
+        y1="8"
+        x2="7"
+        y2="8"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

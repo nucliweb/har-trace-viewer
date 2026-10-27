@@ -13,8 +13,14 @@
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .header {
@@ -26,13 +32,29 @@
   flex-shrink: 0;
 }
 
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
 .headerTitle {
   font-size: var(--fs-meta);
   font-weight: 700;
   color: var(--color-cyan);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  flex: 1;
+}
+
+.pageLabel {
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .closeBtn {
@@ -47,7 +69,9 @@
   color: var(--color-muted);
   font-size: 12px;
   cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -148,11 +172,26 @@
   border: 1px solid currentColor;
 }
 
-.status_hit     { color: var(--color-green);  background: color-mix(in srgb, var(--color-green)  10%, transparent); }
-.status_miss    { color: var(--color-red);    background: color-mix(in srgb, var(--color-red)    10%, transparent); }
-.status_stale   { color: var(--color-orange); background: color-mix(in srgb, var(--color-orange) 10%, transparent); }
-.status_bypass  { color: var(--color-yellow); background: color-mix(in srgb, var(--color-yellow) 10%, transparent); }
-.status_unknown { color: var(--color-muted);  background: color-mix(in srgb, var(--color-muted)  10%, transparent); }
+.status_hit {
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 10%, transparent);
+}
+.status_miss {
+  color: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 10%, transparent);
+}
+.status_stale {
+  color: var(--color-orange);
+  background: color-mix(in srgb, var(--color-orange) 10%, transparent);
+}
+.status_bypass {
+  color: var(--color-yellow);
+  background: color-mix(in srgb, var(--color-yellow) 10%, transparent);
+}
+.status_unknown {
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-muted) 10%, transparent);
+}
 
 /* Recommendations */
 .recs {
@@ -170,10 +209,22 @@
   border: 1px solid transparent;
 }
 
-.rec_good     { border-color: color-mix(in srgb, var(--color-green)  25%, transparent); background: color-mix(in srgb, var(--color-green)   6%, transparent); }
-.rec_info     { border-color: color-mix(in srgb, var(--color-cyan)   25%, transparent); background: color-mix(in srgb, var(--color-cyan)    6%, transparent); }
-.rec_warning  { border-color: color-mix(in srgb, var(--color-orange) 25%, transparent); background: color-mix(in srgb, var(--color-orange)  6%, transparent); }
-.rec_critical { border-color: color-mix(in srgb, var(--color-red)    25%, transparent); background: color-mix(in srgb, var(--color-red)     6%, transparent); }
+.rec_good {
+  border-color: color-mix(in srgb, var(--color-green) 25%, transparent);
+  background: color-mix(in srgb, var(--color-green) 6%, transparent);
+}
+.rec_info {
+  border-color: color-mix(in srgb, var(--color-cyan) 25%, transparent);
+  background: color-mix(in srgb, var(--color-cyan) 6%, transparent);
+}
+.rec_warning {
+  border-color: color-mix(in srgb, var(--color-orange) 25%, transparent);
+  background: color-mix(in srgb, var(--color-orange) 6%, transparent);
+}
+.rec_critical {
+  border-color: color-mix(in srgb, var(--color-red) 25%, transparent);
+  background: color-mix(in srgb, var(--color-red) 6%, transparent);
+}
 
 .sevIcon {
   font-size: 12px;
@@ -188,10 +239,18 @@
   margin-top: 1px;
 }
 
-.sevGood { color: var(--color-green); }
-.sevInfo { color: var(--color-cyan); }
-.sevWarn { color: var(--color-orange); }
-.sevCrit { color: var(--color-red); }
+.sevGood {
+  color: var(--color-green);
+}
+.sevInfo {
+  color: var(--color-cyan);
+}
+.sevWarn {
+  color: var(--color-orange);
+}
+.sevCrit {
+  color: var(--color-red);
+}
 
 .recContent {
   flex: 1;

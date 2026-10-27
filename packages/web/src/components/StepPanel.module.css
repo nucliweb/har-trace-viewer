@@ -27,7 +27,10 @@
   border: 1.5px solid var(--color-border2);
   color: var(--color-muted);
   background: transparent;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,7 +126,9 @@
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
   flex-shrink: 0;
   margin-left: calc(-1 * var(--space-sm));
 }
@@ -149,7 +154,9 @@
   font-family: var(--font-mono);
   background: transparent;
   letter-spacing: 0.05em;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .btn:hover:not(:disabled) {

@@ -40,7 +40,9 @@
   background: var(--color-panel);
   border: 1px solid var(--color-border2);
   border-radius: 8px;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .rowDragging {
@@ -69,7 +71,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .orderBtn:not(:disabled):hover {
@@ -129,7 +133,10 @@
   gap: var(--space-xs);
   padding: 0 var(--space-sm);
   cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
   overflow: hidden;
 }
 
@@ -194,7 +201,9 @@
   padding: 0 var(--space-sm);
   height: 34px;
   white-space: nowrap;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .traceBtn:not(:disabled):hover {
@@ -242,7 +251,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .removeBtn:not(:disabled):hover {
@@ -263,6 +274,46 @@
   justify-content: space-between;
 }
 
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.regionField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.regionLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.regionSelect {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  transition: border-color var(--transition-fast);
+}
+
+.regionSelect:hover,
+.regionSelect:focus-visible {
+  border-color: var(--color-cyan);
+}
+
+.regionSelect:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
 .addBtn {
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
@@ -272,7 +323,9 @@
   border-radius: 4px;
   padding: 0 var(--space-md);
   height: 34px;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .addBtn:hover {

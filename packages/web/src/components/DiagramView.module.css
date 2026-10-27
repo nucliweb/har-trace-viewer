@@ -52,14 +52,32 @@
   opacity: 0.45;
 }
 
-.badge_ttfb  { color: var(--color-yellow); background: color-mix(in srgb, var(--color-yellow) 12%, transparent); }
-.badge_fcp   { color: var(--color-green);  background: color-mix(in srgb, var(--color-green)  12%, transparent); }
-.badge_lcp   { color: var(--color-orange); background: color-mix(in srgb, var(--color-orange) 12%, transparent); }
-.badge_onload { color: var(--color-text);  background: color-mix(in srgb, var(--color-text)   8%, transparent); }
+.badge_ttfb {
+  color: var(--color-yellow);
+  background: color-mix(in srgb, var(--color-yellow) 12%, transparent);
+}
+.badge_fcp {
+  color: var(--color-green);
+  background: color-mix(in srgb, var(--color-green) 12%, transparent);
+}
+.badge_lcp {
+  color: var(--color-orange);
+  background: color-mix(in srgb, var(--color-orange) 12%, transparent);
+}
+.badge_onload {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
 
 @keyframes badgePop {
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Cache analysis toggle button */
@@ -76,7 +94,10 @@
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
   z-index: 5;
 }
 

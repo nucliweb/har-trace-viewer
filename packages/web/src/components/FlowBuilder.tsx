@@ -1,13 +1,21 @@
-import { useCallback, useRef, useState } from "react";
-import { parseHarJson } from "@htv/core/parsers/har-parser.js";
+import { useCallback, useId, useRef, useState } from "react";
+import { parseHarPagesJson } from "@htv/core/parsers/har-parser.js";
+import { expandPageFlows } from "@htv/core";
 import { parseTraceJson } from "@htv/core/parsers/trace-parser.js";
-import type { PageFlow, ParsedHar, ParsedTrace } from "@htv/core/types.js";
+import { isClientRegion } from "@htv/core/steps/step-generator.js";
+import type {
+  ClientRegion,
+  FlowOptions,
+  PageFlow,
+  ParsedHar,
+  ParsedTrace,
+} from "@htv/core/types.js";
 import styles from "./FlowBuilder.module.css";
 
 interface PageEntry {
   id: string;
   name: string;
-  har: ParsedHar | null;
+  har: ParsedHar[] | null;
   harFileName: string;
   trace: ParsedTrace | null;
   traceFileName: string;
@@ -45,7 +53,10 @@ async function readTraceFile(file: File): Promise<ParsedTrace> {
     const total = chunks.reduce((n, c) => n + c.length, 0);
     const merged = new Uint8Array(total);
     let offset = 0;
-    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length; }
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
     return parseTraceJson(new TextDecoder().decode(merged));
   }
   return parseTraceJson(await file.text());
@@ -69,10 +80,18 @@ interface PageRowProps {
 }
 
 function PageRow({
-  page, idx, total, isDraggingOver,
-  onNameChange, onHarFile, onTraceFile,
-  onMoveUp, onMoveDown, onRemove,
-  onDragOver, onDragLeave,
+  page,
+  idx,
+  total,
+  isDraggingOver,
+  onNameChange,
+  onHarFile,
+  onTraceFile,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+  onDragOver,
+  onDragLeave,
 }: PageRowProps) {
   const harInputRef = useRef<HTMLInputElement>(null);
   const traceInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +106,10 @@ function PageRow({
   return (
     <div
       className={`${styles.row} ${isDraggingOver ? styles.rowDragging : ""}`}
-      onDragOver={(e) => { e.preventDefault(); onDragOver(); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver();
+      }}
       onDragLeave={onDragLeave}
       onDrop={handleHarDrop}
     >
@@ -140,12 +162,18 @@ function PageRow({
           onClick={() => harInputRef.current?.click()}
           title={page.har ? page.harFileName : "Click or drop a .har file"}
         >
-          {page.har
-            ? <span className={styles.harName}>{page.harFileName}</span>
-            : page.harError
-            ? <span className={styles.errorText}>{page.harError}</span>
-            : <><span className={styles.harIcon}>⬇</span> Drop .har</>
-          }
+          {page.har ? (
+            <span className={styles.harName}>
+              {page.harFileName}
+              {page.har.length > 1 ? ` · ${page.har.length} pages` : ""}
+            </span>
+          ) : page.harError ? (
+            <span className={styles.errorText}>{page.harError}</span>
+          ) : (
+            <>
+              <span className={styles.harIcon}>⬇</span> Drop .har
+            </>
+          )}
         </button>
       </div>
 
@@ -171,9 +199,7 @@ function PageRow({
         >
           {page.trace ? "Trace ✓" : "Trace"}
         </button>
-        {page.traceError && (
-          <span className={styles.traceErrorText}>{page.traceError}</span>
-        )}
+        {page.traceError && <span className={styles.traceErrorText}>{page.traceError}</span>}
       </div>
 
       <button
@@ -192,46 +218,54 @@ function PageRow({
 // ── FlowBuilder ───────────────────────────────────────────────────────────────
 
 interface Props {
-  onGenerate: (pages: PageFlow[]) => void;
+  onGenerate: (pages: PageFlow[], options: FlowOptions) => void;
 }
 
 export function FlowBuilder({ onGenerate }: Props) {
   const [pages, setPages] = useState<PageEntry[]>([makeEntry("Page 1")]);
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
+  const [clientRegion, setClientRegion] = useState<ClientRegion>("default");
+  const regionSelectId = useId();
 
   const update = useCallback((id: string, patch: Partial<PageEntry>) => {
     setPages((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
-  const handleHarFile = useCallback((id: string, file: File) => {
-    if (!file.name.endsWith(".har")) {
-      update(id, { harError: "Only .har files are supported." });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const har = parseHarJson(e.target?.result as string);
-        update(id, { har, harFileName: file.name, harError: null });
-      } catch {
-        update(id, { harError: "Could not parse HAR file." });
+  const handleHarFile = useCallback(
+    (id: string, file: File) => {
+      if (!file.name.endsWith(".har")) {
+        update(id, { harError: "Only .har files are supported." });
+        return;
       }
-    };
-    reader.readAsText(file);
-  }, [update]);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const har = parseHarPagesJson(e.target?.result as string);
+          update(id, { har, harFileName: file.name, harError: null });
+        } catch {
+          update(id, { harError: "Could not parse HAR file." });
+        }
+      };
+      reader.readAsText(file);
+    },
+    [update]
+  );
 
-  const handleTraceFile = useCallback(async (id: string, file: File) => {
-    if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
-      update(id, { traceError: "Expected .json or .json.gz trace file." });
-      return;
-    }
-    try {
-      const trace = await readTraceFile(file);
-      update(id, { trace, traceFileName: file.name, traceError: null });
-    } catch {
-      update(id, { traceError: "Could not parse trace file." });
-    }
-  }, [update]);
+  const handleTraceFile = useCallback(
+    async (id: string, file: File) => {
+      if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
+        update(id, { traceError: "Expected .json or .json.gz trace file." });
+        return;
+      }
+      try {
+        const trace = await readTraceFile(file);
+        update(id, { trace, traceFileName: file.name, traceError: null });
+      } catch {
+        update(id, { traceError: "Could not parse trace file." });
+      }
+    },
+    [update]
+  );
 
   const moveUp = useCallback((idx: number) => {
     setPages((prev) => {
@@ -262,12 +296,14 @@ export function FlowBuilder({ onGenerate }: Props) {
   const handleGenerate = () => {
     const pageFlows: PageFlow[] = pages
       .filter((p) => p.har !== null)
-      .map((p) => ({
-        name: p.name.trim() || "Page",
-        har: p.har!,
-        ...(p.trace ? { trace: p.trace } : {}),
-      }));
-    onGenerate(pageFlows);
+      .flatMap((p) =>
+        expandPageFlows({
+          name: p.name.trim() || "Page",
+          har: p.har!,
+          ...(p.trace ? { trace: p.trace } : {}),
+        })
+      );
+    onGenerate(pageFlows, { clientRegion });
   };
 
   return (
@@ -301,13 +337,27 @@ export function FlowBuilder({ onGenerate }: Props) {
         <button className={styles.addBtn} onClick={addPage}>
           + Add page
         </button>
-        <button
-          className={styles.generateBtn}
-          onClick={handleGenerate}
-          disabled={!canGenerate}
-        >
-          Generate diagram →
-        </button>
+        <div className={styles.footerActions}>
+          <div className={styles.regionField}>
+            <label className={styles.regionLabel} htmlFor={regionSelectId}>
+              Client region
+            </label>
+            <select
+              id={regionSelectId}
+              className={styles.regionSelect}
+              value={clientRegion}
+              onChange={(e) => {
+                if (isClientRegion(e.target.value)) setClientRegion(e.target.value);
+              }}
+            >
+              <option value="default">Default</option>
+              <option value="cn">China (behind the Great Firewall)</option>
+            </select>
+          </div>
+          <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate}>
+            Generate diagram →
+          </button>
+        </div>
       </div>
     </div>
   );

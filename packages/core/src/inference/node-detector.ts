@@ -1,4 +1,11 @@
-import type { CdnProvider, NetworkRegion, NodeDetectionResult } from "../types.js";
+import { getRootDomain } from "../utils/domain.js";
+import type {
+  CdnProvider,
+  ClientRegionSuggestion,
+  NetworkRegion,
+  NodeDetectionResult,
+  ParsedHar,
+} from "../types.js";
 
 export function detectNode(responseHeaders: Record<string, string>): NodeDetectionResult {
   const cdnProvider = detectCdnProvider(responseHeaders);
@@ -27,7 +34,7 @@ export function detectNode(responseHeaders: Record<string, string>): NodeDetecti
 // to the provided `fallback` region (caller supplies context-derived default).
 export function detectCdnRegion(
   responseHeaders: Record<string, string>,
-  fallback: NetworkRegion = "edge",
+  fallback: NetworkRegion = "edge"
 ): NetworkRegion {
   const cfRay = responseHeaders["cf-ray"];
   if (cfRay) {
@@ -45,12 +52,12 @@ export function detectCdnRegion(
 }
 
 // Returns a human-readable PoP city for the CDN edge node, if detectable.
-// For Akamai serving China traffic (hasGfw=true), falls back to "Hong Kong"
+// For Akamai serving a client behind the Great Firewall, falls back to "Hong Kong"
 // since HK is the canonical APAC PoP for China-routed requests.
 export function detectCdnPopCity(
   responseHeaders: Record<string, string>,
   cdnProvider: CdnProvider,
-  hasGfw: boolean,
+  behindGfw: boolean
 ): string | null {
   const cfRay = responseHeaders["cf-ray"];
   if (cfRay) {
@@ -64,16 +71,33 @@ export function detectCdnPopCity(
     return POP_CITIES[pop] ?? null;
   }
 
-  if (cdnProvider === "akamai" && hasGfw) return "Hong Kong";
+  if (cdnProvider === "akamai" && behindGfw) return "Hong Kong";
 
   return null;
 }
 
-// Detects China / GFW-mediated routing from two signals:
+const GFW_DNS_THRESHOLD_MS = 80;
+const GFW_CONNECT_THRESHOLD_MS = 300;
+
+// Suggests the "cn" client region when the latencies are compatible with
+// China / GFW-mediated routing:
 // 1. High DNS on the document (not cached): > 80ms
 // 2. High TCP connect on any entry: > 300ms (cross-continental from China)
-export function detectGfw(documentDnsMs: number, maxConnectMs: number): boolean {
-  return documentDnsMs > 80 || maxConnectMs > 300;
+// Slow or mobile networks produce the same signals, so the result is only a
+// hint for the user; it never switches the topology on its own.
+export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | null {
+  const documentDnsMs = har.documentEntry.timing.dns;
+  const maxConnectMs = Math.max(0, ...har.entries.map((e) => e.timing.connect));
+
+  const signals: string[] = [];
+  if (documentDnsMs > GFW_DNS_THRESHOLD_MS) {
+    signals.push(`document DNS ${Math.round(documentDnsMs)}ms > ${GFW_DNS_THRESHOLD_MS}ms`);
+  }
+  if (maxConnectMs > GFW_CONNECT_THRESHOLD_MS) {
+    signals.push(`max TCP connect ${Math.round(maxConnectMs)}ms > ${GFW_CONNECT_THRESHOLD_MS}ms`);
+  }
+
+  return signals.length > 0 ? { region: "cn", reason: signals.join(", ") } : null;
 }
 
 // Infers origin server region from response headers.
@@ -102,7 +126,7 @@ export function detectOriginRegion(headers: Record<string, string>): NetworkRegi
 // Detects the dominant geographic region of a set of third-party entries.
 // Priority: azure-cloud > europe > united-states > asia-pacific > origin.
 export function detectThirdPartyRegion(
-  entries: Array<{ url: string; responseHeaders: Record<string, string> }>,
+  entries: { url: string; responseHeaders: Record<string, string> }[]
 ): NetworkRegion {
   if (entries.some((e) => isAzureEntry(e.url, e.responseHeaders))) return "azure-cloud";
 
@@ -110,10 +134,14 @@ export function detectThirdPartyRegion(
     try {
       const hostname = new URL(e.url).hostname;
       if (EU_TLD_RE.test(hostname)) return "europe";
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
-  const regions = entries.map((e) => detectCdnRegion(e.responseHeaders)).filter((r) => r !== "edge");
+  const regions = entries
+    .map((e) => detectCdnRegion(e.responseHeaders))
+    .filter((r) => r !== "edge");
   if (regions.includes("europe")) return "europe";
   if (regions.includes("united-states")) return "united-states";
   if (regions.includes("asia-pacific")) return "asia-pacific";
@@ -129,10 +157,7 @@ function detectCdnProvider(headers: Record<string, string>): CdnProvider {
 
   const server = headers["server"] ?? "";
   const via = headers["via"] ?? "";
-  if (
-    server.toLowerCase().includes("google frontend") ||
-    via.toLowerCase().includes("google")
-  ) {
+  if (server.toLowerCase().includes("google frontend") || via.toLowerCase().includes("google")) {
     return "gfe";
   }
 
@@ -148,24 +173,77 @@ function isAzureEntry(url: string, headers: Record<string, string>): boolean {
       hostname.endsWith(".azurewebsites.net") ||
       hostname.endsWith(".core.windows.net") ||
       hostname.endsWith(".azureedge.net")
-    ) return true;
-  } catch { /* skip */ }
+    )
+      return true;
+  } catch {
+    /* skip */
+  }
   return !!(headers["x-ms-request-id"] || headers["x-azure-ref"] || headers["x-msedge-ref"]);
 }
 
 const EU_TLD_RE = /\.(eu|de|fr|nl|ie|be|pl|es|it|se|no|dk|at|ch|co\.uk|co\.de)$/i;
 
 const APAC_POPS = new Set([
-  "hkg", "nrt", "hnd", "kix", "icn", "sin", "cgk", "bom", "bkk", "mnl",
-  "syd", "mel", "per", "akl", "tpe", "tsa", "hel", "pvg",
+  "hkg",
+  "nrt",
+  "hnd",
+  "kix",
+  "icn",
+  "sin",
+  "cgk",
+  "bom",
+  "bkk",
+  "mnl",
+  "syd",
+  "mel",
+  "per",
+  "akl",
+  "tpe",
+  "tsa",
+  "hel",
+  "pvg",
 ]);
 const EUROPE_POPS = new Set([
-  "lhr", "ams", "fra", "cdg", "mad", "mxp", "waw", "vie", "arn", "cph",
-  "dub", "prg", "bud", "sof", "ath", "otp", "bcn", "muc", "ham",
+  "lhr",
+  "ams",
+  "fra",
+  "cdg",
+  "mad",
+  "mxp",
+  "waw",
+  "vie",
+  "arn",
+  "cph",
+  "dub",
+  "prg",
+  "bud",
+  "sof",
+  "ath",
+  "otp",
+  "bcn",
+  "muc",
+  "ham",
 ]);
 const US_POPS = new Set([
-  "iad", "dca", "ewr", "jfk", "bos", "ord", "dfw", "atl", "mia", "phx",
-  "sjc", "sfo", "lax", "sea", "pdx", "den", "msp", "yyz", "yul",
+  "iad",
+  "dca",
+  "ewr",
+  "jfk",
+  "bos",
+  "ord",
+  "dfw",
+  "atl",
+  "mia",
+  "phx",
+  "sjc",
+  "sfo",
+  "lax",
+  "sea",
+  "pdx",
+  "den",
+  "msp",
+  "yyz",
+  "yul",
 ]);
 
 function popToRegion(pop: string): NetworkRegion | null {
@@ -176,31 +254,57 @@ function popToRegion(pop: string): NetworkRegion | null {
 }
 
 const POP_CITIES: Record<string, string> = {
-  hkg: "Hong Kong", hnd: "Tokyo",   nrt: "Tokyo",         kix: "Osaka",
-  icn: "Seoul",     sin: "Singapore", cgk: "Jakarta",    bom: "Mumbai",
-  bkk: "Bangkok",   mnl: "Manila",   syd: "Sydney",       mel: "Melbourne",
-  per: "Perth",     akl: "Auckland", tpe: "Taipei",       pvg: "Shanghai",
-  lhr: "London",    ams: "Amsterdam", fra: "Frankfurt",   cdg: "Paris",
-  mad: "Madrid",    mxp: "Milan",    waw: "Warsaw",       vie: "Vienna",
-  arn: "Stockholm", cph: "Copenhagen", dub: "Dublin",    prg: "Prague",
-  bud: "Budapest",  bcn: "Barcelona", muc: "Munich",     ham: "Hamburg",
-  iad: "Washington DC", dca: "Washington DC", ewr: "Newark", jfk: "New York",
-  bos: "Boston",    ord: "Chicago",  dfw: "Dallas",       atl: "Atlanta",
-  mia: "Miami",     phx: "Phoenix",  sjc: "San Jose",     sfo: "San Francisco",
-  lax: "Los Angeles", sea: "Seattle", pdx: "Portland",   den: "Denver",
+  hkg: "Hong Kong",
+  hnd: "Tokyo",
+  nrt: "Tokyo",
+  kix: "Osaka",
+  icn: "Seoul",
+  sin: "Singapore",
+  cgk: "Jakarta",
+  bom: "Mumbai",
+  bkk: "Bangkok",
+  mnl: "Manila",
+  syd: "Sydney",
+  mel: "Melbourne",
+  per: "Perth",
+  akl: "Auckland",
+  tpe: "Taipei",
+  pvg: "Shanghai",
+  lhr: "London",
+  ams: "Amsterdam",
+  fra: "Frankfurt",
+  cdg: "Paris",
+  mad: "Madrid",
+  mxp: "Milan",
+  waw: "Warsaw",
+  vie: "Vienna",
+  arn: "Stockholm",
+  cph: "Copenhagen",
+  dub: "Dublin",
+  prg: "Prague",
+  bud: "Budapest",
+  bcn: "Barcelona",
+  muc: "Munich",
+  ham: "Hamburg",
+  iad: "Washington DC",
+  dca: "Washington DC",
+  ewr: "Newark",
+  jfk: "New York",
+  bos: "Boston",
+  ord: "Chicago",
+  dfw: "Dallas",
+  atl: "Atlanta",
+  mia: "Miami",
+  phx: "Phoenix",
+  sjc: "San Jose",
+  sfo: "San Francisco",
+  lax: "Los Angeles",
+  sea: "Seattle",
+  pdx: "Portland",
+  den: "Denver",
 };
 
-export function hasThirdParties(entries: Array<{ url: string }>, documentUrl: string): boolean {
+export function hasThirdParties(entries: { url: string }[], documentUrl: string): boolean {
   const documentRoot = getRootDomain(documentUrl);
   return entries.some((e) => getRootDomain(e.url) !== documentRoot);
-}
-
-function getRootDomain(url: string): string {
-  try {
-    const hostname = new URL(url).hostname;
-    const parts = hostname.split(".");
-    return parts.slice(-2).join(".");
-  } catch {
-    return url;
-  }
 }

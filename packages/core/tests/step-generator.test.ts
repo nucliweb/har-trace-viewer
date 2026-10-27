@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { parseHarJson } from "../src/parsers/har-parser.js";
+import { parseHar, parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
-import { generateFlow } from "../src/steps/step-generator.js";
-import type { HarEntry, ParsedHar } from "../src/types.js";
+import { FLOW_VERSION, generateFlow, normalizeFlow } from "../src/steps/step-generator.js";
+import { firefoxHar } from "./helpers/firefox-har.js";
+import type { DiagramStep, Flow, HarEntry, ParsedHar } from "../src/types.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const harPath = join(__dirname, "fixtures/webperf-snippets.har.fixture.json");
@@ -104,10 +105,12 @@ describe("generateFlow — single page with trace", () => {
 
   it("FCP step has badge and correct value", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar(), trace: loadTrace() }]);
-    const fcpStep = flow.steps.find((s) => s.title.includes("Contentful Paint") && s.badge?.type === "fcp")!;
+    const fcpStep = flow.steps.find(
+      (s) => s.title.includes("Contentful Paint") && s.badge?.type === "fcp"
+    )!;
 
     expect(fcpStep).toBeDefined();
-    expect(fcpStep.badge?.value).toBe("182ms");
+    expect(fcpStep.badge?.value).toBe("181ms");
   });
 
   it("LCP step has badge and correct value", () => {
@@ -115,7 +118,7 @@ describe("generateFlow — single page with trace", () => {
     const lcpStep = flow.steps.find((s) => s.badge?.type === "lcp")!;
 
     expect(lcpStep).toBeDefined();
-    expect(lcpStep.badge?.value).toBe("182ms");
+    expect(lcpStep.badge?.value).toBe("181ms");
   });
 
   it("FCP step appears after Critical resources and before Secondary resources", () => {
@@ -144,6 +147,7 @@ describe("generateFlow — cache classification", () => {
       priority: "VeryHigh",
       responseHeaders: {},
       transferSize: 1024,
+      bodySize: 1024,
       isDocument: false,
       fromCache: false,
       ...overrides,
@@ -236,6 +240,7 @@ describe("generateFlow — node resourceStats", () => {
       priority: "VeryHigh",
       responseHeaders: {},
       transferSize: 1024,
+      bodySize: 1024,
       isDocument: false,
       fromCache: false,
       ...overrides,
@@ -364,5 +369,363 @@ describe("generateFlow — two pages", () => {
     ]);
 
     expect(flow.steps).toHaveLength(15);
+  });
+});
+
+describe("generateFlow — per-page analysis", () => {
+  function makeEntry(overrides: Partial<HarEntry> = {}): HarEntry {
+    return {
+      url: "https://example.com/app.js",
+      startTime: 100,
+      duration: 50,
+      timing: { dns: 0, connect: 0, ssl: 0, send: 1, wait: 10, receive: 5, blocked: 0 },
+      ttfb: 10,
+      status: 200,
+      mimeType: "application/javascript",
+      resourceType: "script",
+      priority: "Low",
+      responseHeaders: {},
+      transferSize: 1024,
+      bodySize: 1024,
+      isDocument: false,
+      fromCache: false,
+      ...overrides,
+    };
+  }
+
+  function makeHar(entries: HarEntry[], docHeaders: Record<string, string>): ParsedHar {
+    const docEntry = makeEntry({
+      url: "https://example.com/",
+      mimeType: "text/html",
+      isDocument: true,
+      resourceType: "document",
+      timing: { dns: 10, connect: 20, ssl: 0, send: 1, wait: 50, receive: 5, blocked: 0 },
+      ttfb: 50,
+      responseHeaders: docHeaders,
+    });
+    return {
+      pages: [{ id: "p1", title: "Example", onContentLoad: 300, onLoad: 500 }],
+      entries: [docEntry, ...entries],
+      documentEntry: docEntry,
+      preconnectHints: {},
+    };
+  }
+
+  // Page 1 is served through Cloudflare (two CDN hits); page 2 straight from origin.
+  function cdnThenOriginFlow() {
+    const cloudflareHar = makeHar(
+      [
+        makeEntry({
+          url: "https://example.com/a.js",
+          responseHeaders: { "cf-cache-status": "HIT" },
+        }),
+        makeEntry({
+          url: "https://example.com/b.js",
+          responseHeaders: { "cf-cache-status": "HIT" },
+        }),
+      ],
+      { "cf-ray": "abc123-LHR", server: "cloudflare" }
+    );
+    const originHar = makeHar([makeEntry({ url: "https://example.com/c.js" })], {});
+    return generateFlow([
+      { name: "Home", har: cloudflareHar },
+      { name: "Checkout", har: originHar },
+    ]);
+  }
+
+  it("computes one analysis per page", () => {
+    const flow = cdnThenOriginFlow();
+
+    expect(flow.pageAnalyses).toHaveLength(2);
+  });
+
+  it("detects the CDN edge per page", () => {
+    const [home, checkout] = cdnThenOriginFlow().pageAnalyses;
+
+    expect(home.nodes.find((n) => n.id === "edge")?.present).toBe(true);
+    expect(home.paths.map((p) => p.id)).toContain("browser-edge");
+    expect(checkout.nodes.find((n) => n.id === "edge")?.present).toBe(false);
+    expect(checkout.paths.map((p) => p.id)).toContain("browser-origin");
+    expect(checkout.paths.map((p) => p.id)).not.toContain("browser-edge");
+  });
+
+  it("analyzes the cache per page", () => {
+    const [home, checkout] = cdnThenOriginFlow().pageAnalyses;
+
+    expect(home.cacheReport.ownResources.cdnHits).toBe(2);
+    expect(checkout.cacheReport.ownResources.cdnHits).toBe(0);
+    expect(checkout.cacheReport.ownResources.total).toBe(1);
+  });
+
+  it("tags every step with its page; the transition step belongs to the page it leads to", () => {
+    const flow = cdnThenOriginFlow();
+    const transitionIdx = flow.steps.findIndex((s) => s.title.startsWith("→"));
+
+    expect(transitionIdx).toBeGreaterThan(0);
+    flow.steps.forEach((step, i) => expect(step.pageIndex).toBe(i < transitionIdx ? 0 : 1));
+  });
+
+  it("steps reference the paths of their own page", () => {
+    const flow = cdnThenOriginFlow();
+    const requestSteps = flow.steps.filter((s) => s.title === "First request in flight");
+
+    expect(requestSteps.map((s) => s.activePaths)).toEqual([
+      ["browser-edge", "edge-origin"],
+      ["browser-origin"],
+    ]);
+    for (const step of flow.steps) {
+      const pagePaths = flow.pageAnalyses[step.pageIndex].paths.map((p) => p.id);
+      for (const pathId of step.activePaths) expect(pagePaths).toContain(pathId);
+    }
+  });
+
+  it("keeps the top-level topology and cache report as the first page's", () => {
+    const flow = cdnThenOriginFlow();
+
+    expect(flow.nodes).toEqual(flow.pageAnalyses[0].nodes);
+    expect(flow.paths).toEqual(flow.pageAnalyses[0].paths);
+    expect(flow.cacheReport).toEqual(flow.pageAnalyses[0].cacheReport);
+  });
+
+  it("counts third parties per page", () => {
+    const withThirdParty = makeHar([makeEntry({ url: "https://cdn.analytics.com/t.js" })], {});
+    const withoutThirdParty = makeHar([makeEntry()], {});
+    const flow = generateFlow([
+      { name: "Home", har: withoutThirdParty },
+      { name: "Blog", har: withThirdParty },
+    ]);
+
+    const thirdParties = flow.pageAnalyses.map((a) =>
+      a.nodes.find((n) => n.id === "third-parties")!
+    );
+    expect(thirdParties.map((n) => n.present)).toEqual([false, true]);
+    expect(thirdParties[1].resourceStats?.count).toBe(1);
+  });
+});
+
+describe("generateFlow — Firefox-style HAR (no priority, onLoad not fired)", () => {
+  function firefoxFlow() {
+    return generateFlow([{ name: "Home", har: parseHar(firefoxHar()) }]);
+  }
+
+  it("yields critical resources from stylesheets", () => {
+    const step = firefoxFlow().steps.find((s) => s.title.includes("Critical"))!;
+
+    expect(step.resources?.map((e) => e.resourceType)).toEqual(["stylesheet"]);
+  });
+
+  it("yields secondary resources without relying on priority", () => {
+    const step = firefoxFlow().steps.find((s) => s.title.includes("Secondary"))!;
+
+    expect(step.resources?.length).toBeGreaterThan(0);
+    expect(step.metrics.find((m) => m.label === "Resources")?.value).toBe("3");
+  });
+
+  it("shows n/a for onLoad and omits the onload badge", () => {
+    const last = firefoxFlow().steps.at(-1)!;
+
+    expect(last.metrics.find((m) => m.label === "onLoad")?.value).toBe("n/a");
+    expect(last.metrics.find((m) => m.label === "DCL")?.value).toBe("120ms");
+    expect(last.badge).toBeUndefined();
+    expect(JSON.stringify(last)).not.toContain("-1ms");
+  });
+});
+
+describe("generateFlow — client region", () => {
+  function makeEntry(overrides: Partial<HarEntry> = {}): HarEntry {
+    return {
+      url: "https://example.com/app.js",
+      startTime: 100,
+      duration: 50,
+      timing: { dns: 0, connect: 0, ssl: 0, send: 1, wait: 10, receive: 5, blocked: 0 },
+      ttfb: 10,
+      status: 200,
+      mimeType: "application/javascript",
+      resourceType: "script",
+      priority: "Low",
+      responseHeaders: {},
+      transferSize: 1024,
+      bodySize: 1024,
+      isDocument: false,
+      fromCache: false,
+      ...overrides,
+    };
+  }
+
+  // A HAR whose document connection took 350 ms: slow, but not proof of China routing.
+  function slowHar(docHeaders: Record<string, string> = {}): ParsedHar {
+    const docEntry = makeEntry({
+      url: "https://example.com/",
+      mimeType: "text/html",
+      isDocument: true,
+      resourceType: "document",
+      timing: { dns: 10, connect: 350, ssl: 0, send: 1, wait: 50, receive: 5, blocked: 0 },
+      ttfb: 50,
+      responseHeaders: docHeaders,
+    });
+    return {
+      pages: [{ id: "p1", title: "Example", onContentLoad: 300, onLoad: 500 }],
+      entries: [docEntry, makeEntry()],
+      documentEntry: docEntry,
+      preconnectHints: {},
+    };
+  }
+
+  const CLOUDFLARE_HEADERS = { "cf-ray": "abc123-LHR" };
+  const AKAMAI_HEADERS = { "x-akamai-transformed": "9 - 0 pmb=mRUM,1" };
+
+  it("stamps the flow with the current data-model version", () => {
+    const flow = generateFlow([{ name: "Home", har: loadHar() }]);
+
+    expect(FLOW_VERSION).toBe(2);
+    expect(flow.version).toBe(FLOW_VERSION);
+  });
+
+  it("defaults to the default client region with no hint for a fast HAR", () => {
+    const flow = generateFlow([{ name: "Home", har: loadHar() }]);
+
+    expect(flow.clientRegion).toBe("default");
+    expect(flow.hints.suggestedClientRegion).toBeUndefined();
+  });
+
+  it("slow HAR without options: no GFW topology, only a suggestion with a reason", () => {
+    const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }]);
+
+    expect(flow.clientRegion).toBe("default");
+    expect(flow.nodes.map((n) => n.id)).not.toContain("gfw");
+    expect(flow.nodes.find((n) => n.id === "browser")?.region).toBe("client");
+    expect(flow.paths.map((p) => p.id)).toContain("browser-edge");
+    expect(flow.steps.flatMap((s) => s.activeNodes)).not.toContain("gfw");
+    expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
+    expect(flow.hints.suggestedClientRegion?.reason).toContain("350ms");
+  });
+
+  it("slow HAR with clientRegion cn and a CDN: GFW node between browser and edge", () => {
+    const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }], {
+      clientRegion: "cn",
+    });
+
+    expect(flow.clientRegion).toBe("cn");
+    expect(flow.nodes.find((n) => n.id === "gfw")?.present).toBe(true);
+    expect(flow.nodes.find((n) => n.id === "browser")?.region).toBe("china");
+    const paths = flow.paths.map((p) => p.id);
+    expect(paths).toEqual(expect.arrayContaining(["browser-gfw", "gfw-edge", "edge-origin"]));
+    expect(paths).not.toContain("browser-edge");
+    expect(flow.steps[1].activePaths).toEqual(["browser-gfw", "gfw-edge", "edge-origin"]);
+  });
+
+  it("clientRegion cn without a CDN routes browser → GFW → origin", () => {
+    const flow = generateFlow([{ name: "Home", har: slowHar() }], { clientRegion: "cn" });
+
+    const paths = flow.paths.map((p) => p.id);
+    expect(paths).toEqual(expect.arrayContaining(["browser-gfw", "gfw-origin"]));
+    expect(paths).not.toContain("browser-origin");
+    expect(flow.steps[1].activeNodes).toEqual(["browser", "gfw", "origin"]);
+    expect(flow.steps[1].activePaths).toEqual(["browser-gfw", "gfw-origin"]);
+    expect(flow.steps[1].pathDirections).toEqual({
+      "browser-gfw": "request",
+      "gfw-origin": "request",
+    });
+  });
+
+  it("clientRegion cn applies the Hong Kong / APAC fallbacks to an Akamai edge", () => {
+    const cn = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }], {
+      clientRegion: "cn",
+    });
+    const edge = cn.nodes.find((n) => n.id === "edge")!;
+    expect(edge.subLabel).toBe("Hong Kong");
+    expect(edge.region).toBe("asia-pacific");
+
+    const byDefault = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }]);
+    const defaultEdge = byDefault.nodes.find((n) => n.id === "edge")!;
+    expect(defaultEdge.subLabel).toBeUndefined();
+    expect(defaultEdge.region).toBe("edge");
+  });
+
+  it("clientRegion cn applies to every page of a multi-page flow", () => {
+    const flow = generateFlow(
+      [
+        { name: "Home", har: loadHar() },
+        { name: "Docs", har: loadHar() },
+      ],
+      { clientRegion: "cn" }
+    );
+
+    const requestSteps = flow.steps.filter((s) => s.title === "First request in flight");
+    expect(requestSteps).toHaveLength(2);
+    for (const step of requestSteps) expect(step.activeNodes).toContain("gfw");
+  });
+});
+
+describe("normalizeFlow", () => {
+  it("treats a flow without version as version 0 in the default region with no hints", () => {
+    const current = generateFlow([{ name: "Home", har: loadHar() }]);
+    // Shape of a flow embedded before versioning existed.
+    const legacy: Partial<Flow> = { ...current };
+    delete legacy.version;
+    delete legacy.clientRegion;
+    delete legacy.hints;
+    delete legacy.pageAnalyses;
+
+    const normalized = normalizeFlow(legacy as Flow);
+
+    expect(normalized.version).toBe(0);
+    expect(normalized.clientRegion).toBe("default");
+    expect(normalized.hints).toEqual({});
+    expect(normalized.nodes).toBe(current.nodes);
+  });
+
+  // Shape of a version-1 flow: one shared topology, steps without pageIndex.
+  function versionOneFlow(): Flow {
+    const har = loadHar();
+    const current = generateFlow([
+      { name: "Home", har },
+      { name: "Docs", har },
+      { name: "Blog", har },
+    ]);
+    const legacy: Partial<Flow> = {
+      ...current,
+      version: 1,
+      steps: current.steps.map((step) => {
+        const legacyStep: Partial<DiagramStep> = { ...step };
+        delete legacyStep.pageIndex;
+        return legacyStep as DiagramStep;
+      }),
+    };
+    delete legacy.pageAnalyses;
+    return legacy as Flow;
+  }
+
+  it("synthesizes one analysis per page from the top-level fields of a version-1 flow", () => {
+    const legacy = versionOneFlow();
+
+    const normalized = normalizeFlow(legacy);
+
+    expect(normalized.version).toBe(1);
+    expect(normalized.pageAnalyses).toHaveLength(3);
+    for (const analysis of normalized.pageAnalyses) {
+      expect(analysis.nodes).toBe(legacy.nodes);
+      expect(analysis.paths).toBe(legacy.paths);
+      expect(analysis.cacheReport).toBe(legacy.cacheReport);
+    }
+  });
+
+  it("derives sequential pageIndex values from the transition steps of a version-1 flow", () => {
+    const normalized = normalizeFlow(versionOneFlow());
+
+    const transitions = normalized.steps
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.title.startsWith("→"));
+    expect(transitions.map(({ s }) => s.pageIndex)).toEqual([1, 2]);
+    normalized.steps.forEach((step, i) => {
+      const expected = i < transitions[0].i ? 0 : i < transitions[1].i ? 1 : 2;
+      expect(step.pageIndex).toBe(expected);
+    });
+  });
+
+  it("returns a current flow unchanged", () => {
+    const current = generateFlow([{ name: "Home", har: loadHar() }], { clientRegion: "cn" });
+
+    expect(normalizeFlow(current)).toEqual(current);
   });
 });

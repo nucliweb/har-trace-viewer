@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Flow, HarEntry, PathId } from "@htv/core/types.js";
 import { useDiagramState } from "../hooks/useDiagramState.js";
+import type { HistoricalPath } from "../types.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepPanel } from "./StepPanel.js";
 import { ResourceSidebar } from "./ResourceSidebar.js";
@@ -11,8 +12,6 @@ import styles from "./DiagramView.module.css";
 interface Props {
   flow: Flow;
 }
-
-type HistoricalPath = { timing?: string; direction?: "request" | "response" };
 
 const BADGE_LABELS: Record<string, string> = {
   ttfb: "TTFB",
@@ -28,13 +27,16 @@ function toHistoricalTiming(timing: string): string {
   return timing.replace(/^\d+ .+ · (avg .+)$/, "$1");
 }
 
+// History only covers the active page: each page has its own topology.
 function computeHistoricalPaths(
   steps: Flow["steps"],
   currentStepIndex: number
 ): Partial<Record<PathId, HistoricalPath>> {
   const history: Partial<Record<PathId, HistoricalPath>> = {};
+  const { pageIndex } = steps[currentStepIndex];
   for (let i = 0; i < currentStepIndex; i++) {
     const s = steps[i];
+    if (s.pageIndex !== pageIndex) continue;
     for (const pathId of s.activePaths) {
       const raw = s.pathTimings?.[pathId as PathId];
       history[pathId as PathId] = {
@@ -49,6 +51,10 @@ function computeHistoricalPaths(
 export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
   const step = flow.steps[state.stepIndex];
+  const { pageIndex } = step;
+  // Indexing keeps the analysis reference stable while the user stays on a page.
+  const analysis = flow.pageAnalyses[pageIndex];
+  const page = flow.pages[pageIndex];
   const [sidebarResources, setSidebarResources] = useState<HarEntry[] | null>(null);
   const [showCachePanel, setShowCachePanel] = useState(false);
 
@@ -57,22 +63,23 @@ export function DiagramView({ flow }: Props) {
 
   const historicalPaths = computeHistoricalPaths(flow.steps, state.stepIndex);
 
+  // Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad.
   const allBadges = useMemo(() => {
     const seen = new Map<string, NonNullable<Flow["steps"][number]["badge"]>>();
     for (const s of flow.steps) {
-      if (s.badge) seen.set(s.badge.type, s.badge);
+      if (s.badge && s.pageIndex === pageIndex) seen.set(s.badge.type, s.badge);
     }
     return [...seen.values()];
-  }, [flow.steps]);
+  }, [flow.steps, pageIndex]);
 
   const revealedTypes = useMemo(() => {
     const types = new Set<string>();
     for (let i = 0; i <= state.stepIndex; i++) {
-      const badge = flow.steps[i].badge;
-      if (badge) types.add(badge.type);
+      const { badge, pageIndex: stepPage } = flow.steps[i];
+      if (badge && stepPage === pageIndex) types.add(badge.type);
     }
     return types;
-  }, [flow.steps, state.stepIndex]);
+  }, [flow.steps, state.stepIndex, pageIndex]);
 
   const currentBadgeType = step.badge?.type;
 
@@ -80,8 +87,8 @@ export function DiagramView({ flow }: Props) {
     <div className={styles.view}>
       <div className={styles.canvas}>
         <NodeRenderer
-          nodes={flow.nodes}
-          paths={flow.paths}
+          nodes={analysis.nodes}
+          paths={analysis.paths}
           activeNodes={step.activeNodes}
           activePaths={step.activePaths}
           pathTimings={step.pathTimings}
@@ -109,13 +116,14 @@ export function DiagramView({ flow }: Props) {
             resources={sidebarResources}
             title={step.title}
             onClose={closeSidebar}
-            preconnectHints={flow.pages[0].har.preconnectHints}
-            documentHostname={new URL(flow.pages[0].har.documentEntry.url).hostname}
+            preconnectHints={page.har.preconnectHints}
+            documentHostname={new URL(page.har.documentEntry.url).hostname}
           />
         )}
         {showCachePanel && (
           <CachePanel
-            report={flow.cacheReport}
+            report={analysis.cacheReport}
+            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
             onClose={() => setShowCachePanel(false)}
           />
         )}

@@ -1,28 +1,83 @@
-import { detectCdnPopCity, detectCdnRegion, detectGfw, detectNode, detectOriginRegion, detectThirdPartyRegion, hasThirdParties } from "../inference/node-detector.js";
+import { getRootDomain } from "../utils/domain.js";
+import {
+  detectCdnPopCity,
+  detectCdnRegion,
+  detectNode,
+  detectOriginRegion,
+  detectThirdPartyRegion,
+  suggestClientRegion,
+} from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import type {
+  ClientRegion,
   DiagramNode,
   DiagramPath,
   DiagramStep,
   Flow,
+  FlowOptions,
   HarEntry,
   NetworkRegion,
+  NodeDetectionResult,
   NodeId,
+  PageAnalysis,
   PageFlow,
+  ParsedHar,
   PathId,
 } from "../types.js";
 
-function getRootDomain(url: string): string {
-  try {
-    const parts = new URL(url).hostname.split(".");
-    return parts.slice(-2).join(".");
-  } catch {
-    return url;
-  }
+// Bump when the Flow shape changes in a way readers must detect.
+// 2: per-page topology and cache report (Flow.pageAnalyses, DiagramStep.pageIndex).
+export const FLOW_VERSION = 2;
+
+export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
+
+export function isClientRegion(value: unknown): value is ClientRegion {
+  return CLIENT_REGIONS.includes(value as ClientRegion);
+}
+
+const TRANSITION_TITLE_PREFIX = "→ User navigates to ";
+
+// Version ≤ 1 steps carry no pageIndex: every transition step starts a new page.
+function withDerivedPageIndex(steps: DiagramStep[]): DiagramStep[] {
+  let pageIndex = 0;
+  return steps.map((step) => {
+    if (step.title.startsWith(TRANSITION_TITLE_PREFIX)) pageIndex++;
+    return { ...step, pageIndex };
+  });
+}
+
+// Fills the fields that older embedded flows lack, so readers can rely on the
+// current shape. Version 0 means "pre-versioning". Version ≤ 1 flows had a
+// single topology and cache report: every page gets a copy of the top-level ones.
+export function normalizeFlow(flow: Flow): Flow {
+  const steps = flow.steps.every((step) => typeof step.pageIndex === "number")
+    ? flow.steps
+    : withDerivedPageIndex(flow.steps);
+  const pageCount = Math.max(flow.pages.length, (steps.at(-1)?.pageIndex ?? 0) + 1);
+  const pageAnalyses =
+    flow.pageAnalyses ??
+    Array.from({ length: pageCount }, () => ({
+      nodes: flow.nodes,
+      paths: flow.paths,
+      cacheReport: flow.cacheReport,
+    }));
+
+  return {
+    ...flow,
+    version: flow.version ?? 0,
+    clientRegion: isClientRegion(flow.clientRegion) ? flow.clientRegion : "default",
+    hints: flow.hints ?? {},
+    pageAnalyses,
+    steps,
+  };
 }
 
 function formatMs(ms: number): string {
   return `${Math.round(ms)}ms`;
+}
+
+function formatOptionalMs(ms: number | null): string {
+  return ms === null ? "n/a" : formatMs(ms);
 }
 
 function avgMs(entries: HarEntry[]): number {
@@ -40,14 +95,12 @@ function isCriticalResource(entry: HarEntry): boolean {
     (entry.resourceType === "script" &&
       (entry.priority === "VeryHigh" || entry.priority === "High"))
   );
+  // Without a priority (non-Chrome HARs) scripts cannot be proven render-blocking,
+  // so they stay secondary; stylesheets are always critical.
 }
 
 function isSecondaryResource(entry: HarEntry): boolean {
-  return (
-    !entry.isDocument &&
-    !isCriticalResource(entry) &&
-    entry.resourceType !== "fetch"
-  );
+  return !entry.isDocument && !isCriticalResource(entry) && entry.resourceType !== "fetch";
 }
 
 interface TopologyOptions {
@@ -63,7 +116,17 @@ interface TopologyOptions {
 }
 
 function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: DiagramPath[] } {
-  const { hasCdn, hasThirdPartyNodes, hasGfw, edgeName, edgeRegion, edgeSubLabel, originRegion, originSubLabel, thirdPartyRegion } = opts;
+  const {
+    hasCdn,
+    hasThirdPartyNodes,
+    hasGfw,
+    edgeName,
+    edgeRegion,
+    edgeSubLabel,
+    originRegion,
+    originSubLabel,
+    thirdPartyRegion,
+  } = opts;
   const browserRegion: NetworkRegion = hasGfw ? "china" : "client";
 
   const nodes: DiagramNode[] = [
@@ -71,13 +134,36 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
   ];
 
   if (hasGfw) {
-    nodes.push({ id: "gfw", label: "GFW", subLabel: "DPI inspection", present: true, region: "china" });
+    nodes.push({
+      id: "gfw",
+      label: "GFW",
+      subLabel: "DPI inspection",
+      present: true,
+      region: "china",
+    });
   }
 
   nodes.push(
-    { id: "edge", label: edgeName, subLabel: edgeSubLabel ?? undefined, present: hasCdn, region: edgeRegion },
-    { id: "origin", label: "Origin Server", subLabel: originSubLabel ?? undefined, present: true, region: originRegion },
-    { id: "third-parties", label: "3rd Parties", present: hasThirdPartyNodes, region: thirdPartyRegion },
+    {
+      id: "edge",
+      label: edgeName,
+      subLabel: edgeSubLabel ?? undefined,
+      present: hasCdn,
+      region: edgeRegion,
+    },
+    {
+      id: "origin",
+      label: "Origin Server",
+      subLabel: originSubLabel ?? undefined,
+      present: true,
+      region: originRegion,
+    },
+    {
+      id: "third-parties",
+      label: "3rd Parties",
+      present: hasThirdPartyNodes,
+      region: thirdPartyRegion,
+    }
   );
 
   let paths: DiagramPath[];
@@ -86,6 +172,12 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
       { id: "browser-gfw", from: "browser", to: "gfw" },
       { id: "gfw-edge", from: "gfw", to: "edge" },
       { id: "edge-origin", from: "edge", to: "origin" },
+      { id: "browser-third-parties", from: "browser", to: "third-parties" },
+    ];
+  } else if (hasGfw) {
+    paths = [
+      { id: "browser-gfw", from: "browser", to: "gfw" },
+      { id: "gfw-origin", from: "gfw", to: "origin" },
       { id: "browser-third-parties", from: "browser", to: "third-parties" },
     ];
   } else if (hasCdn) {
@@ -105,13 +197,22 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
 }
 
 function serverNodes(hasCdn: boolean, hasGfw: boolean): NodeId[] {
-  if (hasGfw && hasCdn) return ["browser", "gfw", "edge", "origin"];
+  if (hasGfw) return hasCdn ? ["browser", "gfw", "edge", "origin"] : ["browser", "gfw", "origin"];
   return hasCdn ? ["browser", "edge", "origin"] : ["browser", "origin"];
 }
 
 function serverPaths(hasCdn: boolean, hasGfw: boolean): PathId[] {
-  if (hasGfw && hasCdn) return ["browser-gfw", "gfw-edge", "edge-origin"];
+  if (hasGfw)
+    return hasCdn ? ["browser-gfw", "gfw-edge", "edge-origin"] : ["browser-gfw", "gfw-origin"];
   return hasCdn ? ["browser-edge", "edge-origin"] : ["browser-origin"];
+}
+
+function serverPathDirections(
+  hasCdn: boolean,
+  hasGfw: boolean,
+  direction: "request" | "response"
+): Partial<Record<PathId, "request" | "response">> {
+  return Object.fromEntries(serverPaths(hasCdn, hasGfw).map((id) => [id, direction]));
 }
 
 function firstActivePath(hasCdn: boolean, hasGfw: boolean): PathId {
@@ -119,27 +220,42 @@ function firstActivePath(hasCdn: boolean, hasGfw: boolean): PathId {
   return hasCdn ? "browser-edge" : "browser-origin";
 }
 
-function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
+// What a page's document and entries say about its network topology.
+interface PageContext {
+  cdnResult: NodeDetectionResult;
+  hasCdn: boolean;
+  documentRoot: string;
+  thirdPartyEntries: HarEntry[];
+}
+
+function describePage(har: ParsedHar): PageContext {
+  const cdnResult = detectNode(har.documentEntry.responseHeaders);
+  const documentRoot = getRootDomain(har.documentEntry.url);
+  return {
+    cdnResult,
+    hasCdn: cdnResult.type === "edge",
+    documentRoot,
+    thirdPartyEntries: har.entries.filter((e) => !e.isDocument && isThirdParty(e, documentRoot)),
+  };
+}
+
+// Steps are built per page and tagged with their pageIndex by generateFlow.
+type PageStep = Omit<DiagramStep, "pageIndex">;
+
+function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const { har, trace } = pageFlow;
   const { documentEntry, pages, entries } = har;
   const page = pages[0];
 
-  const cdnResult = detectNode(documentEntry.responseHeaders);
-  const hasCdn = cdnResult.type === "edge";
-  const maxConnectMs = Math.max(0, ...entries.map((e) => e.timing.connect));
-  const hasGfw = detectGfw(documentEntry.timing.dns, maxConnectMs);
-  const documentRoot = getRootDomain(documentEntry.url);
-  const thirdPartyEntries = entries.filter((e) => !e.isDocument && isThirdParty(e, documentRoot));
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries } = describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
 
   const ownEntries = entries.filter((e) => !isThirdParty(e, documentRoot));
   const criticalEntries = ownEntries.filter((e) => !e.isDocument && isCriticalResource(e));
   const secondaryEntries = ownEntries.filter((e) => !e.isDocument && isSecondaryResource(e));
 
-  const apacFallback: NetworkRegion = hasGfw ? "asia-pacific" : "edge";
-  const edgeRegion = detectCdnRegion(documentEntry.responseHeaders, apacFallback);
   const edgeLabel = hasCdn ? cdnResult.name : "Origin";
-  const steps: DiagramStep[] = [];
+  const steps: PageStep[] = [];
 
   // Step 1 — DNS + initial connection
   const { dns, connect, ssl } = documentEntry.timing;
@@ -165,11 +281,7 @@ function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
     [firstPath]: reqConnectionLabel,
   };
 
-  const step2PathDirections: Partial<Record<PathId, "request" | "response">> = hasGfw && hasCdn
-    ? { "browser-gfw": "request", "gfw-edge": "request", "edge-origin": "request" }
-    : hasCdn
-    ? { "browser-edge": "request", "edge-origin": "request" }
-    : { "browser-origin": "request" };
+  const step2PathDirections = serverPathDirections(hasCdn, hasGfw, "request");
 
   steps.push({
     title: "First request in flight",
@@ -186,11 +298,7 @@ function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
     [firstPath]: `TTFB ${formatMs(documentEntry.ttfb)}`,
   };
 
-  const step3PathDirections: Partial<Record<PathId, "request" | "response">> = hasGfw && hasCdn
-    ? { "browser-gfw": "response", "gfw-edge": "response", "edge-origin": "response" }
-    : hasCdn
-    ? { "browser-edge": "response", "edge-origin": "response" }
-    : { "browser-origin": "response" };
+  const step3PathDirections = serverPathDirections(hasCdn, hasGfw, "response");
 
   steps.push({
     title: "TTFB — First byte received",
@@ -209,14 +317,18 @@ function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
   const criticalCss = criticalNetwork.filter((e) => e.resourceType === "stylesheet");
   const criticalJs = criticalNetwork.filter((e) => e.resourceType === "script");
   const criticalMetrics: DiagramStep["metrics"] = [];
-  if (criticalCss.length > 0) criticalMetrics.push({ label: "CSS files", value: String(criticalCss.length) });
-  if (criticalJs.length > 0) criticalMetrics.push({ label: "JS files", value: String(criticalJs.length) });
-  if (criticalCache.length > 0) criticalMetrics.push({ label: "From cache", value: String(criticalCache.length) });
+  if (criticalCss.length > 0)
+    criticalMetrics.push({ label: "CSS files", value: String(criticalCss.length) });
+  if (criticalJs.length > 0)
+    criticalMetrics.push({ label: "JS files", value: String(criticalJs.length) });
+  if (criticalCache.length > 0)
+    criticalMetrics.push({ label: "From cache", value: String(criticalCache.length) });
 
   const criticalAvg = avgMs(criticalNetwork);
-  const step4PathTimings: Partial<Record<PathId, string>> = criticalNetwork.length > 0
-    ? { [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(criticalAvg)}` }
-    : {};
+  const step4PathTimings: Partial<Record<PathId, string>> =
+    criticalNetwork.length > 0
+      ? { [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(criticalAvg)}` }
+      : {};
 
   steps.push({
     title: "Critical resources loading",
@@ -245,12 +357,16 @@ function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
   const secondaryNetwork = secondaryEntries.filter((e) => e.fromCache === false);
   const secondaryCache = secondaryEntries.filter((e) => e.fromCache !== false);
   const secondaryAvg = avgMs(secondaryNetwork);
-  const step5PathTimings: Partial<Record<PathId, string>> = secondaryNetwork.length > 0
-    ? { [firstPath]: `${secondaryNetwork.length} resources · avg ${formatMs(secondaryAvg)}` }
-    : {};
+  const step5PathTimings: Partial<Record<PathId, string>> =
+    secondaryNetwork.length > 0
+      ? { [firstPath]: `${secondaryNetwork.length} resources · avg ${formatMs(secondaryAvg)}` }
+      : {};
 
-  const secondaryMetrics: DiagramStep["metrics"] = [{ label: "Resources", value: String(secondaryEntries.length) }];
-  if (secondaryCache.length > 0) secondaryMetrics.push({ label: "From cache", value: String(secondaryCache.length) });
+  const secondaryMetrics: DiagramStep["metrics"] = [
+    { label: "Resources", value: String(secondaryEntries.length) },
+  ];
+  if (secondaryCache.length > 0)
+    secondaryMetrics.push({ label: "From cache", value: String(secondaryCache.length) });
 
   steps.push({
     title: "Secondary resources",
@@ -285,40 +401,48 @@ function generatePageSteps(pageFlow: PageFlow): DiagramStep[] {
       { label: "Domains", value: String(thirdPartyDomains.size) },
       { label: "Requests", value: String(thirdPartyNetwork.length) },
     ];
-    if (thirdPartyCache.length > 0) thirdPartyMetrics.push({ label: "From cache", value: String(thirdPartyCache.length) });
+    if (thirdPartyCache.length > 0)
+      thirdPartyMetrics.push({ label: "From cache", value: String(thirdPartyCache.length) });
     steps.push({
       title: "Third-party requests",
       description: "Browser fetches resources from external domains.",
       activeNodes: ["browser", "third-parties"],
       activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties"] : [],
       metrics: thirdPartyMetrics,
-      pathTimings: thirdPartyNetwork.length > 0 ? {
-        "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(thirdPartyAvg)}`,
-      } : {},
+      pathTimings:
+        thirdPartyNetwork.length > 0
+          ? {
+              "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(thirdPartyAvg)}`,
+            }
+          : {},
       resources: thirdPartyNetwork.length > 0 ? thirdPartyNetwork : undefined,
       cacheResources: thirdPartyCache.length > 0 ? thirdPartyCache : undefined,
     });
   }
 
   // Step 7 — onLoad
+  // A null onLoad (event never fired) shows "n/a" and gets no badge.
   steps.push({
     title: "Page loaded",
     description: "The load event fires — all resources have been downloaded.",
     activeNodes: ["browser"],
     activePaths: [],
     metrics: [
-      { label: "onLoad", value: formatMs(page.onLoad) },
-      { label: "DCL", value: formatMs(page.onContentLoad) },
+      { label: "onLoad", value: formatOptionalMs(page.onLoad) },
+      { label: "DCL", value: formatOptionalMs(page.onContentLoad) },
     ],
-    badge: { type: "onload", value: formatMs(page.onLoad), node: "browser" },
+    badge:
+      page.onLoad === null
+        ? undefined
+        : { type: "onload", value: formatMs(page.onLoad), node: "browser" },
   });
 
   return steps;
 }
 
-function generateTransitionStep(fromPage: string, toPage: string): DiagramStep {
+function generateTransitionStep(fromPage: string, toPage: string): PageStep {
   return {
-    title: `→ User navigates to ${toPage}`,
+    title: `${TRANSITION_TITLE_PREFIX}${toPage}`,
     description: `The user leaves ${fromPage} and navigates to ${toPage}.`,
     activeNodes: ["browser"],
     activePaths: [],
@@ -326,56 +450,28 @@ function generateTransitionStep(fromPage: string, toPage: string): DiagramStep {
   };
 }
 
-export function generateFlow(pages: PageFlow[]): Flow {
-  if (pages.length === 0) {
-    throw new Error("Flow requires at least one page");
-  }
-
-  const allSteps: DiagramStep[] = [];
-  for (let i = 0; i < pages.length; i++) {
-    if (i > 0) {
-      allSteps.push(generateTransitionStep(pages[i - 1].name, pages[i].name));
-    }
-    allSteps.push(...generatePageSteps(pages[i]));
-  }
-
-  // Topology is derived from the first page's document
-  const firstDoc = pages[0].har.documentEntry;
-  const firstPageEntries = pages[0].har.entries;
-  const cdnResult = detectNode(firstDoc.responseHeaders);
-  const hasCdn = cdnResult.type === "edge";
-  const maxConnectMs = Math.max(0, ...firstPageEntries.map((e) => e.timing.connect));
-  const hasGfw = detectGfw(firstDoc.timing.dns, maxConnectMs);
-  const documentRoot = getRootDomain(firstDoc.url);
-  const allThirdPartyEntries = pages.flatMap((p) =>
-    p.har.entries.filter((e) => !e.isDocument && getRootDomain(e.url) !== getRootDomain(p.har.documentEntry.url))
-  );
-  const hasThirdPartyNodes = allThirdPartyEntries.length > 0;
+function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
+  const { har } = pageFlow;
+  const { documentEntry, entries } = har;
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries } = describePage(har);
+  const hasThirdPartyNodes = thirdPartyEntries.length > 0;
   const apacFallback: NetworkRegion = hasGfw ? "asia-pacific" : "edge";
-  const edgeRegion = detectCdnRegion(firstDoc.responseHeaders, apacFallback);
-  const edgeName = hasCdn ? cdnResult.name : "Origin Server";
-  const edgeSubLabel = hasCdn ? detectCdnPopCity(firstDoc.responseHeaders, cdnResult.cdnProvider, hasGfw) : null;
-  const originRegion = detectOriginRegion(firstDoc.responseHeaders);
-  const originSubLabel = firstDoc.responseHeaders["server"] ?? null;
-  const thirdPartyRegion = hasThirdPartyNodes
-    ? detectThirdPartyRegion(allThirdPartyEntries)
-    : "origin" as NetworkRegion;
-
-  void documentRoot;
 
   const { nodes, paths } = buildTopology({
     hasCdn,
     hasThirdPartyNodes,
     hasGfw,
-    edgeName,
-    edgeRegion,
-    edgeSubLabel,
-    originRegion,
-    originSubLabel,
-    thirdPartyRegion,
+    edgeName: hasCdn ? cdnResult.name : "Origin Server",
+    edgeRegion: detectCdnRegion(documentEntry.responseHeaders, apacFallback),
+    edgeSubLabel: hasCdn
+      ? detectCdnPopCity(documentEntry.responseHeaders, cdnResult.cdnProvider, hasGfw)
+      : null,
+    originRegion: detectOriginRegion(documentEntry.responseHeaders),
+    originSubLabel: documentEntry.responseHeaders["server"] ?? null,
+    thirdPartyRegion: hasThirdPartyNodes ? detectThirdPartyRegion(thirdPartyEntries) : "origin",
   });
 
-  const ownNonDocNetwork = firstPageEntries.filter(
+  const ownNonDocNetwork = entries.filter(
     (e) => !e.isDocument && getRootDomain(e.url) === documentRoot && e.fromCache === false
   );
   const cdnHitEntries = hasCdn
@@ -384,16 +480,18 @@ export function generateFlow(pages: PageFlow[]): Flow {
   const originEntries = hasCdn
     ? ownNonDocNetwork.filter((e) => detectCdnCacheStatus(e.responseHeaders) !== "hit")
     : ownNonDocNetwork;
-  const browserCacheEntries = firstPageEntries.filter(
-    (e) => !e.isDocument && e.fromCache !== false
-  );
-  const thirdPartyNetworkEntries = allThirdPartyEntries.filter((e) => e.fromCache === false);
+  const browserCacheEntries = entries.filter((e) => !e.isDocument && e.fromCache !== false);
+  const thirdPartyNetworkEntries = thirdPartyEntries.filter((e) => e.fromCache === false);
 
   for (const node of nodes) {
     if (node.id === "browser" && browserCacheEntries.length > 0) {
       node.resourceStats = { count: browserCacheEntries.length };
     } else if (node.id === "edge" && hasCdn && cdnHitEntries.length > 0) {
-      node.resourceStats = { count: cdnHitEntries.length, avgMs: avgMs(cdnHitEntries), label: "CDN hit" };
+      node.resourceStats = {
+        count: cdnHitEntries.length,
+        avgMs: avgMs(cdnHitEntries),
+        label: "CDN hit",
+      };
     } else if (node.id === "origin" && originEntries.length > 0) {
       node.resourceStats = {
         count: originEntries.length,
@@ -401,11 +499,49 @@ export function generateFlow(pages: PageFlow[]): Flow {
         label: hasCdn ? "CDN miss" : undefined,
       };
     } else if (node.id === "third-parties" && thirdPartyNetworkEntries.length > 0) {
-      node.resourceStats = { count: thirdPartyNetworkEntries.length, avgMs: avgMs(thirdPartyNetworkEntries) };
+      node.resourceStats = {
+        count: thirdPartyNetworkEntries.length,
+        avgMs: avgMs(thirdPartyNetworkEntries),
+      };
     }
   }
 
-  const cacheReport = analyzeCacheForHar(pages[0].har);
+  return { nodes, paths, cacheReport: analyzeCacheForHar(har) };
+}
 
-  return { pages, steps: allSteps, nodes, paths, cacheReport };
+export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow {
+  if (pages.length === 0) {
+    throw new Error("Flow requires at least one page");
+  }
+
+  const clientRegion: ClientRegion = options.clientRegion ?? "default";
+  // The GFW topology is opt-in: latencies alone cannot tell China routing
+  // apart from a slow or mobile network.
+  const hasGfw = clientRegion === "cn";
+  const suggestion = suggestClientRegion(pages[0].har);
+
+  const steps: DiagramStep[] = [];
+  pages.forEach((page, pageIndex) => {
+    // The transition belongs to the page it leads to.
+    const pageSteps = generatePageSteps(page, hasGfw);
+    if (pageIndex > 0) {
+      pageSteps.unshift(generateTransitionStep(pages[pageIndex - 1].name, page.name));
+    }
+    steps.push(...pageSteps.map((step) => ({ pageIndex, ...step })));
+  });
+
+  const pageAnalyses = pages.map((page) => analyzePage(page, hasGfw));
+  const [firstPage] = pageAnalyses;
+
+  return {
+    version: FLOW_VERSION,
+    clientRegion,
+    hints: suggestion ? { suggestedClientRegion: suggestion } : {},
+    pages,
+    pageAnalyses,
+    steps,
+    nodes: firstPage.nodes,
+    paths: firstPage.paths,
+    cacheReport: firstPage.cacheReport,
+  };
 }

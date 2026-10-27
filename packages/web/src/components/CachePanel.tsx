@@ -3,14 +3,15 @@ import styles from "./CachePanel.module.css";
 
 interface Props {
   report: CacheReport;
+  pageLabel: string;
   onClose: () => void;
 }
 
 const MINUTE = 60;
-const HOUR   = 3_600;
-const DAY    = 86_400;
-const MONTH  = 2_592_000;   // 30 days
-const YEAR   = 31_536_000;  // 365 days
+const HOUR = 3_600;
+const DAY = 86_400;
+const MONTH = 2_592_000; // 30 days
+const YEAR = 31_536_000; // 365 days
 
 function formatDuration(seconds: number): string {
   if (seconds < MINUTE) return `${seconds}s`;
@@ -31,10 +32,10 @@ function formatDuration(seconds: number): string {
   }
   if (seconds < YEAR) {
     const mo = Math.floor(seconds / MONTH);
-    const d  = Math.floor((seconds % MONTH) / DAY);
+    const d = Math.floor((seconds % MONTH) / DAY);
     return d > 0 ? `${mo}mo ${d}d` : `${mo}mo`;
   }
-  const y  = Math.floor(seconds / YEAR);
+  const y = Math.floor(seconds / YEAR);
   const mo = Math.floor((seconds % YEAR) / MONTH);
   return mo > 0 ? `${y}y ${mo}mo` : `${y}y`;
 }
@@ -54,23 +55,23 @@ function pct(ratio: number): string {
 
 function CdnStatusBadge({ status }: { status: CdnCacheStatus }) {
   const label = status === "unknown" ? "—" : status.toUpperCase();
-  return (
-    <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
-      {label}
-    </span>
-  );
+  return <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>{label}</span>;
 }
 
 function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "critical" }) {
   switch (severity) {
-    case "good":     return <span className={`${styles.sevIcon} ${styles.sevGood}`}>✓</span>;
-    case "info":     return <span className={`${styles.sevIcon} ${styles.sevInfo}`}>ℹ</span>;
-    case "warning":  return <span className={`${styles.sevIcon} ${styles.sevWarn}`}>⚠</span>;
-    case "critical": return <span className={`${styles.sevIcon} ${styles.sevCrit}`}>✕</span>;
+    case "good":
+      return <span className={`${styles.sevIcon} ${styles.sevGood}`}>✓</span>;
+    case "info":
+      return <span className={`${styles.sevIcon} ${styles.sevInfo}`}>ℹ</span>;
+    case "warning":
+      return <span className={`${styles.sevIcon} ${styles.sevWarn}`}>⚠</span>;
+    case "critical":
+      return <span className={`${styles.sevIcon} ${styles.sevCrit}`}>✕</span>;
   }
 }
 
-export function CachePanel({ report, onClose }: Props) {
+export function CachePanel({ report, pageLabel, onClose }: Props) {
   const { document: doc, ownResources, browser, recommendations } = report;
 
   const docCacheControl = Object.entries({
@@ -85,8 +86,13 @@ export function CachePanel({ report, onClose }: Props) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.headerTitle}>Cache Analysis</span>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close cache analysis">✕</button>
+        <div className={styles.headerText}>
+          <span className={styles.headerTitle}>Cache Analysis</span>
+          <h2 className={styles.pageLabel}>{pageLabel}</h2>
+        </div>
+        <button className={styles.closeBtn} onClick={onClose} aria-label="Close cache analysis">
+          ✕
+        </button>
       </div>
 
       <div className={styles.body}>
@@ -155,7 +161,10 @@ export function CachePanel({ report, onClose }: Props) {
               <span className={styles.rowLabel}>Hit ratio</span>
               <span className={styles.rowValue}>
                 {pct(browser.hitRatio)}
-                <span className={styles.pct}> ({browser.fromDisk + browser.fromMemory}/{browser.total})</span>
+                <span className={styles.pct}>
+                  {" "}
+                  ({browser.fromDisk + browser.fromMemory}/{browser.total})
+                </span>
               </span>
             </div>
             {(browser.fromDisk > 0 || browser.fromMemory > 0) && (

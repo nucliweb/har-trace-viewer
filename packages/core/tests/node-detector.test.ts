@@ -2,8 +2,14 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { detectCdnRegion, detectGfw, detectNode, hasThirdParties } from "../src/inference/node-detector.js";
+import {
+  detectCdnRegion,
+  detectNode,
+  hasThirdParties,
+  suggestClientRegion,
+} from "../src/inference/node-detector.js";
 import { parseHarJson } from "../src/parsers/har-parser.js";
+import type { HarEntry, ParsedHar } from "../src/types.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const harFixturePath = join(__dirname, "fixtures/webperf-snippets.har.fixture.json");
@@ -71,21 +77,65 @@ describe("detectNode", () => {
   });
 });
 
-describe("detectGfw", () => {
-  it("triggers on high DNS (> 80ms)", () => {
-    expect(detectGfw(169, 0)).toBe(true);
+function latencyHar(documentDnsMs: number, connectMs: number[]): ParsedHar {
+  const entries: HarEntry[] = connectMs.map((connect, i) => ({
+    url: i === 0 ? "https://example.com/" : `https://example.com/${i}.js`,
+    startTime: 0,
+    duration: 100,
+    timing: {
+      dns: i === 0 ? documentDnsMs : 0,
+      connect,
+      ssl: 0,
+      send: 1,
+      wait: 20,
+      receive: 5,
+      blocked: 0,
+    },
+    ttfb: 20,
+    status: 200,
+    mimeType: i === 0 ? "text/html" : "application/javascript",
+    resourceType: i === 0 ? "document" : "script",
+    responseHeaders: {},
+    transferSize: 1000,
+    bodySize: 1000,
+    isDocument: i === 0,
+    fromCache: false,
+  }));
+  return {
+    pages: [{ id: "p1", title: "Example", onContentLoad: 100, onLoad: 200 }],
+    entries,
+    documentEntry: entries[0],
+    preconnectHints: {},
+  };
+}
+
+describe("suggestClientRegion", () => {
+  it("suggests cn on high document DNS (> 80ms) and explains why", () => {
+    const suggestion = suggestClientRegion(latencyHar(169, [0]));
+
+    expect(suggestion?.region).toBe("cn");
+    expect(suggestion?.reason).toContain("DNS");
+    expect(suggestion?.reason).toContain("169ms");
   });
 
-  it("triggers on high max TCP connect (> 300ms) even with cached DNS", () => {
-    expect(detectGfw(0, 419)).toBe(true);
+  it("suggests cn on high max TCP connect (> 300ms) even with cached DNS", () => {
+    const suggestion = suggestClientRegion(latencyHar(0, [0, 419]));
+
+    expect(suggestion?.region).toBe("cn");
+    expect(suggestion?.reason).toContain("TCP connect");
+    expect(suggestion?.reason).toContain("419ms");
   });
 
-  it("does not trigger for cached local connections", () => {
-    expect(detectGfw(0, 0)).toBe(false);
+  it("does not suggest anything for cached local connections", () => {
+    expect(suggestClientRegion(latencyHar(0, [0]))).toBeNull();
   });
 
-  it("does not trigger for moderate cross-continent latency (< 300ms)", () => {
-    expect(detectGfw(0, 150)).toBe(false);
+  it("does not suggest anything for moderate cross-continent latency (< 300ms)", () => {
+    expect(suggestClientRegion(latencyHar(0, [150]))).toBeNull();
+  });
+
+  it("ignores the -1 'not applicable' timings of reused connections", () => {
+    expect(suggestClientRegion(latencyHar(-1, [-1, -1]))).toBeNull();
   });
 });
 
@@ -137,5 +187,22 @@ describe("hasThirdParties", () => {
     const { entries, documentEntry } = parseHarJson(json);
 
     expect(hasThirdParties(entries, documentEntry.url)).toBe(true);
+  });
+});
+
+describe("hasThirdParties with multi-label public suffixes", () => {
+  it("treats subdomains of the same .com.au domain as first party", () => {
+    expect(
+      hasThirdParties(
+        [{ url: "https://static.example.com.au/a.js" }],
+        "https://www.example.com.au/"
+      )
+    ).toBe(false);
+  });
+
+  it("treats a different .co.uk domain as third party", () => {
+    expect(hasThirdParties([{ url: "https://news.co.uk/a.js" }], "https://www.bbc.co.uk/")).toBe(
+      true
+    );
   });
 });

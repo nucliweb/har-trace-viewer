@@ -10,22 +10,24 @@ export interface HarTiming {
   blocked: number;
 }
 
-export type ResourceType = "document" | "stylesheet" | "script" | "image" | "font" | "fetch" | "other";
+export type ResourceType =
+  "document" | "stylesheet" | "script" | "image" | "font" | "fetch" | "other";
 export type ResourcePriority = "VeryHigh" | "High" | "Medium" | "Low" | "VeryLow";
 export type PreconnectSource = "link-header" | "early-hints";
 
 export interface HarEntry {
   url: string;
-  startTime: number;        // ms relative to first entry startedDateTime
-  duration: number;         // ms total
+  startTime: number; // ms relative to first entry startedDateTime
+  duration: number; // ms total
   timing: HarTiming;
-  ttfb: number;             // ms: wait (time to first byte)
+  ttfb: number; // ms: wait (time to first byte)
   status: number;
   mimeType: string;
   resourceType: ResourceType;
-  priority: ResourcePriority;
+  priority?: ResourcePriority; // undefined when the HAR carries no priority (non-Chrome)
   responseHeaders: Record<string, string>;
-  transferSize: number;
+  transferSize: number; // bytes on the wire (headers + compressed body)
+  bodySize: number; // decompressed body bytes (response.content.size)
   isDocument: boolean;
   fromCache: "disk" | "memory" | false;
 }
@@ -33,8 +35,8 @@ export interface HarEntry {
 export interface HarPage {
   id: string;
   title: string;
-  onContentLoad: number;    // ms relative to page startedDateTime
-  onLoad: number;           // ms relative to page startedDateTime
+  onContentLoad: number | null; // ms relative to page startedDateTime; null when the event never fired
+  onLoad: number | null; // ms relative to page startedDateTime; null when the event never fired
 }
 
 export interface ParsedHar {
@@ -48,14 +50,16 @@ export interface ParsedHar {
 
 export interface TraceEvent {
   name: string;
-  ts: number;               // microseconds (raw from trace)
+  ts: number; // microseconds (raw from trace)
   args?: Record<string, unknown>;
 }
 
 export interface ParsedTrace {
-  navigationStart: number;  // microseconds
-  fcp: number | null;       // ms relative to navigationStart
-  lcp: number | null;       // ms relative to navigationStart
+  navigationStart: number; // microseconds
+  fcp: number | null; // ms relative to navigationStart
+  lcp: number | null; // ms relative to navigationStart
+  navigationId: string | null; // id of the main navigation, when the trace carries it
+  url: string | null; // documentLoaderURL of the main navigation
 }
 
 // ── Diagram types ─────────────────────────────────────────────────────────────
@@ -84,6 +88,7 @@ export interface DiagramNode {
 export type PathId =
   | "browser-gfw"
   | "gfw-edge"
+  | "gfw-origin"
   | "browser-edge"
   | "edge-origin"
   | "browser-origin"
@@ -101,6 +106,9 @@ export interface Metric {
 }
 
 export interface DiagramStep {
+  // Index into Flow.pages / Flow.pageAnalyses. A transition step belongs to the
+  // page it leads to, so the diagram already shows the destination topology.
+  pageIndex: number;
   title: string;
   description: string;
   activeNodes: NodeId[];
@@ -125,9 +133,42 @@ export interface PageFlow {
   trace?: ParsedTrace;
 }
 
+// Where the client browser sits on the network. "cn" puts it behind the Great
+// Firewall: the diagram adds a GFW node between the browser and the first server.
+export type ClientRegion = "default" | "cn";
+
+export interface FlowOptions {
+  clientRegion?: ClientRegion; // "default" when omitted
+}
+
+// Non-binding hint derived from timings: never changes the topology by itself.
+export interface ClientRegionSuggestion {
+  region: Exclude<ClientRegion, "default">;
+  reason: string;
+}
+
+export interface FlowHints {
+  suggestedClientRegion?: ClientRegionSuggestion;
+}
+
+// Topology and cache analysis of a single page of the flow.
+export interface PageAnalysis {
+  nodes: DiagramNode[];
+  paths: DiagramPath[];
+  cacheReport: CacheReport;
+}
+
 export interface Flow {
+  // Data-model version. Flows embedded before versioning existed have none and
+  // are read as version 0 (see normalizeFlow).
+  version: number;
+  clientRegion: ClientRegion;
+  hints: FlowHints;
   pages: PageFlow[];
+  // One entry per page, in the same order as `pages`.
+  pageAnalyses: PageAnalysis[];
   steps: DiagramStep[];
+  // First page's topology and cache report, kept for readers of version-1 flows.
   nodes: DiagramNode[];
   paths: DiagramPath[];
   cacheReport: CacheReport;

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { generateFlow } from "@htv/core/steps/step-generator.js";
-import type { Flow, PageFlow } from "@htv/core/types.js";
+import { generateFlow, normalizeFlow } from "@htv/core/steps/step-generator.js";
+import type { Flow, FlowOptions, PageFlow } from "@htv/core/types.js";
 import { DiagramView } from "./components/DiagramView.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
+import { RegionNotice } from "./components/RegionNotice.js";
 import styles from "./App.module.css";
 
 function getInitialTheme(): "dark" | "light" {
@@ -10,24 +11,43 @@ function getInitialTheme(): "dark" | "light" {
 }
 
 declare global {
-  interface Window { __HTV_FLOW__?: Flow }
+  interface Window {
+    __HTV_FLOW__?: Flow;
+  }
 }
 
 export function App() {
-  const [flow, setFlow] = useState<Flow | null>(() => window.__HTV_FLOW__ ?? null);
+  // Reports embed the flow without the raw pages, so it cannot be regenerated.
+  const [flow, setFlow] = useState<Flow | null>(() =>
+    window.__HTV_FLOW__ ? normalizeFlow(window.__HTV_FLOW__) : null
+  );
+  const [pages, setPages] = useState<PageFlow[] | null>(null);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const initial = getInitialTheme();
     document.documentElement.setAttribute("data-theme", initial);
     return initial;
   });
 
-  const handleGenerate = (pages: PageFlow[]) => {
-    setFlow(generateFlow(pages));
+  const handleGenerate = (nextPages: PageFlow[], options: FlowOptions) => {
+    setPages(nextPages);
+    setFlow(generateFlow(nextPages, options));
+    setNoticeDismissed(false);
   };
+
+  const handleShowGfwTopology = pages
+    ? () => setFlow(generateFlow(pages, { clientRegion: "cn" }))
+    : undefined;
 
   const handleReset = () => {
     setFlow(null);
+    setPages(null);
   };
+
+  const regionSuggestion =
+    flow?.clientRegion === "default" && !noticeDismissed
+      ? flow.hints.suggestedClientRegion
+      : undefined;
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -51,11 +71,7 @@ export function App() {
               ↩ Reset
             </button>
           )}
-          <button
-            className={styles.themeToggle}
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
+          <button className={styles.themeToggle} onClick={toggleTheme} aria-label="Toggle theme">
             {theme === "dark" ? "☀" : "🌙"}
           </button>
         </div>
@@ -63,7 +79,18 @@ export function App() {
 
       <main className={styles.main}>
         {flow ? (
-          <DiagramView flow={flow} />
+          <div className={styles.flowLayout}>
+            {regionSuggestion && (
+              <RegionNotice
+                suggestion={regionSuggestion}
+                onShowGfwTopology={handleShowGfwTopology}
+                onDismiss={() => setNoticeDismissed(true)}
+              />
+            )}
+            <div className={styles.flowArea}>
+              <DiagramView flow={flow} />
+            </div>
+          </div>
         ) : (
           <div className={styles.builderWrapper}>
             <FlowBuilder onGenerate={handleGenerate} />
