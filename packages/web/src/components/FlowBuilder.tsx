@@ -1,6 +1,6 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { expandPageFlows, isClientRegion } from "@htv/core";
-import type { ClientRegion, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
+import type { ClientRegion, Flow, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
 import { parseInWorker } from "../lib/parse-client.js";
 import type { ParseProgress } from "../lib/parse-protocol.js";
 import styles from "./FlowBuilder.module.css";
@@ -210,13 +210,64 @@ function PageRow({
 
 interface Props {
   onGenerate: (pages: PageFlow[], options: FlowOptions) => void;
+  /** When set, the empty state offers a ready-made demo flow, fetched on demand. */
+  onLoadFlow?: (flow: Flow) => void;
 }
 
-export function FlowBuilder({ onGenerate }: Props) {
+/** Mini diagram motif: browser, edge and origin joined by a dashed request path. */
+function DemoGlyph() {
+  return (
+    <svg className={styles.demoGlyph} viewBox="0 0 72 32" aria-hidden="true" focusable="false">
+      <path d="M10 16 H36 M36 16 H62" className={styles.demoGlyphPath} />
+      <circle cx="10" cy="16" r="5" className={styles.demoGlyphNode} />
+      <circle cx="36" cy="16" r="5" className={styles.demoGlyphNode} />
+      <circle cx="62" cy="16" r="5" className={styles.demoGlyphOrigin} />
+    </svg>
+  );
+}
+
+function Guide() {
+  return (
+    <section className={styles.guide} aria-labelledby="guide-heading">
+      <h3 id="guide-heading" className={styles.guideHeading}>
+        Where do the files come from?
+      </h3>
+      <div className={styles.guideColumns}>
+        <div className={styles.guideCard}>
+          <h4 className={styles.guideTitle}>HAR file</h4>
+          <ol className={styles.guideSteps}>
+            <li>Open DevTools and go to the Network panel.</li>
+            <li>Tick &ldquo;Preserve log&rdquo; and reload the page.</li>
+            <li>Click the download icon, &ldquo;Export HAR (with content)&rdquo;.</li>
+          </ol>
+        </div>
+        <div className={styles.guideCard}>
+          <h4 className={styles.guideTitle}>Trace (optional)</h4>
+          <ol className={styles.guideSteps}>
+            <li>Go to the Performance panel.</li>
+            <li>Click &ldquo;Record and reload&rdquo;, then stop the recording.</li>
+            <li>Click &ldquo;Save profile&rdquo; to get a .json.gz file.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
   const [pages, setPages] = useState<PageEntry[]>([makeEntry("Page 1")]);
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
   const [clientRegion, setClientRegion] = useState<ClientRegion>("default");
   const regionSelectId = useId();
+  const [demoStatus, setDemoStatus] = useState<"idle" | "loading" | "error">("idle");
+
+  const loadDemo = useCallback(() => {
+    setDemoStatus("loading");
+    // A separate chunk: the demo flow is only downloaded when someone asks for it.
+    import("../demo/demo-flow.json")
+      .then((module) => onLoadFlow?.(module.default as unknown as Flow))
+      .catch(() => setDemoStatus("error"));
+  }, [onLoadFlow]);
 
   const update = useCallback((id: string, patch: Partial<PageEntry>) => {
     setPages((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -310,6 +361,26 @@ export function FlowBuilder({ onGenerate }: Props) {
         Add one page for a single-page trace, or multiple pages to visualise a user journey.
       </p>
 
+      {onLoadFlow && (
+        <div className={styles.demo}>
+          <DemoGlyph />
+          <div className={styles.demoText}>
+            <p className={styles.demoTitle}>No files at hand?</p>
+            <p className={styles.demoCopy}>
+              Step through a real page load, captured as a HAR file and a Chrome trace.
+            </p>
+            {demoStatus === "error" && (
+              <p className={styles.demoError} role="alert">
+                Could not load the demo flow.
+              </p>
+            )}
+          </div>
+          <button className={styles.demoBtn} onClick={loadDemo} disabled={demoStatus === "loading"}>
+            {demoStatus === "loading" ? "Loading…" : "Load demo flow →"}
+          </button>
+        </div>
+      )}
+
       <div className={styles.pages}>
         {pages.map((page, idx) => (
           <PageRow
@@ -356,6 +427,8 @@ export function FlowBuilder({ onGenerate }: Props) {
           </button>
         </div>
       </div>
+
+      <Guide />
     </div>
   );
 }

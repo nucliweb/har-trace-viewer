@@ -369,3 +369,75 @@ test("bundled report falls back to main-thread parsing when the worker chunk is 
   );
   expect(unexpected).toEqual([]);
 });
+
+test.describe("mobile layout at 360x740", () => {
+  test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
+
+  const tapTargetsOf = (page: Page) => [
+    themeToggle(page),
+    page.getByRole("button", { name: "Next →" }),
+    page.getByRole("button", { name: "← Prev" }),
+    page.getByRole("button", { name: "Auto play" }),
+    page.getByRole("button", { name: "Toggle cache analysis" }),
+    page.getByRole("button", { name: "Toggle metrics summary" }),
+    page.getByRole("combobox", { name: "Playback speed" }),
+    page.getByRole("tab").first(),
+  ];
+
+  test("the report does not scroll horizontally and keeps 44px tap targets", async ({ page }) => {
+    const collected = await open(page, bundleUrl);
+    await page.getByRole("button", { name: "Next →" }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      360
+    );
+    for (const target of tapTargetsOf(page)) {
+      const box = await target.boundingBox();
+      expect(box, await target.evaluate((el) => el.outerHTML.slice(0, 80))).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    // The diagram scales to the viewport instead of overflowing it.
+    const svg = await page.locator("#diagram-svg").boundingBox();
+    expect(svg!.width).toBeLessThanOrEqual(360);
+    expect(collected.errors).toEqual([]);
+  });
+
+  test("HTML text stays at 12px or larger and the step controls wrap inside the viewport", async ({
+    page,
+  }) => {
+    await open(page, bundleUrl);
+    const result = await page.evaluate(() => {
+      const small: string[] = [];
+      for (const el of document.body.querySelectorAll("*")) {
+        if (el.closest("svg")) continue;
+        const ownText = [...el.childNodes].some(
+          (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()
+        );
+        if (!ownText) continue;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        if (rect.width === 0 || style.visibility === "hidden") continue;
+        if (parseFloat(style.fontSize) < 12) small.push(`${el.tagName} ${el.textContent?.trim()}`);
+      }
+      const overflowing = [...document.querySelectorAll("button, select")]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && (r.right > 360.5 || r.left < -0.5);
+        })
+        .map((el) => el.getAttribute("aria-label") ?? el.textContent);
+      return { small, overflowing };
+    });
+    expect(result.small).toEqual([]);
+    // The step track scrolls inside its own row; every other control fits the viewport.
+    expect(result.overflowing.filter((label) => !/^Step \d+:/.test(label ?? ""))).toEqual([]);
+  });
+
+  test("the builder stacks without horizontal scroll after Reset", async ({ page }) => {
+    await open(page, bundleUrl);
+    await page.getByRole("button", { name: "↩ Reset" }).click();
+    await expect(page.getByRole("heading", { name: "Build your flow" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      360
+    );
+  });
+});

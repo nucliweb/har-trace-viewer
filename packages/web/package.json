@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
+    "demo:build": "node scripts/build-demo.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

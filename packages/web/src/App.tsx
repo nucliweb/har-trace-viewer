@@ -15,9 +15,8 @@ declare global {
 
 export function App() {
   // Reports embed the flow without the raw pages, so it cannot be regenerated.
-  const [flow, setFlow] = useState<Flow | null>(() =>
-    window.__HTV_FLOW__ ? normalizeFlow(window.__HTV_FLOW__) : null
-  );
+  const embedded = window.__HTV_FLOW__;
+  const [flow, setFlow] = useState<Flow | null>(() => (embedded ? normalizeFlow(embedded) : null));
   const [pages, setPages] = useState<PageFlow[] | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const { theme, toggleTheme } = useTheme();
@@ -25,6 +24,12 @@ export function App() {
   const handleGenerate = (nextPages: PageFlow[], options: FlowOptions) => {
     setPages(nextPages);
     setFlow(generateFlow(nextPages, options));
+    setNoticeDismissed(false);
+  };
+
+  const handleLoadFlow = (loaded: Flow) => {
+    setPages(null);
+    setFlow(normalizeFlow(loaded));
     setNoticeDismissed(false);
   };
 
@@ -84,7 +89,11 @@ export function App() {
           </div>
         ) : (
           <div className={styles.builderWrapper}>
-            <FlowBuilder onGenerate={handleGenerate} />
+            <FlowBuilder
+              onGenerate={handleGenerate}
+              // The demo chunk is not shipped inside generated reports.
+              onLoadFlow={embedded ? undefined : handleLoadFlow}
+            />
           </div>
         )}
       </main>

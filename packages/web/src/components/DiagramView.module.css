@@ -127,6 +127,27 @@
   }
 }
 
+/* Mobile: the diagram scales to the viewport; toolbar buttons become 44 px targets. */
+@media (max-width: 640px) {
+  .badgeRow {
+    top: 60px;
+    width: calc(100% - 2 * var(--space-sm));
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs);
+  }
+
+  .cacheBtn,
+  .metricsBtn {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .metricsBtn {
+    right: calc(var(--space-sm) + 80px);
+  }
+}
+
 .view:focus-visible {
   outline: 2px solid var(--color-cyan);
   outline-offset: -2px;

@@ -367,3 +367,274 @@
   color: var(--color-cyan);
   white-space: nowrap;
 }
+
+/* ── Demo callout ───────────────────────────────────────────────────────────── */
+
+.demo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--color-cyan) 9%, transparent), transparent 70%),
+    var(--color-panel);
+  border: 1px solid var(--color-border2);
+  border-left: 3px solid var(--color-cyan);
+  border-radius: 8px;
+}
+
+.demoGlyph {
+  width: 72px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.demoGlyphPath {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.demoGlyphNode {
+  fill: var(--color-panel);
+  stroke: var(--color-cyan);
+  stroke-width: 1.5;
+}
+
+.demoGlyphOrigin {
+  fill: var(--color-panel);
+  stroke: var(--color-green);
+  stroke-width: 1.5;
+}
+
+.demoText {
+  flex: 1;
+  min-width: 0;
+}
+
+.demoTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.demoCopy {
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.demoError {
+  font-size: var(--fs-meta);
+  color: var(--color-red);
+}
+
+.demoBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-cyan);
+  border-radius: 4px;
+  padding: 0 var(--space-lg);
+  height: 44px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.demoBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.demoBtn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ── How to get the files ───────────────────────────────────────────────────── */
+
+.guide {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.guideHeading {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.guideColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.guideTitle {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--color-cyan);
+  margin-bottom: var(--space-xs);
+}
+
+.guideSteps {
+  list-style: none;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.guideSteps li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 24px;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--color-text2);
+}
+
+.guideSteps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-border2);
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 14px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .builder {
+    gap: var(--space-md);
+  }
+
+  .heading {
+    font-size: 26px;
+  }
+
+  .demo {
+    flex-wrap: wrap;
+    padding: var(--space-md);
+  }
+
+  .demoGlyph {
+    display: none;
+  }
+
+  .demoText {
+    flex-basis: 100%;
+  }
+
+  .demoBtn {
+    width: 100%;
+  }
+
+  .guideColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: auto 1fr 44px;
+    grid-template-areas:
+      "order name remove"
+      "har har har"
+      "trace trace trace";
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+
+  .rowOrder {
+    grid-area: order;
+    flex-direction: row;
+    gap: var(--space-xs);
+  }
+
+  .orderBtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nameInput {
+    grid-area: name;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    font-size: 16px; /* keeps iOS from zooming on focus */
+  }
+
+  .removeBtn {
+    grid-area: remove;
+    width: 44px;
+    height: 44px;
+  }
+
+  .harZone {
+    grid-area: har;
+  }
+
+  .traceZone {
+    grid-area: trace;
+    flex-wrap: wrap;
+  }
+
+  .harBtn {
+    height: 44px;
+  }
+
+  .traceBtn {
+    height: 44px;
+    padding: 0 var(--space-md);
+  }
+
+  .traceErrorText {
+    max-width: none;
+    white-space: normal;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-md);
+  }
+
+  .footerActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .regionField {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-xs);
+  }
+
+  .regionSelect {
+    height: 44px;
+    width: 100%;
+  }
+
+  .addBtn {
+    height: 44px;
+  }
+
+  .generateBtn {
+    height: 48px;
+  }
+}

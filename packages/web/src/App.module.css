@@ -140,8 +140,35 @@
 .builderWrapper {
   height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
   padding: var(--space-xl);
   overflow-y: auto;
+}
+
+/* Centers the builder while it fits and lets it scroll from the top when it does not. */
+.builderWrapper > * {
+  margin: auto;
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .logo span {
+    display: none;
+  }
+
+  .resetButton {
+    height: 44px;
+    padding: 0 var(--space-md);
+  }
+
+  .themeToggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .builderWrapper {
+    padding: var(--space-md);
+  }
 }

@@ -3,7 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>htv — HAR Trace Viewer</title>
+    <title>HTV · HAR Trace Viewer</title>
+    <meta
+      name="description"
+      content="Turn a HAR file and a Chrome trace into a step-by-step diagram of a page load: browser, CDN edge, origin and third parties. Runs entirely in your browser."
+    />
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#060910" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="HTV" />
+    <meta property="og:title" content="HTV · HAR Trace Viewer" />
+    <meta
+      property="og:description"
+      content="Turn a HAR file and a Chrome trace into a step-by-step diagram of a page load. Runs entirely in your browser."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="HTV, HAR Trace Viewer: a diagram of a page load from browser to edge to origin."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HTV · HAR Trace Viewer" />
+    <meta
+      name="twitter:description"
+      content="Turn a HAR file and a Chrome trace into a step-by-step diagram of a page load."
+    />
+    <meta name="twitter:image" content="/og.png" />
+    <!-- Inline icon: the CLI inlines this file into reports opened over file://, where /favicon.svg would not resolve. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23060910'/%3E%3Cpath%20d='M13%2040%20L29%2024%20L51%2040'%20fill='none'%20stroke='%2300d4ff'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'%20stroke-dasharray='1%207.5'/%3E%3Cpath%20d='M13%2040%20L29%2024%20L51%2040'%20fill='none'%20stroke='%2300d4ff'%20stroke-width='3'%20stroke-linecap='round'%20stroke-linejoin='round'%20opacity='.45'/%3E%3Ccircle%20cx='13'%20cy='40'%20r='6'%20fill='%23060910'%20stroke='%2300d4ff'%20stroke-width='3.5'/%3E%3Ccircle%20cx='29'%20cy='24'%20r='6'%20fill='%23060910'%20stroke='%2300d4ff'%20stroke-width='3.5'/%3E%3Ccircle%20cx='51'%20cy='40'%20r='6'%20fill='%2300ff9d'/%3E%3C/svg%3E"
+    />
     <link
       rel="preload"
       as="font"
