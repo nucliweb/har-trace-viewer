@@ -80,8 +80,9 @@
   }
 }
 
-/* Cache analysis toggle button */
-.cacheBtn {
+/* Cache analysis and metrics toggle buttons */
+.cacheBtn,
+.metricsBtn {
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
@@ -101,7 +102,12 @@
   z-index: 5;
 }
 
-.cacheBtn:hover {
+.metricsBtn {
+  right: calc(var(--space-sm) + 80px);
+}
+
+.cacheBtn:hover,
+.metricsBtn:hover {
   border-color: var(--color-cyan);
   color: var(--color-cyan);
 }
@@ -114,7 +120,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .badge,
-  .cacheBtn {
+  .cacheBtn,
+  .metricsBtn {
     animation: none;
     transition: none;
   }

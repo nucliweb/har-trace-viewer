@@ -8,6 +8,7 @@ import { StepPanel } from "./StepPanel.js";
 import { ResourceSidebar } from "./ResourceSidebar.js";
 import { CacheSidebar } from "./CacheSidebar.js";
 import { CachePanel } from "./CachePanel.js";
+import { MetricsSummary } from "./MetricsSummary.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -65,6 +66,7 @@ export function DiagramView({ flow }: Props) {
   const page = flow.pages[pageIndex];
   const [sidebarResources, setSidebarResources] = useState<HarEntry[] | null>(null);
   const [showCachePanel, setShowCachePanel] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(false);
 
   const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
   const closeSidebar = () => setSidebarResources(null);
@@ -136,9 +138,25 @@ export function DiagramView({ flow }: Props) {
             onClose={() => setShowCachePanel(false)}
           />
         )}
+        {showMetrics && <MetricsSummary flow={flow} onClose={() => setShowMetrics(false)} />}
+        <button
+          className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowMetrics((v) => !v);
+            setShowCachePanel(false);
+          }}
+          aria-label="Toggle metrics summary"
+          aria-expanded={showMetrics}
+          title="Metrics summary"
+        >
+          Metrics
+        </button>
         <button
           className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
-          onClick={() => setShowCachePanel((v) => !v)}
+          onClick={() => {
+            setShowCachePanel((v) => !v);
+            setShowMetrics(false);
+          }}
           aria-label="Toggle cache analysis"
           title="Cache Analysis"
         >

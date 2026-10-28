@@ -6,3 +6,4 @@ export * from "./inference/cache-analyzer.js";
 export * from "./steps/step-generator.js";
 export * from "./utils/domain.js";
 export * from "./steps/expand-page-flows.js";
+export * from "./analysis/metrics-summary.js";

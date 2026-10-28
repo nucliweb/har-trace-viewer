@@ -94,6 +94,29 @@ describe("parseHar — Chrome transfer sizes", () => {
   });
 });
 
+describe("parseHar — transfer size of cached entries", () => {
+  const withEntry = (overrides: Record<string, unknown>) => {
+    const raw = firefoxHar();
+    raw.log.entries.push(firefoxEntry("https://example.com/c.js", "text/javascript", overrides));
+    return parseHar(raw).entries.at(-1)!;
+  };
+
+  it("reports 0 transferred bytes for a cache entry without _transferSize, keeping bodySize", () => {
+    const entry = withEntry({ _fromCache: "disk" });
+    expect(entry.fromCache).toBe("disk");
+    expect(entry.transferSize).toBe(0);
+    expect(entry.bodySize).toBe(5000);
+  });
+
+  it("keeps the fallback chain for network entries without _transferSize", () => {
+    expect(withEntry({}).transferSize).toBe(1500);
+  });
+
+  it("uses _transferSize as is, even for cache entries", () => {
+    expect(withEntry({ _fromCache: "memory", _transferSize: 42 }).transferSize).toBe(42);
+  });
+});
+
 describe("parseHar — Firefox-style HAR", () => {
   it("infers resourceType from mimeType", () => {
     const { entries } = parseHar(firefoxHar());

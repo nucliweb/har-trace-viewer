@@ -231,6 +231,8 @@ function parseResourcePriority(raw?: string): ResourcePriority | undefined {
 
 function parseTransferSize(e: RawHarEntry): number {
   if (typeof e._transferSize === "number" && e._transferSize >= 0) return e._transferSize;
+  // Served from the browser cache: nothing crossed the network.
+  if (parseFromCache(e._fromCache, e.cache)) return 0;
   const { bodySize, headersSize, content } = e.response;
   if (typeof bodySize === "number" && typeof headersSize === "number") {
     if (bodySize >= 0 && headersSize >= 0) return bodySize + headersSize;
