@@ -14,7 +14,8 @@ export default mergeConfig(
       coverage: {
         provider: "v8",
         include: ["src/hooks/**", "src/lib/**"],
-        exclude: ["src/lib/parse-protocol.ts"],
+        // export-browser.ts needs a real browser: covered by e2e/export.spec.ts.
+        exclude: ["src/lib/parse-protocol.ts", "src/lib/export-browser.ts"],
         reporter: ["text", "lcov"],
         thresholds: {
           lines: 80,

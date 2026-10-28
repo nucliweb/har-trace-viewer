@@ -10,6 +10,7 @@ import { ResourceSidebar } from "./ResourceSidebar.js";
 import { CacheSidebar } from "./CacheSidebar.js";
 import { CachePanel } from "./CachePanel.js";
 import { MetricsSummary } from "./MetricsSummary.js";
+import { ExportMenu } from "./ExportMenu.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -118,6 +119,13 @@ export function DiagramView({ flow }: Props) {
             {allBadges.map((badge) => (
               <div
                 key={badge.type}
+                data-badge-state={
+                  !revealedTypes.has(badge.type)
+                    ? "hidden"
+                    : badge.type !== currentBadgeType
+                      ? "dim"
+                      : "active"
+                }
                 className={`${styles.badge} ${styles[`badge_${badge.type}`]} ${!revealedTypes.has(badge.type) ? styles.badgeHidden : badge.type !== currentBadgeType ? styles.badgeDim : ""}`}
               >
                 <span className={styles.badgeLabel}>{BADGE_LABELS[badge.type]}</span>
@@ -167,6 +175,7 @@ export function DiagramView({ flow }: Props) {
         >
           Cache
         </button>
+        <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
       </div>
       <StepPanel state={state} resources={resources} onOpenResources={openSidebar} />
     </div>
