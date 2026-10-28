@@ -1,6 +1,6 @@
 import { parseHarPagesJson, parseTraceJson } from "@htv/core";
 import { readFileText } from "./read-file-text.js";
-import type { ParsedHar, ParsedTrace } from "@htv/core/types.js";
+import type { ParsedHar, ParsedTrace } from "@htv/core";
 import type {
   ParseKind,
   ParseProgress,

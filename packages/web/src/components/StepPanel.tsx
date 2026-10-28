@@ -1,4 +1,4 @@
-import type { HarEntry } from "@htv/core/types.js";
+import type { HarEntry } from "@htv/core";
 import type { DiagramState, Speed } from "../hooks/useDiagramState.js";
 import styles from "./StepPanel.module.css";
 

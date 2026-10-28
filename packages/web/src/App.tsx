@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { generateFlow, normalizeFlow } from "@htv/core/steps/step-generator.js";
-import type { Flow, FlowOptions, PageFlow } from "@htv/core/types.js";
+import { generateFlow, normalizeFlow } from "@htv/core";
+import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { DiagramView } from "./components/DiagramView.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
 import { RegionNotice } from "./components/RegionNotice.js";
+import { useTheme } from "./hooks/useTheme.js";
 import styles from "./App.module.css";
-
-function getInitialTheme(): "dark" | "light" {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
 
 declare global {
   interface Window {
@@ -23,11 +20,7 @@ export function App() {
   );
   const [pages, setPages] = useState<PageFlow[] | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    const initial = getInitialTheme();
-    document.documentElement.setAttribute("data-theme", initial);
-    return initial;
-  });
+  const { theme, toggleTheme } = useTheme();
 
   const handleGenerate = (nextPages: PageFlow[], options: FlowOptions) => {
     setPages(nextPages);
@@ -49,12 +42,6 @@ export function App() {
       ? flow.hints.suggestedClientRegion
       : undefined;
 
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-  };
-
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -71,7 +58,11 @@ export function App() {
               ↩ Reset
             </button>
           )}
-          <button className={styles.themeToggle} onClick={toggleTheme} aria-label="Toggle theme">
+          <button
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            aria-label={`Toggle theme (current: ${theme})`}
+          >
             {theme === "dark" ? "☀" : "🌙"}
           </button>
         </div>

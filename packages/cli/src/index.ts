@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseArgs, printUsage, validateArgs, generateReport } from "./cli";
+import { parseArgs, printUsage, HELP, validateArgs, generateReport } from "./cli";
 import type { Args } from "./cli";
 
 async function main() {
@@ -10,6 +10,15 @@ async function main() {
     console.error((err as Error).message);
     printUsage();
     process.exit(1);
+  }
+
+  if (args.help) {
+    console.log(HELP);
+    return;
+  }
+  if (args.version) {
+    console.log(__HTV_VERSION__);
+    return;
   }
 
   const error = validateArgs(args);

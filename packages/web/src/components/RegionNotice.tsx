@@ -1,4 +1,4 @@
-import type { ClientRegionSuggestion } from "@htv/core/types.js";
+import type { ClientRegionSuggestion } from "@htv/core";
 import styles from "./RegionNotice.module.css";
 
 interface Props {

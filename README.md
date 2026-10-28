@@ -7,19 +7,21 @@ Generates static HTML reports from HAR and Chrome trace files, visualizing page 
 ## Usage
 
 ```bash
-htv --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle] [--region default|cn]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] --output <dir|file.html> [--bundle] [--region default|cn]
 ```
 
 ### Options
 
-| Flag             | Description                                                                                                   |
-| ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| `--page <name>`  | Page label (can be specified multiple times for multi-page reports)                                           |
-| `--har <file>`   | HAR file for the preceding `--page`                                                                           |
-| `--trace <file>` | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                          |
-| `--output <dir>` | Directory where the report is written                                                                         |
-| `--bundle`       | Inline all assets (CSS, JS, fonts) into a single self-contained `index.html`                                  |
-| `--region <id>`  | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server |
+| Flag                  | Description                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--page <name>`       | Page label (can be specified multiple times for multi-page reports)                                           |
+| `--har <file>`        | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                     |
+| `--trace <file>`      | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                          |
+| `-o, --output <path>` | Directory where the report is written; with `--bundle` it can also be a `.html` file path                     |
+| `--bundle`            | Inline all assets (CSS, JS, fonts) into a single self-contained HTML file                                     |
+| `--region <id>`       | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server |
+| `-h, --help`          | Print the usage and exit                                                                                      |
+| `-v, --version`       | Print the version and exit                                                                                    |
 
 ### Examples
 
@@ -49,6 +51,8 @@ Portable single-file report:
 ```bash
 htv --page "Home" --har home.har --output report/ --bundle
 ```
+
+With `--bundle`, `--output` can be a `.html` path (`--output report.html`) to write just that single file; without `--bundle` a `.html` output path is an error.
 
 Without `--bundle`, the report loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`) or use `--bundle` for a file that opens by double-click.
 

@@ -1,4 +1,4 @@
-import type { CacheReport, CdnCacheStatus } from "@htv/core/types.js";
+import type { CacheReport, CdnCacheStatus } from "@htv/core";
 import styles from "./CachePanel.module.css";
 
 interface Props {

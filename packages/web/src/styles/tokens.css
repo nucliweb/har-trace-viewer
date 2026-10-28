@@ -1,22 +1,30 @@
 /* ── Design tokens ──────────────────────────────────────────────────────────── */
 
+/*
+ * Each color token is defined once with light-dark(light, dark). The active
+ * variant follows the element's color-scheme: the system preference by default,
+ * or the forced theme set by data-theme on <html> (see hooks/useTheme.ts).
+ */
+
 :root {
+  color-scheme: light dark;
+
   /* Palette */
-  --color-bg: #060910;
-  --color-surface: #0c1018;
-  --color-panel: #0f1520;
-  --color-border: #1a2535;
-  --color-border2: #243044;
+  --color-bg: light-dark(#f5f7fa, #060910);
+  --color-surface: light-dark(#ffffff, #0c1018);
+  --color-panel: light-dark(#f0f2f5, #0f1520);
+  --color-border: light-dark(#d0d8e4, #1a2535);
+  --color-border2: light-dark(#b8c4d0, #243044);
 
-  --color-cyan: #00d4ff;
-  --color-green: #00ff9d;
-  --color-orange: #ff8c00;
-  --color-red: #ff3355;
-  --color-yellow: #ffe600;
+  --color-cyan: light-dark(#006d8a, #00d4ff);
+  --color-green: light-dark(#006440, #00ff9d);
+  --color-orange: light-dark(#b35900, #ff8c00);
+  --color-red: light-dark(#b80f2b, #ff3355);
+  --color-yellow: light-dark(#856300, #ffe600);
 
-  --color-muted: #6d8faa;
-  --color-text: #c8d8e8;
-  --color-text2: #7a90a8;
+  --color-muted: light-dark(#4d6580, #6d8faa);
+  --color-text: light-dark(#1a2535, #c8d8e8);
+  --color-text2: light-dark(#4a6080, #7a90a8);
 
   /* Node accent colors */
   --color-node-browser: var(--color-cyan);
@@ -54,60 +62,12 @@
   --opacity-active: 1;
 }
 
-/* ── Light mode ─────────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-bg: #f5f7fa;
-    --color-surface: #ffffff;
-    --color-panel: #f0f2f5;
-    --color-border: #d0d8e4;
-    --color-border2: #b8c4d0;
-
-    --color-cyan: #006d8a;
-    --color-green: #006440;
-    --color-orange: #b35900;
-    --color-red: #b80f2b;
-    --color-yellow: #856300;
-
-    --color-muted: #4d6580;
-    --color-text: #1a2535;
-    --color-text2: #4a6080;
-  }
-}
+/* Forced themes, chosen by the toggle or the persisted preference */
 
 [data-theme="light"] {
-  --color-bg: #f5f7fa;
-  --color-surface: #ffffff;
-  --color-panel: #f0f2f5;
-  --color-border: #d0d8e4;
-  --color-border2: #b8c4d0;
-
-  --color-cyan: #006d8a;
-  --color-green: #006440;
-  --color-orange: #b35900;
-  --color-red: #b80f2b;
-  --color-yellow: #856300;
-
-  --color-muted: #4d6580;
-  --color-text: #1a2535;
-  --color-text2: #4a6080;
+  color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --color-bg: #060910;
-  --color-surface: #0c1018;
-  --color-panel: #0f1520;
-  --color-border: #1a2535;
-  --color-border2: #243044;
-
-  --color-cyan: #00d4ff;
-  --color-green: #00ff9d;
-  --color-orange: #ff8c00;
-  --color-red: #ff3355;
-  --color-yellow: #ffe600;
-
-  --color-muted: #6d8faa;
-  --color-text: #c8d8e8;
-  --color-text2: #7a90a8;
+  color-scheme: dark;
 }

@@ -4,13 +4,14 @@ import { readFile } from "fs/promises";
 import { parseTraceJson } from "./trace-parser.js";
 import type { ParsedTrace } from "../types.js";
 
+/** Reads a UTF-8 text file, gunzipping it first when the path ends in `.gz`. */
+export async function readTextFile(filePath: string): Promise<string> {
+  if (filePath.endsWith(".gz")) return readGzipFile(filePath);
+  return readFile(filePath, "utf8");
+}
+
 export async function parseTraceFile(filePath: string): Promise<ParsedTrace> {
-  if (filePath.endsWith(".gz")) {
-    const buffer = await readGzipFile(filePath);
-    return parseTraceJson(buffer);
-  }
-  const content = await readFile(filePath, "utf8");
-  return parseTraceJson(content);
+  return parseTraceJson(await readTextFile(filePath));
 }
 
 function readGzipFile(filePath: string): Promise<string> {

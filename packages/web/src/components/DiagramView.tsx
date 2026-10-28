@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { Flow, HarEntry, PathId } from "@htv/core/types.js";
-import { getStepCacheResources, getStepResources } from "@htv/core/steps/step-generator.js";
+import { getStepCacheResources, getStepResources } from "@htv/core";
+import type { Flow, HarEntry, PathId } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import type { HistoricalPath } from "../types.js";
 import { NodeRenderer } from "./NodeRenderer.js";

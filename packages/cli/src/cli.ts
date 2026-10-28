@@ -1,16 +1,25 @@
-import { readFileSync, mkdirSync, cpSync, writeFileSync, rmSync } from "node:fs";
+import {
+  readFileSync,
+  mkdirSync,
+  cpSync,
+  writeFileSync,
+  rmSync,
+  mkdtempSync,
+  renameSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { gunzipSync } from "node:zlib";
+import { parseArgs as nodeParseArgs } from "node:util";
 import {
   parseHarPagesJson,
   expandPageFlows,
-  parseTraceJson,
   generateFlow,
   isClientRegion,
   CLIENT_REGIONS,
 } from "@htv/core";
 import type { ClientRegion, PageFlow } from "@htv/core";
+import { parseTraceFile, readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +35,8 @@ export interface Args {
   output: string;
   bundle: boolean;
   region?: ClientRegion; // undefined when --region is absent
+  help?: boolean;
+  version?: boolean;
 }
 
 function parseRegion(value: string | undefined): ClientRegion {
@@ -34,38 +45,73 @@ function parseRegion(value: string | undefined): ClientRegion {
 }
 
 export function parseArgs(argv: string[]): Args {
+  const { tokens } = nodeParseArgs({
+    args: argv,
+    options: {
+      page: { type: "string", multiple: true },
+      har: { type: "string", multiple: true },
+      trace: { type: "string", multiple: true },
+      output: { type: "string", short: "o" },
+      bundle: { type: "boolean" },
+      region: { type: "string" },
+      help: { type: "boolean", short: "h" },
+      version: { type: "boolean", short: "v" },
+    },
+    tokens: true,
+    allowPositionals: false,
+    strict: true,
+  });
+
   const pages: PageArg[] = [];
   let output = "";
   let bundle = false;
+  let help = false;
+  let version = false;
   let region: ClientRegion | undefined;
-  let i = 0;
+  const lastPage = () => {
+    if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
+    return pages[pages.length - 1];
+  };
 
-  while (i < argv.length) {
-    const arg = argv[i];
-    if (arg === "--page") {
-      pages.push({ name: argv[++i], har: "" });
-    } else if (arg === "--har") {
-      if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
-      pages[pages.length - 1].har = argv[++i];
-    } else if (arg === "--trace") {
-      if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
-      pages[pages.length - 1].trace = argv[++i];
-    } else if (arg === "--output" || arg === "-o") {
-      output = argv[++i];
-    } else if (arg === "--bundle") {
-      bundle = true;
-    } else if (arg === "--region") {
-      region = parseRegion(argv[++i]);
+  for (const token of tokens ?? []) {
+    if (token.kind !== "option") continue;
+    const value = token.value as string;
+    switch (token.name) {
+      case "page":
+        pages.push({ name: value, har: "" });
+        break;
+      case "har":
+        lastPage().har = value;
+        break;
+      case "trace":
+        lastPage().trace = value;
+        break;
+      case "output":
+        output = value;
+        break;
+      case "bundle":
+        bundle = true;
+        break;
+      case "region":
+        region = parseRegion(value);
+        break;
+      case "help":
+        help = true;
+        break;
+      case "version":
+        version = true;
+        break;
     }
-    i++;
   }
 
-  return { pages, output, bundle, ...(region ? { region } : {}) };
-}
-
-function readContent(filePath: string): string {
-  const raw = readFileSync(filePath);
-  return filePath.endsWith(".gz") ? gunzipSync(raw).toString("utf-8") : raw.toString("utf-8");
+  return {
+    pages,
+    output,
+    bundle,
+    ...(region ? { region } : {}),
+    ...(help ? { help } : {}),
+    ...(version ? { version } : {}),
+  };
 }
 
 const ASSET_MIME: Record<string, string> = {
@@ -113,14 +159,47 @@ export function bundleHtml(outputDir: string): void {
   rmSync(join(outputDir, "assets"), { recursive: true, force: true });
 }
 
+const isHtmlPath = (p: string) => p.toLowerCase().endsWith(".html");
+
+export const USAGE = `Usage: htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] --output <dir|file.html> [options]`;
+
+export const HELP = `${USAGE}
+
+Generates a self-contained HTML performance report from HAR and Chrome trace files.
+
+Options:
+  --page <name>       Start a page in the report; repeat once per page.
+                      The following --har and --trace attach to it.
+  --har <file>        HAR file for the preceding --page (.har or .har.gz).
+                      Without a --page, a page named "Page 1" is created.
+  --trace <file>      Chrome trace for the preceding --page (.json or .json.gz).
+  -o, --output <path> Directory where the report is written. With --bundle it
+                      may also be a .html file path.
+  --bundle            Inline all assets (CSS, JS, fonts) into a single
+                      self-contained index.html that opens offline.
+  --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")} (default: default).
+                      "cn" draws the Great Firewall before the first server.
+  -h, --help          Show this help.
+  -v, --version       Show the version.
+
+Example (two pages):
+  htv --page "Home" --har home.har --trace home.json.gz \
+      --page "Checkout" --har checkout.har \
+      --output report/ --bundle
+
+Without --bundle the report loads ES modules from assets/, which browsers
+block over file://; serve the folder over HTTP (npx serve report/) or use
+--bundle for a single file that opens by double-click.`;
+
 export function printUsage() {
-  console.error(
-    `Usage: htv --page <name> --har <file.har> [--trace <file.json[.gz]>] --output <dir> [--bundle] [--region ${CLIENT_REGIONS.join("|")}]`
-  );
+  console.error(USAGE);
 }
 
 export function validateArgs(args: Args): string | null {
   if (args.pages.length === 0 || !args.output) return "";
+  if (isHtmlPath(args.output) && !args.bundle) {
+    return "--output must be a directory unless --bundle is set";
+  }
   for (const p of args.pages) {
     if (!p.har) return `Missing --har for page "${p.name}"`;
   }
@@ -128,19 +207,22 @@ export function validateArgs(args: Args): string | null {
 }
 
 export async function generateReport(args: Args): Promise<string> {
-  const pageFlows: PageFlow[] = args.pages.flatMap((p) => {
-    const har = parseHarPagesJson(readContent(resolve(p.har)));
+  const pageFlows: PageFlow[] = [];
+  for (const p of args.pages) {
+    const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
     if (har.length > 1) {
       console.error(
         `Note: ${p.har} contains ${har.length} pages; expanded into ${har.length} flow pages.`
       );
     }
-    return expandPageFlows({
-      name: p.name,
-      har,
-      trace: p.trace ? parseTraceJson(readContent(resolve(p.trace))) : undefined,
-    });
-  });
+    pageFlows.push(
+      ...expandPageFlows({
+        name: p.name,
+        har,
+        trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
+      })
+    );
+  }
 
   const flow = generateFlow(pageFlows, { clientRegion: args.region ?? "default" });
 
@@ -151,7 +233,22 @@ export async function generateReport(args: Args): Promise<string> {
     );
   }
 
-  const outputDir = resolve(args.output);
+  const target = resolve(args.output);
+  const singleFile = isHtmlPath(target);
+  const outputDir = singleFile ? mkdtempSync(join(tmpdir(), "htv-report-")) : target;
+  try {
+    return writeReport(flow, outputDir, args.bundle, singleFile ? target : undefined);
+  } finally {
+    if (singleFile) rmSync(outputDir, { recursive: true, force: true });
+  }
+}
+
+function writeReport(
+  flow: ReturnType<typeof generateFlow>,
+  outputDir: string,
+  bundle: boolean,
+  singleFile?: string
+): string {
   mkdirSync(outputDir, { recursive: true });
 
   const webDir = join(__dirname, "web");
@@ -164,8 +261,19 @@ export async function generateReport(args: Args): Promise<string> {
   html = html.replace("</head>", () => `${injection}\n</head>`);
   writeFileSync(indexPath, html);
 
-  if (args.bundle) {
+  if (bundle) {
     bundleHtml(outputDir);
+  }
+
+  if (singleFile) {
+    mkdirSync(dirname(singleFile), { recursive: true });
+    try {
+      renameSync(indexPath, singleFile);
+    } catch {
+      // Cross-device move (temp dir on another filesystem)
+      writeFileSync(singleFile, readFileSync(indexPath));
+    }
+    return singleFile;
   }
 
   return indexPath;

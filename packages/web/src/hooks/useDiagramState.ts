@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Flow } from "@htv/core/types.js";
+import type { Flow } from "@htv/core";
 
 export type Speed = 400 | 800 | 1400 | 2000;
 

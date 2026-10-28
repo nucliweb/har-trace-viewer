@@ -1,13 +1,6 @@
 import { useCallback, useId, useRef, useState } from "react";
-import { expandPageFlows } from "@htv/core";
-import { isClientRegion } from "@htv/core/steps/step-generator.js";
-import type {
-  ClientRegion,
-  FlowOptions,
-  PageFlow,
-  ParsedHar,
-  ParsedTrace,
-} from "@htv/core/types.js";
+import { expandPageFlows, isClientRegion } from "@htv/core";
+import type { ClientRegion, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
 import { parseInWorker } from "../lib/parse-client.js";
 import type { ParseProgress } from "../lib/parse-protocol.js";
 import styles from "./FlowBuilder.module.css";

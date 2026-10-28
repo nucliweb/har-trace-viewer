@@ -1,4 +1,4 @@
-import type { ParsedHar, ParsedTrace } from "@htv/core/types.js";
+import type { ParsedHar, ParsedTrace } from "@htv/core";
 
 export type ParseKind = "har" | "trace";
 export type ParsePhase = "reading" | "decompressing" | "parsing";

@@ -9,6 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs, bundleHtml } from "../src/cli";
@@ -103,7 +104,72 @@ describe("parseArgs", () => {
 
   it("rejects an unknown region listing the valid values", () => {
     expect(() => parseArgs(["--region", "eu"])).toThrow(/default, cn/);
-    expect(() => parseArgs(["--region"])).toThrow(/default, cn/);
+    expect(() => parseArgs(["--region"])).toThrow(/region/);
+  });
+
+  it("throws the parseArgs error for an unknown option", () => {
+    expect(() => parseArgs(["--foo"])).toThrow(/Unknown option '--foo'/);
+  });
+
+  it("rejects positional arguments", () => {
+    expect(() => parseArgs(["stray"])).toThrow();
+  });
+
+  it("sets help and version with long and short flags", () => {
+    expect(parseArgs(["--help"]).help).toBe(true);
+    expect(parseArgs(["-h"]).help).toBe(true);
+    expect(parseArgs(["--version"]).version).toBe(true);
+    expect(parseArgs(["-v"]).version).toBe(true);
+    expect(parseArgs([]).help).toBeUndefined();
+  });
+});
+
+describe("--help, --version and --output (built CLI)", () => {
+  const pkgVersion = JSON.parse(readFileSync(join(CLI_ROOT, "package.json"), "utf-8")).version;
+
+  it("prints the usage to stdout and exits 0 with --help", () => {
+    const res = runCli(["--help"]);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("Usage");
+    expect(res.stdout).toContain("--bundle");
+    expect(res.stdout).toContain("Example");
+  });
+
+  it("prints the package.json version and exits 0 with --version", () => {
+    const res = runCli(["--version"]);
+    expect(res.status).toBe(0);
+    expect(res.stdout.trim()).toBe(pkgVersion);
+  });
+
+  it("exits 1 with Unknown option and the usage for an unknown flag", () => {
+    const res = runCli(["--foo"]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("Unknown option '--foo'");
+    expect(res.stderr).toContain("Usage");
+  });
+
+  it("writes a single file to a .html output path with --bundle", () => {
+    const target = join(makeTempDir(), "out.html");
+    const res = runCli(["--har", HAR, "--output", target, "--bundle"]);
+    expect(res.status).toBe(0);
+    expect(readFileSync(target, "utf-8")).toContain("window.__HTV_FLOW__");
+    expect(readdirSync(join(target, ".."))).toEqual(["out.html"]);
+  });
+
+  it("exits 1 when --output is a .html path without --bundle", () => {
+    const target = join(makeTempDir(), "out.html");
+    const res = runCli(["--har", HAR, "--output", target]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--output must be a directory unless --bundle is set");
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it("reads a gzipped HAR", () => {
+    const dir = makeTempDir();
+    const gz = join(dir, "a.har.gz");
+    writeFileSync(gz, gzipSync(readFileSync(HAR)));
+    const res = runCli(["--har", gz, "--output", join(dir, "out")]);
+    expect(res.status).toBe(0);
   });
 });
 
