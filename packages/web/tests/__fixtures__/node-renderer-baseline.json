@@ -1,0 +1,2033 @@
+{
+  "noGfw_cdn": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 150,240 C 230,240 320,240 380,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 150,240 C 230,240 320,240 380,240" }],
+          "labels": [{ "text": "120ms", "x": 265, "y": 228 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 210 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 150,245 C 230,245 320,245 380,245" },
+            { "id": "path-browser-edge-req", "d": "M 150,235 C 230,235 320,235 380,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 265, "y": 222 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 420,240 C 500,230 600,215 680,205" },
+            { "id": "path-edge-origin-req", "d": "M 420,230 C 500,220 600,205 680,195" }
+          ],
+          "labels": [{ "text": "120ms", "x": 550, "y": 202 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,247 C 320,260 530,295 680,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 150,237 C 320,250 530,285 680,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 150,235 C 230,235 320,235 380,235" },
+            { "id": "path-browser-edge-res", "d": "M 150,245 C 230,245 320,245 380,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 265, "y": 262 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 420,230 C 500,220 600,205 680,195" },
+            { "id": "path-edge-origin-res", "d": "M 420,240 C 500,230 600,215 680,205" }
+          ],
+          "labels": [{ "text": "120ms", "x": 550, "y": 242 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,237 C 320,250 530,285 680,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 150,247 C 320,260 530,295 680,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 150,240 C 230,240 320,240 380,240" }],
+          "labels": [{ "text": "120ms", "x": 265, "y": 228 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 210 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 150,235 C 230,235 320,235 380,235" }],
+          "labels": [{ "text": "120ms", "x": 265, "y": 222 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,230 C 500,220 600,205 680,195" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 202 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,237 C 320,250 530,285 680,305" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 132.5, "y": 22 },
+        { "text": "EUROPE", "x": 410, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 132.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 150,245 C 230,245 320,245 380,245" }],
+          "labels": [{ "text": "120ms", "x": 265, "y": 262 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,240 C 500,230 600,215 680,205" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 242 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,247 C 320,260 530,295 680,315" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    }
+  },
+  "noGfw_noCdn": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 150,243 C 320,235 530,215 680,205" },
+            { "id": "path-browser-origin-req", "d": "M 150,233 C 320,225 530,205 680,195" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,247 C 320,260 530,295 680,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 150,237 C 320,250 530,285 680,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 150,233 C 320,225 530,205 680,195" },
+            { "id": "path-browser-origin-res", "d": "M 150,243 C 320,235 530,215 680,205" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,237 C 320,250 530,285 680,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 150,247 C 320,260 530,295 680,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,233 C 320,225 530,205 680,195" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,237 C 320,250 530,285 680,305" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,243 C 320,235 530,215 680,205" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,247 C 320,260 530,295 680,315" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        }
+      ]
+    }
+  },
+  "noGfw_noCdn_thirdParties": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 150,243 C 320,235 530,215 680,205" },
+            { "id": "path-browser-origin-req", "d": "M 150,233 C 320,225 530,205 680,195" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,247 C 320,260 530,295 680,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 150,237 C 320,250 530,285 680,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 150,233 C 320,225 530,205 680,195" },
+            { "id": "path-browser-origin-res", "d": "M 150,243 C 320,235 530,215 680,205" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,237 C 320,250 530,285 680,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 150,247 C 320,260 530,295 680,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,238 C 320,230 530,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,233 C 320,225 530,205 680,195" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,237 C 320,250 530,285 680,305" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 207.5, "y": 22 },
+        { "text": "ORIGIN", "x": 657.5, "y": 22 },
+        { "text": "CACHE", "x": 207.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 150,243 C 320,235 530,215 680,205" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,247 C 320,260 530,295 680,315" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [130, 240], "texts": [{ "text": "Browser", "x": 130, "y": 274 }] },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    }
+  },
+  "gfw_cdn": {
+    "idle": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": []
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 228,240 C 282,240 340,240 381,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 228,240 C 282,240 340,240 381,240" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 210 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 112,245 C 145,245 170,245 193,245" },
+            { "id": "path-browser-gfw-req", "d": "M 112,235 C 145,235 170,235 193,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 228,245 C 282,245 340,245 381,245" },
+            { "id": "path-gfw-edge-req", "d": "M 228,235 C 282,235 340,235 381,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 420,240 C 500,230 600,215 680,205" },
+            { "id": "path-edge-origin-req", "d": "M 420,230 C 500,220 600,205 680,195" }
+          ],
+          "labels": [{ "text": "120ms", "x": 550, "y": 202 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,247 C 320,260 530,295 680,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 150,237 C 320,250 530,285 680,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 112,235 C 145,235 170,235 193,235" },
+            { "id": "path-browser-gfw-res", "d": "M 112,245 C 145,245 170,245 193,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 228,235 C 282,235 340,235 381,235" },
+            { "id": "path-gfw-edge-res", "d": "M 228,245 C 282,245 340,245 381,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 420,230 C 500,220 600,205 680,195" },
+            { "id": "path-edge-origin-res", "d": "M 420,240 C 500,230 600,215 680,205" }
+          ],
+          "labels": [{ "text": "120ms", "x": 550, "y": 242 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,237 C 320,250 530,285 680,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 150,247 C 320,260 530,295 680,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 228,240 C 282,240 340,240 381,240" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,235 C 500,225 600,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 210 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,235 C 145,235 170,235 193,235" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 228,235 C 282,235 340,235 381,235" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,230 C 500,220 600,205 680,195" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 202 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,237 C 320,250 530,285 680,305" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "EUROPE", "x": 422.5, "y": 22 },
+        { "text": "ORIGIN", "x": 727.5, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,245 C 145,245 170,245 193,245" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 228,245 C 282,245 340,245 381,245" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 420,240 C 500,230 600,215 680,205" }],
+          "labels": [{ "text": "120ms", "x": 550, "y": 242 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,247 C 320,260 530,295 680,315" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [400, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 400, "y": 274 },
+            { "text": "London", "x": 400, "y": 287 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "cloudflare", "x": 700, "y": 247 },
+            { "text": "2 CDN miss · avg 40ms", "x": 700, "y": 260 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    }
+  },
+  "gfw_cdn_4": {
+    "idle": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 93,240 C 118,240 140,240 162,240" }],
+          "labels": []
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 193,240 C 233,238 268,238 305,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 340,235 C 480,226 630,218 753,215" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 93,244 C 220,264 390,295 518,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 93,240 C 118,240 140,240 162,240" }],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 193,240 C 233,238 268,238 305,240" }],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 340,235 C 480,226 630,218 753,215" }],
+          "labels": [{ "text": "120ms", "x": 546, "y": 214 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 93,244 C 220,264 390,295 518,310" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 93,245 C 118,245 140,245 162,245" },
+            { "id": "path-browser-gfw-req", "d": "M 93,235 C 118,235 140,235 162,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 193,245 C 233,243 268,243 305,245" },
+            { "id": "path-gfw-edge-req", "d": "M 193,235 C 233,233 268,233 305,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 340,240 C 480,231 630,223 753,220" },
+            { "id": "path-edge-origin-req", "d": "M 340,230 C 480,221 630,213 753,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 546, "y": 208 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 93,249 C 220,269 390,300 518,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 93,239 C 220,259 390,290 518,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 305, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 93,235 C 118,235 140,235 162,235" },
+            { "id": "path-browser-gfw-res", "d": "M 93,245 C 118,245 140,245 162,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 193,235 C 233,233 268,233 305,235" },
+            { "id": "path-gfw-edge-res", "d": "M 193,245 C 233,243 268,243 305,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 340,230 C 480,221 630,213 753,210" },
+            { "id": "path-edge-origin-res", "d": "M 340,240 C 480,231 630,223 753,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 546, "y": 246 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 93,239 C 220,259 390,290 518,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 93,249 C 220,269 390,300 518,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 305, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 93,240 C 118,240 140,240 162,240" }],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 193,240 C 233,238 268,238 305,240" }],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 340,235 C 480,226 630,218 753,215" }],
+          "labels": [{ "text": "120ms", "x": 546, "y": 214 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 93,244 C 220,264 390,295 518,310" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 93,235 C 118,235 140,235 162,235" }],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 193,235 C 233,233 268,233 305,235" }],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 340,230 C 480,221 630,213 753,210" }],
+          "labels": [{ "text": "120ms", "x": 546, "y": 208 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 93,239 C 220,259 390,290 518,305" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CHINA", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 322.5, "y": 22 },
+        { "text": "EUROPE", "x": 537.5, "y": 22 },
+        { "text": "ORIGIN", "x": 772.5, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 107.5, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 93,245 C 118,245 140,245 162,245" }],
+          "labels": [{ "text": "120ms", "x": 128, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 193,245 C 233,243 268,243 305,245" }],
+          "labels": [{ "text": "120ms", "x": 249, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 340,240 C 480,231 630,223 753,220" }],
+          "labels": [{ "text": "120ms", "x": 546, "y": 246 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 93,249 C 220,269 390,300 518,315" }],
+          "labels": [{ "text": "120ms", "x": 305, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [178, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 178, "y": 268 },
+            { "text": "DPI inspection", "x": 178, "y": 281 }
+          ]
+        },
+        {
+          "centre": [322, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 322, "y": 274 },
+            { "text": "London", "x": 322, "y": 287 }
+          ]
+        },
+        {
+          "centre": [770, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 770, "y": 249 },
+            { "text": "cloudflare", "x": 770, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 770, "y": 275 }
+          ]
+        },
+        {
+          "centre": [535, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 535, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 535, "y": 357 }
+          ]
+        }
+      ]
+    }
+  },
+  "gfw_noCdn": {
+    "idle": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": []
+        },
+        "gfw-origin": {
+          "d": [{ "id": "path-gfw-origin", "d": "M 228,239 C 380,232 560,210 680,200" }],
+          "labels": []
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": "path-gfw-origin", "d": "M 228,239 C 380,232 560,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 455, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": "path-browser-third-parties", "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 112,245 C 145,245 170,245 193,245" },
+            { "id": "path-browser-gfw-req", "d": "M 112,235 C 145,235 170,235 193,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [
+            { "id": null, "d": "M 228,244 C 380,237 560,215 680,205" },
+            { "id": "path-gfw-origin-req", "d": "M 228,234 C 380,227 560,205 680,195" }
+          ],
+          "labels": [{ "text": "120ms", "x": 455, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,247 C 320,260 530,295 680,315" },
+            { "id": "path-browser-third-parties-req", "d": "M 150,237 C 320,250 530,285 680,305" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 112,235 C 145,235 170,235 193,235" },
+            { "id": "path-browser-gfw-res", "d": "M 112,245 C 145,245 170,245 193,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [
+            { "id": null, "d": "M 228,234 C 380,227 560,205 680,195" },
+            { "id": "path-gfw-origin-res", "d": "M 228,244 C 380,237 560,215 680,205" }
+          ],
+          "labels": [{ "text": "120ms", "x": 455, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [
+            { "id": null, "d": "M 150,237 C 320,250 530,285 680,305" },
+            { "id": "path-browser-third-parties-res", "d": "M 150,247 C 320,260 530,295 680,315" }
+          ],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,240 C 145,240 170,240 193,240" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 228,239 C 380,232 560,210 680,200" }],
+          "labels": [{ "text": "120ms", "x": 455, "y": 212 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,242 C 320,255 530,290 680,310" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,235 C 145,235 170,235 193,235" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 228,234 C 380,227 560,205 680,195" }],
+          "labels": [{ "text": "120ms", "x": 455, "y": 204 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,237 C 320,250 530,285 680,305" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 308 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CHINA", "x": 145, "y": 22 },
+        { "text": "ORIGIN", "x": 595, "y": 22 },
+        { "text": "CACHE", "x": 145, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 145, "y": 362 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 112,245 C 145,245 170,245 193,245" }],
+          "labels": [{ "text": "120ms", "x": 153, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 228,244 C 380,237 560,215 680,205" }],
+          "labels": [{ "text": "120ms", "x": 455, "y": 244 }]
+        },
+        "browser-third-parties": {
+          "d": [{ "id": null, "d": "M 150,247 C 320,260 530,295 680,315" }],
+          "labels": [{ "text": "120ms", "x": 415, "y": 330 }]
+        }
+      },
+      "nodes": [
+        { "centre": [90, 240], "texts": [{ "text": "Browser", "x": 90, "y": 274 }] },
+        {
+          "centre": [210, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 210, "y": 268 },
+            { "text": "DPI inspection", "x": 210, "y": 281 }
+          ]
+        },
+        {
+          "centre": [700, 200],
+          "texts": [
+            { "text": "Origin Server", "x": 700, "y": 234 },
+            { "text": "2 req · avg 40ms", "x": 700, "y": 247 }
+          ]
+        },
+        {
+          "centre": [700, 310],
+          "texts": [
+            { "text": "3rd Parties", "x": 700, "y": 344 },
+            { "text": "1 req · avg 40ms", "x": 700, "y": 357 }
+          ]
+        }
+      ]
+    }
+  }
+}
