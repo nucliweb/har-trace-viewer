@@ -1,4 +1,5 @@
 import type { ParsedTrace } from "../types.js";
+import { computeCls, computeInp } from "./web-vitals.js";
 
 interface RawTraceEvent {
   name: string;
@@ -86,12 +87,16 @@ function parseTraceEvents(events: RawTraceEvent[]): ParsedTrace {
       )
       .at(-1) ?? null;
 
+  const navigationEvents = events.filter(sameNavigation);
+
   const toMs = (ts: number) => (ts - navigationStart) / 1000;
 
   return {
     navigationStart,
     fcp: fcpEvent ? toMs(fcpEvent.ts) : null,
     lcp: lastLcp ? toMs(lastLcp.ts) : null,
+    cls: computeCls(navigationEvents),
+    inp: computeInp(navigationEvents),
     navigationId,
     url: typeof url === "string" && url !== "" ? url : null,
   };

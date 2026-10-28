@@ -9,6 +9,7 @@ import {
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
+import { firstStart, sortByTimeline, type TimedItem } from "./timeline.js";
 import type {
   ClientRegion,
   DiagramNode,
@@ -88,6 +89,10 @@ function formatMs(ms: number): string {
 
 function formatOptionalMs(ms: number | null): string {
   return ms === null ? "n/a" : formatMs(ms);
+}
+
+function formatCls(cls: number | null | undefined): string {
+  return cls == null ? "n/a" : cls.toFixed(3);
 }
 
 function avgMs(entries: HarEntry[]): number {
@@ -270,63 +275,70 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const secondaryEntries = ownEntries.filter((e) => !e.isDocument && isSecondaryResource(e));
 
   const edgeLabel = hasCdn ? cdnResult.name : "Origin";
-  const steps: PageStep[] = [];
 
-  // Step 1 — DNS + initial connection
-  const { dns, connect, ssl } = documentEntry.timing;
+  // Time base: HAR startTime counts from the page origin (the earlier of the
+  // first request and the page start) and trace FCP/LCP count from the
+  // navigation's navigationStart. Both mark the start of the same navigation,
+  // so the two scales are compared directly.
+  const { dns, connect, ssl, blocked, send } = documentEntry.timing;
+  const requestSentAt = documentEntry.startTime + blocked + dns + connect + ssl;
+  const firstByteAt = requestSentAt + send + documentEntry.ttfb;
+
+  // ── Fixed prologue: nothing can be fetched before the document is requested
+  // and its first byte arrives (an Early-Hints preload is the one exception,
+  // and it still reads better after the connection steps).
   const connectionMetrics = [
     { label: "DNS", value: formatMs(dns) },
     { label: "TCP connect", value: formatMs(connect) },
   ];
   if (ssl > 0) connectionMetrics.push({ label: "TLS", value: formatMs(ssl) });
 
-  steps.push({
+  const connectionStep: PageStep = {
     title: "DNS + initial connection",
     description: `Browser resolves the domain and establishes a TCP${ssl > 0 ? "/TLS" : ""} connection to ${edgeLabel}.`,
+    timestamp: documentEntry.startTime,
     activeNodes: ["browser"],
     activePaths: [],
     metrics: connectionMetrics,
-  });
+  };
 
-  // Step 2 — First request in flight
   const reqConnectionLabel = `DNS ${formatMs(dns)} · TCP ${formatMs(connect)}${ssl > 0 ? ` · TLS ${formatMs(ssl)}` : ""}`;
   const firstPath = firstActivePath(hasCdn, hasGfw);
 
-  const step2PathTimings: Partial<Record<PathId, string>> = {
-    [firstPath]: reqConnectionLabel,
-  };
-
-  const step2PathDirections = serverPathDirections(hasCdn, hasGfw, "request");
-
-  steps.push({
+  const requestStep: PageStep = {
     title: "First request in flight",
     description: "Browser sends the HTTP request for the HTML document.",
+    timestamp: requestSentAt,
     activeNodes: serverNodes(hasCdn, hasGfw),
     activePaths: serverPaths(hasCdn, hasGfw),
     metrics: [],
-    pathTimings: step2PathTimings,
-    pathDirections: step2PathDirections,
-  });
-
-  // Step 3 — TTFB
-  const step3PathTimings: Partial<Record<PathId, string>> = {
-    [firstPath]: `TTFB ${formatMs(documentEntry.ttfb)}`,
+    pathTimings: { [firstPath]: reqConnectionLabel },
+    pathDirections: serverPathDirections(hasCdn, hasGfw, "request"),
   };
 
-  const step3PathDirections = serverPathDirections(hasCdn, hasGfw, "response");
-
-  steps.push({
+  const ttfbStep: PageStep = {
     title: "TTFB — First byte received",
     description: `${edgeLabel} responds with the first byte of the HTML document.`,
+    timestamp: firstByteAt,
     activeNodes: serverNodes(hasCdn, hasGfw),
     activePaths: serverPaths(hasCdn, hasGfw),
     metrics: [{ label: "TTFB", value: formatMs(documentEntry.ttfb) }],
-    pathTimings: step3PathTimings,
-    pathDirections: step3PathDirections,
+    pathTimings: { [firstPath]: `TTFB ${formatMs(documentEntry.ttfb)}` },
+    pathDirections: serverPathDirections(hasCdn, hasGfw, "response"),
     badge: { type: "ttfb", value: formatMs(documentEntry.ttfb), node: "browser" },
-  });
+  };
 
-  // Step 4 — Critical resources
+  // ── Timeline: resource groups and paints, ordered by when they happen.
+  // A group is one step whose timestamp is its first request; resources that
+  // start later still belong to it. The rank keeps the classic narrative for
+  // events that share a timestamp.
+  const startTimes = (list: HarEntry[]) => list.map((e) => e.startTime);
+  const criticalAt = firstStart(startTimes(criticalEntries), firstByteAt);
+  const secondaryAt = firstStart(startTimes(secondaryEntries), criticalAt);
+  const thirdPartyAt = firstStart(startTimes(thirdPartyEntries), secondaryAt);
+
+  const timeline: TimedItem<PageStep>[] = [];
+
   const criticalNetwork = criticalEntries.filter((e) => e.fromCache === false);
   const criticalCache = criticalEntries.filter((e) => e.fromCache !== false);
   const criticalCss = criticalNetwork.filter((e) => e.resourceType === "stylesheet");
@@ -339,120 +351,150 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   if (criticalCache.length > 0)
     criticalMetrics.push({ label: "From cache", value: String(criticalCache.length) });
 
-  const criticalAvg = avgMs(criticalNetwork);
-  const step4PathTimings: Partial<Record<PathId, string>> =
-    criticalNetwork.length > 0
-      ? { [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(criticalAvg)}` }
-      : {};
-
-  steps.push({
-    title: "Critical resources loading",
-    description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
-    activeNodes: serverNodes(hasCdn, hasGfw),
-    activePaths: serverPaths(hasCdn, hasGfw),
-    metrics: criticalMetrics,
-    pathTimings: step4PathTimings,
-    resourceRefs: refs(criticalNetwork),
-    cacheResourceRefs: refs(criticalCache),
+  timeline.push({
+    timestamp: criticalAt,
+    rank: 0,
+    item: {
+      title: "Critical resources loading",
+      description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
+      timestamp: criticalAt,
+      activeNodes: serverNodes(hasCdn, hasGfw),
+      activePaths: serverPaths(hasCdn, hasGfw),
+      metrics: criticalMetrics,
+      pathTimings:
+        criticalNetwork.length > 0
+          ? {
+              [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(avgMs(criticalNetwork))}`,
+            }
+          : {},
+      resourceRefs: refs(criticalNetwork),
+      cacheResourceRefs: refs(criticalCache),
+    },
   });
 
-  // Steps from trace (FCP / LCP) — inserted chronologically after critical resources
+  // Paints are placed where they fall relative to the resource requests.
+  const paintNote = (paintAt: number): string => {
+    if (secondaryEntries.length === 0) return "";
+    return paintAt < secondaryAt
+      ? " It happens before any secondary resource is requested."
+      : " It happens after secondary resources started loading.";
+  };
+
   if (trace?.fcp != null) {
-    steps.push({
-      title: "First Contentful Paint",
-      description: "The browser renders the first visible content on screen.",
-      activeNodes: ["browser"],
-      activePaths: [],
-      metrics: [{ label: "FCP", value: formatMs(trace.fcp) }],
-      badge: { type: "fcp", value: formatMs(trace.fcp), node: "browser" },
+    timeline.push({
+      timestamp: trace.fcp,
+      rank: 1,
+      item: {
+        title: "First Contentful Paint",
+        description: `The browser renders the first visible content on screen.${paintNote(trace.fcp)}`,
+        timestamp: trace.fcp,
+        activeNodes: ["browser"],
+        activePaths: [],
+        metrics: [{ label: "FCP", value: formatMs(trace.fcp) }],
+        badge: { type: "fcp", value: formatMs(trace.fcp), node: "browser" },
+      },
     });
   }
 
-  // Step 5 — Secondary resources
   const secondaryNetwork = secondaryEntries.filter((e) => e.fromCache === false);
   const secondaryCache = secondaryEntries.filter((e) => e.fromCache !== false);
-  const secondaryAvg = avgMs(secondaryNetwork);
-  const step5PathTimings: Partial<Record<PathId, string>> =
-    secondaryNetwork.length > 0
-      ? { [firstPath]: `${secondaryNetwork.length} resources · avg ${formatMs(secondaryAvg)}` }
-      : {};
-
   const secondaryMetrics: DiagramStep["metrics"] = [
     { label: "Resources", value: String(secondaryEntries.length) },
   ];
   if (secondaryCache.length > 0)
     secondaryMetrics.push({ label: "From cache", value: String(secondaryCache.length) });
 
-  steps.push({
-    title: "Secondary resources",
-    description: "Async scripts, images, and fonts load in the background.",
-    activeNodes: serverNodes(hasCdn, hasGfw),
-    activePaths: serverPaths(hasCdn, hasGfw),
-    metrics: secondaryMetrics,
-    pathTimings: step5PathTimings,
-    resourceRefs: refs(secondaryNetwork),
-    cacheResourceRefs: refs(secondaryCache),
+  timeline.push({
+    timestamp: secondaryAt,
+    rank: 2,
+    item: {
+      title: "Secondary resources",
+      description: "Async scripts, images, and fonts load in the background.",
+      timestamp: secondaryAt,
+      activeNodes: serverNodes(hasCdn, hasGfw),
+      activePaths: serverPaths(hasCdn, hasGfw),
+      metrics: secondaryMetrics,
+      pathTimings:
+        secondaryNetwork.length > 0
+          ? {
+              [firstPath]: `${secondaryNetwork.length} resources · avg ${formatMs(avgMs(secondaryNetwork))}`,
+            }
+          : {},
+      resourceRefs: refs(secondaryNetwork),
+      cacheResourceRefs: refs(secondaryCache),
+    },
   });
 
-  // LCP (from trace) — inserted after secondary resources
   if (trace?.lcp != null) {
-    steps.push({
-      title: "Largest Contentful Paint",
-      description: "The largest visible element in the viewport has finished rendering.",
-      activeNodes: ["browser"],
-      activePaths: [],
-      metrics: [{ label: "LCP", value: formatMs(trace.lcp) }],
-      badge: { type: "lcp", value: formatMs(trace.lcp), node: "browser" },
+    timeline.push({
+      timestamp: trace.lcp,
+      rank: 3,
+      item: {
+        title: "Largest Contentful Paint",
+        description: `The largest visible element in the viewport has finished rendering.${paintNote(trace.lcp)}`,
+        timestamp: trace.lcp,
+        activeNodes: ["browser"],
+        activePaths: [],
+        metrics: [{ label: "LCP", value: formatMs(trace.lcp) }],
+        badge: { type: "lcp", value: formatMs(trace.lcp), node: "browser" },
+      },
     });
   }
 
-  // Step 6 — 3rd parties (only if present)
   if (hasThirdPartyNodes) {
     const thirdPartyNetwork = thirdPartyEntries.filter((e) => e.fromCache === false);
     const thirdPartyCache = thirdPartyEntries.filter((e) => e.fromCache !== false);
     const thirdPartyDomains = new Set(thirdPartyNetwork.map((e) => getRootDomain(e.url)));
-    const thirdPartyAvg = avgMs(thirdPartyNetwork);
     const thirdPartyMetrics: DiagramStep["metrics"] = [
       { label: "Domains", value: String(thirdPartyDomains.size) },
       { label: "Requests", value: String(thirdPartyNetwork.length) },
     ];
     if (thirdPartyCache.length > 0)
       thirdPartyMetrics.push({ label: "From cache", value: String(thirdPartyCache.length) });
-    steps.push({
-      title: "Third-party requests",
-      description: "Browser fetches resources from external domains.",
-      activeNodes: ["browser", "third-parties"],
-      activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties"] : [],
-      metrics: thirdPartyMetrics,
-      pathTimings:
-        thirdPartyNetwork.length > 0
-          ? {
-              "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(thirdPartyAvg)}`,
-            }
-          : {},
-      resourceRefs: refs(thirdPartyNetwork),
-      cacheResourceRefs: refs(thirdPartyCache),
+    timeline.push({
+      timestamp: thirdPartyAt,
+      rank: 4,
+      item: {
+        title: "Third-party requests",
+        description: "Browser fetches resources from external domains.",
+        timestamp: thirdPartyAt,
+        activeNodes: ["browser", "third-parties"],
+        activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties"] : [],
+        metrics: thirdPartyMetrics,
+        pathTimings:
+          thirdPartyNetwork.length > 0
+            ? {
+                "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(avgMs(thirdPartyNetwork))}`,
+              }
+            : {},
+        resourceRefs: refs(thirdPartyNetwork),
+        cacheResourceRefs: refs(thirdPartyCache),
+      },
     });
   }
 
-  // Step 7 — onLoad
-  // A null onLoad (event never fired) shows "n/a" and gets no badge.
-  steps.push({
+  // ── Epilogue: the load event closes the page. A null onLoad (event never
+  // fired) shows "n/a", carries no timestamp and gets no badge. DCL stays a
+  // metric of this step rather than a step of its own.
+  const loadedStep: PageStep = {
     title: "Page loaded",
     description: "The load event fires — all resources have been downloaded.",
+    timestamp: page.onLoad ?? undefined,
     activeNodes: ["browser"],
     activePaths: [],
     metrics: [
       { label: "onLoad", value: formatOptionalMs(page.onLoad) },
       { label: "DCL", value: formatOptionalMs(page.onContentLoad) },
+      { label: "CLS", value: formatCls(trace?.cls) },
+      { label: "INP", value: formatOptionalMs(trace?.inp ?? null) },
     ],
     badge:
       page.onLoad === null
         ? undefined
         : { type: "onload", value: formatMs(page.onLoad), node: "browser" },
-  });
+  };
 
-  return steps;
+  return [connectionStep, requestStep, ttfbStep, ...sortByTimeline(timeline), loadedStep];
 }
 
 function generateTransitionStep(fromPage: string, toPage: string): PageStep {

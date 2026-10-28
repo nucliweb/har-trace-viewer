@@ -7,6 +7,13 @@ import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { FLOW_VERSION, generateFlow, normalizeFlow } from "../src/steps/step-generator.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import { firefoxHar } from "./helpers/firefox-har.js";
+import {
+  criticalCss,
+  makeHar,
+  makeTrace,
+  secondaryImage,
+  thirdPartyScript,
+} from "./helpers/synthetic-har.js";
 import type { DiagramStep, Flow, HarEntry, ParsedHar } from "../src/types.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -122,15 +129,19 @@ describe("generateFlow — single page with trace", () => {
     expect(lcpStep.badge?.value).toBe("181ms");
   });
 
-  it("FCP step appears after Critical resources and before Secondary resources", () => {
+  it("FCP and LCP steps appear after every resource group and before Page loaded", () => {
+    // Chronology of this fixture: critical, secondary and third-party requests all
+    // start at 55-56ms, FCP and LCP paint at 181ms, onLoad fires at 480ms. Steps
+    // follow the real timeline, so both paints come after the three groups.
     const flow = generateFlow([{ name: "Home", har: loadHar(), trace: loadTrace() }]);
     const titles = flow.steps.map((s) => s.title);
-    const criticalIdx = titles.findIndex((t) => t.includes("Critical"));
-    const fcpIdx = titles.findIndex((t) => t.includes("First Contentful"));
-    const secondaryIdx = titles.findIndex((t) => t.includes("Secondary"));
+    const idx = (needle: string) => titles.findIndex((t) => t.includes(needle));
 
-    expect(criticalIdx).toBeLessThan(fcpIdx);
-    expect(fcpIdx).toBeLessThan(secondaryIdx);
+    expect(idx("Critical")).toBeLessThan(idx("Secondary"));
+    expect(idx("Secondary")).toBeLessThan(idx("Third-party"));
+    expect(idx("Third-party")).toBeLessThan(idx("First Contentful"));
+    expect(idx("First Contentful")).toBeLessThan(idx("Largest Contentful"));
+    expect(idx("Largest Contentful")).toBeLessThan(idx("Page loaded"));
   });
 });
 
@@ -884,5 +895,142 @@ describe("normalizeFlow — version 2 inline resources", () => {
     const normalized = normalizeFlow(JSON.parse(JSON.stringify(legacy)) as Flow);
 
     expect(normalized.steps[0].resourceRefs).toEqual([1, 2]);
+  });
+});
+
+describe("generateFlow — chronological steps", () => {
+  const titles = (flow: Flow) => flow.steps.map((s) => s.title);
+  const indexOf = (flow: Flow, needle: string) => titles(flow).findIndex((t) => t.includes(needle));
+
+  it("keeps the classic 7-step order without a trace", () => {
+    const har = makeHar([criticalCss(100), secondaryImage(200), thirdPartyScript(300)]);
+    const flow = generateFlow([{ name: "Home", har }]);
+
+    expect(titles(flow)).toEqual([
+      "DNS + initial connection",
+      "First request in flight",
+      "TTFB — First byte received",
+      "Critical resources loading",
+      "Secondary resources",
+      "Third-party requests",
+      "Page loaded",
+    ]);
+  });
+
+  it("places third-party requests before critical resources when they started first", () => {
+    const har = makeHar([thirdPartyScript(60), criticalCss(120), secondaryImage(200)]);
+    const flow = generateFlow([{ name: "Home", har }]);
+
+    expect(indexOf(flow, "Third-party")).toBeLessThan(indexOf(flow, "Critical"));
+    expect(indexOf(flow, "Critical")).toBeLessThan(indexOf(flow, "Secondary"));
+  });
+
+  it("places FCP before Secondary resources when it paints before the first secondary request", () => {
+    const har = makeHar([criticalCss(60), secondaryImage(150), thirdPartyScript(160)]);
+    const flow = generateFlow([{ name: "Home", har, trace: makeTrace(90, 400) }]);
+
+    expect(indexOf(flow, "Critical")).toBeLessThan(indexOf(flow, "First Contentful"));
+    expect(indexOf(flow, "First Contentful")).toBeLessThan(indexOf(flow, "Secondary"));
+    expect(indexOf(flow, "Third-party")).toBeLessThan(indexOf(flow, "Largest Contentful"));
+    expect(indexOf(flow, "Largest Contentful")).toBeLessThan(indexOf(flow, "Page loaded"));
+  });
+
+  it("places FCP and LCP after every resource group when they paint later", () => {
+    const har = makeHar([criticalCss(60), secondaryImage(80), thirdPartyScript(100)]);
+    const flow = generateFlow([{ name: "Home", har, trace: makeTrace(500, 600) }]);
+
+    expect(titles(flow)).toEqual([
+      "DNS + initial connection",
+      "First request in flight",
+      "TTFB — First byte received",
+      "Critical resources loading",
+      "Secondary resources",
+      "Third-party requests",
+      "First Contentful Paint",
+      "Largest Contentful Paint",
+      "Page loaded",
+    ]);
+  });
+
+  it("keeps connection, request and TTFB first and the load event last whatever the timestamps", () => {
+    // An Early-Hints preload can start before the document's first byte (TTFB 50ms).
+    const har = makeHar([criticalCss(5), secondaryImage(700)], { onContentLoad: 20, onLoad: 30 });
+    const flow = generateFlow([{ name: "Home", har, trace: makeTrace(10, 15) }]);
+
+    expect(titles(flow).slice(0, 3)).toEqual([
+      "DNS + initial connection",
+      "First request in flight",
+      "TTFB — First byte received",
+    ]);
+    expect(titles(flow).at(-1)).toBe("Page loaded");
+  });
+
+  it("keeps empty resource groups in their classic position", () => {
+    const har = makeHar([thirdPartyScript(300)]);
+    const flow = generateFlow([{ name: "Home", har }]);
+
+    expect(titles(flow).slice(3)).toEqual([
+      "Critical resources loading",
+      "Secondary resources",
+      "Third-party requests",
+      "Page loaded",
+    ]);
+  });
+
+  it("adds CLS and INP to the Page loaded metrics", () => {
+    const har = makeHar([criticalCss(60)]);
+    const flow = generateFlow([
+      { name: "Home", har, trace: makeTrace(90, 400, { cls: 0.17, inp: 250 }) },
+    ]);
+    const metrics = flow.steps[indexOf(flow, "Page loaded")].metrics;
+
+    expect(metrics).toContainEqual({ label: "CLS", value: "0.170" });
+    expect(metrics).toContainEqual({ label: "INP", value: "250ms" });
+  });
+
+  it("shows n/a for CLS and INP when the trace has none or there is no trace", () => {
+    const har = makeHar([criticalCss(60)]);
+    for (const trace of [makeTrace(90, 400), undefined]) {
+      const flow = generateFlow([{ name: "Home", har, trace }]);
+      const metrics = flow.steps[indexOf(flow, "Page loaded")].metrics;
+      expect(metrics).toContainEqual({ label: "CLS", value: "n/a" });
+      expect(metrics).toContainEqual({ label: "INP", value: "n/a" });
+    }
+  });
+
+  it("stamps every page step with its timestamp in ms from the page origin", () => {
+    const har = makeHar([criticalCss(60), secondaryImage(150), thirdPartyScript(160)]);
+    const flow = generateFlow([{ name: "Home", har, trace: makeTrace(90, 400) }]);
+    const at = (needle: string) => flow.steps[indexOf(flow, needle)].timestamp;
+
+    expect(at("DNS")).toBe(0);
+    // First byte = startTime + blocked + dns + connect + ssl + send + wait (the
+    // TTFB badge shows only the wait): 0 + 0 + 10 + 20 + 0 + 1 + 50.
+    expect(at("TTFB")).toBe(81);
+    expect(at("Critical")).toBe(60);
+    expect(at("First Contentful")).toBe(90);
+    expect(at("Secondary")).toBe(150);
+    expect(at("Third-party")).toBe(160);
+    expect(at("Largest Contentful")).toBe(400);
+    expect(at("Page loaded")).toBe(500);
+  });
+
+  it("sorts the steps of each page independently in a multi-page flow", () => {
+    const early = makeHar([thirdPartyScript(60), criticalCss(120)]);
+    const classic = makeHar([criticalCss(60), thirdPartyScript(120)]);
+    const flow = generateFlow([
+      { name: "A", har: early },
+      { name: "B", har: classic },
+    ]);
+    const pageTitles = (pageIndex: number) =>
+      flow.steps.filter((s) => s.pageIndex === pageIndex).map((s) => s.title);
+
+    expect(pageTitles(0).indexOf("Third-party requests")).toBeLessThan(
+      pageTitles(0).indexOf("Critical resources loading")
+    );
+    expect(pageTitles(1).indexOf("Critical resources loading")).toBeLessThan(
+      pageTitles(1).indexOf("Third-party requests")
+    );
+    expect(pageTitles(1)[0]).toBe("→ User navigates to B");
   });
 });

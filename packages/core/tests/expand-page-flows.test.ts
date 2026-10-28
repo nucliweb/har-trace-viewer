@@ -8,6 +8,8 @@ const trace = (url: string | null): ParsedTrace => ({
   navigationStart: 0,
   fcp: null,
   lcp: null,
+  cls: null,
+  inp: null,
   navigationId: null,
   url,
 });

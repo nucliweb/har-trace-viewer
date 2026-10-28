@@ -58,6 +58,8 @@ export interface ParsedTrace {
   navigationStart: number; // microseconds
   fcp: number | null; // ms relative to navigationStart
   lcp: number | null; // ms relative to navigationStart
+  cls: number | null; // unitless; null when the trace has no LayoutShift events
+  inp: number | null; // ms; null when the trace has no interactions
   navigationId: string | null; // id of the main navigation, when the trace carries it
   url: string | null; // documentLoaderURL of the main navigation
 }
@@ -111,6 +113,10 @@ export interface DiagramStep {
   pageIndex: number;
   title: string;
   description: string;
+  // Milliseconds from the page origin at which the step's event happens
+  // (connection start, first byte, first request of a resource group, paint,
+  // load event). Page steps are ordered by it; transition steps have none.
+  timestamp?: number;
   activeNodes: NodeId[];
   activePaths: PathId[];
   metrics: Metric[];
