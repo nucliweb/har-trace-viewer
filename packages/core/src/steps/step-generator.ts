@@ -1,4 +1,4 @@
-import { getRootDomain } from "../utils/domain.js";
+import { getHostname, getRootDomain } from "../utils/domain.js";
 import {
   detectCdnPopCity,
   detectCdnRegion,
@@ -250,7 +250,10 @@ function describePage(har: ParsedHar): PageContext {
     cdnResult,
     hasCdn: cdnResult.type === "edge",
     documentRoot,
-    thirdPartyEntries: har.entries.filter((e) => !e.isDocument && isThirdParty(e, documentRoot)),
+    // Third-party iframes are HTML documents too; only the main document is not a resource.
+    thirdPartyEntries: har.entries.filter(
+      (e) => e !== har.documentEntry && isThirdParty(e, documentRoot)
+    ),
   };
 }
 
@@ -444,7 +447,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   if (hasThirdPartyNodes) {
     const thirdPartyNetwork = thirdPartyEntries.filter((e) => e.fromCache === false);
     const thirdPartyCache = thirdPartyEntries.filter((e) => e.fromCache !== false);
-    const thirdPartyDomains = new Set(thirdPartyNetwork.map((e) => getRootDomain(e.url)));
+    const thirdPartyDomains = new Set(thirdPartyNetwork.map((e) => getHostname(e.url) ?? e.url));
     const thirdPartyMetrics: DiagramStep["metrics"] = [
       { label: "Domains", value: String(thirdPartyDomains.size) },
       { label: "Requests", value: String(thirdPartyNetwork.length) },
@@ -476,6 +479,12 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   // ── Epilogue: the load event closes the page. A null onLoad (event never
   // fired) shows "n/a", carries no timestamp and gets no badge. DCL stays a
   // metric of this step rather than a step of its own.
+  // The last step doubles as the page overview: it references every entry but the main
+  // document, network and cached alike (other HTML responses such as iframes included,
+  // although no resource group lists them), so the sidebar can summarise the whole page.
+  const overviewEntries = entries
+    .filter((e) => e !== documentEntry)
+    .sort((a, b) => a.startTime - b.startTime);
   const loadedStep: PageStep = {
     title: "Page loaded",
     description: "The load event fires — all resources have been downloaded.",
@@ -488,6 +497,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
       { label: "CLS", value: formatCls(trace?.cls) },
       { label: "INP", value: formatOptionalMs(trace?.inp ?? null) },
     ],
+    resourceRefs: refs(overviewEntries),
     badge:
       page.onLoad === null
         ? undefined

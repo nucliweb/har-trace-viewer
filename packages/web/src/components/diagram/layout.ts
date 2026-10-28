@@ -105,6 +105,20 @@ const LABEL_OFFSET = { centre: -9.25, request: -16.25, response: 22.75 };
 // Paths heading down (to the third parties) label just above their target, response below it.
 const DOWNWARD_LABEL_OFFSET = { centre: -2, response: 20 };
 
+// Browser → 3rd parties dips under the captions of the nodes it passes (GFW checkpoint, edge).
+// Per node: the caption's last baseline plus descender below the node centre, its half-width,
+// and how deep below the node centre the control points of the curve sit.
+const BYPASS_CAPTIONS: Partial<
+  Record<NodeId, { bottom: number; halfWidth: number; controlDepth: number }>
+> = {
+  gfw: { bottom: 45, halfWidth: 50, controlDepth: 150 },
+  edge: { bottom: 64, halfWidth: 75, controlDepth: 110 },
+};
+// The GFW caption sits close to the browser: the curve leaves almost straight down to clear it.
+const BYPASS_STEEP_CONTROL_X = 0.1;
+// The timing label of a bypassing path hangs under the lowest point of its curve.
+const BYPASS_LABEL_OFFSET = { centre: 12, response: 20 };
+
 const ZONE_LABELS: Partial<Record<NetworkRegion, string>> = {
   china: "CHINA",
   "asia-pacific": "ASIA-PACIFIC",
@@ -205,26 +219,85 @@ function positions(
 
 const round = (value: number) => Math.round(value);
 
-function bezier(x0: number, y0: number, x1: number, y1: number): string {
+// With `controlY` both control points sit at that height instead of between the anchors.
+function bezier(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  bypass?: { controlY: number; control1X: number }
+): string {
   const dx = x1 - x0;
   const dy = y1 - y0;
   const points = [
     [x0, y0],
-    [x0 + CONTROL_1.x * dx, y0 + CONTROL_1.y * dy],
-    [x0 + CONTROL_2.x * dx, y0 + CONTROL_2.y * dy],
+    [x0 + (bypass?.control1X ?? CONTROL_1.x) * dx, bypass?.controlY ?? y0 + CONTROL_1.y * dy],
+    [x0 + CONTROL_2.x * dx, bypass?.controlY ?? y0 + CONTROL_2.y * dy],
     [x1, y1],
   ].map(([x, y]) => `${round(x)},${round(y)}`);
   return `M ${points[0]} C ${points.slice(1).join(" ")}`;
 }
 
-function pathGeometry(from: NodePosition, to: NodePosition, path: DiagramPath): PathGeometry {
+// Nodes of the request chain that lie between the two ends of a path, with a caption to avoid.
+function bypassed(from: NodePosition, to: NodePosition, nodes: Layout["nodes"]) {
+  const [lo, hi] = [Math.min(from.cx, to.cx), Math.max(from.cx, to.cx)];
+  return (["gfw", "edge"] as const).filter((id) => {
+    const node = nodes[id];
+    return node?.present && node.cx > lo && node.cx < hi;
+  });
+}
+
+function pathGeometry(
+  from: NodePosition,
+  to: NodePosition,
+  path: DiagramPath,
+  nodes: Layout["nodes"]
+): PathGeometry {
   const run = Math.sign(to.cx - from.cx) || 1;
   const rise = Math.sign(to.cy - from.cy);
   const x0 = from.cx + run * ANCHOR_RADIUS[path.from];
   const y0 = from.cy + rise * SOURCE_LEAN;
   const x1 = to.cx - run * ANCHOR_RADIUS[path.to];
   const y1 = to.cy;
-  const lane = (offset: number) => bezier(x0, y0 + offset, x1, y1 + offset);
+  const skipped = path.id === "browser-third-parties" ? bypassed(from, to, nodes) : [];
+  const controlY = Math.max(
+    ...skipped.map((id) => nodes[id]!.cy + BYPASS_CAPTIONS[id]!.controlDepth)
+  );
+  const control1X = skipped.includes("gfw") ? BYPASS_STEEP_CONTROL_X : CONTROL_1.x;
+  const lane = (offset: number) =>
+    bezier(
+      x0,
+      y0 + offset,
+      x1,
+      y1 + offset,
+      skipped.length ? { controlY: controlY + offset, control1X } : undefined
+    );
+
+  if (skipped.length) {
+    // Lowest point of the centre curve, sampled.
+    const dx = x1 - x0;
+    const px = [x0, x0 + control1X * dx, x0 + CONTROL_2.x * dx, x1];
+    const py = [y0, controlY, controlY, y1];
+    let low = { x: x0, y: y0 };
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      const u = 1 - t;
+      const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+      const y = w.reduce((sum, k, j) => sum + k * py[j], 0);
+      if (y > low.y) low = { x: w.reduce((sum, k, j) => sum + k * px[j], 0), y };
+    }
+    const y = low.y + BYPASS_LABEL_OFFSET.centre;
+    return {
+      d: lane(0),
+      requestD: lane(-LANE_OFFSET),
+      responseD: lane(LANE_OFFSET),
+      labelX: low.x,
+      labelY: y,
+      labelBelow: true,
+      requestLabelY: y,
+      responseLabelY: low.y + BYPASS_LABEL_OFFSET.response,
+    };
+  }
 
   const labelX = (x0 + x1) / 2;
   const midY = (y0 + y1) / 2;
@@ -269,7 +342,7 @@ export function layout(
   for (const path of paths) {
     const from = nodePositions[path.from];
     const to = nodePositions[path.to];
-    if (from && to) pathGeometries[path.id] = pathGeometry(from, to, path);
+    if (from && to) pathGeometries[path.id] = pathGeometry(from, to, path, nodePositions);
   }
   return {
     width: WIDTH,

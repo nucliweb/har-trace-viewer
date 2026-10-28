@@ -99,6 +99,10 @@ export function DiagramView({ flow }: Props) {
   }, [flow.steps, state.stepIndex, pageIndex]);
 
   const currentBadgeType = step.badge?.type;
+  // The last step of a page is its overview ("Page loaded"). A transition step belongs to the
+  // page it leads to, so the next step starting a new page also marks the end of this one.
+  // Not tied to the title or the onload badge, which is absent when the load event never fired.
+  const isOverviewStep = flow.steps[stepIndex + 1]?.pageIndex !== step.pageIndex;
 
   return (
     // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
@@ -138,7 +142,8 @@ export function DiagramView({ flow }: Props) {
         {sidebarResources && (
           <ResourceSidebar
             resources={sidebarResources}
-            title={step.title}
+            title={isOverviewStep ? "All resources" : step.title}
+            overview={isOverviewStep}
             onClose={closeSidebar}
             preconnectHints={page.har.preconnectHints}
             documentHostname={new URL(page.har.documentEntry.url).hostname}

@@ -9,6 +9,7 @@ import { getStepCacheResources, getStepResources } from "../src/steps/step-resou
 import { firefoxHar } from "./helpers/firefox-har.js";
 import {
   criticalCss,
+  makeEntry as makeSyntheticEntry,
   makeHar,
   makeTrace,
   secondaryImage,
@@ -251,6 +252,39 @@ describe("generateFlow — cache classification", () => {
     const secondaryStep = flow.steps.find((s) => s.title.includes("Secondary"))!;
     expect(getStepResources(flow, secondaryStep).map((e) => e.url)).toEqual([networkImg.url]);
     expect(getStepCacheResources(flow, secondaryStep).map((e) => e.url)).toEqual([cachedImg.url]);
+  });
+});
+
+describe("generateFlow — third-party counts", () => {
+  it("count hostnames and third-party iframes the same in the step, the node and the overview", () => {
+    const iframe = makeSyntheticEntry({
+      url: "https://ads.third.com/frame.html",
+      mimeType: "text/html",
+      resourceType: "document",
+      isDocument: true,
+      startTime: 120,
+    });
+    const script = makeSyntheticEntry({
+      url: "https://cdn.third.com/tag.js",
+      mimeType: "application/javascript",
+      resourceType: "script",
+      startTime: 110,
+    });
+    const sibling = makeSyntheticEntry({
+      url: "https://pixel.third.com/p.gif",
+      mimeType: "image/gif",
+      resourceType: "image",
+      startTime: 130,
+    });
+    const flow = generateFlow([{ name: "P", har: makeHar([script, iframe, sibling]) }]);
+    const step = flow.steps.find((s) => s.title === "Third-party requests")!;
+    const metric = (label: string) => step.metrics.find((m) => m.label === label)?.value;
+
+    expect(metric("Requests")).toBe("3");
+    // Three hostnames under one root domain (third.com).
+    expect(metric("Domains")).toBe("3");
+    expect(flow.nodes.find((n) => n.id === "third-parties")?.resourceStats?.count).toBe(3);
+    expect(flow.steps.at(-1)!.resourceRefs).toHaveLength(3);
   });
 });
 
@@ -790,6 +824,26 @@ describe("step resource references", () => {
     }
     expect(referenced).toBeGreaterThan(0);
     expect(flow.steps.some((s) => (s.cacheResourceRefs?.length ?? 0) > 0)).toBe(true);
+  });
+
+  it("Page loaded references every entry of the page but the main document in startTime order", () => {
+    const flow = recordedTwoPageFlow();
+
+    flow.pages.forEach((page, pageIndex) => {
+      const last = flow.steps.filter((s) => s.pageIndex === pageIndex).at(-1)!;
+      const { entries } = page.har;
+      const expected = entries
+        .map((entry, index) => ({ entry, index }))
+        .filter(({ entry }) => entry !== page.har.documentEntry)
+        .sort((a, b) => a.entry.startTime - b.entry.startTime)
+        .map(({ index }) => index);
+
+      expect(last.title).toBe("Page loaded");
+      expect(expected.length).toBeGreaterThan(0);
+      expect(last.resourceRefs).toEqual(expected);
+      expect(last.cacheResourceRefs).toBeUndefined();
+      expect(getStepResources(flow, last)).not.toContain(page.har.documentEntry);
+    });
   });
 
   it("returns no resources for steps without references", () => {

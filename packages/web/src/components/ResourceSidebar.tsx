@@ -1,3 +1,4 @@
+import { getRootDomain } from "@htv/core";
 import type { HarEntry, PreconnectSource, ResourceType } from "@htv/core";
 import { formatBytes, formatMs, shortUrl } from "../lib/format.js";
 import { groupByType } from "../lib/resource-types.js";
@@ -15,6 +16,8 @@ interface DomainInfo {
   hostname: string;
   resourceTypes: Set<ResourceType>;
   preconnect: PreconnectSource | null;
+  requests: number;
+  bytes: number;
 }
 
 function extractDomains(
@@ -34,9 +37,14 @@ function extractDomains(
         hostname,
         resourceTypes: new Set(),
         preconnect: preconnectHints[hostname] ?? null,
+        requests: 0,
+        bytes: 0,
       });
     }
-    map.get(hostname)!.resourceTypes.add(entry.resourceType);
+    const info = map.get(hostname)!;
+    info.resourceTypes.add(entry.resourceType);
+    info.requests += 1;
+    info.bytes += entry.transferSize;
   }
   return [...map.values()];
 }
@@ -75,6 +83,8 @@ interface Props {
   onClose: () => void;
   preconnectHints?: Record<string, PreconnectSource>;
   documentHostname?: string;
+  /** Page overview: domains are split first-party vs third-party, with request counts and bytes. */
+  overview?: boolean;
 }
 
 function PreconnectBadge({ source }: { source: PreconnectSource }) {
@@ -154,12 +164,65 @@ function DomainsSection({
   );
 }
 
+function summarize(domains: DomainInfo[]) {
+  return domains.reduce(
+    (sum, d) => ({ requests: sum.requests + d.requests, bytes: sum.bytes + d.bytes }),
+    { requests: 0, bytes: 0 }
+  );
+}
+
+function OverviewDomainsSection({
+  domains,
+  documentHostname,
+}: {
+  domains: DomainInfo[];
+  documentHostname: string | undefined;
+}) {
+  const documentRoot = documentHostname ? getRootDomain(`https://${documentHostname}/`) : null;
+  const isFirstParty = (d: DomainInfo) => getRootDomain(`https://${d.hostname}/`) === documentRoot;
+  const parties = [
+    { label: "First-party", list: domains.filter(isFirstParty) },
+    { label: "Third-party", list: domains.filter((d) => !isFirstParty(d)) },
+  ];
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupHeader label="Domains" count={domains.length} />
+      {parties.map(({ label, list }) => {
+        const total = summarize(list);
+        return (
+          <SidebarRows key={label}>
+            <div className={styles.partyRow}>
+              <span className={styles.partyName}>{label}</span>
+              <span className={styles.domainStats}>
+                {list.length} domains · {total.requests} req · {formatBytes(total.bytes)}
+              </span>
+            </div>
+            {list.map((d) => (
+              <div key={d.hostname} className={styles.domainRow}>
+                <span className={styles.domainName} title={d.hostname}>
+                  {d.hostname}
+                </span>
+                {d.preconnect && <PreconnectBadge source={d.preconnect} />}
+                <span className={styles.domainStats}>
+                  {d.requests} · {formatBytes(d.bytes)}
+                </span>
+              </div>
+            ))}
+          </SidebarRows>
+        );
+      })}
+    </SidebarGroup>
+  );
+}
+
 export function ResourceSidebar({
   resources,
   title,
   onClose,
   preconnectHints = {},
   documentHostname,
+  overview = false,
 }: Props) {
   const grouped = groupByType(resources);
   const domains = extractDomains(resources, preconnectHints);
@@ -172,7 +235,11 @@ export function ResourceSidebar({
       width={320}
       onClose={onClose}
     >
-      <DomainsSection domains={domains} documentHostname={documentHostname} />
+      {overview ? (
+        <OverviewDomainsSection domains={domains} documentHostname={documentHostname} />
+      ) : (
+        <DomainsSection domains={domains} documentHostname={documentHostname} />
+      )}
 
       {[...grouped.entries()].map(([type, entries]) => (
         <SidebarGroup key={type}>

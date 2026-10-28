@@ -29,11 +29,20 @@ const LABEL_TOLERANCE = 3;
 // A path starts and ends on the outline of its nodes: no glyph is wider than this.
 const ATTACH_DISTANCE = 25;
 
+// Captions are centred under their glyph; the last baseline gets a few pixels for descenders.
+// A bypassing path keeps this far below the caption while within its half-width.
+const CAPTION_HALF_WIDTH = { gfw: 50, edge: 75 } as const;
+const CAPTION_DESCENT = 4;
+const CAPTION_CLEARANCE = 12;
+
 // Geometry that changes on purpose, per layout, compared for structure only. The hand-written
 // tables drew browser → 3rd parties from x = 150 in every 3-zone layout, so with the GFW column
 // (browser at x = 90) the path started 60 px away from the browser.
+// Browser → 3rd parties also dips under the captions of the GFW and edge nodes it passes.
 const INTENTIONAL_CHANGES: Record<string, readonly string[]> = {
+  noGfw_cdn: ["browser-third-parties"],
   gfw_cdn: ["browser-third-parties"],
+  gfw_cdn_4: ["browser-third-parties"],
   gfw_noCdn: ["browser-third-parties"],
 };
 
@@ -366,6 +375,35 @@ describe("NodeRenderer geometry", () => {
         );
       }
     });
+
+    if (scenario.layout !== "noGfw_noCdn" && scenario.layout !== "noGfw_noCdn_thirdParties") {
+      it(`routes the ${scenario.layout} browser-third-parties path below the captions it passes`, () => {
+        const { nodes } = syntheticFlow(scenario).pageAnalyses[0];
+        const geometry = actual[scenario.layout].idle;
+        const present = nodes.filter((n) => n.present);
+        const d = numbers(geometry.paths["browser-third-parties"].d[0].d);
+        const label = actual[scenario.layout].center.paths["browser-third-parties"].labels[0];
+        for (const id of ["gfw", "edge"] as const) {
+          const index = present.findIndex((n) => n.id === id);
+          if (index < 0) continue;
+          const node = geometry.nodes[index];
+          const bottom = Math.max(...node.texts.map((t) => t.y)) + CAPTION_DESCENT;
+          // Coarse samples (t = 0.1 ... 0.9) plus a fine pass over the part below the glyph.
+          const samples = [
+            ...Array.from({ length: 9 }, (_, i) => (i + 1) / 10),
+            ...Array.from({ length: 101 }, (_, i) => i / 100),
+          ];
+          for (const t of samples) {
+            const [x, y] = cubic(d, t);
+            if (Math.abs(x - node.centre[0]) > CAPTION_HALF_WIDTH[id]) continue;
+            expect(y, `${id} t=${t} at x=${Math.round(x)}`).toBeGreaterThanOrEqual(
+              bottom + CAPTION_CLEARANCE
+            );
+          }
+          expect(label.y, `${id} label`).toBeGreaterThan(bottom + CAPTION_CLEARANCE);
+        }
+      });
+    }
 
     it(`keeps the ${scenario.layout} geometry`, () => {
       const expected = baseline[scenario.layout];

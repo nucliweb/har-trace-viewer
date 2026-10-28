@@ -86,6 +86,8 @@
   font-size: var(--fs-body);
   color: var(--color-text2);
   line-height: 1.4;
+  /* Reserve two lines so the panel keeps its height between steps and the diagram does not jump. */
+  min-height: calc(2 * 1.4em);
 }
 
 /* Metrics */

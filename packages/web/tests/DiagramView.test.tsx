@@ -63,4 +63,41 @@ describe("DiagramView", () => {
     await user.click(screen.getByRole("button", { name: "Toggle cache analysis" }));
     expect(screen.queryByText(label)).not.toBeInTheDocument();
   });
+
+  describe("resource sidebar", () => {
+    const lastIndex = flow.steps.length - 1;
+
+    async function openSidebar(user: ReturnType<typeof userEvent.setup>, index: number) {
+      await goTo(user, index);
+      await user.click(screen.getByRole("button", { name: "View resource list" }));
+    }
+
+    it("summarises every page resource on the last step, domains first", async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
+      await openSidebar(user, lastIndex);
+
+      const expected = flow.pages[0].har.entries.length - 1;
+      expect(screen.getByText("All resources")).toBeInTheDocument();
+      expect(screen.getByText(`${expected} resources`)).toBeInTheDocument();
+      expect(screen.getByText("First-party")).toBeInTheDocument();
+      expect(screen.getByText("Third-party")).toBeInTheDocument();
+      const labels = Array.from(document.querySelectorAll("[class*=groupLabel]")).map(
+        (el) => el.textContent
+      );
+      expect(labels[0]).toBe("Domains");
+      expect(labels.length).toBeGreaterThan(1);
+    });
+
+    it("keeps the step title and a plain domain list on other steps", async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
+      const index = flow.steps.findIndex((s, i) => i < lastIndex && s.resourceRefs?.length);
+      await openSidebar(user, index);
+
+      expect(screen.queryByText("All resources")).not.toBeInTheDocument();
+      expect(screen.queryByText("First-party")).not.toBeInTheDocument();
+      expect(screen.getByText("Domains")).toBeInTheDocument();
+    });
+  });
 });

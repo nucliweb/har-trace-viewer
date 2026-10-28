@@ -75,3 +75,25 @@
   color: var(--color-text);
   font-weight: 600;
 }
+
+/* Overview: first-party / third-party split */
+.partyRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: 4px var(--space-xs) 2px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.partyName {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.domainStats {
+  color: var(--color-text2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
