@@ -28,10 +28,11 @@ interface RawHarEntry {
   cache?: { beforeRequest?: Record<string, unknown> | null };
   request: { url: string; method: string };
   _transferSize?: number;
-  response: {
-    status: number;
-    headers: { name: string; value: string }[];
-    content: { mimeType?: string; size?: number };
+  // WebPageTest omits or nulls parts of the response (content: null, no headers).
+  response?: {
+    status?: number;
+    headers?: { name: string; value: string }[];
+    content?: { mimeType?: string; size?: number } | null;
     bodySize?: number;
     headersSize?: number;
   };
@@ -233,11 +234,11 @@ function parseTransferSize(e: RawHarEntry): number {
   if (typeof e._transferSize === "number" && e._transferSize >= 0) return e._transferSize;
   // Served from the browser cache: nothing crossed the network.
   if (parseFromCache(e._fromCache, e.cache)) return 0;
-  const { bodySize, headersSize, content } = e.response;
+  const { bodySize, headersSize, content } = e.response ?? {};
   if (typeof bodySize === "number" && typeof headersSize === "number") {
     if (bodySize >= 0 && headersSize >= 0) return bodySize + headersSize;
   }
-  return content.size != null && content.size >= 0 ? content.size : 0;
+  return content?.size != null && content.size >= 0 ? content.size : 0;
 }
 
 function parsePageTime(value: number | undefined): number | null {
@@ -313,8 +314,9 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     const timing = parseTiming(rawTimings);
     const ttfb = normalizeMs(rawTimings.wait);
     const startTime = new Date(e.startedDateTime).getTime() - pageOrigin;
-    const responseHeaders = pickResponseHeaders(headersToRecord(e.response.headers));
-    const mimeType = e.response.content.mimeType ?? "";
+    const response = e.response ?? {};
+    const responseHeaders = pickResponseHeaders(headersToRecord(response.headers ?? []));
+    const mimeType = response.content?.mimeType ?? "";
 
     return {
       url: e.request.url,
@@ -322,13 +324,13 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       duration: e.time,
       timing,
       ttfb,
-      status: e.response.status,
+      status: response.status ?? 0,
       mimeType,
       resourceType: parseResourceType(e._resourceType, e.request.url, mimeType),
       priority: parseResourcePriority(e._priority),
       responseHeaders,
       transferSize: parseTransferSize(e),
-      bodySize: Math.max(0, e.response.content.size ?? 0),
+      bodySize: Math.max(0, response.content?.size ?? 0),
       isDocument: isHtmlMime(mimeType),
       fromCache: parseFromCache(e._fromCache, e.cache),
     };

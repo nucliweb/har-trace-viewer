@@ -240,6 +240,74 @@ describe("parseHar — malformed input", () => {
   });
 });
 
+describe("parseHar — WebPageTest-style HAR", () => {
+  const withResponse = (index: number, response: Record<string, unknown> | undefined) => {
+    const raw = firefoxHar();
+    const entry = raw.log.entries[index] as unknown as { response?: unknown };
+    entry.response = response;
+    return parseHar(raw as never);
+  };
+
+  it("parses an entry whose response.content is null, inferring the type from the extension", () => {
+    const { entries } = withResponse(2, { status: 200, headers: [], content: null });
+
+    expect(entries[2].mimeType).toBe("");
+    expect(entries[2].resourceType).toBe("script");
+    expect(entries[2].bodySize).toBe(0);
+    expect(entries[2].transferSize).toBe(0);
+  });
+
+  it("parses an entry with no response.content at all", () => {
+    const { entries } = withResponse(3, { status: 200, headers: [] });
+
+    expect(entries[3].mimeType).toBe("");
+    expect(entries[3].resourceType).toBe("image");
+  });
+
+  it("parses an entry with no response headers", () => {
+    const { entries } = withResponse(1, { status: 200, content: { mimeType: "text/css" } });
+
+    expect(entries[1].responseHeaders).toEqual({});
+    expect(entries[1].resourceType).toBe("stylesheet");
+  });
+
+  it("treats a missing response or status as status 0", () => {
+    expect(withResponse(1, undefined).entries[1].status).toBe(0);
+    expect(withResponse(1, { headers: [], content: null }).entries[1].status).toBe(0);
+  });
+
+  it("falls back to content size when bodySize and headersSize are -1 or missing", () => {
+    const sized = withResponse(1, {
+      status: 200,
+      headers: [],
+      content: { mimeType: "text/css", size: 700 },
+      bodySize: -1,
+      headersSize: -1,
+    });
+    expect(sized.entries[1].transferSize).toBe(700);
+
+    const bare = withResponse(1, { status: 200, content: { mimeType: "text/css", size: 700 } });
+    expect(bare.entries[1].transferSize).toBe(700);
+  });
+
+  it("still finds the document and keeps -1 page timings as null", () => {
+    const raw = firefoxHar();
+    raw.log.pages[0].pageTimings = { onContentLoad: -1, onLoad: -1 };
+    const parsed = parseHar(raw);
+
+    expect(parsed.documentEntry.url).toBe("https://example.com/");
+    expect(parsed.pages[0].onContentLoad).toBeNull();
+    expect(parsed.pages[0].onLoad).toBeNull();
+  });
+
+  it("keeps long WebPageTest page titles as the default page name", () => {
+    const title = "Run 1, First View for https://example.com/some/long/path?x=1";
+    const page = { id: "p", title, startedDateTime: "2026-01-01T00:00:00.000Z" };
+
+    expect(defaultPageName({ ...page, onContentLoad: null, onLoad: null }, 0)).toBe(title);
+  });
+});
+
 describe("parseHarPages", () => {
   it("returns one ParsedHar per page, ordered by startedDateTime", () => {
     const result = parseHarPages(twoPageHar());

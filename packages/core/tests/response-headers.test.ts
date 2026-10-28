@@ -38,7 +38,7 @@ function parseUnfiltered(raw: RawHar): ParsedHar {
   const parsed = parseHar(raw);
   const entries = parsed.entries.map((entry, i) => {
     const responseHeaders: Record<string, string> = {};
-    for (const h of raw.log.entries![i].response.headers) {
+    for (const h of raw.log.entries![i].response?.headers ?? []) {
       responseHeaders[h.name.toLowerCase()] = h.value;
     }
     return { ...entry, responseHeaders };
