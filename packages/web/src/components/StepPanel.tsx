@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import type { KeyboardEvent } from "react";
 import type { HarEntry } from "@htv/core";
 import type { DiagramState, Speed } from "../hooks/useDiagramState.js";
 import styles from "./StepPanel.module.css";
@@ -57,17 +59,48 @@ export function StepPanel({ state, resources, onOpenResources }: Props) {
   const step = flow.steps[stepIndex];
   const total = flow.steps.length;
 
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Arrow keys inside the tablist move the selection (same as the global shortcut) and focus follows.
+  const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target =
+      event.key === "ArrowRight"
+        ? Math.min(stepIndex + 1, total - 1)
+        : event.key === "ArrowLeft"
+          ? Math.max(stepIndex - 1, 0)
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? total - 1
+              : null;
+    if (target === null || event.ctrlKey || event.metaKey || event.altKey) return;
+    event.preventDefault();
+    goTo(target);
+    tabRefs.current[target]?.focus();
+  };
+
   return (
     <div className={styles.panel}>
-      {/* Step track */}
-      <div className={styles.track} role="tablist" aria-label="Steps">
+      <div className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
+        Step {stepIndex + 1} of {total}: {step.title}
+      </div>
+
+      {/* Step track. The focusable elements are the tabs; key events bubble up to the tablist. */}
+      {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+      <div className={styles.track} role="tablist" aria-label="Steps" onKeyDown={onTabKeyDown}>
         {flow.steps.map((s, i) => {
           const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
           return (
             <button
               key={i}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              id={`step-tab-${i}`}
               role="tab"
               aria-selected={i === stepIndex}
+              aria-controls="step-panel"
+              tabIndex={i === stepIndex ? 0 : -1}
               aria-label={`Step ${i + 1}: ${s.title}`}
               className={`${styles.trackDot} ${styles[status]}`}
               onClick={() => goTo(i)}
@@ -79,7 +112,12 @@ export function StepPanel({ state, resources, onOpenResources }: Props) {
       </div>
 
       {/* Info card */}
-      <div className={styles.info}>
+      <div
+        className={styles.info}
+        id="step-panel"
+        role="tabpanel"
+        aria-labelledby={`step-tab-${stepIndex}`}
+      >
         <div className={styles.infoMain}>
           <div className={styles.stepCounter}>
             Step {stepIndex + 1} / {total}

@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { getStepCacheResources, getStepResources } from "@htv/core";
 import type { Flow, HarEntry, PathId } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
+import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import type { HistoricalPath } from "../types.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepPanel } from "./StepPanel.js";
@@ -52,6 +53,8 @@ function computeHistoricalPaths(
 
 export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
+  const viewRef = useRef<HTMLDivElement>(null);
+  useStepKeyboard(viewRef, state);
   const { stepIndex } = state;
   const step = flow.steps[stepIndex];
   const { pageIndex } = step;
@@ -97,7 +100,9 @@ export function DiagramView({ flow }: Props) {
   const currentBadgeType = step.badge?.type;
 
   return (
-    <div className={styles.view}>
+    // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+    <div ref={viewRef} className={styles.view} role="region" aria-label="Diagram" tabIndex={0}>
       <div className={styles.canvas}>
         <NodeRenderer
           nodes={analysis.nodes}

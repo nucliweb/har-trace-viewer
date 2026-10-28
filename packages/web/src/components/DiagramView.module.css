@@ -126,3 +126,8 @@
     transition: none;
   }
 }
+
+.view:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: -2px;
+}

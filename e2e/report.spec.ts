@@ -98,6 +98,45 @@ test("step navigation moves through every step and highlights the diagram", asyn
   await expect(stepLabel(page)).toHaveText(`Step ${total} / ${total}`);
 });
 
+test("keyboard alone walks every step with ArrowRight, then End and Home", async ({ page }) => {
+  await open(page, bundleUrl);
+  const total = await totalSteps(page);
+  const highlighted = page.locator('#diagram-svg g[opacity="1"]');
+
+  await page.getByRole("region", { name: "Diagram" }).focus();
+  for (let n = 1; n <= total; n++) {
+    await expect(stepLabel(page)).toHaveText(`Step ${n} / ${total}`);
+    expect(await highlighted.count()).toBeGreaterThan(0);
+    await expect(page.getByRole("tab", { selected: true })).toHaveAttribute(
+      "aria-label",
+      new RegExp(`^Step ${n}:`)
+    );
+    if (n < total) await page.keyboard.press("ArrowRight");
+  }
+  await page.keyboard.press("ArrowRight");
+  await expect(stepLabel(page)).toHaveText(`Step ${total} / ${total}`);
+
+  await page.keyboard.press("Home");
+  await expect(stepLabel(page)).toHaveText(`Step 1 / ${total}`);
+  await page.keyboard.press("End");
+  await expect(stepLabel(page)).toHaveText(`Step ${total} / ${total}`);
+  await page.keyboard.press("ArrowLeft");
+  await expect(stepLabel(page)).toHaveText(`Step ${total - 1} / ${total}`);
+
+  // Inside the tablist the focus follows the selected tab.
+  await page.getByRole("tab", { selected: true }).focus();
+  await page.keyboard.press("Home");
+  await expect(stepLabel(page)).toHaveText(`Step 1 / ${total}`);
+  await expect(page.getByRole("tab", { name: /^Step 1:/ })).toBeFocused();
+
+  // Space toggles autoplay.
+  await page.getByRole("region", { name: "Diagram" }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("button", { name: "Auto play" })).toBeVisible();
+});
+
 interface StepResources {
   title: string;
   resources: string[];
