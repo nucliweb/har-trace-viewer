@@ -8,6 +8,7 @@
   "scripts": {
     "build": "npm run build -w @htv/core -w har-trace-viewer",
     "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -19,6 +20,7 @@
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.64.1",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.10.2",
