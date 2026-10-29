@@ -1,4 +1,5 @@
 import { getRootDomain } from "../utils/domain.js";
+import { detectPop } from "./pops.js";
 import type {
   CdnProvider,
   ClientRegionSuggestion,
@@ -14,41 +15,35 @@ export function detectNode(responseHeaders: Record<string, string>): NodeDetecti
     return { type: "origin", name: "Origin Server", cdnProvider };
   }
 
-  const names: Record<Exclude<CdnProvider, "unknown">, string> = {
-    akamai: "Akamai Edge",
-    cloudflare: "Cloudflare",
-    fastly: "Fastly CDN",
-    cloudfront: "CloudFront",
-    gfe: "Google GFE",
-  };
-
   return {
     type: "edge",
-    name: names[cdnProvider],
+    name: CDN_NAMES[cdnProvider],
     cdnProvider,
   };
 }
 
-// Returns the geographic region of the CDN PoP from response headers.
-// Cloudflare and CloudFront expose the PoP code directly; other CDNs fall back
-// to the provided `fallback` region (caller supplies context-derived default).
+const CDN_NAMES: Record<Exclude<CdnProvider, "unknown">, string> = {
+  akamai: "Akamai Edge",
+  cloudflare: "Cloudflare",
+  fastly: "Fastly CDN",
+  cloudfront: "CloudFront",
+  gfe: "Google",
+  "google-cloud-cdn": "Google Cloud CDN",
+  vercel: "Vercel Edge",
+  netlify: "Netlify Edge",
+  "azure-front-door": "Azure Front Door",
+  bunny: "Bunny CDN",
+  keycdn: "KeyCDN",
+};
+
+// Returns the geographic region of the CDN PoP from response headers (see detectPop
+// for the supported headers); other CDNs fall back to the provided `fallback` region
+// (caller supplies context-derived default).
 export function detectCdnRegion(
   responseHeaders: Record<string, string>,
   fallback: NetworkRegion = "edge"
 ): NetworkRegion {
-  const cfRay = responseHeaders["cf-ray"];
-  if (cfRay) {
-    const pop = cfRay.split("-").pop()?.toLowerCase() ?? "";
-    return popToRegion(pop) ?? fallback;
-  }
-
-  const cfPop = responseHeaders["x-amz-cf-pop"];
-  if (cfPop) {
-    const pop = cfPop.slice(0, 3).toLowerCase();
-    return popToRegion(pop) ?? fallback;
-  }
-
-  return fallback;
+  return detectPop(responseHeaders)?.region ?? fallback;
 }
 
 // Returns a human-readable PoP city for the CDN edge node, if detectable.
@@ -59,17 +54,8 @@ export function detectCdnPopCity(
   cdnProvider: CdnProvider,
   behindGfw: boolean
 ): string | null {
-  const cfRay = responseHeaders["cf-ray"];
-  if (cfRay) {
-    const pop = cfRay.split("-").pop()?.toLowerCase() ?? "";
-    return POP_CITIES[pop] ?? null;
-  }
-
-  const cfPop = responseHeaders["x-amz-cf-pop"];
-  if (cfPop) {
-    const pop = cfPop.slice(0, 3).toLowerCase();
-    return POP_CITIES[pop] ?? null;
-  }
+  const pop = detectPop(responseHeaders);
+  if (pop) return pop.city;
 
   if (cdnProvider === "akamai" && behindGfw) return "Hong Kong";
 
@@ -105,15 +91,12 @@ export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | nu
 export function detectOriginRegion(headers: Record<string, string>): NetworkRegion {
   const vercelId = headers["x-vercel-id"];
   if (vercelId) {
-    const prefix = vercelId.split("::")[0].replace(/-\d+$/, "").toLowerCase().slice(0, 3);
-    const region = popToRegion(prefix);
-    return region ?? "united-states";
+    return detectPop({ "x-vercel-id": vercelId })?.region ?? "united-states";
   }
 
   const flyId = headers["fly-request-id"];
   if (flyId) {
-    const pop = flyId.split("-")[1]?.toLowerCase().slice(0, 3);
-    if (pop) return popToRegion(pop) ?? "origin";
+    return detectPop({ "fly-request-id": flyId })?.region ?? "origin";
   }
 
   if (headers["x-amz-request-id"] || headers["x-amz-id-2"]) {
@@ -124,7 +107,8 @@ export function detectOriginRegion(headers: Record<string, string>): NetworkRegi
 }
 
 // Detects the dominant geographic region of a set of third-party entries.
-// Priority: azure-cloud > europe > united-states > asia-pacific > origin.
+// Priority: azure-cloud > europe > united-states > asia-pacific > north-america >
+// south-america > africa > middle-east > origin.
 export function detectThirdPartyRegion(
   entries: { url: string; responseHeaders: Record<string, string> }[]
 ): NetworkRegion {
@@ -145,21 +129,55 @@ export function detectThirdPartyRegion(
   if (regions.includes("europe")) return "europe";
   if (regions.includes("united-states")) return "united-states";
   if (regions.includes("asia-pacific")) return "asia-pacific";
+  for (const region of ["north-america", "south-america", "africa", "middle-east"] as const) {
+    if (regions.includes(region)) return region;
+  }
 
   return "origin";
 }
 
+// Provider detection order, most specific header first. The first rule that matches
+// wins, so hosting platforms with their own request id (Vercel, Netlify) are checked
+// before the CDNs that may sit in front of them, and generic signals (the `via` and
+// `server` headers) come last.
+//   1. vercel            x-vercel-id, x-vercel-cache
+//   2. netlify           x-nf-request-id
+//   3. azure-front-door  x-azure-ref, x-fd-*
+//   4. bunny             cdn-cache, server: BunnyCDN
+//   5. keycdn            server: keycdn-engine (x-edge-location)
+//   6. akamai            x-akamai-transformed, server: AkamaiNetStorage
+//   7. cloudflare        cf-ray, server: cloudflare
+//   8. fastly            x-fastly-request-id, x-served-by: cache-*
+//   9. cloudfront        x-amz-cf-pop, x-cache or via mentioning cloudfront
+//  10. google-cloud-cdn  via: 1.1 google with x-goog-* or cache-status
+//  11. gfe               server: Google Frontend, or via: 1.1 google alone
 function detectCdnProvider(headers: Record<string, string>): CdnProvider {
-  if (headers["x-akamai-transformed"] !== undefined) return "akamai";
-  if (headers["cf-ray"] !== undefined) return "cloudflare";
-  if (headers["x-fastly-request-id"] !== undefined) return "fastly";
-  if (headers["x-amz-cf-pop"] !== undefined) return "cloudfront";
+  const has = (name: string) => headers[name] !== undefined;
+  const hasPrefix = (prefix: string) => Object.keys(headers).some((n) => n.startsWith(prefix));
+  const server = (headers["server"] ?? "").toLowerCase();
+  const via = (headers["via"] ?? "").toLowerCase();
 
-  const server = headers["server"] ?? "";
-  const via = headers["via"] ?? "";
-  if (server.toLowerCase().includes("google frontend") || via.toLowerCase().includes("google")) {
-    return "gfe";
+  if (has("x-vercel-id") || has("x-vercel-cache")) return "vercel";
+  if (has("x-nf-request-id")) return "netlify";
+  if (has("x-azure-ref") || hasPrefix("x-fd-")) return "azure-front-door";
+  if (has("cdn-cache") || server.startsWith("bunnycdn")) return "bunny";
+  if (server.includes("keycdn-engine")) return "keycdn";
+  if (has("x-akamai-transformed") || server.includes("akamainetstorage")) return "akamai";
+  if (has("cf-ray") || server === "cloudflare") return "cloudflare";
+  if (has("x-fastly-request-id") || /^cache-/i.test(headers["x-served-by"] ?? "")) {
+    return "fastly";
   }
+  if (
+    has("x-amz-cf-pop") ||
+    (headers["x-cache"] ?? "").toLowerCase().includes("cloudfront") ||
+    via.includes("cloudfront")
+  ) {
+    return "cloudfront";
+  }
+  if (via.includes("google")) {
+    return hasPrefix("x-goog-") || has("cache-status") ? "google-cloud-cdn" : "gfe";
+  }
+  if (server.includes("google frontend")) return "gfe";
 
   return "unknown";
 }
@@ -182,127 +200,6 @@ function isAzureEntry(url: string, headers: Record<string, string>): boolean {
 }
 
 const EU_TLD_RE = /\.(eu|de|fr|nl|ie|be|pl|es|it|se|no|dk|at|ch|co\.uk|co\.de)$/i;
-
-const APAC_POPS = new Set([
-  "hkg",
-  "nrt",
-  "hnd",
-  "kix",
-  "icn",
-  "sin",
-  "cgk",
-  "bom",
-  "bkk",
-  "mnl",
-  "syd",
-  "mel",
-  "per",
-  "akl",
-  "tpe",
-  "tsa",
-  "hel",
-  "pvg",
-]);
-const EUROPE_POPS = new Set([
-  "lhr",
-  "ams",
-  "fra",
-  "cdg",
-  "mad",
-  "mxp",
-  "waw",
-  "vie",
-  "arn",
-  "cph",
-  "dub",
-  "prg",
-  "bud",
-  "sof",
-  "ath",
-  "otp",
-  "bcn",
-  "muc",
-  "ham",
-]);
-const US_POPS = new Set([
-  "iad",
-  "dca",
-  "ewr",
-  "jfk",
-  "bos",
-  "ord",
-  "dfw",
-  "atl",
-  "mia",
-  "phx",
-  "sjc",
-  "sfo",
-  "lax",
-  "sea",
-  "pdx",
-  "den",
-  "msp",
-  "yyz",
-  "yul",
-]);
-
-function popToRegion(pop: string): NetworkRegion | null {
-  if (APAC_POPS.has(pop)) return "asia-pacific";
-  if (EUROPE_POPS.has(pop)) return "europe";
-  if (US_POPS.has(pop)) return "united-states";
-  return null;
-}
-
-const POP_CITIES: Record<string, string> = {
-  hkg: "Hong Kong",
-  hnd: "Tokyo",
-  nrt: "Tokyo",
-  kix: "Osaka",
-  icn: "Seoul",
-  sin: "Singapore",
-  cgk: "Jakarta",
-  bom: "Mumbai",
-  bkk: "Bangkok",
-  mnl: "Manila",
-  syd: "Sydney",
-  mel: "Melbourne",
-  per: "Perth",
-  akl: "Auckland",
-  tpe: "Taipei",
-  pvg: "Shanghai",
-  lhr: "London",
-  ams: "Amsterdam",
-  fra: "Frankfurt",
-  cdg: "Paris",
-  mad: "Madrid",
-  mxp: "Milan",
-  waw: "Warsaw",
-  vie: "Vienna",
-  arn: "Stockholm",
-  cph: "Copenhagen",
-  dub: "Dublin",
-  prg: "Prague",
-  bud: "Budapest",
-  bcn: "Barcelona",
-  muc: "Munich",
-  ham: "Hamburg",
-  iad: "Washington DC",
-  dca: "Washington DC",
-  ewr: "Newark",
-  jfk: "New York",
-  bos: "Boston",
-  ord: "Chicago",
-  dfw: "Dallas",
-  atl: "Atlanta",
-  mia: "Miami",
-  phx: "Phoenix",
-  sjc: "San Jose",
-  sfo: "San Francisco",
-  lax: "Los Angeles",
-  sea: "Seattle",
-  pdx: "Portland",
-  den: "Denver",
-};
 
 export function hasThirdParties(entries: { url: string }[], documentUrl: string): boolean {
   const documentRoot = getRootDomain(documentUrl);

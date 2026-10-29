@@ -74,6 +74,10 @@ export type NetworkRegion =
   | "europe"
   | "azure-cloud"
   | "united-states"
+  | "north-america"
+  | "south-america"
+  | "africa"
+  | "middle-east"
   | "client"
   | "edge"
   | "origin";
@@ -221,7 +225,30 @@ export interface CacheReport {
 
 // ── Node detection ────────────────────────────────────────────────────────────
 
-export type CdnProvider = "akamai" | "cloudflare" | "fastly" | "cloudfront" | "gfe" | "unknown";
+export type CdnProvider =
+  | "akamai"
+  | "cloudflare"
+  | "fastly"
+  | "cloudfront"
+  | "gfe"
+  | "google-cloud-cdn"
+  | "vercel"
+  | "netlify"
+  | "azure-front-door"
+  | "bunny"
+  | "keycdn"
+  | "unknown";
+
+// Where a PoP code was read from. "fly" is a hosting platform, not a CDN.
+export type PopProvider = Exclude<CdnProvider, "unknown" | "gfe" | "akamai"> | "fly";
+
+export interface PopDetection {
+  code: string; // lowercase IATA code, e.g. "fra"
+  city: string;
+  country: string;
+  region: NetworkRegion;
+  provider: PopProvider;
+}
 
 export interface NodeDetectionResult {
   type: "edge" | "origin";

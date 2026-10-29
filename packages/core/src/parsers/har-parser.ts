@@ -104,6 +104,7 @@ export const RESPONSE_HEADER_ALLOW_LIST: readonly string[] = [
   "x-amz-id-2",
   "x-amz-request-id",
   "x-azure-ref",
+  "x-edge-location",
   "x-fastly-request-id",
   "x-iinfo",
   "x-ms-request-id",
@@ -119,6 +120,8 @@ export const RESPONSE_HEADER_ALLOW_PREFIXES: readonly string[] = [
   "cf-",
   "x-amz-cf",
   "x-vercel",
+  "x-fd",
+  "x-goog",
 ];
 
 const ALLOWED_HEADERS = new Set(RESPONSE_HEADER_ALLOW_LIST);

@@ -12,26 +12,96 @@ function parseMaxAge(cacheControl: string): number | null {
   return match ? parseInt(match[1], 10) : null;
 }
 
+// Splits a header list on commas that are not inside a quoted string.
+function splitList(value: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (const char of value) {
+    if (char === '"') quoted = !quoted;
+    if (char === "," && !quoted) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  parts.push(current.trim());
+  return parts.filter(Boolean);
+}
+
+const FWD_STATUS: Record<string, CdnCacheStatus> = {
+  miss: "miss",
+  "uri-miss": "miss",
+  "vary-miss": "miss",
+  request: "miss",
+  partial: "miss",
+  stale: "stale",
+  bypass: "bypass",
+  method: "bypass",
+};
+
+// Cache-Status (RFC 9211) lists the caches the response crossed, the one closest to
+// the client last. The last member that says "hit" or gives a "fwd" reason decides.
+// `fwd` wins over `hit` when both are present (a stale entry that was revalidated).
+function parseCacheStatus(value: string): CdnCacheStatus {
+  for (const member of splitList(value).reverse()) {
+    const params = member
+      .split(";")
+      .slice(1)
+      .map((p) => p.trim().toLowerCase());
+    const fwd = params.find((p) => p.startsWith("fwd="))?.slice(4);
+    if (fwd !== undefined) return FWD_STATUS[fwd] ?? "miss";
+    if (params.some((p) => p === "hit" || p === "hit=?1")) return "hit";
+  }
+  return "unknown";
+}
+
+// Classifies the free-form x-cache family: "Hit from cloudfront", "TCP_HIT",
+// "TCP_REFRESH_HIT", "HIT, MISS". With several tiers the last one is the one closest
+// to the client.
+function parseXCache(value: string): CdnCacheStatus {
+  const tier = splitList(value.toLowerCase()).pop() ?? "";
+  if (/refresh_?hit/.test(tier)) return "stale";
+  if (tier.includes("miss")) return "miss";
+  if (tier.includes("hit")) return "hit";
+  return "unknown";
+}
+
+const SIMPLE_STATUS: Record<string, CdnCacheStatus> = {
+  hit: "hit",
+  prerender: "hit",
+  miss: "miss",
+  stale: "stale",
+  expired: "stale",
+  revalidated: "stale",
+  updating: "stale",
+  bypass: "bypass",
+  dynamic: "bypass",
+};
+
+// Header precedence: the platform-specific status headers first (x-vercel-cache,
+// cf-cache-status, cdn-cache), then the standard Cache-Status, then the x-cache
+// family. x-cache-remote reports the parent tier, so it is the last resort.
 export function detectCdnCacheStatus(headers: Record<string, string>): CdnCacheStatus {
-  const vercel = headers["x-vercel-cache"]?.toLowerCase();
-  if (vercel === "hit") return "hit";
-  if (vercel === "miss") return "miss";
-  if (vercel === "stale") return "stale";
-  if (vercel === "bypass") return "bypass";
+  for (const name of ["x-vercel-cache", "cf-cache-status", "cdn-cache"]) {
+    const status = SIMPLE_STATUS[headers[name]?.trim().toLowerCase() ?? ""];
+    if (status) return status;
+  }
 
-  const cf = headers["cf-cache-status"]?.toLowerCase();
-  if (cf === "hit") return "hit";
-  if (cf === "miss") return "miss";
-  if (cf === "expired" || cf === "revalidated") return "stale";
-  if (cf === "bypass" || cf === "dynamic") return "bypass";
+  const cacheStatus = headers["cache-status"];
+  if (cacheStatus) {
+    const status = parseCacheStatus(cacheStatus);
+    if (status !== "unknown") return status;
+  }
 
-  const xCache = headers["x-cache"]?.toLowerCase();
-  if (xCache?.includes("hit")) return "hit";
-  if (xCache?.includes("miss")) return "miss";
-
-  const xCacheStatus = headers["x-cache-status"]?.toLowerCase();
-  if (xCacheStatus === "hit") return "hit";
-  if (xCacheStatus === "miss") return "miss";
+  for (const name of ["x-cache", "x-cache-status", "x-cache-remote"]) {
+    const value = headers[name];
+    if (value) {
+      const status = parseXCache(value);
+      if (status !== "unknown") return status;
+    }
+  }
 
   return "unknown";
 }

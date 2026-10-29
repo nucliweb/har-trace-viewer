@@ -70,6 +70,60 @@ describe("detectCdnCacheStatus", () => {
   });
 });
 
+describe("detectCdnCacheStatus per provider header", () => {
+  const cases: [string, Record<string, string>, string][] = [
+    ["x-vercel-cache HIT", { "x-vercel-cache": "HIT" }, "hit"],
+    ["x-vercel-cache MISS", { "x-vercel-cache": "MISS" }, "miss"],
+    ["x-vercel-cache STALE", { "x-vercel-cache": "STALE" }, "stale"],
+    ["x-vercel-cache PRERENDER", { "x-vercel-cache": "PRERENDER" }, "hit"],
+    ["x-vercel-cache REVALIDATED", { "x-vercel-cache": "REVALIDATED" }, "stale"],
+    ["cf-cache-status HIT", { "cf-cache-status": "HIT" }, "hit"],
+    ["cdn-cache HIT", { "cdn-cache": "HIT" }, "hit"],
+    ["cdn-cache MISS", { "cdn-cache": "MISS" }, "miss"],
+    ["cdn-cache EXPIRED", { "cdn-cache": "EXPIRED" }, "stale"],
+    ["cdn-cache BYPASS", { "cdn-cache": "BYPASS" }, "bypass"],
+    ["x-cache TCP_HIT", { "x-cache": "TCP_HIT from a23-1-2-3" }, "hit"],
+    ["x-cache TCP_MISS", { "x-cache": "TCP_MISS from a23-1-2-3" }, "miss"],
+    ["x-cache TCP_REFRESH_HIT", { "x-cache": "TCP_REFRESH_HIT" }, "stale"],
+    ["x-cache TCP_REFRESH_MISS", { "x-cache": "TCP_REFRESH_MISS" }, "miss"],
+    ["x-cache Hit from cloudfront", { "x-cache": "Hit from cloudfront" }, "hit"],
+    ["x-cache RefreshHit from cloudfront", { "x-cache": "RefreshHit from cloudfront" }, "stale"],
+    ["x-cache Error from cloudfront", { "x-cache": "Error from cloudfront" }, "unknown"],
+    ["x-cache multi tier, last wins", { "x-cache": "HIT, MISS" }, "miss"],
+    ["x-cache-remote TCP_HIT", { "x-cache-remote": "TCP_HIT from a1" }, "hit"],
+    ["x-cache-remote TCP_MISS", { "x-cache-remote": "TCP_MISS from a1" }, "miss"],
+    [
+      "x-cache wins over x-cache-remote",
+      { "x-cache": "TCP_HIT", "x-cache-remote": "TCP_MISS" },
+      "hit",
+    ],
+    ["x-cache-status HIT", { "x-cache-status": "HIT" }, "hit"],
+  ];
+
+  it.each(cases)("%s", (_label, headers, expected) => {
+    expect(detectCdnCacheStatus(headers)).toBe(expected);
+  });
+});
+
+describe("detectCdnCacheStatus Cache-Status (RFC 9211)", () => {
+  const cases: [string, string, string][] = [
+    ["hit", '"Netlify Edge"; hit', "hit"],
+    ["fwd=miss", '"Netlify Edge"; fwd=miss', "miss"],
+    ["fwd=uri-miss", "Edge; fwd=uri-miss", "miss"],
+    ["fwd=stale; stored", '"Netlify Edge"; fwd=stale; stored', "stale"],
+    ["fwd=bypass", "Edge; fwd=bypass", "bypass"],
+    ["last member wins", 'OriginCache; hit, "Netlify Edge"; fwd=miss; stored', "miss"],
+    ["last member with hit/fwd wins", 'Edge; hit, "Origin"; ttl=60', "hit"],
+    ["quoted comma is not a separator", '"Edge, EU"; hit', "hit"],
+    ["hit=?1 boolean", "Edge; hit=?1", "hit"],
+    ["no hit/fwd", "Edge; detail=thing", "unknown"],
+  ];
+
+  it.each(cases)("%s", (_label, value, expected) => {
+    expect(detectCdnCacheStatus({ "cache-status": value })).toBe(expected);
+  });
+});
+
 describe("profileResourceCache", () => {
   it("parses max-age from cache-control", () => {
     const p = profileResourceCache({ "cache-control": "public, max-age=31536000, immutable" });

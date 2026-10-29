@@ -74,34 +74,49 @@ describe("generateFlow — single page without trace", () => {
     expect(Number(requests.value)).toBeGreaterThan(0);
   });
 
-  it("topology: no CDN — browser-origin path, edge not present", () => {
+  it("topology: Vercel edge — browser-edge-origin paths, edge named after the provider and PoP", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
     const edge = flow.nodes.find((n) => n.id === "edge")!;
-    expect(edge.present).toBe(false);
+    expect(edge.present).toBe(true);
+    expect(edge.label).toBe("Vercel Edge");
+    expect(edge.subLabel).toBe("Paris");
+    expect(edge.region).toBe("europe");
 
     const origin = flow.nodes.find((n) => n.id === "origin")!;
     expect(origin.present).toBe(true);
 
     const paths = flow.paths.map((p) => p.id);
+    expect(paths).toContain("browser-edge");
+    expect(paths).toContain("edge-origin");
+    expect(paths).not.toContain("browser-origin");
+  });
+
+  it("topology: no CDN headers — browser-origin path, edge not present", () => {
+    const har = loadHar();
+    har.documentEntry.responseHeaders = { server: "nginx" };
+    const flow = generateFlow([{ name: "Home", har }]);
+
+    expect(flow.nodes.find((n) => n.id === "edge")!.present).toBe(false);
+    const paths = flow.paths.map((p) => p.id);
     expect(paths).toContain("browser-origin");
     expect(paths).not.toContain("browser-edge");
   });
 
-  it("step 2 (request in flight) has pathDirections marking browser-origin as request", () => {
+  it("step 2 (request in flight) has pathDirections marking browser-edge as request", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
     const requestStep = flow.steps[1];
 
     expect(requestStep.title).toContain("request");
-    expect(requestStep.pathDirections?.["browser-origin"]).toBe("request");
+    expect(requestStep.pathDirections?.["browser-edge"]).toBe("request");
   });
 
-  it("step 3 (TTFB) has pathDirections marking browser-origin as response", () => {
+  it("step 3 (TTFB) has pathDirections marking browser-edge as response", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
     const ttfbStep = flow.steps[2];
 
     expect(ttfbStep.title).toContain("TTFB");
-    expect(ttfbStep.pathDirections?.["browser-origin"]).toBe("response");
+    expect(ttfbStep.pathDirections?.["browser-edge"]).toBe("response");
   });
 });
 

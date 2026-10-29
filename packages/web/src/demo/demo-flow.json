@@ -484,7 +484,13 @@
               "expires": "Tue, 19 May 2026 10:43:12 GMT",
               "last-modified": "Tue, 14 Apr 2026 14:41:58 GMT",
               "server": "cloudflare",
-              "via": "1.1 google"
+              "via": "1.1 google",
+              "x-goog-generation": "1776177718967890",
+              "x-goog-hash": "md5=KVJ/PDj2OFGwiIy0pfxQqg==",
+              "x-goog-metageneration": "1",
+              "x-goog-storage-class": "STANDARD",
+              "x-goog-stored-content-encoding": "identity",
+              "x-goog-stored-content-length": "34992"
             },
             "transferSize": 34992,
             "bodySize": 34992,
@@ -1214,14 +1220,20 @@
     {
       "nodes": [
         { "id": "browser", "label": "Browser", "present": true, "region": "client" },
-        { "id": "edge", "label": "Origin Server", "present": false, "region": "edge" },
+        {
+          "id": "edge",
+          "label": "Vercel Edge",
+          "subLabel": "Paris",
+          "present": true,
+          "region": "europe",
+          "resourceStats": { "count": 28, "avgMs": 63.72710714432677, "label": "CDN hit" }
+        },
         {
           "id": "origin",
           "label": "Origin Server",
           "subLabel": "Vercel",
           "present": true,
-          "region": "europe",
-          "resourceStats": { "count": 28, "avgMs": 63.72710714432677 }
+          "region": "europe"
         },
         {
           "id": "third-parties",
@@ -1232,7 +1244,8 @@
         }
       ],
       "paths": [
-        { "id": "browser-origin", "from": "browser", "to": "origin" },
+        { "id": "browser-edge", "from": "browser", "to": "edge" },
+        { "id": "edge-origin", "from": "edge", "to": "origin" },
         { "id": "browser-third-parties", "from": "browser", "to": "third-parties" }
       ],
       "cacheReport": {
@@ -1281,7 +1294,7 @@
     {
       "pageIndex": 0,
       "title": "DNS + initial connection",
-      "description": "Browser resolves the domain and establishes a TCP connection to Origin.",
+      "description": "Browser resolves the domain and establishes a TCP connection to Vercel Edge.",
       "timestamp": 0,
       "activeNodes": ["browser"],
       "activePaths": [],
@@ -1295,22 +1308,22 @@
       "title": "First request in flight",
       "description": "Browser sends the HTTP request for the HTML document.",
       "timestamp": 1.821000001810491,
-      "activeNodes": ["browser", "origin"],
-      "activePaths": ["browser-origin"],
+      "activeNodes": ["browser", "edge", "origin"],
+      "activePaths": ["browser-edge", "edge-origin"],
       "metrics": [],
-      "pathTimings": { "browser-origin": "DNS 0ms · TCP 0ms" },
-      "pathDirections": { "browser-origin": "request" }
+      "pathTimings": { "browser-edge": "DNS 0ms · TCP 0ms" },
+      "pathDirections": { "browser-edge": "request", "edge-origin": "request" }
     },
     {
       "pageIndex": 0,
       "title": "TTFB — First byte received",
-      "description": "Origin responds with the first byte of the HTML document.",
+      "description": "Vercel Edge responds with the first byte of the HTML document.",
       "timestamp": 50.63399998471141,
-      "activeNodes": ["browser", "origin"],
-      "activePaths": ["browser-origin"],
+      "activeNodes": ["browser", "edge", "origin"],
+      "activePaths": ["browser-edge", "edge-origin"],
       "metrics": [{ "label": "TTFB", "value": "49ms" }],
-      "pathTimings": { "browser-origin": "TTFB 49ms" },
-      "pathDirections": { "browser-origin": "response" },
+      "pathTimings": { "browser-edge": "TTFB 49ms" },
+      "pathDirections": { "browser-edge": "response", "edge-origin": "response" },
       "badge": { "type": "ttfb", "value": "49ms", "node": "browser" }
     },
     {
@@ -1318,10 +1331,10 @@
       "title": "Critical resources loading",
       "description": "Browser parses the HTML and fetches render-blocking CSS and scripts.",
       "timestamp": 55,
-      "activeNodes": ["browser", "origin"],
-      "activePaths": ["browser-origin"],
+      "activeNodes": ["browser", "edge", "origin"],
+      "activePaths": ["browser-edge", "edge-origin"],
       "metrics": [{ "label": "CSS files", "value": "2" }],
-      "pathTimings": { "browser-origin": "2 files · avg 56ms" },
+      "pathTimings": { "browser-edge": "2 files · avg 56ms" },
       "resourceRefs": [1, 2]
     },
     {
@@ -1329,10 +1342,10 @@
       "title": "Secondary resources",
       "description": "Async scripts, images, and fonts load in the background.",
       "timestamp": 55,
-      "activeNodes": ["browser", "origin"],
-      "activePaths": ["browser-origin"],
+      "activeNodes": ["browser", "edge", "origin"],
+      "activePaths": ["browser-edge", "edge-origin"],
       "metrics": [{ "label": "Resources", "value": "25" }],
-      "pathTimings": { "browser-origin": "25 resources · avg 65ms" },
+      "pathTimings": { "browser-edge": "25 resources · avg 65ms" },
       "resourceRefs": [
         3, 4, 5, 6, 7, 8, 9, 10, 11, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30, 31
       ]
@@ -1345,7 +1358,7 @@
       "activeNodes": ["browser", "third-parties"],
       "activePaths": ["browser-third-parties"],
       "metrics": [
-        { "label": "Domains", "value": "4" },
+        { "label": "Domains", "value": "5" },
         { "label": "Requests", "value": "5" }
       ],
       "pathTimings": { "browser-third-parties": "5 req · avg 267ms" },
@@ -1384,19 +1397,29 @@
         { "label": "CLS", "value": "n/a" },
         { "label": "INP", "value": "n/a" }
       ],
+      "resourceRefs": [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+        26, 27, 28, 29, 30, 31, 32, 33
+      ],
       "badge": { "type": "onload", "value": "480ms", "node": "browser" }
     }
   ],
   "nodes": [
     { "id": "browser", "label": "Browser", "present": true, "region": "client" },
-    { "id": "edge", "label": "Origin Server", "present": false, "region": "edge" },
+    {
+      "id": "edge",
+      "label": "Vercel Edge",
+      "subLabel": "Paris",
+      "present": true,
+      "region": "europe",
+      "resourceStats": { "count": 28, "avgMs": 63.72710714432677, "label": "CDN hit" }
+    },
     {
       "id": "origin",
       "label": "Origin Server",
       "subLabel": "Vercel",
       "present": true,
-      "region": "europe",
-      "resourceStats": { "count": 28, "avgMs": 63.72710714432677 }
+      "region": "europe"
     },
     {
       "id": "third-parties",
@@ -1407,7 +1430,8 @@
     }
   ],
   "paths": [
-    { "id": "browser-origin", "from": "browser", "to": "origin" },
+    { "id": "browser-edge", "from": "browser", "to": "edge" },
+    { "id": "edge-origin", "from": "edge", "to": "origin" },
     { "id": "browser-third-parties", "from": "browser", "to": "third-parties" }
   ],
   "cacheReport": {

@@ -3,13 +3,15 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import {
+  detectCdnPopCity,
   detectCdnRegion,
   detectNode,
   hasThirdParties,
   suggestClientRegion,
 } from "../src/inference/node-detector.js";
+import { detectPop } from "../src/inference/pops.js";
 import { parseHarJson } from "../src/parsers/har-parser.js";
-import type { HarEntry, ParsedHar } from "../src/types.js";
+import type { CdnProvider, HarEntry, ParsedHar } from "../src/types.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const harFixturePath = join(__dirname, "fixtures/webperf-snippets.har.fixture.json");
@@ -66,14 +68,79 @@ describe("detectNode", () => {
     expect(result.name).toBe("Origin Server");
   });
 
-  it("returns origin for the webperf-snippets document (Vercel, no CDN headers)", () => {
+  it("detects a Vercel edge for the webperf-snippets document", () => {
     const json = readFileSync(harFixturePath, "utf8");
     const { documentEntry } = parseHarJson(json);
 
     const result = detectNode(documentEntry.responseHeaders);
 
-    expect(result.cdnProvider).toBe("unknown");
-    expect(result.type).toBe("origin");
+    expect(result).toEqual({ type: "edge", name: "Vercel Edge", cdnProvider: "vercel" });
+    expect(detectPop(documentEntry.responseHeaders)).toMatchObject({
+      code: "cdg",
+      city: "Paris",
+      provider: "vercel",
+    });
+  });
+});
+
+describe("detectNode providers", () => {
+  // One case per provider/header. Order matters: the most specific header wins.
+  const cases: [string, Record<string, string>, CdnProvider, string][] = [
+    ["x-vercel-id", { "x-vercel-id": "fra1::abc" }, "vercel", "Vercel Edge"],
+    ["x-vercel-cache", { "x-vercel-cache": "HIT" }, "vercel", "Vercel Edge"],
+    ["x-nf-request-id", { "x-nf-request-id": "01H" }, "netlify", "Netlify Edge"],
+    ["x-azure-ref", { "x-azure-ref": "2024" }, "azure-front-door", "Azure Front Door"],
+    ["x-fd-*", { "x-fd-healthprobe": "1" }, "azure-front-door", "Azure Front Door"],
+    ["cdn-cache", { "cdn-cache": "HIT" }, "bunny", "Bunny CDN"],
+    ["server: BunnyCDN", { server: "BunnyCDN-DE1-1234" }, "bunny", "Bunny CDN"],
+    [
+      "x-edge-location + keycdn-engine",
+      { "x-edge-location": "defr", server: "keycdn-engine" },
+      "keycdn",
+      "KeyCDN",
+    ],
+    ["x-akamai-transformed", { "x-akamai-transformed": "9 - 0" }, "akamai", "Akamai Edge"],
+    ["server: AkamaiNetStorage", { server: "AkamaiNetStorage" }, "akamai", "Akamai Edge"],
+    ["cf-ray", { "cf-ray": "a51d5608791cf7dd-LAX" }, "cloudflare", "Cloudflare"],
+    ["server: cloudflare", { server: "cloudflare" }, "cloudflare", "Cloudflare"],
+    ["x-fastly-request-id", { "x-fastly-request-id": "a" }, "fastly", "Fastly CDN"],
+    ["x-served-by: cache-", { "x-served-by": "cache-fra-eddf-FRA" }, "fastly", "Fastly CDN"],
+    ["x-amz-cf-pop", { "x-amz-cf-pop": "FRA56-P14" }, "cloudfront", "CloudFront"],
+    ["x-cache: cloudfront", { "x-cache": "Hit from cloudfront" }, "cloudfront", "CloudFront"],
+    [
+      "via google + x-goog-*",
+      { via: "1.1 google", "x-goog-generation": "1" },
+      "google-cloud-cdn",
+      "Google Cloud CDN",
+    ],
+    [
+      "via google + cache-status",
+      { via: "1.1 google", "cache-status": '"Google"; hit' },
+      "google-cloud-cdn",
+      "Google Cloud CDN",
+    ],
+    ["server: Google Frontend", { server: "Google Frontend" }, "gfe", "Google"],
+    ["via google alone", { via: "1.1 google" }, "gfe", "Google"],
+  ];
+
+  it.each(cases)("detects %s", (_label, headers, provider, name) => {
+    expect(detectNode(headers)).toEqual({ type: "edge", name, cdnProvider: provider });
+  });
+
+  it("does not treat generic servers as CDNs", () => {
+    for (const server of ["UploadServer", "envoy", "nginx"]) {
+      expect(detectNode({ server }).type).toBe("origin");
+    }
+  });
+
+  it("prefers the most specific header when several providers are present", () => {
+    expect(detectNode({ "x-vercel-id": "a", "cf-ray": "b-LAX" }).cdnProvider).toBe("vercel");
+    expect(detectNode({ "cf-ray": "b-LAX", "x-amz-cf-pop": "FRA1" }).cdnProvider).toBe(
+      "cloudflare"
+    );
+    expect(detectNode({ "x-amz-cf-pop": "FRA1", via: "1.1 google" }).cdnProvider).toBe(
+      "cloudfront"
+    );
   });
 });
 
@@ -156,12 +223,41 @@ describe("detectCdnRegion", () => {
     expect(detectCdnRegion({ "x-amz-cf-pop": "NRT57-P1" })).toBe("asia-pacific");
   });
 
+  it("maps PoPs of every other region", () => {
+    expect(detectCdnRegion({ "cf-ray": "abc-GRU" })).toBe("south-america");
+    expect(detectCdnRegion({ "cf-ray": "abc-JNB" })).toBe("africa");
+    expect(detectCdnRegion({ "cf-ray": "abc-DXB" })).toBe("middle-east");
+    expect(detectCdnRegion({ "cf-ray": "abc-YYZ" })).toBe("north-america");
+    expect(detectCdnRegion({ "cf-ray": "abc-SYD" })).toBe("asia-pacific");
+  });
+
+  it("maps the PoP of Vercel, Fastly and KeyCDN", () => {
+    expect(detectCdnRegion({ "x-vercel-id": "iad1::abc" })).toBe("united-states");
+    expect(detectCdnRegion({ "x-served-by": "cache-nrt-rjtf-NRT" })).toBe("asia-pacific");
+    expect(detectCdnRegion({ "x-edge-location": "defr" })).toBe("europe");
+  });
+
   it("returns the fallback when PoP is unknown", () => {
     expect(detectCdnRegion({ "cf-ray": "abc123-XYZ" }, "edge")).toBe("edge");
   });
 
   it("returns default fallback (edge) when no PoP headers present", () => {
     expect(detectCdnRegion({})).toBe("edge");
+  });
+});
+
+describe("detectCdnPopCity", () => {
+  it("returns the city of the detected PoP", () => {
+    expect(detectCdnPopCity({ "cf-ray": "a-LAX" }, "cloudflare", false)).toBe("Los Angeles");
+    expect(detectCdnPopCity({ "x-vercel-id": "cdg1::a" }, "vercel", false)).toBe("Paris");
+    expect(detectCdnPopCity({ "x-amz-cf-pop": "FRA56-P14" }, "cloudfront", false)).toBe(
+      "Frankfurt"
+    );
+  });
+
+  it("falls back to Hong Kong for Akamai behind the GFW and null otherwise", () => {
+    expect(detectCdnPopCity({}, "akamai", true)).toBe("Hong Kong");
+    expect(detectCdnPopCity({}, "akamai", false)).toBeNull();
   });
 });
 
