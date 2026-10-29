@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs, bundleHtml } from "../src/cli";
 import { twoPageHar } from "../../core/tests/helpers/firefox-har";
+import { wptHar } from "../../core/tests/helpers/wpt-har";
 
 const CLI_ROOT = resolve(__dirname, "..");
 const DIST_ENTRY = join(CLI_ROOT, "dist", "index.js");
@@ -78,6 +79,19 @@ describe("parseArgs", () => {
       { name: "A", har: "a" },
       { name: "B", har: "b", trace: "t" },
     ]);
+  });
+
+  it("attaches --select to the most recent --page", () => {
+    const { pages } = parseArgs(["--page", "A", "--har", "a", "--select", "page_2", "--page", "B"]);
+    expect(pages).toEqual([
+      { name: "A", har: "a", select: "page_2" },
+      { name: "B", har: "" },
+    ]);
+  });
+
+  it("sets listPages with --list-pages", () => {
+    expect(parseArgs(["--har", "a", "--list-pages"]).listPages).toBe(true);
+    expect(parseArgs(["--har", "a"]).listPages).toBeUndefined();
   });
 
   it('creates "Page 1" when --har has no preceding --page', () => {
@@ -444,5 +458,64 @@ describe("multi-page HAR (built CLI)", () => {
   it("prints no note for a single-page HAR", () => {
     const res = runCli(["--har", HAR, "--output", join(makeTempDir(), "out")]);
     expect(res.stderr).not.toContain("expanded into");
+  });
+});
+
+describe("selecting pages of a multi-page HAR (built CLI)", () => {
+  function writeWptHar() {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    return { dir, harPath };
+  }
+
+  function pageNames(out: string): string[] {
+    const flow = extractFlow(readFileSync(join(out, "index.html"), "utf-8")) as unknown as {
+      pages: { name: string }[];
+    };
+    return flow.pages.map((p) => p.name);
+  }
+
+  it("generates only the page selected by id", () => {
+    const { dir, harPath } = writeWptHar();
+    const out = join(dir, "report");
+    const res = runCli(["--har", harPath, "--select", "page_2", "--output", out]);
+    expect(res.status, res.stderr).toBe(0);
+    expect(pageNames(out)).toEqual(["Run 2 · First view"]);
+    expect(res.stderr).toContain("expanded into 1 flow page.");
+  });
+
+  it("selects several pages with a comma-separated list or a title match", () => {
+    const { dir, harPath } = writeWptHar();
+    const byIds = join(dir, "ids");
+    expect(
+      runCli(["--har", harPath, "--select", "page_1_0_1,page_2_0_1", "--output", byIds]).status
+    ).toBe(0);
+    expect(pageNames(byIds)).toEqual(["Run 1 · First view", "Run 2 · First view"]);
+
+    const byTitle = join(dir, "title");
+    expect(
+      runCli(["--har", harPath, "--select", "Run 1, Repeat", "--output", byTitle]).status
+    ).toBe(0);
+    expect(pageNames(byTitle)).toEqual(["Run 1 · Repeat view"]);
+  });
+
+  it("prints the pages with --list-pages and generates nothing", () => {
+    const { dir, harPath } = writeWptHar();
+    const res = runCli(["--har", harPath, "--list-pages"]);
+    expect(res.status, res.stderr).toBe(0);
+    for (const id of ["page_1_0_1", "page_1_1_1", "page_2_0_1"]) expect(res.stdout).toContain(id);
+    expect(res.stdout).toContain("4 entries");
+    expect(readdirSync(dir)).toEqual(["wpt.har"]);
+  });
+
+  it("exits 1 listing the available pages when the selection is unknown", () => {
+    const { dir, harPath } = writeWptHar();
+    const out = join(dir, "report");
+    const res = runCli(["--har", harPath, "--select", "page_9_9_9", "--output", out]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("No page matches the selection");
+    expect(res.stderr).toContain("page_1_1_1");
+    expect(existsSync(out)).toBe(false);
   });
 });

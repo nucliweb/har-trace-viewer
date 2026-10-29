@@ -30,6 +30,61 @@
   gap: var(--space-sm);
 }
 
+/* ── Page selection ────────────────────────────────────────────────────────── */
+
+.rowGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 4px);
+}
+
+.checklist {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--color-border2);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.checklistLegend {
+  padding: 0 var(--space-xs, 4px);
+}
+
+.checklistToggle {
+  font: inherit;
+  color: var(--color-cyan);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.checklistToggle:hover {
+  border-color: var(--color-cyan);
+}
+
+.checklistItems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs, 4px) var(--space-md);
+}
+
+.checklistItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
 /* ── Row ───────────────────────────────────────────────────────────────────── */
 
 .row {

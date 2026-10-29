@@ -14,6 +14,8 @@ import { parseArgs as nodeParseArgs } from "node:util";
 import {
   parseHarPagesJson,
   expandPageFlows,
+  listHarPages,
+  parsePageSelection,
   generateFlow,
   isClientRegion,
   CLIENT_REGIONS,
@@ -28,12 +30,15 @@ export interface PageArg {
   name: string;
   har: string;
   trace?: string;
+  /** Page id(s) or text selecting which pages of a multi-page HAR to expand. */
+  select?: string;
 }
 
 export interface Args {
   pages: PageArg[];
   output: string;
   bundle: boolean;
+  listPages?: boolean;
   region?: ClientRegion; // undefined when --region is absent
   help?: boolean;
   version?: boolean;
@@ -51,6 +56,8 @@ export function parseArgs(argv: string[]): Args {
       page: { type: "string", multiple: true },
       har: { type: "string", multiple: true },
       trace: { type: "string", multiple: true },
+      select: { type: "string", multiple: true },
+      "list-pages": { type: "boolean" },
       output: { type: "string", short: "o" },
       bundle: { type: "boolean" },
       region: { type: "string" },
@@ -65,6 +72,7 @@ export function parseArgs(argv: string[]): Args {
   const pages: PageArg[] = [];
   let output = "";
   let bundle = false;
+  let listPages = false;
   let help = false;
   let version = false;
   let region: ClientRegion | undefined;
@@ -85,6 +93,12 @@ export function parseArgs(argv: string[]): Args {
         break;
       case "trace":
         lastPage().trace = value;
+        break;
+      case "select":
+        lastPage().select = value;
+        break;
+      case "list-pages":
+        listPages = true;
         break;
       case "output":
         output = value;
@@ -108,6 +122,7 @@ export function parseArgs(argv: string[]): Args {
     pages,
     output,
     bundle,
+    ...(listPages ? { listPages } : {}),
     ...(region ? { region } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
@@ -173,6 +188,11 @@ Options:
   --har <file>        HAR file for the preceding --page (.har or .har.gz).
                       Without a --page, a page named "Page 1" is created.
   --trace <file>      Chrome trace for the preceding --page (.json or .json.gz).
+  --select <value>    For the preceding --har with several pages (e.g. WebPageTest
+                      runs): keep only the matching pages. A page id, a comma-
+                      separated list of ids, or text/regex matched against id,
+                      title and URL ("Run 1, First"). Default: all pages.
+  --list-pages        Print the pages (id, title, entries) of each --har and exit.
   -o, --output <path> Directory where the report is written. With --bundle it
                       may also be a .html file path.
   --bundle            Inline all assets (CSS, JS, fonts) into a single
@@ -196,6 +216,11 @@ export function printUsage() {
 }
 
 export function validateArgs(args: Args): string | null {
+  if (args.listPages) {
+    if (args.pages.length === 0) return "";
+    const missing = args.pages.find((p) => !p.har);
+    return missing ? `Missing --har for page "${missing.name}"` : null;
+  }
   if (args.pages.length === 0 || !args.output) return "";
   if (isHtmlPath(args.output) && !args.bundle) {
     return "--output must be a directory unless --bundle is set";
@@ -206,22 +231,36 @@ export function validateArgs(args: Args): string | null {
   return null;
 }
 
+/** Describes the pages of each --har: id, entries and title. */
+export async function listPagesReport(args: Args): Promise<string> {
+  const lines: string[] = [];
+  for (const p of args.pages) {
+    const pages = listHarPages(parseHarPagesJson(await readTextFile(resolve(p.har))));
+    lines.push(`${p.har} (${pages.length} page${pages.length === 1 ? "" : "s"})`);
+    for (const page of pages) {
+      lines.push(`  ${page.id}  ${page.entries} entries  ${page.title || page.url}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 export async function generateReport(args: Args): Promise<string> {
   const pageFlows: PageFlow[] = [];
   for (const p of args.pages) {
     const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
+    const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
+    const expanded = expandPageFlows({
+      name: p.name,
+      har,
+      select,
+      trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
+    });
     if (har.length > 1) {
       console.error(
-        `Note: ${p.har} contains ${har.length} pages; expanded into ${har.length} flow pages.`
+        `Note: ${p.har} contains ${har.length} pages; expanded into ${expanded.length} flow page${expanded.length === 1 ? "" : "s"}.`
       );
     }
-    pageFlows.push(
-      ...expandPageFlows({
-        name: p.name,
-        har,
-        trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
-      })
-    );
+    pageFlows.push(...expanded);
   }
 
   const flow = generateFlow(pageFlows, { clientRegion: args.region ?? "default" });

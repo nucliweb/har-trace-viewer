@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseArgs, printUsage, HELP, validateArgs, generateReport } from "./cli";
+import { parseArgs, printUsage, HELP, validateArgs, generateReport, listPagesReport } from "./cli";
 import type { Args } from "./cli";
 
 async function main() {
@@ -26,6 +26,11 @@ async function main() {
     if (error) console.error(error);
     printUsage();
     process.exit(1);
+  }
+
+  if (args.listPages) {
+    console.log(await listPagesReport(args));
+    return;
   }
 
   const indexPath = await generateReport(args);

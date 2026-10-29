@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FlowBuilder } from "../src/components/FlowBuilder.js";
+import { wptHar } from "../../core/tests/helpers/wpt-har";
 import { harJson, makeFile, traceJson } from "./fixtures.js";
 
 const generate = () => screen.getByRole("button", { name: /generate diagram/i });
@@ -105,5 +106,68 @@ describe("FlowBuilder", () => {
     await user.click(generate());
     expect(onGenerate.mock.calls[0][0]).toHaveLength(1);
     expect(within(document.body).getByDisplayValue("Page 2")).toBeInTheDocument();
+  });
+
+  describe("multi-page HAR", () => {
+    const wptJson = JSON.stringify(wptHar());
+    const checklist = () => screen.getByRole("group", { name: /pages to include/i });
+    const box = (name: RegExp) => within(checklist()).getByRole("checkbox", { name });
+
+    it("shows no checklist for a single-page HAR", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user);
+      await screen.findByText("site.har");
+      expect(screen.queryByRole("group", { name: /pages to include/i })).not.toBeInTheDocument();
+    });
+
+    it("lists every page with its request count and ticks only the first WebPageTest view", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user, 0, wptJson);
+      await screen.findByText("site.har · 3 pages");
+
+      expect(box(/Run 1 · First view \(3 req\)/)).toBeChecked();
+      expect(box(/Run 1 · Repeat view \(2 req\)/)).not.toBeChecked();
+      expect(box(/Run 2 · First view \(4 req\)/)).not.toBeChecked();
+    });
+
+    it("generates one flow page per ticked page", async () => {
+      const user = userEvent.setup();
+      const onGenerate = vi.fn();
+      render(<FlowBuilder onGenerate={onGenerate} />);
+      await loadHar(user, 0, wptJson);
+      await screen.findByText("site.har · 3 pages");
+      await user.click(box(/Run 2 · First view/));
+      await user.click(generate());
+
+      const [pages] = onGenerate.mock.calls[0];
+      expect(pages.map((p: { name: string }) => p.name)).toEqual([
+        "Run 1 · First view",
+        "Run 2 · First view",
+      ]);
+    });
+
+    it("selects all or none with the toggle and disables Generate when nothing is ticked", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user, 0, wptJson);
+      await screen.findByText("site.har · 3 pages");
+
+      await user.click(within(checklist()).getByRole("button", { name: "Select all" }));
+      expect(
+        within(checklist())
+          .getAllByRole("checkbox")
+          .every((c) => (c as HTMLInputElement).checked)
+      ).toBe(true);
+
+      await user.click(within(checklist()).getByRole("button", { name: "Select none" }));
+      expect(
+        within(checklist())
+          .getAllByRole("checkbox")
+          .some((c) => (c as HTMLInputElement).checked)
+      ).toBe(false);
+      expect(generate()).toBeDisabled();
+    });
   });
 });
