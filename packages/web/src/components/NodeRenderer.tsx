@@ -1,8 +1,9 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useRef } from "react";
 import type { DiagramNode, DiagramPath, NodeId, PathId } from "@htv/core";
+import { useElementSize } from "../hooks/useElementSize.js";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion.js";
 import type { HistoricalPath } from "../types.js";
-import { layout, layoutOptions } from "./diagram/layout.js";
+import { HEIGHT, MAX_WIDTH, WIDTH, layout, layoutOptions } from "./diagram/layout.js";
 import { NodeLayer } from "./diagram/NodeLayer.js";
 import { GlowFilter, PathLayer } from "./diagram/PathLayer.js";
 import { ZoneBands } from "./diagram/ZoneBands.js";
@@ -32,10 +33,21 @@ function NodeRendererView({
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   const options = useMemo(() => layoutOptions(nodes), [nodes]);
-  const geometry = useMemo(() => layout(nodes, paths, options), [nodes, paths, options]);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const size = useElementSize(svgRef, { width: WIDTH, height: HEIGHT });
+  // The diagram is as wide as the container's aspect ratio asks, so it fills it both ways.
+  const width = Math.min(
+    MAX_WIDTH,
+    Math.max(WIDTH, Math.round((HEIGHT * size.width) / size.height))
+  );
+  const geometry = useMemo(
+    () => layout(nodes, paths, options, { width }),
+    [nodes, paths, options, width]
+  );
 
   return (
     <svg
+      ref={svgRef}
       id={`${idPrefix}diagram-svg`}
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
       width="100%"

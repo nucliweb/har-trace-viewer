@@ -10,6 +10,8 @@ import type { DiagramNode, DiagramPath, NetworkRegion, NodeId, NodeKind, PathId 
 
 export const WIDTH = 900;
 export const HEIGHT = 480;
+// The diagram stretches with its container, up to this many units wide.
+export const MAX_WIDTH = 2400;
 // The client zone's browser-cache sub-zone starts here; the GFW zone caption sits just above.
 // With stacked third-party clusters it starts lower, leaving their paths room to fan out.
 const CACHE_SUBZONE_Y = 370;
@@ -286,8 +288,7 @@ function zoneRegions(
   return regions;
 }
 
-function zones(nodes: DiagramNode[], options: LayoutOptions, bounds: number[]): Zone[] {
-  const edges = [0, ...bounds, WIDTH];
+function zones(nodes: DiagramNode[], options: LayoutOptions, edges: number[]): Zone[] {
   return zoneRegions(nodes, options).map(({ id, region }, i) => ({
     id,
     label: region === THIRD_PARTIES_ZONE ? "3RD PARTIES" : zoneLabel(region),
@@ -338,6 +339,32 @@ function positions(
 }
 
 const round = (value: number) => Math.round(value);
+
+// The zone edges for a diagram `width` units wide: the 900-wide bounds, scaled proportionally.
+function scaledEdges(bounds: number[], width: number): number[] {
+  const edges = [0, ...bounds, WIDTH];
+  return edges.map((edge) => (width === WIDTH ? edge : round((edge * width) / WIDTH)));
+}
+
+// Each column keeps its relative position inside its zone when the zones stretch to `width`.
+function scaledColumns(
+  columns: LayoutSpec["columns"],
+  bounds: number[],
+  width: number
+): LayoutSpec["columns"] {
+  if (width === WIDTH) return columns;
+  const from = [0, ...bounds, WIDTH];
+  const to = scaledEdges(bounds, width);
+  const result: LayoutSpec["columns"] = {};
+  for (const [kind, cx] of Object.entries(columns) as [NodeKind, number][]) {
+    const i = Math.max(
+      0,
+      from.findIndex((edge, j) => j < from.length - 1 && cx >= edge && cx < from[j + 1])
+    );
+    result[kind] = round(to[i] + ((cx - from[i]) / (from[i + 1] - from[i])) * (to[i + 1] - to[i]));
+  }
+  return result;
+}
 
 // A curve that dips under captions: both control points sit at `controlY`, at these
 // fractions of the run.
@@ -681,10 +708,13 @@ function pathGeometry(
 export function layout(
   nodes: DiagramNode[],
   paths: DiagramPath[],
-  options: LayoutOptions = layoutOptions(nodes)
+  options: LayoutOptions = layoutOptions(nodes),
+  { width = WIDTH }: { width?: number } = {}
 ): Layout {
   const spec = LAYOUTS[layoutId(options)];
-  const nodePositions = positions(nodes, spec.columns, options);
+  const edges = scaledEdges(spec.bounds, width);
+  const clientZoneEnd = edges[1];
+  const nodePositions = positions(nodes, scaledColumns(spec.columns, spec.bounds, width), options);
   // Paths to stacked clusters fan out in stack order, top first.
   const clusterIds = options.hasThirdPartyZone
     ? nodes.filter((n) => isCluster(n.id)).map((n) => n.id)
@@ -699,7 +729,7 @@ export function layout(
   const fans = new Map<PathId, ClusterFan>();
   if (stacked.length > 0) {
     const { x0, x1 } = anchors(stacked[0].from, stacked[0].to, stacked[0].path);
-    const start = spec.bounds[0];
+    const start = clientZoneEnd;
     const slot = (x0 + CLUSTER_LABEL_SLOTS_END * (x1 - x0) - start) / stacked.length;
     const sideBySide = slot >= 2 * CLUSTER_LABEL.halfWidth + CLUSTER_LABEL.clearance;
     const order = stacked.map((_, i) => i);
@@ -710,7 +740,7 @@ export function layout(
       ...cp,
       labelX: round(start + (slots.indexOf(i) + 0.5) * slot),
     }));
-    const shapes = solveClusterFan(clusterPaths, nodePositions, spec.bounds[0]);
+    const shapes = solveClusterFan(clusterPaths, nodePositions, clientZoneEnd);
     clusterPaths.forEach(({ path, labelX }, i) => {
       fans.set(path.id, { shape: shapes[i], labelX });
     });
@@ -724,10 +754,10 @@ export function layout(
     }
   }
   return {
-    width: WIDTH,
+    width,
     height: HEIGHT,
     cacheSubzoneY: options.hasThirdPartyZone ? CLUSTER_CACHE_SUBZONE_Y : CACHE_SUBZONE_Y,
-    zones: zones(nodes, options, spec.bounds),
+    zones: zones(nodes, options, edges),
     nodes: nodePositions,
     paths: pathGeometries,
   };

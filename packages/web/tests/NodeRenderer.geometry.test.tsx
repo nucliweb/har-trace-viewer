@@ -6,6 +6,7 @@ import { generateFlow, nodeKind, parseHar } from "@htv/core";
 import type { ClientRegion, PathId } from "@htv/core";
 import type { ComponentProps } from "react";
 import { NodeRenderer } from "../src/components/NodeRenderer.js";
+import { layout } from "../src/components/diagram/layout.js";
 
 /**
  * Geometry regression guard for the diagram. Every layout is rendered with `react-dom/server`
@@ -643,4 +644,67 @@ describe("NodeRenderer geometry", () => {
       expect(dev.failures).toEqual([]);
     });
   }
+});
+
+describe("wide layout", () => {
+  const WIDE = 1400;
+
+  for (const scenario of SCENARIOS) {
+    describe(scenario.layout, () => {
+      const { nodes, paths } = syntheticFlow(scenario).pageAnalyses[0];
+      const narrow = layout(nodes, paths);
+      const wide = layout(nodes, paths, undefined, { width: WIDE });
+
+      it("spans the zones contiguously over the whole width", () => {
+        expect(wide.width).toBe(WIDE);
+        expect(wide.zones[0].x0).toBe(0);
+        expect(wide.zones.at(-1)!.x1).toBe(WIDE);
+        wide.zones.slice(1).forEach((zone, i) => expect(zone.x0).toBe(wide.zones[i].x1));
+        expect(wide.zones.length).toBe(narrow.zones.length);
+      });
+
+      it("keeps every node at the same relative position inside its zone", () => {
+        const zoneOf = (l: typeof narrow, cx: number) =>
+          l.zones.findIndex((z) => cx >= z.x0 && cx < z.x1);
+        for (const [id, position] of Object.entries(narrow.nodes)) {
+          const wideNode = wide.nodes[id as keyof typeof wide.nodes]!;
+          const i = zoneOf(narrow, position!.cx);
+          expect(zoneOf(wide, wideNode.cx), `${id} zone`).toBe(i);
+          const relative = (l: typeof narrow, cx: number) =>
+            (cx - l.zones[i].x0) / (l.zones[i].x1 - l.zones[i].x0);
+          expect(relative(wide, wideNode.cx), id).toBeCloseTo(relative(narrow, position!.cx), 2);
+          expect(wideNode.cy).toBe(position!.cy);
+        }
+      });
+
+      it("attaches every path to the nodes it joins", () => {
+        for (const path of paths) {
+          const from = wide.nodes[path.from];
+          const to = wide.nodes[path.to];
+          if (!from || !to) continue;
+          const d = numbers(wide.paths[path.id]!.d);
+          expect(Math.hypot(d[0] - from.cx, d[1] - from.cy), `${path.id} start`).toBeLessThan(
+            ATTACH_DISTANCE
+          );
+          expect(Math.hypot(d.at(-2)! - to.cx, d.at(-1)! - to.cy), `${path.id} end`).toBeLessThan(
+            ATTACH_DISTANCE
+          );
+        }
+      });
+
+      it("keeps the paths inside the diagram", () => {
+        for (const geometry of Object.values(wide.paths)) {
+          for (const x of numbers(geometry!.d).filter((_, i) => i % 2 === 0)) {
+            expect(x).toBeGreaterThanOrEqual(0);
+            expect(x).toBeLessThanOrEqual(WIDE);
+          }
+        }
+      });
+    });
+  }
+
+  it("draws the default width exactly as an explicit 900", () => {
+    const { nodes, paths } = syntheticFlow(SCENARIOS[0]).pageAnalyses[0];
+    expect(layout(nodes, paths, undefined, { width: 900 })).toEqual(layout(nodes, paths));
+  });
 });

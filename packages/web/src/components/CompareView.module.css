@@ -101,22 +101,16 @@
   border-top: 1px solid var(--color-border);
 }
 
-/* Laid over the diagram's top-left corner, which the centred diagram leaves free on wide screens. */
+/* A slim row above the diagram: the labels never cover its zone captions. */
 .paneHeader {
-  position: absolute;
-  top: var(--space-sm);
-  left: var(--space-md);
-  z-index: 2;
+  flex: none;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-xs);
-  max-width: 40%;
-  padding: var(--space-xs) var(--space-sm);
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  pointer-events: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .paneLabel {
@@ -312,17 +306,6 @@
   .paneCanvas .badges {
     top: auto;
     bottom: var(--space-xs);
-  }
-
-  .paneHeader {
-    position: static;
-    max-width: none;
-    background: none;
-    border: 0;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: var(--space-xs) var(--space-md) 0;
   }
 
   .deltasBtn {
