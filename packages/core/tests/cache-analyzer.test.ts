@@ -8,6 +8,8 @@ import {
   profileResourceCache,
   analyzeCacheForHar,
 } from "../src/inference/cache-analyzer.js";
+import type { InferredCacheHit } from "../src/types.js";
+import { makeEntry, makeHar as makeSyntheticHar } from "./helpers/synthetic-har.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const harPath = join(__dirname, "fixtures/webperf-snippets.har.fixture.json");
@@ -350,5 +352,121 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
     const report = analyzeCacheForHar(har);
     expect(report.ownResources.total).toBe(1);
     expect(report.ownResources.cdnHits).toBe(1);
+  });
+});
+
+describe("analyzeCacheForHar — WebPageTest inferred cache hits", () => {
+  const inferred = (url: string): InferredCacheHit => ({
+    url,
+    resourceType: "script",
+    transferSize: 5000,
+    lifetime: 86400,
+  });
+
+  it("counts inferred hits as browser-cache hits among the resources the page used", () => {
+    const har = {
+      ...makeSyntheticHar([makeEntry(), makeEntry({ url: "https://example.com/b.css" })]),
+      inferredCacheHits: [
+        inferred("https://example.com/a.js"),
+        inferred("https://example.com/c.js"),
+      ],
+    };
+    const { browser } = analyzeCacheForHar(har);
+
+    expect(browser.inferred).toBe(2);
+    expect(browser.total).toBe(4);
+    expect(browser.hitRatio).toBe(0.5);
+  });
+
+  it("says the hits are inferred from the WebPageTest first view", () => {
+    const har = {
+      ...makeSyntheticHar([makeEntry()]),
+      inferredCacheHits: [inferred("https://example.com/a.js")],
+    };
+    const labels = analyzeCacheForHar(har).recommendations.map((r) => r.label);
+
+    expect(labels).toContain("Browser cache hits inferred from WebPageTest");
+    expect(labels).not.toContain("No browser cache hits");
+  });
+
+  it("reports no inferred hits for HARs that list cache hits themselves", () => {
+    expect(analyzeCacheForHar(makeSyntheticHar([makeEntry()])).browser.inferred).toBe(0);
+  });
+});
+
+describe("analyzeCacheForHar — revalidations", () => {
+  it("counts 304 responses as revalidated, not as cache hits", () => {
+    const har = makeSyntheticHar([
+      makeEntry({ status: 304 }),
+      makeEntry({ status: 304, url: "https://example.com/b.css" }),
+      makeEntry(),
+    ]);
+    const { browser, recommendations } = analyzeCacheForHar(har);
+
+    expect(browser.revalidated).toBe(2);
+    expect(browser.hitRatio).toBe(0);
+    expect(recommendations.find((r) => r.label === "2 resources revalidated (304)")).toMatchObject({
+      severity: "info",
+    });
+  });
+});
+
+describe("analyzeCacheForHar — versioned assets that cannot be cached", () => {
+  const asset = (url: string, cacheControl: string, transferSize = 1000) =>
+    makeEntry({ url, transferSize, responseHeaders: { "cache-control": cacheControl } });
+
+  const finding = (entries: ReturnType<typeof makeEntry>[]) =>
+    analyzeCacheForHar(makeSyntheticHar(entries)).recommendations.find(
+      (r) => r.label === "Versioned assets are not cached"
+    );
+
+  it("lists content-hashed assets that the browser may not reuse", () => {
+    const rec = finding([
+      asset(
+        "https://example.com/app/chunk-47TTPNLV.js",
+        "no-cache, no-store, must-revalidate",
+        20000
+      ),
+      asset("https://example.com/app/styles-VC4FUF6G.css", "no-cache", 30000),
+      asset("https://example.com/static/main.3f2a9c1b.js", "max-age=0", 50000),
+      asset("https://example.com/assets/index-BkD3x9_a.js", "no-store", 1000),
+    ]);
+
+    expect(rec?.severity).toBe("critical");
+    expect(rec?.resources?.map((r) => r.url)).toEqual([
+      "https://example.com/static/main.3f2a9c1b.js",
+      "https://example.com/app/styles-VC4FUF6G.css",
+      "https://example.com/app/chunk-47TTPNLV.js",
+      "https://example.com/assets/index-BkD3x9_a.js",
+    ]);
+    expect(rec?.resources?.[0]).toEqual({
+      url: "https://example.com/static/main.3f2a9c1b.js",
+      transferSize: 50000,
+      cacheControl: "max-age=0",
+    });
+    expect(rec?.description).toContain("4 content-hashed assets");
+    expect(rec?.description).toContain("max-age=31536000, immutable");
+  });
+
+  it("ignores hashed assets with a lifetime and unhashed assets without one", () => {
+    expect(
+      finding([
+        asset("https://example.com/chunk-47TTPNLV.js", "public, max-age=31536000, immutable"),
+        asset("https://example.com/app.js", "no-store"),
+        asset("https://example.com/jquery-3.6.1.min.js", "no-store"),
+        asset("https://example.com/bootstrap-datepicker.js", "no-store"),
+        asset("https://example.com/build-20260101.js", "no-store"),
+        asset("https://example.com/theme/nuance-c2c-button.css", "no-store"),
+      ])
+    ).toBeUndefined();
+  });
+
+  it("ignores the document, cache hits and failed responses", () => {
+    expect(
+      finding([
+        { ...asset("https://example.com/chunk-47TTPNLV.js", "no-store"), fromCache: "disk" },
+        { ...asset("https://example.com/chunk-Q4K72MKY.js", "no-store"), status: 404 },
+      ])
+    ).toBeUndefined();
   });
 });

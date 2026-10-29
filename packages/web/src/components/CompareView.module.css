@@ -130,6 +130,11 @@
   color: var(--color-muted);
 }
 
+/* The pane's Cache button sits at the right end of its header. */
+.paneCacheBtn {
+  margin-left: auto;
+}
+
 .paneCanvas {
   flex: 1;
   position: relative;

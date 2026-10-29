@@ -1,5 +1,11 @@
 import { rateDelta, rateMetric } from "@htv/core";
-import type { ComparedMetric, DeltaRating, FlowComparison, HopPair } from "@htv/core";
+import type {
+  ComparedMetric,
+  ComparisonCaveat,
+  DeltaRating,
+  FlowComparison,
+  HopPair,
+} from "@htv/core";
 import { formatBytes, formatDelta, formatDeltaPct, formatMs } from "../lib/format.js";
 import type { DeltaUnit } from "../lib/format.js";
 import { RATING_CLASS, RATING_TEXT } from "./MetricsSummary.js";
@@ -99,9 +105,27 @@ function HopRow({ pair }: { pair: HopPair }) {
   );
 }
 
+/** The numbers of the notes that touch `target`, as a superscript; nothing without any. */
+function NoteRefs({
+  caveats,
+  target,
+}: {
+  caveats: ComparisonCaveat[];
+  target: ComparisonCaveat["affects"][number];
+}) {
+  const numbers = caveats.flatMap((c, i) => (c.affects.includes(target) ? [i + 1] : []));
+  if (numbers.length === 0) return null;
+  return (
+    <sup className={styles.noteRef}>
+      <span className={metricsStyles.srOnly}> see note </span>
+      {numbers.join(",")}
+    </sup>
+  );
+}
+
 /** Metrics summary and hosts of two flows side by side, with B − A for each. */
 export function DeltasPanel({ comparison, names, onClose }: Props) {
-  const { metrics, hops } = comparison;
+  const { metrics, hops, caveats } = comparison;
   return (
     <div className={`${metricsStyles.panel} ${styles.panel}`}>
       <div className={metricsStyles.header}>
@@ -130,7 +154,10 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
               const unit = UNITS[m.key];
               return (
                 <tr key={m.key}>
-                  <th scope="row">{m.label}</th>
+                  <th scope="row">
+                    {m.label}
+                    <NoteRefs caveats={caveats} target={m.key} />
+                  </th>
                   {[m.a, m.b].map((value, i) => {
                     const rating = rateMetric(m.key, value);
                     return (
@@ -157,8 +184,18 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
             })}
           </tbody>
         </table>
+        {caveats.length > 0 && (
+          <ol className={styles.notes} aria-label="Notes on the deltas">
+            {caveats.map((c) => (
+              <li key={c.id + c.text}>{c.text}</li>
+            ))}
+          </ol>
+        )}
 
-        <h3 className={styles.sectionTitle}>Hosts</h3>
+        <h3 className={styles.sectionTitle}>
+          Hosts
+          <NoteRefs caveats={caveats} target="hosts" />
+        </h3>
         <table className={`${hopsStyles.table} ${styles.table}`}>
           <caption className={hopsStyles.caption}>Host deltas</caption>
           <thead>

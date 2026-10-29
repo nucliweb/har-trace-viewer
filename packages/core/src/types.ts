@@ -39,11 +39,22 @@ export interface HarPage {
   onLoad: number | null; // ms relative to page startedDateTime; null when the event never fired
 }
 
+// A first-view resource that a WebPageTest repeat view never requested: WebPageTest leaves
+// browser-cache hits out of repeat views, so a resource still fresh is taken as one.
+export interface InferredCacheHit {
+  url: string;
+  resourceType: ResourceType;
+  transferSize: number; // bytes the first view downloaded, saved by the repeat view
+  lifetime: number; // freshness lifetime in seconds, from Cache-Control, Expires or Last-Modified
+}
+
 export interface ParsedHar {
   pages: HarPage[];
   entries: HarEntry[];
   documentEntry: HarEntry;
   preconnectHints: Record<string, PreconnectSource>;
+  // Only on WebPageTest repeat views, inferred from the first view of the same run.
+  inferredCacheHits?: InferredCacheHit[];
 }
 
 // ── Trace types ───────────────────────────────────────────────────────────────
@@ -249,10 +260,18 @@ export interface ResourceCacheProfile {
   noStore: boolean;
 }
 
+export interface RecommendationResource {
+  url: string;
+  transferSize: number;
+  cacheControl: string;
+}
+
 export interface CacheRecommendation {
   label: string;
   description: string;
   severity: "good" | "info" | "warning" | "critical";
+  // The resources the recommendation is about, biggest first, when it names them.
+  resources?: RecommendationResource[];
 }
 
 export interface CacheReport {
@@ -265,9 +284,13 @@ export interface CacheReport {
     immutableRatio: number;
   };
   browser: {
-    total: number;
+    total: number; // resources the page used: network requests and cache hits, document aside
     fromDisk: number;
     fromMemory: number;
+    // WebPageTest repeat-view hits inferred from the first view; absent before flow version 6.
+    inferred?: number;
+    // 304 responses: cached copies the browser had to confirm; absent before flow version 6.
+    revalidated?: number;
     hitRatio: number;
   };
   recommendations: CacheRecommendation[];

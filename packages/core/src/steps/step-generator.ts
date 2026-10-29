@@ -47,7 +47,9 @@ export {
 // 4: third parties grouped by CDN provider and region (PageAnalysis.thirdPartyClusters);
 //    a page with several clusters has one `third-parties:<id>` node per cluster.
 // 5: steps carry their kind (DiagramStep.kind).
-export const FLOW_VERSION = 5;
+// 6: cache reports count inferred and revalidated browser-cache hits (CacheReport.browser
+//    inferred, revalidated); WebPageTest repeat views carry ParsedHar.inferredCacheHits.
+export const FLOW_VERSION = 6;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 

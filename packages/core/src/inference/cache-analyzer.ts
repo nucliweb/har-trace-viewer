@@ -3,7 +3,9 @@ import type {
   CacheReport,
   CacheRecommendation,
   CdnCacheStatus,
+  HarEntry,
   ParsedHar,
+  RecommendationResource,
   ResourceCacheProfile,
 } from "../types.js";
 
@@ -122,10 +124,53 @@ export function profileResourceCache(headers: Record<string, string>): ResourceC
   };
 }
 
+// A file name that carries a content hash: main.3f2a9c1b.js, chunk-47TTPNLV.js, index-BkD3x9_a.js.
+// The hash is the last "." or "-" separated part, 8+ characters mixing letters and digits, so
+// versions (jquery-3.6.1.min.js), words (nuance-c2c-button.css) and dates (build-20260101.js)
+// do not count.
+const HASHED_FILE =
+  /[.-]([A-Za-z0-9_]{8,})\.(?:m?js|css|woff2?|ttf|otf|png|jpe?g|gif|webp|avif|svg)$/i;
+
+function isContentHashed(url: string): boolean {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return false;
+  }
+  const hash = HASHED_FILE.exec(pathname)?.[1];
+  return hash !== undefined && /\d/.test(hash) && /[a-z]/i.test(hash);
+}
+
+// Cache-Control that makes the browser download or revalidate the response on every use.
+function preventsReuse(cacheControl: string): boolean {
+  return /\b(no-store|no-cache)\b|\bmax-age=0\b/i.test(cacheControl);
+}
+
+/** Content-hashed assets fetched over the network that the browser may not reuse, biggest first. */
+function uncachedVersionedAssets(entries: HarEntry[]): RecommendationResource[] {
+  return entries
+    .filter(
+      (e) =>
+        !e.isDocument &&
+        e.fromCache === false &&
+        (e.status === 200 || e.status === 304) &&
+        isContentHashed(e.url) &&
+        preventsReuse(e.responseHeaders["cache-control"] ?? "")
+    )
+    .map((e) => ({
+      url: e.url,
+      transferSize: e.transferSize,
+      cacheControl: e.responseHeaders["cache-control"] ?? "",
+    }))
+    .sort((a, b) => b.transferSize - a.transferSize);
+}
+
 function buildRecommendations(
   doc: ResourceCacheProfile,
   own: CacheReport["ownResources"],
-  browser: CacheReport["browser"]
+  browser: CacheReport["browser"],
+  uncachedVersioned: RecommendationResource[]
 ): CacheRecommendation[] {
   const recs: CacheRecommendation[] = [];
 
@@ -199,7 +244,33 @@ function buildRecommendations(
     }
   }
 
+  if (uncachedVersioned.length > 0) {
+    recs.push({
+      label: "Versioned assets are not cached",
+      description: `${uncachedVersioned.length} content-hashed assets are served with Cache-Control that forbids reusing them, so every visit fetches them again. Their file name changes whenever their content does: serve them with public, max-age=31536000, immutable.`,
+      severity: "critical",
+      resources: uncachedVersioned,
+    });
+  }
+
   // Browser cache
+  const inferred = browser.inferred ?? 0;
+  if (inferred > 0) {
+    recs.push({
+      label: "Browser cache hits inferred from WebPageTest",
+      description: `WebPageTest leaves browser-cache hits out of repeat views. ${inferred} resources of the first view that were still fresh and not requested again are counted as hits.`,
+      severity: "info",
+    });
+  }
+  const revalidated = browser.revalidated ?? 0;
+  if (revalidated > 0) {
+    recs.push({
+      label: `${revalidated} resources revalidated (304)`,
+      description:
+        "The browser had these resources cached but had to ask the server whether they changed: their lifetime had expired or Cache-Control requires revalidation. Each one costs a round trip without a download.",
+      severity: "info",
+    });
+  }
   if (browser.total > 0) {
     if (browser.hitRatio >= 0.7) {
       recs.push({
@@ -246,7 +317,9 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
   const allNonDoc = har.entries.filter((e) => !e.isDocument);
   const fromDisk = allNonDoc.filter((e) => e.fromCache === "disk").length;
   const fromMemory = allNonDoc.filter((e) => e.fromCache === "memory").length;
-  const browserTotal = allNonDoc.length;
+  const inferred = har.inferredCacheHits?.length ?? 0;
+  const revalidated = allNonDoc.filter((e) => e.status === 304).length;
+  const browserTotal = allNonDoc.length + inferred;
 
   const ownResources: CacheReport["ownResources"] = {
     total: ownTotal,
@@ -260,13 +333,20 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
     total: browserTotal,
     fromDisk,
     fromMemory,
-    hitRatio: browserTotal > 0 ? (fromDisk + fromMemory) / browserTotal : 0,
+    inferred,
+    revalidated,
+    hitRatio: browserTotal > 0 ? (fromDisk + fromMemory + inferred) / browserTotal : 0,
   };
 
   return {
     document: documentProfile,
     ownResources,
     browser,
-    recommendations: buildRecommendations(documentProfile, ownResources, browser),
+    recommendations: buildRecommendations(
+      documentProfile,
+      ownResources,
+      browser,
+      uncachedVersionedAssets(har.entries)
+    ),
   };
 }

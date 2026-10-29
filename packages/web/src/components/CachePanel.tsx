@@ -1,4 +1,5 @@
-import type { CacheReport, CdnCacheStatus } from "@htv/core";
+import type { CacheReport, CdnCacheStatus, RecommendationResource } from "@htv/core";
+import { formatBytes } from "../lib/format.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {
@@ -71,8 +72,42 @@ function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "c
   }
 }
 
+function fileName(url: string): string {
+  try {
+    return new URL(url).pathname.split("/").filter(Boolean).pop() ?? url;
+  } catch {
+    return url;
+  }
+}
+
+/** The resources a recommendation names, collapsed behind their count and total size. */
+function RecResources({ resources }: { resources: RecommendationResource[] }) {
+  const total = resources.reduce((sum, r) => sum + r.transferSize, 0);
+  return (
+    <details className={styles.recResources}>
+      <summary className={styles.recResourcesSummary}>
+        {resources.length} {resources.length === 1 ? "resource" : "resources"} ·{" "}
+        {formatBytes(total)}
+      </summary>
+      <ul className={styles.recResourceList}>
+        {resources.map((r, i) => (
+          <li key={i} className={styles.recResource}>
+            <span className={styles.recResourceName} title={r.url}>
+              {fileName(r.url)}
+            </span>
+            <span className={styles.recResourceSize}>{formatBytes(r.transferSize)}</span>
+            <span className={styles.recResourceCc}>{r.cacheControl}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function CachePanel({ report, pageLabel, onClose }: Props) {
   const { document: doc, ownResources, browser, recommendations } = report;
+  const inferred = browser.inferred ?? 0;
+  const revalidated = browser.revalidated ?? 0;
 
   const docCacheControl = Object.entries({
     immutable: doc.immutable,
@@ -165,7 +200,7 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
                 {pct(browser.hitRatio)}
                 <span className={styles.pct}>
                   {" "}
-                  ({browser.fromDisk + browser.fromMemory}/{browser.total})
+                  ({browser.fromDisk + browser.fromMemory + inferred}/{browser.total})
                 </span>
               </span>
             </div>
@@ -179,6 +214,18 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
               <div className={styles.row}>
                 <span className={styles.rowLabel}>From memory</span>
                 <span className={styles.rowValue}>{browser.fromMemory}</span>
+              </div>
+            )}
+            {inferred > 0 && (
+              <div className={styles.row}>
+                <span className={styles.rowLabel}>Inferred (WebPageTest)</span>
+                <span className={styles.rowValue}>{inferred}</span>
+              </div>
+            )}
+            {revalidated > 0 && (
+              <div className={styles.row}>
+                <span className={styles.rowLabel}>Revalidated (304)</span>
+                <span className={styles.rowValue}>{revalidated}</span>
               </div>
             )}
           </div>
@@ -195,6 +242,9 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
                   <div className={styles.recContent}>
                     <div className={styles.recLabel}>{rec.label}</div>
                     <div className={styles.recDesc}>{rec.description}</div>
+                    {rec.resources && rec.resources.length > 0 && (
+                      <RecResources resources={rec.resources} />
+                    )}
                   </div>
                 </div>
               ))}

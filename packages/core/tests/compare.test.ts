@@ -336,3 +336,48 @@ describe("compareStepMetrics", () => {
     expect(compareStepMetrics(undefined, undefined)).toEqual([]);
   });
 });
+
+describe("compareFlows — caveats", () => {
+  it("warns that ratios and host averages cover other resources when the network requests differ", () => {
+    const { caveats } = compareFlows(firstView(), repeatView());
+
+    expect(caveats).toEqual([
+      {
+        id: "request-mix",
+        affects: ["cdnHitRatio", "hosts"],
+        text: "B made 4 fewer network requests than A (5 → 1): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers.",
+      },
+    ]);
+  });
+
+  it("has no caveats when both flows request about the same", () => {
+    const a = generateFlow([{ name: "A", har: makeHar([criticalCss(100), secondaryImage(200)]) }]);
+    const b = generateFlow([{ name: "B", har: makeHar([criticalCss(100), secondaryImage(220)]) }]);
+
+    expect(compareFlows(a, b).caveats).toEqual([]);
+  });
+
+  it("says which flow's browser-cache hits are inferred from WebPageTest", () => {
+    const har = {
+      ...makeHar([criticalCss(100)]),
+      inferredCacheHits: [
+        {
+          url: "https://example.com/a.js",
+          resourceType: "script" as const,
+          transferSize: 900,
+          lifetime: 600,
+        },
+      ],
+    };
+    const b = generateFlow([{ name: "Repeat view", har }]);
+    const a = generateFlow([{ name: "First view", har: makeHar([criticalCss(100)]) }]);
+
+    expect(compareFlows(a, b).caveats).toEqual([
+      {
+        id: "inferred-cache-hits",
+        affects: ["browserCacheHitRatio"],
+        text: "B: 1 browser-cache hit is inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.",
+      },
+    ]);
+  });
+});

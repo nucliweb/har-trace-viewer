@@ -6,10 +6,12 @@ import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { formatDelta } from "../lib/format.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { BadgeRow } from "./BadgeRow.js";
+import { CachePanel } from "./CachePanel.js";
 import { DELTA_CLASS, DeltaCell, DeltasPanel } from "./DeltasPanel.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
 import stepStyles from "./StepPanel.module.css";
+import diagramStyles from "./DiagramView.module.css";
 import styles from "./CompareView.module.css";
 
 interface Props {
@@ -37,6 +39,7 @@ interface SideView {
 
 function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const { flow, name, stepIndex, current } = view;
+  const [showCachePanel, setShowCachePanel] = useState(false);
   const step = flow.steps[stepIndex];
   const analysis = flow.pageAnalyses[step.pageIndex];
   const historicalPaths = useMemo(
@@ -58,6 +61,15 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           {name}
         </h2>
         {!current && <span className={styles.paneNote}>Holds step: {step.title}</span>}
+        <button
+          className={`${diagramStyles.cacheBtn} ${styles.paneCacheBtn} ${showCachePanel ? diagramStyles.cacheBtnActive : ""}`}
+          onClick={() => setShowCachePanel((v) => !v)}
+          aria-label="Toggle cache analysis"
+          aria-expanded={showCachePanel}
+          title="Cache Analysis"
+        >
+          Cache
+        </button>
       </div>
       <div className={styles.paneCanvas}>
         <NodeRenderer
@@ -76,6 +88,13 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           stepIndex={stepIndex}
           className={styles.badges}
         />
+        {showCachePanel && (
+          <CachePanel
+            report={analysis.cacheReport}
+            pageLabel={`${TAG[side]} · ${name}`}
+            onClose={() => setShowCachePanel(false)}
+          />
+        )}
       </div>
     </section>
   );

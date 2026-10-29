@@ -46,10 +46,18 @@ export interface HopPair {
   b?: HostHop;
 }
 
+/** Something that changes how a delta reads, with the metrics (or the hosts table) it touches. */
+export interface ComparisonCaveat {
+  id: "request-mix" | "inferred-cache-hits";
+  affects: (ComparedMetric | "hosts")[];
+  text: string;
+}
+
 export interface FlowComparison {
   pairs: StepPair[];
   metrics: MetricDelta[];
   hops: HopPair[];
+  caveats: ComparisonCaveat[];
 }
 
 export interface StepMetricDelta {
@@ -207,13 +215,55 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
   return [...pairs.values()];
 }
 
+// Share of the busier flow's network requests the other flow may lack before ratios and host
+// averages stop describing the same resources.
+const REQUEST_MIX_THRESHOLD = 0.2;
+
+const networkRequests = (flow: Flow): number =>
+  flow.pages[0].har.entries.filter((e) => e.fromCache === false).length;
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
+  const caveats: ComparisonCaveat[] = [];
+  const requestsA = networkRequests(a);
+  const requestsB = networkRequests(b);
+  const difference = requestsB - requestsA;
+  if (Math.abs(difference) > REQUEST_MIX_THRESHOLD * Math.max(requestsA, requestsB)) {
+    caveats.push({
+      id: "request-mix",
+      affects: ["cdnHitRatio", "hosts"],
+      text: `B made ${Math.abs(difference)} ${difference < 0 ? "fewer" : "more"} network requests than A (${requestsA} → ${requestsB}): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers.`,
+    });
+  }
+  for (const [side, flow] of [
+    ["A", a],
+    ["B", b],
+  ] as const) {
+    const inferred = flow.pages[0].har.inferredCacheHits?.length ?? 0;
+    if (inferred === 0) continue;
+    caveats.push({
+      id: "inferred-cache-hits",
+      affects: ["browserCacheHitRatio"],
+      text: `${side}: ${plural(inferred, "browser-cache hit")} ${inferred === 1 ? "is" : "are"} inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.`,
+    });
+  }
+  return caveats;
+}
+
 /**
  * Compares the first page of two flows, A the baseline and B the candidate (for instance a
  * first view and a repeat view): their steps paired by kind, the metrics summary of each
- * with B − A deltas, and their hosts joined by name.
+ * with B − A deltas, their hosts joined by name, and the caveats that change how the
+ * deltas read.
  */
 export function compareFlows(a: Flow, b: Flow): FlowComparison {
-  return { pairs: pairSteps(a, b), metrics: compareMetrics(a, b), hops: compareHops(a, b) };
+  return {
+    pairs: pairSteps(a, b),
+    metrics: compareMetrics(a, b),
+    hops: compareHops(a, b),
+    caveats: compareCaveats(a, b),
+  };
 }
 
 const NUMERIC_VALUE = /^(-?\d+(?:\.\d+)?)(ms)?$/;

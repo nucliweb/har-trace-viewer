@@ -269,3 +269,50 @@
   color: var(--color-text2);
   line-height: 1.4;
 }
+
+/* Resources named by a recommendation */
+.recResources {
+  margin-top: var(--space-xs);
+}
+
+.recResourcesSummary {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.recResourceList {
+  list-style: none;
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recResource {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-sm);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.recResourceName {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recResourceSize {
+  color: var(--color-muted);
+  text-align: right;
+}
+
+.recResourceCc {
+  grid-column: 1 / -1;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}

@@ -1,6 +1,7 @@
 import type {
   HarEntry,
   HarPage,
+  InferredCacheHit,
   HarTiming,
   ParsedHar,
   PreconnectSource,
@@ -47,7 +48,7 @@ interface RawHarPage {
 }
 
 interface RawHar {
-  log: { pages?: RawHarPage[]; entries?: RawHarEntry[] };
+  log: { creator?: { name?: string }; pages?: RawHarPage[]; entries?: RawHarEntry[] };
 }
 
 function normalizeMs(value: number): number {
@@ -367,11 +368,71 @@ export function parseHar(raw: RawHar): ParsedHar {
   return parsed;
 }
 
+// Seconds a response may be reused without asking the server, from Cache-Control max-age,
+// else Expires, else 10% of the time since Last-Modified (the heuristic browsers apply).
+// Null when the browser must revalidate or the response says nothing.
+function freshnessLifetime(headers: Record<string, string>): number | null {
+  const cacheControl = (headers["cache-control"] ?? "").toLowerCase();
+  if (/\b(no-store|no-cache)\b/.test(cacheControl)) return null;
+  const maxAge = cacheControl.match(/\bmax-age=(\d+)/);
+  if (maxAge) return parseInt(maxAge[1], 10);
+  const date = Date.parse(headers["date"] ?? "");
+  if (isNaN(date)) return null;
+  if (headers["expires"] !== undefined) {
+    const expires = Date.parse(headers["expires"]);
+    return isNaN(expires) ? 0 : Math.max(0, (expires - date) / 1000);
+  }
+  const lastModified = Date.parse(headers["last-modified"] ?? "");
+  return isNaN(lastModified) || lastModified >= date
+    ? null
+    : Math.floor((date - lastModified) / 10_000);
+}
+
+// WebPageTest names its pages page_<run>_<view>_<step>, view 0 the first view and 1 the repeat.
+const WPT_REPEAT_VIEW_ID = /^page_(\d+)_1_(\d+)$/;
+
+const isWebPageTest = (raw: RawHar): boolean => /webpagetest/i.test(raw.log.creator?.name ?? "");
+
+interface ParsedPage {
+  page: RawHarPage;
+  entries: RawHarEntry[];
+  parsed: ParsedHar;
+}
+
+/**
+ * The resources of a WebPageTest first view that its repeat view never requested and that
+ * were still fresh when the repeat view started: browser-cache hits WebPageTest left out.
+ */
+function inferCacheHits(firstView: ParsedPage, repeatView: ParsedPage): InferredCacheHit[] {
+  const requested = new Set(repeatView.entries.map((e) => e.request.url));
+  const repeatStart = new Date(repeatView.page.startedDateTime).getTime();
+  const hits: InferredCacheHit[] = [];
+  firstView.entries.forEach((raw, i) => {
+    const entry = firstView.parsed.entries[i];
+    if (entry.isDocument || requested.has(entry.url)) return;
+    if (raw.request.method !== "GET" || entry.status !== 200) return;
+    const lifetime = freshnessLifetime(entry.responseHeaders);
+    if (lifetime === null) return;
+    const age = parseInt(entry.responseHeaders["age"] ?? "", 10) || 0;
+    const elapsed = (repeatStart - new Date(raw.startedDateTime).getTime()) / 1000;
+    if (lifetime <= age + elapsed) return;
+    requested.add(entry.url);
+    hits.push({
+      url: entry.url,
+      resourceType: entry.resourceType,
+      transferSize: entry.transferSize,
+      lifetime,
+    });
+  });
+  return hits;
+}
+
 /**
  * Splits a HAR recorded across several navigations into one ParsedHar per page,
  * ordered by page startedDateTime. Entries are grouped by `pageref` (entries
  * without one belong to the first page) and timed against their own page.
- * Pages without an HTML document are skipped.
+ * Pages without an HTML document are skipped. WebPageTest repeat views carry the
+ * browser-cache hits inferred from the first view of their run.
  */
 export function parseHarPages(raw: RawHar): ParsedHar[] {
   const { pages, entries } = assertHasContent(raw);
@@ -380,14 +441,22 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
   );
   const firstId = ordered[0].id;
 
-  const result: ParsedHar[] = [];
+  const parsedPages = new Map<string, ParsedPage>();
   for (const page of ordered) {
     const pageEntries = entries.filter((e) => (e.pageref ?? firstId) === page.id);
     const parsed = buildParsedHar([page], pageEntries);
-    if (parsed) result.push(parsed);
+    if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
   }
-  if (result.length === 0) throw new Error(NO_DOCUMENT_ERROR);
-  return result;
+  if (parsedPages.size === 0) throw new Error(NO_DOCUMENT_ERROR);
+
+  if (isWebPageTest(raw)) {
+    for (const [id, repeatView] of parsedPages) {
+      const match = WPT_REPEAT_VIEW_ID.exec(id);
+      const firstView = match && parsedPages.get(`page_${match[1]}_0_${match[2]}`);
+      if (firstView) repeatView.parsed.inferredCacheHits = inferCacheHits(firstView, repeatView);
+    }
+  }
+  return [...parsedPages.values()].map(({ parsed }) => parsed);
 }
 
 export function parseHarJson(json: string): ParsedHar {

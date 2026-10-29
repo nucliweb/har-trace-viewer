@@ -105,6 +105,25 @@ describe("CompareView", () => {
     expect(screen.getByText(`Step ${total} / ${total}`)).toBeInTheDocument();
   });
 
+  it("opens the cache analysis of each side inside its own diagram", async () => {
+    const user = userEvent.setup();
+    render(<CompareView a={a} b={b} />);
+
+    await user.click(within(pane("B")).getByRole("button", { name: "Toggle cache analysis" }));
+    expect(within(pane("B")).getByText("B · Repeat view")).toBeInTheDocument();
+    expect(
+      within(pane("B")).getByRole("region", { name: "Cache analysis details" })
+    ).toHaveTextContent("Hit ratio100% (2/2)");
+    expect(
+      within(pane("A")).queryByRole("region", { name: "Cache analysis details" })
+    ).not.toBeInTheDocument();
+
+    await user.click(within(pane("B")).getByRole("button", { name: "Close cache analysis" }));
+    expect(
+      screen.queryByRole("region", { name: "Cache analysis details" })
+    ).not.toBeInTheDocument();
+  });
+
   describe("Deltas panel", () => {
     async function openDeltas() {
       const user = userEvent.setup();
@@ -141,6 +160,25 @@ describe("CompareView", () => {
       const table = screen.getByRole("table", { name: "Host deltas" });
       const thirdPartyRow = within(table).getByRole("row", { name: /^cdn\.third\.com/ });
       expect(cellTexts(thirdPartyRow).slice(0, 3)).toEqual(["1", "0", "−1"]);
+    });
+
+    it("notes how to read the deltas, numbered on the metrics and hosts they touch", async () => {
+      await openDeltas();
+
+      const notes = within(screen.getByRole("list", { name: "Notes on the deltas" }));
+      expect(notes.getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+        expect.stringContaining("B made 4 fewer network requests than A (5 → 1)"),
+      ]);
+      const table = screen.getByRole("table", { name: "Metric deltas" });
+      const marker = (row: string) =>
+        within(table)
+          .getByRole("row", { name: new RegExp(`^${row}`) })
+          .querySelector("sup");
+      expect(marker("CDN hit ratio")).toHaveTextContent("1");
+      expect(marker("TTFB")).toBeNull();
+      expect(
+        screen.getByRole("heading", { name: /^Hosts/ }).querySelector("sup")
+      ).toHaveTextContent("1");
     });
 
     it("closes with its close button", async () => {
