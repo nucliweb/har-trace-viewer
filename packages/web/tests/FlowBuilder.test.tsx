@@ -36,7 +36,8 @@ describe("FlowBuilder", () => {
   it("loads a trace after the HAR", async () => {
     const user = userEvent.setup();
     render(<FlowBuilder onGenerate={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Trace" })).toBeDisabled();
+    // The first Trace button belongs to the page; the second one to the optional comparison.
+    expect(screen.getAllByRole("button", { name: "Trace" })[0]).toBeDisabled();
     await loadHar(user);
     await screen.findByText("site.har");
     await user.upload(
@@ -168,6 +169,99 @@ describe("FlowBuilder", () => {
           .some((c) => (c as HTMLInputElement).checked)
       ).toBe(false);
       expect(generate()).toBeDisabled();
+    });
+  });
+
+  describe("comparison", () => {
+    const wptJson = JSON.stringify(wptHar());
+    const compareTarget = () => screen.getByRole("group", { name: "Compare with…" });
+    const comparePages = () => screen.getByRole("group", { name: "Compare pages" });
+
+    async function loadCompareHar(user: ReturnType<typeof userEvent.setup>, content = harJson) {
+      await user.upload(
+        within(compareTarget()).getByLabelText("HAR file to compare with", { selector: "input" }),
+        makeFile(content, "other.har")
+      );
+      await within(compareTarget()).findByText("other.har");
+    }
+
+    it("offers an optional second drop target that turns Generate into a comparison", async () => {
+      const user = userEvent.setup();
+      const onGenerate = vi.fn();
+      render(<FlowBuilder onGenerate={onGenerate} />);
+      expect(
+        within(compareTarget()).getByRole("button", { name: /drop \.har to compare/i })
+      ).toBeEnabled();
+
+      await loadHar(user);
+      await screen.findByText("site.har");
+      await loadCompareHar(user);
+      await user.click(screen.getByRole("button", { name: /generate comparison/i }));
+
+      const [pages, options, comparePagesArg] = onGenerate.mock.calls[0];
+      expect(pages).toHaveLength(1);
+      expect(options).toEqual({ clientRegion: "default" });
+      expect(comparePagesArg).toHaveLength(1);
+      expect(comparePagesArg[0].har.entries.length).toBeGreaterThan(0);
+    });
+
+    it("attaches an optional trace to the second flow and can be cleared", async () => {
+      const user = userEvent.setup();
+      const onGenerate = vi.fn();
+      render(<FlowBuilder onGenerate={onGenerate} />);
+      await loadHar(user);
+      await screen.findByText("site.har");
+      await loadCompareHar(user);
+      await user.upload(
+        within(compareTarget()).getByLabelText("Trace to compare with", { selector: "input" }),
+        makeFile(traceJson, "trace.json")
+      );
+      expect(
+        await within(compareTarget()).findByRole("button", { name: "Trace ✓" })
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /generate comparison/i }));
+      expect(onGenerate.mock.calls[0][2][0].trace).toBeDefined();
+
+      await user.click(within(compareTarget()).getByRole("button", { name: "Remove comparison" }));
+      expect(generate()).toBeEnabled();
+      await user.click(generate());
+      expect(onGenerate.mock.calls[1][2]).toBeUndefined();
+    });
+
+    it("proposes the first and the repeat view of a WebPageTest HAR as the page pair", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user, 0, wptJson);
+      await screen.findByText("site.har · 3 pages");
+
+      expect(
+        within(comparePages()).getByRole("checkbox", { name: /compare two pages/i })
+      ).not.toBeChecked();
+      expect(within(comparePages()).getByLabelText("A")).toHaveDisplayValue(
+        "Run 1 · First view (3 req)"
+      );
+      expect(within(comparePages()).getByLabelText("B")).toHaveDisplayValue(
+        "Run 1 · Repeat view (2 req)"
+      );
+    });
+
+    it("compares the two picked pages of the same HAR", async () => {
+      const user = userEvent.setup();
+      const onGenerate = vi.fn();
+      render(<FlowBuilder onGenerate={onGenerate} />);
+      await loadHar(user, 0, wptJson);
+      await screen.findByText("site.har · 3 pages");
+
+      await user.click(
+        within(comparePages()).getByRole("checkbox", { name: /compare two pages/i })
+      );
+      expect(screen.queryByRole("group", { name: "Compare with…" })).not.toBeInTheDocument();
+      await user.selectOptions(within(comparePages()).getByLabelText("B"), "page_2_0_1");
+      await user.click(screen.getByRole("button", { name: /generate comparison/i }));
+
+      const [pages, , comparePagesArg] = onGenerate.mock.calls[0];
+      expect(pages.map((p: { name: string }) => p.name)).toEqual(["Run 1 · First view"]);
+      expect(comparePagesArg.map((p: { name: string }) => p.name)).toEqual(["Run 2 · First view"]);
     });
   });
 });

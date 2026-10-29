@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseHarPages } from "../src/parsers/har-parser.js";
 import {
+  defaultComparePageIds,
   defaultSelectedPageIds,
   expandPageFlows,
   listHarPages,
@@ -155,5 +156,28 @@ describe("expandPageFlows", () => {
         expect(expandPageFlows({ har: har(), select: sel })).toHaveLength(2);
       });
     });
+  });
+});
+
+describe("defaultComparePageIds", () => {
+  it("proposes the first and the repeat view of the same WebPageTest run", () => {
+    expect(defaultComparePageIds(parseHarPages(wptHar()))).toEqual(["page_1_0_1", "page_1_1_1"]);
+  });
+
+  it("proposes the first two pages of any other HAR", () => {
+    expect(defaultComparePageIds(parseHarPages(twoPageHar()))).toEqual(
+      listHarPages(parseHarPages(twoPageHar())).map((p) => p.id)
+    );
+  });
+
+  it("falls back to the first two pages when no run has both views", () => {
+    const raw = wptHar();
+    raw.log.pages = raw.log.pages.map((p) => ({ ...p, title: p.title.replace("Repeat", "First") }));
+
+    expect(defaultComparePageIds(parseHarPages(raw))).toEqual(["page_1_0_1", "page_1_1_1"]);
+  });
+
+  it("proposes nothing for a single-page HAR", () => {
+    expect(defaultComparePageIds(parseHarPages(firefoxHar()))).toBeNull();
   });
 });

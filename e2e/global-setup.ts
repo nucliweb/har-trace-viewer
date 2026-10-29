@@ -27,6 +27,22 @@ const CACHED_PAGE = [
   resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har"),
 ];
 
+// The same site recorded with the browser cache disabled (A) and enabled (B), with traces.
+const COMPARE_PAGES = [
+  "--page",
+  "Without cache",
+  "--har",
+  resolve(recordings, "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"),
+  "--trace",
+  resolve(recordings, "WebPerf-Snippets-Disable-Cache_Trace-20260519T123602.json.gz"),
+  "--page",
+  "With cache",
+  "--har",
+  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har"),
+  "--trace",
+  resolve(recordings, "WebPerf-Snippets-Cache_Trace-20260519T123746.json.gz"),
+];
+
 function generate(dir: string, extraArgs: string[], page = HOME_PAGE) {
   execFileSync(process.execPath, [cli, ...page, "--output", dir, ...extraArgs], {
     stdio: "pipe",
@@ -42,4 +58,5 @@ export default function globalSetup() {
   generate(resolve(OUTPUT, "bundle"), ["--bundle"]);
   generate(resolve(OUTPUT, "plain"), []);
   generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
+  generate(resolve(OUTPUT, "compare"), ["--compare", "--bundle"], COMPARE_PAGES);
 }

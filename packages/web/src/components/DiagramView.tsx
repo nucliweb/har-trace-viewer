@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from "react";
 import { analyzeHops, getStepCacheResources, getStepResources } from "@htv/core";
-import type { Flow, HarEntry, PathId } from "@htv/core";
+import type { Flow, HarEntry } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
-import type { HistoricalPath } from "../types.js";
+import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepPanel } from "./StepPanel.js";
 import { ResourceSidebar } from "./ResourceSidebar.js";
@@ -12,45 +12,11 @@ import { CachePanel } from "./CachePanel.js";
 import { MetricsSummary } from "./MetricsSummary.js";
 import { HopsPanel } from "./HopsPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
+import { BadgeRow } from "./BadgeRow.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
   flow: Flow;
-}
-
-const BADGE_LABELS: Record<string, string> = {
-  ttfb: "TTFB",
-  fcp: "FCP",
-  lcp: "LCP",
-  onload: "onLoad",
-};
-
-// Strip "N items · " prefix from path timing labels when shown as historical context.
-// Historical paths already have node-level resource stats; keeping per-step counts
-// creates misleading comparisons (e.g. "45 secondary resources" vs "102 3rd-party req").
-function toHistoricalTiming(timing: string): string {
-  return timing.replace(/^\d+ .+ · (avg .+)$/, "$1");
-}
-
-// History only covers the active page: each page has its own topology.
-function computeHistoricalPaths(
-  steps: Flow["steps"],
-  currentStepIndex: number
-): Partial<Record<PathId, HistoricalPath>> {
-  const history: Partial<Record<PathId, HistoricalPath>> = {};
-  const { pageIndex } = steps[currentStepIndex];
-  for (let i = 0; i < currentStepIndex; i++) {
-    const s = steps[i];
-    if (s.pageIndex !== pageIndex) continue;
-    for (const pathId of s.activePaths) {
-      const raw = s.pathTimings?.[pathId as PathId];
-      history[pathId as PathId] = {
-        timing: raw ? toHistoricalTiming(raw) : raw,
-        direction: s.pathDirections?.[pathId as PathId],
-      };
-    }
-  }
-  return history;
 }
 
 export function DiagramView({ flow }: Props) {
@@ -83,25 +49,6 @@ export function DiagramView({ flow }: Props) {
     [flow.steps, stepIndex]
   );
 
-  // Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad.
-  const allBadges = useMemo(() => {
-    const seen = new Map<string, NonNullable<Flow["steps"][number]["badge"]>>();
-    for (const s of flow.steps) {
-      if (s.badge && s.pageIndex === pageIndex) seen.set(s.badge.type, s.badge);
-    }
-    return [...seen.values()];
-  }, [flow.steps, pageIndex]);
-
-  const revealedTypes = useMemo(() => {
-    const types = new Set<string>();
-    for (let i = 0; i <= state.stepIndex; i++) {
-      const { badge, pageIndex: stepPage } = flow.steps[i];
-      if (badge && stepPage === pageIndex) types.add(badge.type);
-    }
-    return types;
-  }, [flow.steps, state.stepIndex, pageIndex]);
-
-  const currentBadgeType = step.badge?.type;
   // The last step of a page is its overview ("Page loaded"). A transition step belongs to the
   // page it leads to, so the next step starting a new page also marks the end of this one.
   // Not tied to the title or the onload badge, which is absent when the load event never fired.
@@ -163,26 +110,8 @@ export function DiagramView({ flow }: Props) {
           pathDirections={step.pathDirections}
           historicalPaths={historicalPaths}
         />
-        {allBadges.length > 0 && (
-          <div className={styles.badgeRow}>
-            {allBadges.map((badge) => (
-              <div
-                key={badge.type}
-                data-badge-state={
-                  !revealedTypes.has(badge.type)
-                    ? "hidden"
-                    : badge.type !== currentBadgeType
-                      ? "dim"
-                      : "active"
-                }
-                className={`${styles.badge} ${styles[`badge_${badge.type}`]} ${!revealedTypes.has(badge.type) ? styles.badgeHidden : badge.type !== currentBadgeType ? styles.badgeDim : ""}`}
-              >
-                <span className={styles.badgeLabel}>{BADGE_LABELS[badge.type]}</span>
-                <span>{badge.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}
+        <BadgeRow steps={flow.steps} pageIndex={pageIndex} stepIndex={stepIndex} />
         {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}
         {sidebarResources && (
           <ResourceSidebar

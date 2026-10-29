@@ -13,7 +13,7 @@ import {
 import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parseArgs, bundleHtml } from "../src/cli";
+import { parseArgs, bundleHtml, validateArgs } from "../src/cli";
 import { twoPageHar } from "../../core/tests/helpers/firefox-har";
 import { wptHar } from "../../core/tests/helpers/wpt-har";
 
@@ -36,6 +36,11 @@ afterEach(() => {
 
 function runCli(args: string[]) {
   return spawnSync("node", [DIST_ENTRY, ...args], { encoding: "utf-8" });
+}
+
+function extractCompare(html: string): Record<string, unknown> | null {
+  const match = html.match(/window\.__HTV_COMPARE__ = (.*?);<\/script>/s);
+  return match ? JSON.parse(match[1]) : null;
 }
 
 function extractFlow(html: string): Record<string, unknown> {
@@ -128,6 +133,28 @@ describe("parseArgs", () => {
 
   it("rejects positional arguments", () => {
     expect(() => parseArgs(["stray"])).toThrow();
+  });
+
+  it("sets compare with --compare", () => {
+    expect(parseArgs(["--har", "a.har", "--compare", "-o", "out"]).compare).toBe(true);
+    expect(parseArgs(["--har", "a.har", "-o", "out"])).not.toHaveProperty("compare");
+  });
+
+  it("collects --compare-with, --compare-trace and --compare-select into the second flow", () => {
+    expect(
+      parseArgs([
+        "--har",
+        "a.har",
+        "--compare-with",
+        "b.har",
+        "--compare-trace",
+        "b.json",
+        "--compare-select",
+        "page_1_1_1",
+        "-o",
+        "out",
+      ]).compareWith
+    ).toEqual({ har: "b.har", trace: "b.json", select: "page_1_1_1" });
   });
 
   it("sets help and version with long and short flags", () => {
@@ -518,5 +545,133 @@ describe("selecting pages of a multi-page HAR (built CLI)", () => {
     expect(res.stderr).toContain("No page matches the selection");
     expect(res.stderr).toContain("page_1_1_1");
     expect(existsSync(out)).toBe(false);
+  });
+});
+
+describe("validateArgs — comparison", () => {
+  const base = { pages: [{ name: "Page 1", har: "a.har" }], output: "out", bundle: false };
+
+  it("accepts --compare or --compare-with on their own", () => {
+    expect(validateArgs({ ...base, compare: true })).toBeNull();
+    expect(validateArgs({ ...base, compareWith: { har: "b.har" } })).toBeNull();
+  });
+
+  it("rejects --compare together with --compare-with", () => {
+    expect(validateArgs({ ...base, compare: true, compareWith: { har: "b.har" } })).toBe(
+      "Use either --compare or --compare-with, not both"
+    );
+  });
+
+  it("rejects --compare-trace or --compare-select without --compare-with", () => {
+    expect(validateArgs({ ...base, compareWith: { har: "", trace: "b.json" } })).toBe(
+      "--compare-trace and --compare-select need --compare-with"
+    );
+  });
+});
+
+describe("comparison reports (built CLI)", () => {
+  interface EmbeddedFlow {
+    pages: { name: string }[];
+    steps: { kind: string }[];
+  }
+
+  function writeWptHar() {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    return { dir, harPath };
+  }
+
+  function readReport(out: string) {
+    const html = readFileSync(join(out, "index.html"), "utf-8");
+    return {
+      a: extractFlow(html) as unknown as EmbeddedFlow,
+      b: extractCompare(html) as unknown as EmbeddedFlow | null,
+    };
+  }
+
+  it("embeds no second flow without a comparison flag", () => {
+    const out = join(makeTempDir(), "out");
+    expect(runCli(["--har", HAR, "--output", out]).status).toBe(0);
+    expect(readReport(out).b).toBeNull();
+  });
+
+  it("--compare turns a flow of exactly two pages into A and B", () => {
+    const { dir, harPath } = writeWptHar();
+    const out = join(dir, "report");
+
+    const res = runCli([
+      "--har",
+      harPath,
+      "--select",
+      "page_1_0_1,page_1_1_1",
+      "--compare",
+      "--output",
+      out,
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const { a, b } = readReport(out);
+    expect(a.pages.map((p) => p.name)).toEqual(["Run 1 · First view"]);
+    expect(b?.pages.map((p) => p.name)).toEqual(["Run 1 · Repeat view"]);
+    expect(b?.steps.every((s) => s.kind !== "transition")).toBe(true);
+  });
+
+  it("--compare exits 1 unless the flow has exactly two pages", () => {
+    const { dir, harPath } = writeWptHar();
+    const out = join(dir, "report");
+
+    const res = runCli(["--har", harPath, "--compare", "--output", out]);
+
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--compare needs exactly two pages; got 3");
+    expect(existsSync(out)).toBe(false);
+  });
+
+  it("--compare-with builds the second flow from another HAR, its trace and selection", () => {
+    const { dir, harPath } = writeWptHar();
+    const out = join(dir, "report");
+
+    const res = runCli([
+      "--page",
+      "Live",
+      "--har",
+      HAR,
+      "--trace",
+      TRACE,
+      "--compare-with",
+      harPath,
+      "--compare-select",
+      "page_1_1_1",
+      "--compare-trace",
+      TRACE,
+      "--output",
+      out,
+      "--bundle",
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const { a, b } = readReport(out);
+    expect(a.pages.map((p) => p.name)).toEqual(["Live"]);
+    expect(b?.pages.map((p) => p.name)).toEqual(["Run 1 · Repeat view"]);
+    expect(b?.steps.map((s) => s.kind)).toContain("lcp");
+  });
+
+  it("--compare-with names a single-page HAR after its file", () => {
+    const dir = makeTempDir();
+    const other = join(dir, "warm-cache.har");
+    writeFileSync(other, readFileSync(HAR));
+    const out = join(dir, "report");
+
+    expect(runCli(["--har", HAR, "--compare-with", other, "--output", out]).status).toBe(0);
+    expect(readReport(out).b?.pages.map((p) => p.name)).toEqual(["warm-cache"]);
+  });
+
+  it("--compare-with exits 1 when a side has several pages", () => {
+    const { dir, harPath } = writeWptHar();
+    const res = runCli(["--har", HAR, "--compare-with", harPath, "--output", join(dir, "r")]);
+
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--compare-with needs one page on each side; B has 3");
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { generateFlow, normalizeFlow } from "@htv/core";
 import type { Flow, FlowOptions, PageFlow } from "@htv/core";
+import { CompareView } from "./components/CompareView.js";
 import { DiagramView } from "./components/DiagramView.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
 import { RegionNotice } from "./components/RegionNotice.js";
@@ -10,6 +11,8 @@ import styles from "./App.module.css";
 declare global {
   interface Window {
     __HTV_FLOW__?: Flow;
+    /** Second flow of a comparison report: __HTV_FLOW__ is A, this is B. */
+    __HTV_COMPARE__?: Flow;
   }
 }
 
@@ -17,29 +20,48 @@ export function App() {
   // Reports embed the flow without the raw pages, so it cannot be regenerated.
   const embedded = window.__HTV_FLOW__;
   const [flow, setFlow] = useState<Flow | null>(() => (embedded ? normalizeFlow(embedded) : null));
+  // B of a comparison, drawn below `flow`; null for a single flow.
+  const [compare, setCompare] = useState<Flow | null>(() => {
+    const embeddedCompare = embedded ? window.__HTV_COMPARE__ : undefined;
+    return embeddedCompare ? normalizeFlow(embeddedCompare) : null;
+  });
   const [pages, setPages] = useState<PageFlow[] | null>(null);
+  const [comparePages, setComparePages] = useState<PageFlow[] | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const handleGenerate = (nextPages: PageFlow[], options: FlowOptions) => {
+  const handleGenerate = (
+    nextPages: PageFlow[],
+    options: FlowOptions,
+    nextComparePages?: PageFlow[]
+  ) => {
     setPages(nextPages);
     setFlow(generateFlow(nextPages, options));
+    setComparePages(nextComparePages ?? null);
+    setCompare(nextComparePages ? generateFlow(nextComparePages, options) : null);
     setNoticeDismissed(false);
   };
 
   const handleLoadFlow = (loaded: Flow) => {
     setPages(null);
     setFlow(normalizeFlow(loaded));
+    setComparePages(null);
+    setCompare(null);
     setNoticeDismissed(false);
   };
 
   const handleShowGfwTopology = pages
-    ? () => setFlow(generateFlow(pages, { clientRegion: "cn" }))
+    ? () => {
+        setFlow(generateFlow(pages, { clientRegion: "cn" }));
+        if (comparePages) setCompare(generateFlow(comparePages, { clientRegion: "cn" }));
+      }
     : undefined;
 
   const handleReset = () => {
     setFlow(null);
     setPages(null);
+    setCompare(null);
+    setComparePages(null);
   };
 
   const regionSuggestion =
@@ -84,7 +106,7 @@ export function App() {
               />
             )}
             <div className={styles.flowArea}>
-              <DiagramView flow={flow} />
+              {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
             </div>
           </div>
         ) : (

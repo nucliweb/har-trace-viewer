@@ -15,6 +15,9 @@ export function serializeFlowForHtml(flow: unknown): string {
   return JSON.stringify(flow).replace(/[<>&\u2028\u2029]/g, (ch) => ESCAPES[ch]);
 }
 
-export function buildFlowInjection(flow: unknown): string {
-  return `<script>window.__HTV_FLOW__ = ${serializeFlowForHtml(flow)};</script>`;
+/** Script tags embedding the flow and, for a comparison report, the second flow (B). */
+export function buildFlowInjection(flow: unknown, compare?: unknown): string {
+  const main = `<script>window.__HTV_FLOW__ = ${serializeFlowForHtml(flow)};</script>`;
+  if (compare === undefined) return main;
+  return `${main}\n<script>window.__HTV_COMPARE__ = ${serializeFlowForHtml(compare)};</script>`;
 }

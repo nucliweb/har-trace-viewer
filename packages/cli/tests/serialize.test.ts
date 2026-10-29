@@ -26,3 +26,15 @@ describe("serializeFlowForHtml", () => {
     expect(injection.match(/<\/script/gi)).toHaveLength(1);
   });
 });
+
+describe("buildFlowInjection — comparison", () => {
+  it("adds the second flow in a script of its own only when given", () => {
+    expect(buildFlowInjection({ a: 1 })).not.toContain("__HTV_COMPARE__");
+
+    const injection = buildFlowInjection({ a: 1 }, { b: "</script>" });
+
+    expect(injection.match(/<script>/g)).toHaveLength(2);
+    const compare = injection.match(/window\.__HTV_COMPARE__ = (.*?);<\/script>/s)![1];
+    expect(JSON.parse(compare)).toEqual({ b: "</script>" });
+  });
+});

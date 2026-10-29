@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { HarEntry } from "@htv/core";
-import type { DiagramState, Speed } from "../hooks/useDiagramState.js";
+import type { DiagramState, Speed, StepNavigation } from "../hooks/useDiagramState.js";
 import styles from "./StepPanel.module.css";
 
 interface Props {
@@ -54,11 +54,16 @@ function ResourceListIcon() {
   );
 }
 
-export function StepPanel({ state, resources, onOpenResources }: Props) {
-  const { flow, stepIndex, isPlaying, speed, goTo, prev, next, togglePlay, setSpeed } = state;
-  const step = flow.steps[stepIndex];
-  const total = flow.steps.length;
+interface StepTrackProps {
+  /** One accessible label per step, e.g. its title. */
+  labels: string[];
+  stepIndex: number;
+  goTo: (index: number) => void;
+}
 
+/** One numbered tab per step; arrow keys, Home and End move the selection inside the tablist. */
+export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
+  const total = labels.length;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Arrow keys inside the tablist move the selection (same as the global shortcut) and focus follows.
@@ -80,36 +85,92 @@ export function StepPanel({ state, resources, onOpenResources }: Props) {
   };
 
   return (
+    // The focusable elements are the tabs; key events bubble up to the tablist.
+    // eslint-disable-next-line jsx-a11y/interactive-supports-focus
+    <div className={styles.track} role="tablist" aria-label="Steps" onKeyDown={onTabKeyDown}>
+      {labels.map((label, i) => {
+        const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
+        return (
+          <button
+            key={i}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
+            id={`step-tab-${i}`}
+            role="tab"
+            aria-selected={i === stepIndex}
+            aria-controls="step-panel"
+            tabIndex={i === stepIndex ? 0 : -1}
+            aria-label={`Step ${i + 1}: ${label}`}
+            className={`${styles.trackDot} ${styles[status]}`}
+            onClick={() => goTo(i)}
+          >
+            {i < stepIndex ? "✓" : i + 1}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Prev, Next, Auto play, back to the first step and playback speed. */
+export function StepControls({ nav, className }: { nav: StepNavigation; className?: string }) {
+  const { stepIndex, total, isPlaying, speed, goTo, prev, next, togglePlay, setSpeed } = nav;
+  return (
+    <div className={className ? `${styles.controls} ${className}` : styles.controls}>
+      <button className={styles.btn} onClick={prev} disabled={stepIndex === 0}>
+        ← Prev
+      </button>
+      <button className={styles.btn} onClick={next} disabled={stepIndex === total - 1}>
+        Next →
+      </button>
+      <button
+        className={`${styles.btn} ${styles.btnPlay} ${isPlaying ? styles.playing : ""}`}
+        onClick={togglePlay}
+        aria-label={isPlaying ? "Pause" : "Auto play"}
+      >
+        {isPlaying ? "⏸ Pause" : "▶ Auto Play"}
+      </button>
+      <button
+        className={styles.btn}
+        onClick={() => goTo(0)}
+        disabled={stepIndex === 0}
+        aria-label="Reset to first step"
+        title="Reset to step 1"
+      >
+        ↺
+      </button>
+      <div className={styles.speedWrap}>
+        <span className={styles.speedLabel}>SPEED</span>
+        <select
+          className={styles.speedSelect}
+          value={speed}
+          onChange={(e) => setSpeed(Number(e.target.value) as Speed)}
+          aria-label="Playback speed"
+        >
+          {SPEEDS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+export function StepPanel({ state, resources, onOpenResources }: Props) {
+  const { flow, stepIndex, goTo } = state;
+  const step = flow.steps[stepIndex];
+  const total = flow.steps.length;
+
+  return (
     <div className={styles.panel}>
       <div className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
         Step {stepIndex + 1} of {total}: {step.title}
       </div>
 
-      {/* Step track. The focusable elements are the tabs; key events bubble up to the tablist. */}
-      {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
-      <div className={styles.track} role="tablist" aria-label="Steps" onKeyDown={onTabKeyDown}>
-        {flow.steps.map((s, i) => {
-          const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
-          return (
-            <button
-              key={i}
-              ref={(el) => {
-                tabRefs.current[i] = el;
-              }}
-              id={`step-tab-${i}`}
-              role="tab"
-              aria-selected={i === stepIndex}
-              aria-controls="step-panel"
-              tabIndex={i === stepIndex ? 0 : -1}
-              aria-label={`Step ${i + 1}: ${s.title}`}
-              className={`${styles.trackDot} ${styles[status]}`}
-              onClick={() => goTo(i)}
-            >
-              {i < stepIndex ? "✓" : i + 1}
-            </button>
-          );
-        })}
-      </div>
+      <StepTrack labels={flow.steps.map((s) => s.title)} stepIndex={stepIndex} goTo={goTo} />
 
       {/* Info card */}
       <div
@@ -148,46 +209,7 @@ export function StepPanel({ state, resources, onOpenResources }: Props) {
         )}
       </div>
 
-      {/* Controls */}
-      <div className={styles.controls}>
-        <button className={styles.btn} onClick={prev} disabled={stepIndex === 0}>
-          ← Prev
-        </button>
-        <button className={styles.btn} onClick={next} disabled={stepIndex === total - 1}>
-          Next →
-        </button>
-        <button
-          className={`${styles.btn} ${styles.btnPlay} ${isPlaying ? styles.playing : ""}`}
-          onClick={togglePlay}
-          aria-label={isPlaying ? "Pause" : "Auto play"}
-        >
-          {isPlaying ? "⏸ Pause" : "▶ Auto Play"}
-        </button>
-        <button
-          className={styles.btn}
-          onClick={() => goTo(0)}
-          disabled={stepIndex === 0}
-          aria-label="Reset to first step"
-          title="Reset to step 1"
-        >
-          ↺
-        </button>
-        <div className={styles.speedWrap}>
-          <span className={styles.speedLabel}>SPEED</span>
-          <select
-            className={styles.speedSelect}
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value) as Speed)}
-            aria-label="Playback speed"
-          >
-            {SPEEDS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <StepControls nav={state} />
     </div>
   );
 }

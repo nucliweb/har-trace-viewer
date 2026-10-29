@@ -16,6 +16,8 @@ interface Props {
   pathTimings?: Partial<Record<PathId, string>>;
   pathDirections?: Partial<Record<PathId, "request" | "response">>;
   historicalPaths?: Partial<Record<PathId, HistoricalPath>>;
+  /** Prefixes every element id, so several diagrams can share a document ("" keeps "diagram-svg"). */
+  idPrefix?: string;
 }
 
 function NodeRendererView({
@@ -26,6 +28,7 @@ function NodeRendererView({
   pathTimings,
   pathDirections,
   historicalPaths,
+  idPrefix = "",
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   const options = useMemo(() => layoutOptions(nodes), [nodes]);
@@ -33,14 +36,14 @@ function NodeRendererView({
 
   return (
     <svg
-      id="diagram-svg"
+      id={`${idPrefix}diagram-svg`}
       viewBox={`0 0 ${geometry.width} ${geometry.height}`}
       width="100%"
       height="100%"
       className={styles.svg}
     >
       <defs>
-        <GlowFilter />
+        <GlowFilter idPrefix={idPrefix} />
       </defs>
       <ZoneBands
         zones={geometry.zones}
@@ -56,6 +59,7 @@ function NodeRendererView({
         pathDirections={pathDirections}
         historicalPaths={historicalPaths}
         reducedMotion={reducedMotion}
+        idPrefix={idPrefix}
       />
       <NodeLayer nodes={nodes} positions={geometry.nodes} activeNodes={new Set(activeNodes)} />
     </svg>

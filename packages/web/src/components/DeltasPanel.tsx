@@ -1,0 +1,187 @@
+import { rateDelta, rateMetric } from "@htv/core";
+import type { ComparedMetric, DeltaRating, FlowComparison, HopPair } from "@htv/core";
+import { formatBytes, formatDelta, formatDeltaPct, formatMs } from "../lib/format.js";
+import type { DeltaUnit } from "../lib/format.js";
+import { RATING_CLASS, RATING_TEXT } from "./MetricsSummary.js";
+import metricsStyles from "./MetricsSummary.module.css";
+import hopsStyles from "./HopsPanel.module.css";
+import styles from "./DeltasPanel.module.css";
+
+interface Props {
+  comparison: FlowComparison;
+  /** Names of flow A and flow B, shown in the column headers. */
+  names: { a: string; b: string };
+  onClose: () => void;
+}
+
+const UNITS: Record<ComparedMetric, DeltaUnit> = {
+  ttfb: "ms",
+  fcp: "ms",
+  lcp: "ms",
+  cls: "score",
+  inp: "ms",
+  dcl: "ms",
+  onLoad: "ms",
+  requests: "count",
+  bytes: "bytes",
+  cdnHitRatio: "ratio",
+  browserCacheHitRatio: "ratio",
+};
+
+function formatValue(unit: DeltaUnit, value: number | null): string {
+  if (value === null) return "n/a";
+  switch (unit) {
+    case "ms":
+      return formatMs(value);
+    case "bytes":
+      return formatBytes(value);
+    case "ratio":
+      return `${Math.round(value * 100)}%`;
+    case "score":
+      return value.toFixed(3);
+    default:
+      return String(value);
+  }
+}
+
+/** B against A: better reads like a good rating, worse like a poor one. */
+export const DELTA_CLASS: Record<DeltaRating, string> = {
+  better: metricsStyles.good,
+  worse: metricsStyles.poor,
+  same: styles.same,
+  none: "",
+};
+
+const DELTA_TEXT: Record<DeltaRating, string> = {
+  better: "better",
+  worse: "worse",
+  same: "no change",
+  none: "",
+};
+
+/** A delta cell: the signed value, its rating colour and the rating in words for screen readers. */
+export function DeltaCell({ text, rating }: { text: string; rating: DeltaRating }) {
+  return (
+    <td className={`${hopsStyles.num} ${DELTA_CLASS[rating]}`} data-rating={rating}>
+      {text}
+      {rating !== "none" && rating !== "same" && (
+        <span className={metricsStyles.srOnly}>{` (${DELTA_TEXT[rating]})`}</span>
+      )}
+    </td>
+  );
+}
+
+function HopRow({ pair }: { pair: HopPair }) {
+  const { a, b } = pair;
+  const requests = (b?.requests ?? 0) - (a?.requests ?? 0);
+  const ttfb = a && b ? b.avgTtfbMs - a.avgTtfbMs : null;
+  const provider = (b ?? a)!.provider;
+  return (
+    <tr>
+      <th scope="row" className={hopsStyles.host}>
+        <span
+          className={`${hopsStyles.dot} ${hopsStyles[`dot_${provider}`] ?? ""}`}
+          aria-hidden="true"
+        />
+        {pair.host}
+      </th>
+      <td className={hopsStyles.num}>{a?.requests ?? 0}</td>
+      <td className={hopsStyles.num}>{b?.requests ?? 0}</td>
+      <DeltaCell text={formatDelta(requests, "count")} rating={rateDelta(requests)} />
+      <td className={hopsStyles.num}>{a ? formatMs(a.avgTtfbMs) : "—"}</td>
+      <td className={hopsStyles.num}>{b ? formatMs(b.avgTtfbMs) : "—"}</td>
+      <DeltaCell
+        text={ttfb === null ? "" : formatDelta(Math.round(ttfb), "ms")}
+        rating={rateDelta(ttfb === null ? null : Math.round(ttfb))}
+      />
+      <td className={styles.left}>{(b ?? a)!.providerName}</td>
+    </tr>
+  );
+}
+
+/** Metrics summary and hosts of two flows side by side, with B − A for each. */
+export function DeltasPanel({ comparison, names, onClose }: Props) {
+  const { metrics, hops } = comparison;
+  return (
+    <div className={`${metricsStyles.panel} ${styles.panel}`}>
+      <div className={metricsStyles.header}>
+        <span className={metricsStyles.title}>Deltas · B − A</span>
+        <button className={metricsStyles.closeBtn} onClick={onClose} aria-label="Close deltas">
+          ✕
+        </button>
+      </div>
+      {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className={metricsStyles.body} role="region" aria-label="Deltas" tabIndex={0}>
+        <h3 className={styles.sectionTitle}>Metrics</h3>
+        <table className={`${metricsStyles.table} ${styles.table} ${styles.metricsTable}`}>
+          <caption className={metricsStyles.caption}>Metric deltas</caption>
+          <thead>
+            <tr>
+              <th scope="col">Metric</th>
+              <th scope="col">A · {names.a}</th>
+              <th scope="col">B · {names.b}</th>
+              <th scope="col">Δ</th>
+              <th scope="col">Δ %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map((m) => {
+              const unit = UNITS[m.key];
+              return (
+                <tr key={m.key}>
+                  <th scope="row">{m.label}</th>
+                  {[m.a, m.b].map((value, i) => {
+                    const rating = rateMetric(m.key, value);
+                    return (
+                      <td
+                        key={i}
+                        className={`${hopsStyles.num} ${RATING_CLASS[rating]}`}
+                        data-rating={rating}
+                      >
+                        {formatValue(unit, value)}
+                        {rating !== "none" && (
+                          <span
+                            className={metricsStyles.srOnly}
+                          >{` (${RATING_TEXT[rating]})`}</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <DeltaCell text={formatDelta(m.delta, unit)} rating={m.rating} />
+                  <td className={`${hopsStyles.num} ${styles.pct}`}>
+                    {formatDeltaPct(m.deltaPct)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <h3 className={styles.sectionTitle}>Hosts</h3>
+        <table className={`${hopsStyles.table} ${styles.table}`}>
+          <caption className={hopsStyles.caption}>Host deltas</caption>
+          <thead>
+            <tr>
+              <th scope="col">Host</th>
+              <th scope="col">Requests A</th>
+              <th scope="col">Requests B</th>
+              <th scope="col">Δ</th>
+              <th scope="col">Avg TTFB A</th>
+              <th scope="col">Avg TTFB B</th>
+              <th scope="col">Δ</th>
+              <th scope="col" className={styles.left}>
+                Provider
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {hops.map((pair) => (
+              <HopRow key={pair.host} pair={pair} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

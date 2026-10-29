@@ -26,6 +26,7 @@ import type {
   PageFlow,
   ParsedHar,
   PathId,
+  StepKind,
   ThirdPartyCluster,
 } from "../types.js";
 
@@ -45,7 +46,8 @@ export {
 //    instead of carrying copies (resources, cacheResources).
 // 4: third parties grouped by CDN provider and region (PageAnalysis.thirdPartyClusters);
 //    a page with several clusters has one `third-parties:<id>` node per cluster.
-export const FLOW_VERSION = 4;
+// 5: steps carry their kind (DiagramStep.kind).
+export const FLOW_VERSION = 5;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 
@@ -54,6 +56,43 @@ export function isClientRegion(value: unknown): value is ClientRegion {
 }
 
 const TRANSITION_TITLE_PREFIX = "→ User navigates to ";
+
+const KIND_BY_TITLE: Record<string, StepKind> = {
+  "DNS + initial connection": "connection",
+  "First request in flight": "request",
+  "TTFB — First byte received": "ttfb",
+  "Critical resources loading": "critical",
+  "Secondary resources": "secondary",
+  "Third-party requests": "third-party",
+  "First Contentful Paint": "fcp",
+  "Largest Contentful Paint": "lcp",
+  "Page loaded": "loaded",
+};
+
+const KIND_BY_BADGE: Record<NonNullable<DiagramStep["badge"]>["type"], StepKind> = {
+  ttfb: "ttfb",
+  fcp: "fcp",
+  lcp: "lcp",
+  onload: "loaded",
+};
+
+/**
+ * The kind of a step generated before steps carried one (version ≤ 4), read from the titles
+ * those versions used. An unknown title falls back to its badge, else to a resource group.
+ */
+export function stepKindFromTitle(
+  title: string,
+  badge?: NonNullable<DiagramStep["badge"]>["type"]
+): StepKind {
+  if (title.startsWith(TRANSITION_TITLE_PREFIX)) return "transition";
+  return KIND_BY_TITLE[title] ?? (badge ? KIND_BY_BADGE[badge] : "secondary");
+}
+
+function withDerivedKind(steps: DiagramStep[]): DiagramStep[] {
+  return steps.map((step) =>
+    step.kind ? step : { ...step, kind: stepKindFromTitle(step.title, step.badge?.type) }
+  );
+}
 
 // Version ≤ 1 steps carry no pageIndex: every transition step starts a new page.
 function withDerivedPageIndex(steps: DiagramStep[]): DiagramStep[] {
@@ -69,10 +108,12 @@ function withDerivedPageIndex(steps: DiagramStep[]): DiagramStep[] {
 // single topology and cache report: every page gets a copy of the top-level ones.
 // Version ≤ 2 steps carried copies of their entries: they become references.
 // Version ≤ 3 analyses have no third-party clusters: their single third-parties node stays.
+// Version ≤ 4 steps have no kind: it is read from their title.
 export function normalizeFlow(flow: Flow): Flow {
-  const steps = flow.steps.every((step) => typeof step.pageIndex === "number")
+  const indexed = flow.steps.every((step) => typeof step.pageIndex === "number")
     ? flow.steps
     : withDerivedPageIndex(flow.steps);
+  const steps = indexed.every((step) => step.kind) ? indexed : withDerivedKind(indexed);
   const pageCount = Math.max(flow.pages.length, (steps.at(-1)?.pageIndex ?? 0) + 1);
   const pageAnalyses = (
     flow.pageAnalyses ??
@@ -327,6 +368,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   if (ssl > 0) connectionMetrics.push({ label: "TLS", value: formatMs(ssl) });
 
   const connectionStep: PageStep = {
+    kind: "connection",
     title: "DNS + initial connection",
     description: `Browser resolves the domain and establishes a TCP${ssl > 0 ? "/TLS" : ""} connection to ${edgeLabel}.`,
     timestamp: documentEntry.startTime,
@@ -339,6 +381,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const firstPath = firstActivePath(hasCdn, hasGfw);
 
   const requestStep: PageStep = {
+    kind: "request",
     title: "First request in flight",
     description: "Browser sends the HTTP request for the HTML document.",
     timestamp: requestSentAt,
@@ -350,6 +393,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   };
 
   const ttfbStep: PageStep = {
+    kind: "ttfb",
     title: "TTFB — First byte received",
     description: `${edgeLabel} responds with the first byte of the HTML document.`,
     timestamp: firstByteAt,
@@ -388,6 +432,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     timestamp: criticalAt,
     rank: 0,
     item: {
+      kind: "critical",
       title: "Critical resources loading",
       description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
       timestamp: criticalAt,
@@ -418,6 +463,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
       timestamp: trace.fcp,
       rank: 1,
       item: {
+        kind: "fcp",
         title: "First Contentful Paint",
         description: `The browser renders the first visible content on screen.${paintNote(trace.fcp)}`,
         timestamp: trace.fcp,
@@ -441,6 +487,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     timestamp: secondaryAt,
     rank: 2,
     item: {
+      kind: "secondary",
       title: "Secondary resources",
       description: "Async scripts, images, and fonts load in the background.",
       timestamp: secondaryAt,
@@ -463,6 +510,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
       timestamp: trace.lcp,
       rank: 3,
       item: {
+        kind: "lcp",
         title: "Largest Contentful Paint",
         description: `The largest visible element in the viewport has finished rendering.${paintNote(trace.lcp)}`,
         timestamp: trace.lcp,
@@ -512,6 +560,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
       timestamp: thirdPartyAt,
       rank: 4,
       item: {
+        kind: "third-party",
         title: "Third-party requests",
         description: "Browser fetches resources from external domains.",
         timestamp: thirdPartyAt,
@@ -533,6 +582,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     .filter((e) => e !== documentEntry)
     .sort((a, b) => a.startTime - b.startTime);
   const loadedStep: PageStep = {
+    kind: "loaded",
     title: "Page loaded",
     description: "The load event fires — all resources have been downloaded.",
     timestamp: page.onLoad ?? undefined,
@@ -556,6 +606,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
 
 function generateTransitionStep(fromPage: string, toPage: string): PageStep {
   return {
+    kind: "transition",
     title: `${TRANSITION_TITLE_PREFIX}${toPage}`,
     description: `The user leaves ${fromPage} and navigates to ${toPage}.`,
     activeNodes: ["browser"],

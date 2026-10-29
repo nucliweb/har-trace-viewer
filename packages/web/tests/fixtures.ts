@@ -3,6 +3,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expandPageFlows, generateFlow, parseHarPagesJson, parseTraceJson } from "@htv/core";
 import type { Flow } from "@htv/core";
+import {
+  criticalCss,
+  makeHar,
+  makeTrace,
+  secondaryImage,
+  thirdPartyScript,
+} from "../../core/tests/helpers/synthetic-har";
 
 const dir = resolve(import.meta.dirname, "../../core/tests/fixtures");
 
@@ -24,4 +31,26 @@ export function makeFlow(): Flow {
     trace: parseTraceJson(traceJson),
   });
   return generateFlow(pages);
+}
+
+/**
+ * A first view and a cached repeat view of the same synthetic page: the repeat view serves
+ * its resources from the browser cache, loads no third party and fires onLoad earlier.
+ */
+export function makeCompareFlows(): [Flow, Flow] {
+  const a = makeHar(
+    [criticalCss(100), secondaryImage(200), secondaryImage(250), thirdPartyScript(300)],
+    { onContentLoad: 300, onLoad: 500 }
+  );
+  const b = makeHar(
+    [
+      { ...criticalCss(100), fromCache: "disk" },
+      { ...secondaryImage(200), fromCache: "memory" },
+    ],
+    { onContentLoad: 150, onLoad: 200 }
+  );
+  return [
+    generateFlow([{ name: "First view", har: a, trace: makeTrace(150, 400) }]),
+    generateFlow([{ name: "Repeat view", har: b, trace: makeTrace(110, 250) }]),
+  ];
 }

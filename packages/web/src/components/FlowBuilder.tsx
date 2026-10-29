@@ -1,5 +1,6 @@
 import { useCallback, useId, useRef, useState } from "react";
 import {
+  defaultComparePageIds,
   defaultSelectedPageIds,
   expandPageFlows,
   isClientRegion,
@@ -24,7 +25,13 @@ interface PageEntry {
   traceError: string | null;
   harProgress: ParseProgress | null;
   traceProgress: ParseProgress | null;
+  /** Two page ids of a multi-page HAR proposed for a comparison (first vs repeat view). */
+  comparePair: [string, string] | null;
+  /** Compare comparePair[0] (A) with comparePair[1] (B) instead of building a flow. */
+  comparePages: boolean;
 }
+
+type EntryPatch = Partial<PageEntry>;
 
 function makeEntry(name = ""): PageEntry {
   return {
@@ -39,6 +46,8 @@ function makeEntry(name = ""): PageEntry {
     traceError: null,
     harProgress: null,
     traceProgress: null,
+    comparePair: null,
+    comparePages: false,
   };
 }
 
@@ -56,6 +65,148 @@ function hasFlowPages(p: PageEntry): boolean {
   return p.har !== null && (p.har.length === 1 || p.selectedPageIds.length > 0);
 }
 
+const isEntryParsing = (p: PageEntry) => p.harProgress !== null || p.traceProgress !== null;
+
+/** Parses a dropped HAR in the worker, reporting progress and the result through `apply`. */
+function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
+  if (!file.name.endsWith(".har")) {
+    apply({ harError: "Only .har files are supported." });
+    return;
+  }
+  apply({ harProgress: { phase: "reading", loaded: 0, total: file.size }, harError: null });
+  parseInWorker("har", file, (harProgress) => apply({ harProgress }))
+    .then((har) =>
+      apply({
+        har,
+        selectedPageIds: defaultSelectedPageIds(har),
+        comparePair: defaultComparePageIds(har),
+        harFileName: file.name,
+        harError: null,
+        harProgress: null,
+      })
+    )
+    .catch(() => apply({ harError: "Could not parse HAR file.", harProgress: null }));
+}
+
+/** Parses a dropped Chrome trace in the worker, reporting progress and the result through `apply`. */
+async function loadTraceFile(file: File, apply: (patch: EntryPatch) => void) {
+  if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
+    apply({ traceError: "Expected .json or .json.gz trace file." });
+    return;
+  }
+  apply({ traceProgress: { phase: "reading", loaded: 0, total: file.size }, traceError: null });
+  try {
+    const trace = await parseInWorker("trace", file, (traceProgress) => apply({ traceProgress }));
+    apply({ trace, traceFileName: file.name, traceError: null, traceProgress: null });
+  } catch {
+    apply({ traceError: "Could not parse trace file.", traceProgress: null });
+  }
+}
+
+const pageOptionLabel = (page: ReturnType<typeof listHarPages>[number]) =>
+  `${webPageTestLabel(page.title) ?? (page.title || page.url)} (${page.entries} req)`;
+
+// ── FileZones ─────────────────────────────────────────────────────────────────
+
+interface FileZonesProps {
+  entry: PageEntry;
+  onHarFile: (file: File) => void;
+  onTraceFile: (file: File) => void;
+  /** Text of the empty HAR button. */
+  dropLabel?: string;
+  /** Accessible names of the file inputs, when they need one of their own. */
+  harInputLabel?: string;
+  traceInputLabel?: string;
+}
+
+/** The HAR button (click or drop) and the optional trace button of one recording. */
+function FileZones({
+  entry,
+  onHarFile,
+  onTraceFile,
+  dropLabel = "Drop .har",
+  harInputLabel,
+  traceInputLabel,
+}: FileZonesProps) {
+  const harInputRef = useRef<HTMLInputElement>(null);
+  const traceInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <>
+      <div className={styles.harZone}>
+        <input
+          ref={harInputRef}
+          type="file"
+          accept=".har"
+          className={styles.hiddenInput}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onHarFile(f);
+            e.target.value = "";
+          }}
+          aria-hidden="true"
+          aria-label={harInputLabel}
+          tabIndex={-1}
+        />
+        <button
+          className={`${styles.harBtn} ${entry.har ? styles.harLoaded : ""} ${entry.harError ? styles.harError : ""}`}
+          onClick={() => harInputRef.current?.click()}
+          disabled={entry.harProgress !== null}
+          title={entry.har ? entry.harFileName : "Click or drop a .har file"}
+        >
+          {entry.harProgress ? (
+            <span className={styles.progressText} role="status">
+              {describeProgress(entry.harProgress)}
+            </span>
+          ) : entry.har ? (
+            <span className={styles.harName}>
+              {entry.harFileName}
+              {entry.har.length > 1 ? ` · ${entry.har.length} pages` : ""}
+            </span>
+          ) : entry.harError ? (
+            <span className={styles.errorText}>{entry.harError}</span>
+          ) : (
+            <>
+              <span className={styles.harIcon}>⬇</span> {dropLabel}
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className={styles.traceZone}>
+        <input
+          ref={traceInputRef}
+          type="file"
+          accept=".json,.gz"
+          className={styles.hiddenInput}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onTraceFile(f);
+            e.target.value = "";
+          }}
+          aria-hidden="true"
+          aria-label={traceInputLabel}
+          tabIndex={-1}
+        />
+        <button
+          className={`${styles.traceBtn} ${entry.trace ? styles.traceLoaded : ""}`}
+          onClick={() => traceInputRef.current?.click()}
+          disabled={!entry.har || entry.traceProgress !== null}
+          title={entry.trace ? entry.traceFileName : "Load a Chrome DevTools trace (optional)"}
+        >
+          {entry.trace ? "Trace ✓" : "Trace"}
+        </button>
+        {entry.traceProgress && (
+          <span className={styles.progressText} role="status">
+            {describeProgress(entry.traceProgress)}
+          </span>
+        )}
+        {entry.traceError && <span className={styles.traceErrorText}>{entry.traceError}</span>}
+      </div>
+    </>
+  );
+}
+
 // ── PageRow ───────────────────────────────────────────────────────────────────
 
 interface PageRowProps {
@@ -66,6 +217,9 @@ interface PageRowProps {
   onNameChange: (name: string) => void;
   onHarFile: (file: File) => void;
   onSelectedPagesChange: (ids: string[]) => void;
+  /** Offers to compare two pages of this HAR instead of building a flow. */
+  showComparePicker: boolean;
+  onComparePagesChange: (patch: Pick<PageEntry, "comparePair" | "comparePages">) => void;
   onTraceFile: (file: File) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -82,6 +236,8 @@ function PageRow({
   onNameChange,
   onHarFile,
   onSelectedPagesChange,
+  showComparePicker,
+  onComparePagesChange,
   onTraceFile,
   onMoveUp,
   onMoveDown,
@@ -89,9 +245,6 @@ function PageRow({
   onDragOver,
   onDragLeave,
 }: PageRowProps) {
-  const harInputRef = useRef<HTMLInputElement>(null);
-  const traceInputRef = useRef<HTMLInputElement>(null);
-
   const handleHarDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDragLeave();
@@ -109,7 +262,7 @@ function PageRow({
         }}
         onDragLeave={onDragLeave}
         onDrop={handleHarDrop}
-        aria-busy={page.harProgress !== null || page.traceProgress !== null}
+        aria-busy={isEntryParsing(page)}
       >
         <div className={styles.rowOrder}>
           <button
@@ -141,74 +294,7 @@ function PageRow({
           aria-label={`Page ${idx + 1} name`}
         />
 
-        <div className={styles.harZone}>
-          <input
-            ref={harInputRef}
-            type="file"
-            accept=".har"
-            className={styles.hiddenInput}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onHarFile(f);
-              e.target.value = "";
-            }}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-          <button
-            className={`${styles.harBtn} ${page.har ? styles.harLoaded : ""} ${page.harError ? styles.harError : ""}`}
-            onClick={() => harInputRef.current?.click()}
-            disabled={page.harProgress !== null}
-            title={page.har ? page.harFileName : "Click or drop a .har file"}
-          >
-            {page.harProgress ? (
-              <span className={styles.progressText} role="status">
-                {describeProgress(page.harProgress)}
-              </span>
-            ) : page.har ? (
-              <span className={styles.harName}>
-                {page.harFileName}
-                {page.har.length > 1 ? ` · ${page.har.length} pages` : ""}
-              </span>
-            ) : page.harError ? (
-              <span className={styles.errorText}>{page.harError}</span>
-            ) : (
-              <>
-                <span className={styles.harIcon}>⬇</span> Drop .har
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className={styles.traceZone}>
-          <input
-            ref={traceInputRef}
-            type="file"
-            accept=".json,.gz"
-            className={styles.hiddenInput}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onTraceFile(f);
-              e.target.value = "";
-            }}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-          <button
-            className={`${styles.traceBtn} ${page.trace ? styles.traceLoaded : ""}`}
-            onClick={() => traceInputRef.current?.click()}
-            disabled={!page.har || page.traceProgress !== null}
-            title={page.trace ? page.traceFileName : "Load a Chrome DevTools trace (optional)"}
-          >
-            {page.trace ? "Trace ✓" : "Trace"}
-          </button>
-          {page.traceProgress && (
-            <span className={styles.progressText} role="status">
-              {describeProgress(page.traceProgress)}
-            </span>
-          )}
-          {page.traceError && <span className={styles.traceErrorText}>{page.traceError}</span>}
-        </div>
+        <FileZones entry={page} onHarFile={onHarFile} onTraceFile={onTraceFile} />
 
         <button
           className={styles.removeBtn}
@@ -220,7 +306,7 @@ function PageRow({
           ×
         </button>
       </div>
-      {page.har && page.har.length > 1 && (
+      {page.har && page.har.length > 1 && !(showComparePicker && page.comparePages) && (
         <PageChecklist
           har={page.har}
           selected={page.selectedPageIds}
@@ -228,7 +314,149 @@ function PageRow({
           onChange={onSelectedPagesChange}
         />
       )}
+      {showComparePicker && page.har && page.comparePair && (
+        <ComparePagesPicker
+          har={page.har}
+          pair={page.comparePair}
+          enabled={page.comparePages}
+          onChange={onComparePagesChange}
+        />
+      )}
     </div>
+  );
+}
+
+interface ComparePagesPickerProps {
+  har: ParsedHar[];
+  pair: [string, string];
+  enabled: boolean;
+  onChange: (patch: Pick<PageEntry, "comparePair" | "comparePages">) => void;
+}
+
+/** Compares two pages of one HAR, e.g. the first and the repeat view of a WebPageTest run. */
+function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPickerProps) {
+  const pages = listHarPages(har);
+  const idA = useId();
+  const idB = useId();
+  const pick = (side: 0 | 1, id: string) => {
+    const next: [string, string] = [...pair];
+    next[side] = id;
+    onChange({ comparePair: next, comparePages: enabled });
+  };
+  return (
+    <fieldset className={styles.checklist}>
+      <legend className={styles.checklistLegend}>Compare pages</legend>
+      <label className={styles.checklistItem}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => onChange({ comparePair: pair, comparePages: e.target.checked })}
+        />
+        <span>Compare two pages of this HAR</span>
+      </label>
+      {([0, 1] as const).map((side) => (
+        <span key={side} className={styles.pairField}>
+          <label className={styles.pairLabel} htmlFor={side === 0 ? idA : idB}>
+            {side === 0 ? "A" : "B"}
+          </label>
+          <select
+            id={side === 0 ? idA : idB}
+            className={styles.regionSelect}
+            value={pair[side]}
+            disabled={!enabled}
+            onChange={(e) => pick(side, e.target.value)}
+          >
+            {pages.map((page) => (
+              <option key={page.id} value={page.id}>
+                {pageOptionLabel(page)}
+              </option>
+            ))}
+          </select>
+        </span>
+      ))}
+    </fieldset>
+  );
+}
+
+interface CompareTargetProps {
+  entry: PageEntry;
+  onHarFile: (file: File) => void;
+  onTraceFile: (file: File) => void;
+  onPageChange: (id: string) => void;
+  onRemove: () => void;
+}
+
+/** Optional second recording: the report then compares it (B) with the flow above (A). */
+function CompareTarget({
+  entry,
+  onHarFile,
+  onTraceFile,
+  onPageChange,
+  onRemove,
+}: CompareTargetProps) {
+  const [dragging, setDragging] = useState(false);
+  const pageSelectId = useId();
+  const pages = entry.har && entry.har.length > 1 ? listHarPages(entry.har) : null;
+  return (
+    <fieldset className={styles.compare}>
+      <legend className={styles.compareLegend}>Compare with…</legend>
+      <p className={styles.compareHint}>
+        Optional: a second recording of the same page, e.g. with a warm cache. The first page of
+        each side is compared step by step.
+      </p>
+      <div
+        className={`${styles.row} ${dragging ? styles.rowDragging : ""}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer.files[0];
+          if (file) onHarFile(file);
+        }}
+        aria-busy={isEntryParsing(entry)}
+      >
+        <FileZones
+          entry={entry}
+          onHarFile={onHarFile}
+          onTraceFile={onTraceFile}
+          dropLabel="Drop .har to compare"
+          harInputLabel="HAR file to compare with"
+          traceInputLabel="Trace to compare with"
+        />
+        <button
+          className={styles.removeBtn}
+          onClick={onRemove}
+          disabled={!entry.har && !entry.harError}
+          title="Remove comparison"
+          aria-label="Remove comparison"
+        >
+          ×
+        </button>
+      </div>
+      {pages && (
+        <span className={styles.pairField}>
+          <label className={styles.pairLabel} htmlFor={pageSelectId}>
+            Page
+          </label>
+          <select
+            id={pageSelectId}
+            className={styles.regionSelect}
+            value={entry.selectedPageIds[0]}
+            onChange={(e) => onPageChange(e.target.value)}
+          >
+            {pages.map((page) => (
+              <option key={page.id} value={page.id}>
+                {pageOptionLabel(page)}
+              </option>
+            ))}
+          </select>
+        </span>
+      )}
+    </fieldset>
   );
 }
 
@@ -264,9 +492,7 @@ function PageChecklist({ har, selected, name, onChange }: PageChecklistProps) {
                 checked={selected.includes(page.id)}
                 onChange={() => toggle(page.id)}
               />
-              <span>
-                {webPageTestLabel(page.title) ?? (page.title || page.url)} ({page.entries} req)
-              </span>
+              <span>{pageOptionLabel(page)}</span>
             </label>
           </li>
         ))}
@@ -278,7 +504,8 @@ function PageChecklist({ har, selected, name, onChange }: PageChecklistProps) {
 // ── FlowBuilder ───────────────────────────────────────────────────────────────
 
 interface Props {
-  onGenerate: (pages: PageFlow[], options: FlowOptions) => void;
+  /** `comparePages`, when given, is a second flow (B) to compare with `pages` (A). */
+  onGenerate: (pages: PageFlow[], options: FlowOptions, comparePages?: PageFlow[]) => void;
   /** When set, the empty state offers a ready-made demo flow, fetched on demand. */
   onLoadFlow?: (flow: Flow) => void;
 }
@@ -343,50 +570,19 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
   }, []);
 
   const handleHarFile = useCallback(
-    (id: string, file: File) => {
-      if (!file.name.endsWith(".har")) {
-        update(id, { harError: "Only .har files are supported." });
-        return;
-      }
-      update(id, {
-        harProgress: { phase: "reading", loaded: 0, total: file.size },
-        harError: null,
-      });
-      parseInWorker("har", file, (harProgress) => update(id, { harProgress }))
-        .then((har) =>
-          update(id, {
-            har,
-            selectedPageIds: defaultSelectedPageIds(har),
-            harFileName: file.name,
-            harError: null,
-            harProgress: null,
-          })
-        )
-        .catch(() => update(id, { harError: "Could not parse HAR file.", harProgress: null }));
-    },
+    (id: string, file: File) => loadHarFile(file, (patch) => update(id, patch)),
     [update]
   );
 
   const handleTraceFile = useCallback(
-    async (id: string, file: File) => {
-      if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
-        update(id, { traceError: "Expected .json or .json.gz trace file." });
-        return;
-      }
-      update(id, {
-        traceProgress: { phase: "reading", loaded: 0, total: file.size },
-        traceError: null,
-      });
-      try {
-        const trace = await parseInWorker("trace", file, (traceProgress) =>
-          update(id, { traceProgress })
-        );
-        update(id, { trace, traceFileName: file.name, traceError: null, traceProgress: null });
-      } catch {
-        update(id, { traceError: "Could not parse trace file.", traceProgress: null });
-      }
-    },
+    (id: string, file: File) => loadTraceFile(file, (patch) => update(id, patch)),
     [update]
+  );
+
+  const [compareEntry, setCompareEntry] = useState<PageEntry>(() => makeEntry());
+  const updateCompare = useCallback(
+    (patch: EntryPatch) => setCompareEntry((prev) => ({ ...prev, ...patch })),
+    []
   );
 
   const moveUp = useCallback((idx: number) => {
@@ -413,10 +609,28 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
     setPages((prev) => [...prev, makeEntry(`Page ${prev.length + 1}`)]);
   };
 
-  const isParsing = pages.some((p) => p.harProgress !== null || p.traceProgress !== null);
-  const canGenerate = !isParsing && pages.some(hasFlowPages);
+  // Two pages of a single multi-page HAR (first vs repeat view) can be compared directly.
+  const [firstEntry] = pages;
+  const pickerAvailable = pages.length === 1 && (firstEntry.har?.length ?? 0) > 1;
+  const pagePair = pickerAvailable && firstEntry.comparePages ? firstEntry.comparePair : null;
+  const comparing = pagePair !== null || compareEntry.har !== null;
+
+  const isParsing = [...pages, compareEntry].some(isEntryParsing);
+  const canGenerate = !isParsing && (pagePair !== null || pages.some(hasFlowPages));
 
   const handleGenerate = () => {
+    if (pagePair) {
+      const side = (id: string) =>
+        expandPageFlows({
+          name: firstEntry.name.trim() || "Page",
+          har: firstEntry.har!,
+          select: { pageIds: [id] },
+          // The trace belongs to one recording: it stays with A.
+          ...(firstEntry.trace && id === pagePair[0] ? { trace: firstEntry.trace } : {}),
+        });
+      onGenerate(side(pagePair[0]), { clientRegion }, side(pagePair[1]));
+      return;
+    }
     const pageFlows: PageFlow[] = pages.filter(hasFlowPages).flatMap((p) =>
       expandPageFlows({
         name: p.name.trim() || "Page",
@@ -425,7 +639,19 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
         ...(p.trace ? { trace: p.trace } : {}),
       })
     );
-    onGenerate(pageFlows, { clientRegion });
+    const compareHar = compareEntry.har;
+    if (!compareHar) {
+      onGenerate(pageFlows, { clientRegion });
+      return;
+    }
+    const comparePages = expandPageFlows({
+      ...(compareHar.length === 1
+        ? { name: compareEntry.harFileName.replace(/\.har$/i, "") }
+        : { select: { pageIds: compareEntry.selectedPageIds.slice(0, 1) } }),
+      har: compareHar,
+      ...(compareEntry.trace ? { trace: compareEntry.trace } : {}),
+    });
+    onGenerate(pageFlows, { clientRegion }, comparePages);
   };
 
   return (
@@ -466,6 +692,8 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
             onNameChange={(name) => update(page.id, { name })}
             onHarFile={(file) => handleHarFile(page.id, file)}
             onSelectedPagesChange={(selectedPageIds) => update(page.id, { selectedPageIds })}
+            showComparePicker={pickerAvailable}
+            onComparePagesChange={(patch) => update(page.id, patch)}
             onTraceFile={(file) => handleTraceFile(page.id, file)}
             onMoveUp={() => moveUp(idx)}
             onMoveDown={() => moveDown(idx)}
@@ -475,6 +703,16 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
           />
         ))}
       </div>
+
+      {!pagePair && (
+        <CompareTarget
+          entry={compareEntry}
+          onHarFile={(file) => loadHarFile(file, updateCompare)}
+          onTraceFile={(file) => loadTraceFile(file, updateCompare)}
+          onPageChange={(id) => updateCompare({ selectedPageIds: [id] })}
+          onRemove={() => setCompareEntry(makeEntry())}
+        />
+      )}
 
       <div className={styles.footer}>
         <button className={styles.addBtn} onClick={addPage}>
@@ -498,7 +736,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
             </select>
           </div>
           <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate}>
-            Generate diagram →
+            {comparing ? "Generate comparison →" : "Generate diagram →"}
           </button>
         </div>
       </div>

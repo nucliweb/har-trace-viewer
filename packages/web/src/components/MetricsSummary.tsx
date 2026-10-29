@@ -39,13 +39,13 @@ const ROWS: Row[] = [
   },
 ];
 
-const RATING_CLASS: Record<MetricRating, string> = {
+export const RATING_CLASS: Record<MetricRating, string> = {
   good: styles.good,
   "needs-improvement": styles.warn,
   poor: styles.poor,
   none: "",
 };
-const RATING_TEXT: Record<MetricRating, string> = {
+export const RATING_TEXT: Record<MetricRating, string> = {
   good: "good",
   "needs-improvement": "needs improvement",
   poor: "poor",

@@ -35,10 +35,16 @@ export function listHarPages(har: ParsedHar[]): HarPageSummary[] {
   }));
 }
 
+/** Run number and view of a WebPageTest page title ("Run 1, First View for https://x"). */
+function parseWebPageTestTitle(title: string): { run: string; view: "First" | "Repeat" } | null {
+  const m = /^Run (\d+), (First|Repeat) View for .+$/.exec(title.trim());
+  return m ? { run: m[1], view: m[2] as "First" | "Repeat" } : null;
+}
+
 /** "Run 1, First View for https://x" (WebPageTest) becomes "Run 1 · First view"; other titles give null. */
 export function webPageTestLabel(title: string): string | null {
-  const m = /^Run (\d+), (First|Repeat) View for .+$/.exec(title.trim());
-  return m ? `Run ${m[1]} · ${m[2]} view` : null;
+  const wpt = parseWebPageTestTitle(title);
+  return wpt ? `Run ${wpt.run} · ${wpt.view} view` : null;
 }
 
 /**
@@ -50,6 +56,24 @@ export function defaultSelectedPageIds(har: ParsedHar[]): string[] {
   const pages = listHarPages(har);
   const wpt = pages.length > 1 && pages.every((p) => webPageTestLabel(p.title) !== null);
   return (wpt ? pages.slice(0, 1) : pages).map((p) => p.id);
+}
+
+/**
+ * Two page ids a UI should propose for a comparison: the first and the repeat view of the
+ * same WebPageTest run (with cache vs without), else the first two pages. Null with fewer
+ * than two pages.
+ */
+export function defaultComparePageIds(har: ParsedHar[]): [string, string] | null {
+  const pages = listHarPages(har);
+  if (pages.length < 2) return null;
+  const views = pages.map((p) => ({ id: p.id, wpt: parseWebPageTestTitle(p.title) }));
+  for (const first of views) {
+    if (first.wpt?.view !== "First") continue;
+    const run = first.wpt.run;
+    const repeat = views.find((v) => v.wpt?.view === "Repeat" && v.wpt.run === run);
+    if (repeat) return [first.id, repeat.id];
+  }
+  return [pages[0].id, pages[1].id];
 }
 
 function describePages(pages: HarPageSummary[]): string {

@@ -10,6 +10,7 @@ import {
   generateFlow,
   nodeKind,
   normalizeFlow,
+  stepKindFromTitle,
 } from "../src/steps/step-generator.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import { firefoxHar } from "./helpers/firefox-har.js";
@@ -662,7 +663,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(4);
+    expect(FLOW_VERSION).toBe(5);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 
@@ -981,7 +982,8 @@ describe("normalizeFlow — version 2 inline resources", () => {
           activePaths: [],
           metrics: [],
           resources: [entry, twin],
-        } as InlineStep,
+          // Version-2 steps predate the kind.
+        } as Omit<InlineStep, "kind"> as InlineStep,
       ],
     } as Flow;
 
@@ -1480,5 +1482,57 @@ describe("generateFlow — third-party clusters", () => {
       for (const id of step.activeNodes) expect(nodeIds.has(id), id).toBe(true);
       for (const id of step.activePaths) expect(pathIds.has(id), id).toBe(true);
     }
+  });
+});
+
+describe("step kinds", () => {
+  const kinds = (flow: Flow) => flow.steps.map((s) => s.kind);
+
+  it("tags every page step with a stable kind, in step order", () => {
+    const har = makeHar([criticalCss(100), secondaryImage(200), thirdPartyScript(300)]);
+    const flow = generateFlow([{ name: "Home", har, trace: makeTrace(150, 400) }]);
+
+    expect(kinds(flow)).toEqual([
+      "connection",
+      "request",
+      "ttfb",
+      "critical",
+      "fcp",
+      "secondary",
+      "third-party",
+      "lcp",
+      "loaded",
+    ]);
+  });
+
+  it("tags the step that leads to another page as a transition", () => {
+    const flow = generateFlow([
+      { name: "Home", har: makeHar([criticalCss(100)]) },
+      { name: "Docs", har: makeHar([criticalCss(100)]) },
+    ]);
+
+    const docs = flow.steps.filter((s) => s.pageIndex === 1);
+    expect(docs[0].kind).toBe("transition");
+    expect(docs.slice(1).map((s) => s.kind)).not.toContain("transition");
+  });
+
+  it("derives the kind from the title for flows that predate it", () => {
+    const current = generateFlow([
+      { name: "Home", har: loadHar(), trace: loadTrace() },
+      { name: "Docs", har: loadHar() },
+    ]);
+    const legacy = JSON.parse(JSON.stringify(current)) as Flow;
+    legacy.version = 4;
+    for (const step of legacy.steps) delete (step as Partial<DiagramStep>).kind;
+
+    const normalized = normalizeFlow(legacy);
+
+    expect(kinds(normalized)).toEqual(kinds(current));
+  });
+
+  it("falls back to the badge, then to a resource group, for an unknown title", () => {
+    expect(stepKindFromTitle("Something else", "lcp")).toBe("lcp");
+    expect(stepKindFromTitle("Something else", "onload")).toBe("loaded");
+    expect(stepKindFromTitle("Something else")).toBe("secondary");
   });
 });

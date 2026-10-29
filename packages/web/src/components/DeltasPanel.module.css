@@ -1,0 +1,39 @@
+/* Wider than the metrics summary: the hosts table has eight columns. Chrome, rating colours
+   and tables come from MetricsSummary.module.css and HopsPanel.module.css. */
+.panel {
+  width: min(1040px, 100%);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table {
+  margin-bottom: var(--space-lg);
+}
+
+.metricsTable {
+  max-width: 760px;
+}
+
+/* Numbers align right under their headers; the row label and the provider stay left. */
+.panel .table th,
+.panel .table td {
+  text-align: right;
+}
+
+.panel .table tbody th,
+.panel .table thead th:first-child,
+.panel .table .left {
+  text-align: left;
+}
+
+.same,
+.pct {
+  color: var(--color-muted);
+}

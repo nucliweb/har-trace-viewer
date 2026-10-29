@@ -122,10 +122,25 @@ export interface Metric {
   value: string;
 }
 
+// What a step shows, whatever its title: comparisons pair the steps of two flows by kind.
+// A page has at most one step of each kind; "transition" leads from one page to the next.
+export type StepKind =
+  | "connection"
+  | "request"
+  | "ttfb"
+  | "critical"
+  | "secondary"
+  | "third-party"
+  | "fcp"
+  | "lcp"
+  | "loaded"
+  | "transition";
+
 export interface DiagramStep {
   // Index into Flow.pages / Flow.pageAnalyses. A transition step belongs to the
   // page it leads to, so the diagram already shows the destination topology.
   pageIndex: number;
+  kind: StepKind;
   title: string;
   description: string;
   // Milliseconds from the page origin at which the step's event happens

@@ -3,8 +3,9 @@ import type { Flow } from "@htv/core";
 
 export type Speed = 400 | 800 | 1400 | 2000;
 
-export interface DiagramState {
-  flow: Flow;
+/** Position and playback over a sequence of `total` steps. */
+export interface StepNavigation {
+  total: number;
   stepIndex: number;
   isPlaying: boolean;
   speed: Speed;
@@ -15,13 +16,19 @@ export interface DiagramState {
   setSpeed: (speed: Speed) => void;
 }
 
+export interface DiagramState extends StepNavigation {
+  flow: Flow;
+}
+
 export function useDiagramState(flow: Flow): DiagramState {
+  return { ...useStepNavigation(flow.steps.length), flow };
+}
+
+export function useStepNavigation(totalSteps: number): StepNavigation {
   const [stepIndex, setStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>(1400);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const totalSteps = flow.steps.length;
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -73,7 +80,7 @@ export function useDiagramState(flow: Flow): DiagramState {
   }, [isPlaying, stepIndex, speed, next, clearTimer]);
 
   return {
-    flow,
+    total: totalSteps,
     stepIndex,
     isPlaying,
     speed,

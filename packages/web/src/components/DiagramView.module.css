@@ -12,74 +12,6 @@
   min-height: 0;
 }
 
-/* Metric badges row */
-.badgeRow {
-  position: absolute;
-  top: 44px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: var(--space-sm);
-  pointer-events: none;
-}
-
-.badge {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: var(--fs-metric);
-  font-weight: 700;
-  font-family: var(--font-mono);
-  padding: 4px 12px;
-  border-radius: 4px;
-  border: 1.5px solid currentColor;
-  animation: badgePop 200ms ease;
-  transition: opacity 150ms ease;
-}
-
-.badgeLabel {
-  font-size: 12px;
-  font-weight: 400;
-  opacity: 0.75;
-  letter-spacing: 0.05em;
-}
-
-.badgeHidden {
-  visibility: hidden;
-}
-
-.badgeDim {
-  opacity: 0.45;
-}
-
-.badge_ttfb {
-  color: var(--color-yellow);
-  background: color-mix(in srgb, var(--color-yellow) 12%, transparent);
-}
-.badge_fcp {
-  color: var(--color-green);
-  background: color-mix(in srgb, var(--color-green) 12%, transparent);
-}
-.badge_lcp {
-  color: var(--color-orange);
-  background: color-mix(in srgb, var(--color-orange) 12%, transparent);
-}
-.badge_onload {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
-}
-
-@keyframes badgePop {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 /* Toolbar: a right-aligned row above the diagram (Hops, Export, Metrics, Cache). */
 .toolbar {
   display: flex;
@@ -124,7 +56,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .badge,
   .cacheBtn,
   .metricsBtn,
   .hopsBtn {
@@ -133,16 +64,8 @@
   }
 }
 
-/* Mobile: the diagram scales to the viewport; toolbar buttons become 44 px targets. */
+/* Mobile: toolbar buttons become 44 px targets. */
 @media (max-width: 640px) {
-  .badgeRow {
-    top: 60px;
-    width: calc(100% - 2 * var(--space-sm));
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--space-xs);
-  }
-
   .toolbar {
     gap: var(--space-xs);
   }

@@ -26,6 +26,34 @@ export function formatMs(ms: number | null | undefined): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
+export type DeltaUnit = "ms" | "bytes" | "count" | "ratio" | "score";
+
+const MINUS = "\u2212";
+const sign = (value: number) => (value > 0 ? "+" : value < 0 ? MINUS : "");
+
+/**
+ * Formats a signed difference (B − A) in the unit of its metric, with a "+" or a minus
+ * sign: "−300 ms", "+16 KB", "−2", "+45 pp" (ratios, in percentage points), "−0.004"
+ * (unitless scores such as CLS); "n/a" without a value.
+ */
+export function formatDelta(delta: number | null, unit: DeltaUnit): string {
+  if (delta === null) return "n/a";
+  const size = Math.abs(delta);
+  const body = {
+    ms: () => formatMs(size),
+    bytes: () => formatBytes(size),
+    count: () => String(Math.round(size)),
+    ratio: () => `${Math.round(size * 100)} pp`,
+    score: () => size.toFixed(3),
+  }[unit]();
+  return `${sign(delta)}${body}`;
+}
+
+/** Formats a percentage change, rounded: "−60%", "+12%"; empty without a value. */
+export function formatDeltaPct(pct: number | null): string {
+  return pct === null ? "" : `${sign(Math.round(pct))}${Math.abs(Math.round(pct))}%`;
+}
+
 const MAX_URL_LABEL = 36;
 
 /**

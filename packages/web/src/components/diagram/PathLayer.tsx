@@ -26,12 +26,14 @@ interface Props {
   pathDirections?: Partial<Record<PathId, Direction>>;
   historicalPaths?: Partial<Record<PathId, HistoricalPath>>;
   reducedMotion: boolean;
+  /** Prefixes the path and filter ids when several diagrams share a document. */
+  idPrefix?: string;
 }
 
 /** One blur-and-merge filter for every path: the glow takes the colour of the stroke. */
-export function GlowFilter() {
+export function GlowFilter({ idPrefix = "" }: { idPrefix?: string }) {
   return (
-    <filter id={GLOW_FILTER_ID}>
+    <filter id={`${idPrefix}${GLOW_FILTER_ID}`}>
       <feGaussianBlur stdDeviation="3" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
@@ -145,6 +147,7 @@ function PathGroup({
   pathDirections,
   historicalPaths,
   reducedMotion,
+  idPrefix = "",
 }: PathGroupProps) {
   // Every path to a third-party cluster takes the third-parties colour.
   const color =
@@ -180,7 +183,7 @@ function PathGroup({
     return (
       <g>
         <path
-          id={`path-${path.id}`}
+          id={`${idPrefix}path-${path.id}`}
           d={g.d}
           fill="none"
           stroke={color}
@@ -193,10 +196,10 @@ function PathGroup({
   }
 
   const direction = pathDirections?.[path.id];
-  const glow = `url(#${GLOW_FILTER_ID})`;
+  const glow = `url(#${idPrefix}${GLOW_FILTER_ID})`;
 
   if (!direction) {
-    const ref = `path-${path.id}`;
+    const ref = `${idPrefix}path-${path.id}`;
     return (
       <g>
         <path
@@ -225,7 +228,7 @@ function PathGroup({
 
   // Two lanes: the active direction glows, the opposite one stays dimmed.
   const isRequest = direction === "request";
-  const ref = `path-${path.id}-${isRequest ? "req" : "res"}`;
+  const ref = `${idPrefix}path-${path.id}-${isRequest ? "req" : "res"}`;
   return (
     <g>
       <path

@@ -8,7 +8,7 @@ import {
   renameSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve, dirname, join, extname } from "node:path";
+import { resolve, dirname, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs as nodeParseArgs } from "node:util";
 import {
@@ -20,7 +20,7 @@ import {
   isClientRegion,
   CLIENT_REGIONS,
 } from "@htv/core";
-import type { ClientRegion, PageFlow } from "@htv/core";
+import type { ClientRegion, Flow, PageFlow } from "@htv/core";
 import { parseTraceFile, readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
 
@@ -34,10 +34,21 @@ export interface PageArg {
   select?: string;
 }
 
+/** The recording a comparison report puts below the main flow (B). */
+export interface CompareArg {
+  har: string;
+  trace?: string;
+  select?: string;
+}
+
 export interface Args {
   pages: PageArg[];
   output: string;
   bundle: boolean;
+  /** Compares the two pages of the flow: the first is A, the second B. */
+  compare?: boolean;
+  /** Compares the flow (A) with another recording (B). */
+  compareWith?: CompareArg;
   listPages?: boolean;
   region?: ClientRegion; // undefined when --region is absent
   help?: boolean;
@@ -58,6 +69,10 @@ export function parseArgs(argv: string[]): Args {
       trace: { type: "string", multiple: true },
       select: { type: "string", multiple: true },
       "list-pages": { type: "boolean" },
+      compare: { type: "boolean" },
+      "compare-with": { type: "string" },
+      "compare-trace": { type: "string" },
+      "compare-select": { type: "string" },
       output: { type: "string", short: "o" },
       bundle: { type: "boolean" },
       region: { type: "string" },
@@ -76,6 +91,9 @@ export function parseArgs(argv: string[]): Args {
   let help = false;
   let version = false;
   let region: ClientRegion | undefined;
+  let compare = false;
+  let compareWith: CompareArg | undefined;
+  const compareArg = () => (compareWith ??= { har: "" });
   const lastPage = () => {
     if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
     return pages[pages.length - 1];
@@ -100,6 +118,18 @@ export function parseArgs(argv: string[]): Args {
       case "list-pages":
         listPages = true;
         break;
+      case "compare":
+        compare = true;
+        break;
+      case "compare-with":
+        compareArg().har = value;
+        break;
+      case "compare-trace":
+        compareArg().trace = value;
+        break;
+      case "compare-select":
+        compareArg().select = value;
+        break;
       case "output":
         output = value;
         break;
@@ -123,6 +153,8 @@ export function parseArgs(argv: string[]): Args {
     output,
     bundle,
     ...(listPages ? { listPages } : {}),
+    ...(compare ? { compare } : {}),
+    ...(compareWith ? { compareWith } : {}),
     ...(region ? { region } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
@@ -193,6 +225,16 @@ Options:
                       separated list of ids, or text/regex matched against id,
                       title and URL ("Run 1, First"). Default: all pages.
   --list-pages        Print the pages (id, title, entries) of each --har and exit.
+  --compare           Compare the two pages of the flow instead of chaining them:
+                      the first page is A (top), the second B (bottom). The flow
+                      must have exactly two pages, e.g. a WebPageTest first view
+                      and repeat view picked with --select.
+  --compare-with <file>
+                      Compare the flow (A, one page) with another HAR (B).
+  --compare-trace <file>
+                      Chrome trace for the --compare-with HAR.
+  --compare-select <value>
+                      Page of a multi-page --compare-with HAR, as --select.
   -o, --output <path> Directory where the report is written. With --bundle it
                       may also be a .html file path.
   --bundle            Inline all assets (CSS, JS, fonts) into a single
@@ -206,6 +248,10 @@ Example (two pages):
   htv --page "Home" --har home.har --trace home.json.gz \
       --page "Checkout" --har checkout.har \
       --output report/ --bundle
+
+Example (WebPageTest first view vs repeat view, i.e. without and with cache):
+  htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare \
+      --output compare.html --bundle
 
 Without --bundle the report loads ES modules from assets/, which browsers
 block over file://; serve the folder over HTTP (npx serve report/) or use
@@ -222,6 +268,10 @@ export function validateArgs(args: Args): string | null {
     return missing ? `Missing --har for page "${missing.name}"` : null;
   }
   if (args.pages.length === 0 || !args.output) return "";
+  if (args.compare && args.compareWith) return "Use either --compare or --compare-with, not both";
+  if (args.compareWith && !args.compareWith.har) {
+    return "--compare-trace and --compare-select need --compare-with";
+  }
   if (isHtmlPath(args.output) && !args.bundle) {
     return "--output must be a directory unless --bundle is set";
   }
@@ -234,7 +284,7 @@ export function validateArgs(args: Args): string | null {
 /** Describes the pages of each --har: id, entries and title. */
 export async function listPagesReport(args: Args): Promise<string> {
   const lines: string[] = [];
-  for (const p of args.pages) {
+  for (const p of args.compareWith?.har ? [...args.pages, args.compareWith] : args.pages) {
     const pages = listHarPages(parseHarPagesJson(await readTextFile(resolve(p.har))));
     lines.push(`${p.har} (${pages.length} page${pages.length === 1 ? "" : "s"})`);
     for (const page of pages) {
@@ -244,26 +294,61 @@ export async function listPagesReport(args: Args): Promise<string> {
   return lines.join("\n");
 }
 
-export async function generateReport(args: Args): Promise<string> {
-  const pageFlows: PageFlow[] = [];
-  for (const p of args.pages) {
-    const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
-    const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
-    const expanded = expandPageFlows({
-      name: p.name,
-      har,
-      select,
-      trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
-    });
-    if (har.length > 1) {
-      console.error(
-        `Note: ${p.har} contains ${har.length} pages; expanded into ${expanded.length} flow page${expanded.length === 1 ? "" : "s"}.`
+/**
+ * Reads a HAR (and its trace) into flow pages, keeping the selected pages of a multi-page HAR.
+ * Without a page name, a single-page HAR is named after its file and the pages of a multi-page
+ * HAR after their titles.
+ */
+async function readPageFlows(p: PageArg | CompareArg): Promise<PageFlow[]> {
+  const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
+  const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
+  const fileName = basename(p.har).replace(/\.har(\.gz)?$/i, "");
+  const expanded = expandPageFlows({
+    name: "name" in p ? p.name : har.length === 1 ? fileName : undefined,
+    har,
+    select,
+    trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
+  });
+  if (har.length > 1) {
+    console.error(
+      `Note: ${p.har} contains ${har.length} pages; expanded into ${expanded.length} flow page${expanded.length === 1 ? "" : "s"}.`
+    );
+  }
+  return expanded;
+}
+
+/** The two single-page sides of a comparison, or null without --compare/--compare-with. */
+async function comparisonSides(
+  pageFlows: PageFlow[],
+  args: Args
+): Promise<[PageFlow, PageFlow] | null> {
+  if (args.compare) {
+    if (pageFlows.length !== 2) {
+      throw new Error(
+        `--compare needs exactly two pages; got ${pageFlows.length}. Pick two with --select (e.g. --select page_1_0_1,page_1_1_1) or pass two --page.`
       );
     }
-    pageFlows.push(...expanded);
+    return [pageFlows[0], pageFlows[1]];
   }
+  if (!args.compareWith) return null;
+  const other = await readPageFlows(args.compareWith);
+  if (pageFlows.length !== 1 || other.length !== 1) {
+    const side = pageFlows.length !== 1 ? `A has ${pageFlows.length}` : `B has ${other.length}`;
+    throw new Error(
+      `--compare-with needs one page on each side; ${side}. Pick one with --select or --compare-select.`
+    );
+  }
+  return [pageFlows[0], other[0]];
+}
 
-  const flow = generateFlow(pageFlows, { clientRegion: args.region ?? "default" });
+export async function generateReport(args: Args): Promise<string> {
+  const pageFlows: PageFlow[] = [];
+  for (const p of args.pages) pageFlows.push(...(await readPageFlows(p)));
+
+  const options = { clientRegion: args.region ?? "default" } as const;
+  const sides = await comparisonSides(pageFlows, args);
+  const flow = generateFlow(sides ? [sides[0]] : pageFlows, options);
+  const compare = sides ? generateFlow([sides[1]], options) : undefined;
 
   const suggestion = flow.hints.suggestedClientRegion;
   if (suggestion && args.region === undefined) {
@@ -276,14 +361,15 @@ export async function generateReport(args: Args): Promise<string> {
   const singleFile = isHtmlPath(target);
   const outputDir = singleFile ? mkdtempSync(join(tmpdir(), "htv-report-")) : target;
   try {
-    return writeReport(flow, outputDir, args.bundle, singleFile ? target : undefined);
+    return writeReport(flow, compare, outputDir, args.bundle, singleFile ? target : undefined);
   } finally {
     if (singleFile) rmSync(outputDir, { recursive: true, force: true });
   }
 }
 
 function writeReport(
-  flow: ReturnType<typeof generateFlow>,
+  flow: Flow,
+  compare: Flow | undefined,
   outputDir: string,
   bundle: boolean,
   singleFile?: string
@@ -295,7 +381,7 @@ function writeReport(
 
   const indexPath = join(outputDir, "index.html");
   let html = readFileSync(indexPath, "utf-8");
-  const injection = buildFlowInjection(flow);
+  const injection = buildFlowInjection(flow, compare);
   // Function replacer: a string replacement would interpret "$&", "$'" etc. found in the payload.
   html = html.replace("</head>", () => `${injection}\n</head>`);
   writeFileSync(indexPath, html);

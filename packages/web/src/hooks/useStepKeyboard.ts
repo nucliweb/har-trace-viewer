@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
-import type { DiagramState } from "./useDiagramState.js";
+import type { StepNavigation } from "./useDiagramState.js";
 
-type Actions = Pick<DiagramState, "next" | "prev" | "goTo" | "togglePlay"> & { total: number };
+type Actions = Pick<StepNavigation, "next" | "prev" | "goTo" | "togglePlay" | "total">;
 
 const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditable='false'])";
 
@@ -44,10 +44,9 @@ export function stepKeyAction(event: KeyboardEvent, actions: Actions): boolean {
 
 export function useStepKeyboard(
   containerRef: RefObject<HTMLElement | null>,
-  state: DiagramState
+  state: StepNavigation
 ): void {
-  const { next, prev, goTo, togglePlay, flow } = state;
-  const total = flow.steps.length;
+  const { next, prev, goTo, togglePlay, total } = state;
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (stepKeyAction(event, { next, prev, goTo, togglePlay, total })) event.preventDefault();
