@@ -181,6 +181,32 @@ describe("CompareView", () => {
       ).toHaveTextContent("1");
     });
 
+    it("rates each host's TTFB on the URLs both flows requested", async () => {
+      await openDeltas();
+
+      const table = screen.getByRole("table", { name: "Host deltas" });
+      expect(
+        within(table)
+          .getAllByRole("columnheader")
+          .map((th) => th.textContent)
+      ).toEqual([
+        "Host",
+        "Requests A",
+        "Requests B",
+        "Δ",
+        "Avg TTFB A",
+        "Avg TTFB B",
+        "Same URLs",
+        "Δ TTFB",
+        "Provider",
+      ]);
+      // Only the document reached example.com in both flows: same URL, same TTFB.
+      const own = within(table).getByRole("row", { name: /^example\.com/ });
+      expect(cellTexts(own).slice(5, 7)).toEqual(["1", "0 ms"]);
+      const thirdParty = within(table).getByRole("row", { name: /^cdn\.third\.com/ });
+      expect(cellTexts(thirdParty).slice(4, 7)).toEqual(["—", "0", ""]);
+    });
+
     it("closes with its close button", async () => {
       const user = await openDeltas();
       await user.click(screen.getByRole("button", { name: "Close deltas" }));

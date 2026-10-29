@@ -1,6 +1,7 @@
 import type { DiagramStep, Flow, StepKind } from "../types.js";
 import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
+import { getHostname } from "../utils/domain.js";
 import { summarizeFlowMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
 
@@ -40,10 +41,22 @@ export interface MetricDelta {
   rating: DeltaRating;
 }
 
+/** TTFB of a host over the requests both flows made to the same URL, the k-th with the k-th. */
+export interface SameUrlTtfb {
+  /** Requests paired. */
+  count: number;
+  avgTtfbA: number;
+  avgTtfbB: number;
+  /** avgTtfbB − avgTtfbA. */
+  delta: number;
+}
+
 export interface HopPair {
   host: string;
   a?: HostHop;
   b?: HostHop;
+  /** Absent when the flows share no URL on the host. */
+  sameUrls?: SameUrlTtfb;
 }
 
 /** Something that changes how a delta reads, with the metrics (or the hosts table) it touches. */
@@ -204,6 +217,41 @@ const firstPageHops = (flow: Flow): HostHop[] => {
   return analyzeHops(har, har.documentEntry.url);
 };
 
+// TTFBs of the first page's network requests by host, then by URL, in request order.
+function ttfbsByHostAndUrl(flow: Flow): Map<string, Map<string, number[]>> {
+  const byHost = new Map<string, Map<string, number[]>>();
+  for (const entry of flow.pages[0].har.entries) {
+    const host = getHostname(entry.url);
+    if (host === null || entry.fromCache !== false) continue;
+    const byUrl = byHost.get(host) ?? new Map<string, number[]>();
+    byUrl.set(entry.url, [...(byUrl.get(entry.url) ?? []), entry.ttfb]);
+    byHost.set(host, byUrl);
+  }
+  return byHost;
+}
+
+function sameUrlTtfb(
+  urlsA: Map<string, number[]> | undefined,
+  urlsB: Map<string, number[]> | undefined
+): SameUrlTtfb | undefined {
+  let count = 0;
+  let sumA = 0;
+  let sumB = 0;
+  for (const [url, ttfbsA] of urlsA ?? []) {
+    const ttfbsB = urlsB?.get(url) ?? [];
+    const paired = Math.min(ttfbsA.length, ttfbsB.length);
+    for (let i = 0; i < paired; i++) {
+      sumA += ttfbsA[i];
+      sumB += ttfbsB[i];
+    }
+    count += paired;
+  }
+  if (count === 0) return undefined;
+  const avgTtfbA = sumA / count;
+  const avgTtfbB = sumB / count;
+  return { count, avgTtfbA, avgTtfbB, delta: avgTtfbB - avgTtfbA };
+}
+
 function compareHops(a: Flow, b: Flow): HopPair[] {
   const pairs = new Map<string, HopPair>();
   for (const hop of firstPageHops(a)) pairs.set(hop.host, { host: hop.host, a: hop });
@@ -212,7 +260,12 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
     if (pair) pair.b = hop;
     else pairs.set(hop.host, { host: hop.host, b: hop });
   }
-  return [...pairs.values()];
+  const urlsA = ttfbsByHostAndUrl(a);
+  const urlsB = ttfbsByHostAndUrl(b);
+  return [...pairs.values()].map((pair) => {
+    const sameUrls = sameUrlTtfb(urlsA.get(pair.host), urlsB.get(pair.host));
+    return sameUrls ? { ...pair, sameUrls } : pair;
+  });
 }
 
 // Share of the busier flow's network requests the other flow may lack before ratios and host
@@ -233,7 +286,7 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
     caveats.push({
       id: "request-mix",
       affects: ["cdnHitRatio", "hosts"],
-      text: `B made ${Math.abs(difference)} ${difference < 0 ? "fewer" : "more"} network requests than A (${requestsA} → ${requestsB}): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers.`,
+      text: `B made ${Math.abs(difference)} ${difference < 0 ? "fewer" : "more"} network requests than A (${requestsA} → ${requestsB}): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.`,
     });
   }
   for (const [side, flow] of [

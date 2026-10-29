@@ -1,4 +1,4 @@
-/* Wider than the metrics summary: the hosts table has eight columns. Chrome, rating colours
+/* Wider than the metrics summary: the hosts table has nine columns. Chrome, rating colours
    and tables come from MetricsSummary.module.css and HopsPanel.module.css. */
 .panel {
   width: min(1040px, 100%);

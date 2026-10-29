@@ -241,6 +241,47 @@ describe("compareFlows — metrics", () => {
   });
 });
 
+describe("compareFlows — TTFB of the URLs both flows requested", () => {
+  const at = (url: string, ttfb: number, extra: Partial<ReturnType<typeof makeEntry>> = {}) =>
+    makeEntry({ url: `https://static.site.net/${url}`, ttfb, ...extra });
+  const hostPair = (a: ReturnType<typeof makeEntry>[], b: ReturnType<typeof makeEntry>[]) =>
+    compareFlows(
+      generateFlow([{ name: "A", har: makeHar(a) }]),
+      generateFlow([{ name: "B", har: makeHar(b) }])
+    ).hops.find((h) => h.host === "static.site.net")!;
+
+  it("averages the TTFB of each side over the URLs both requested only", () => {
+    const pair = hostPair(
+      [at("x.js", 100), at("y.js", 200), at("cached-in-b.js", 30)],
+      [at("x.js", 150), at("y.js", 250), at("new-in-b.js", 900)]
+    );
+
+    expect(pair.sameUrls).toEqual({ count: 2, avgTtfbA: 150, avgTtfbB: 200, delta: 50 });
+  });
+
+  it("pairs a repeated URL occurrence by occurrence", () => {
+    const pair = hostPair(
+      [at("beacon", 100), at("beacon", 300), at("beacon", 500)],
+      [at("beacon", 200), at("beacon", 400)]
+    );
+
+    expect(pair.sameUrls).toEqual({ count: 2, avgTtfbA: 200, avgTtfbB: 300, delta: 100 });
+  });
+
+  it("leaves browser-cache hits out, since they never reached the host", () => {
+    const pair = hostPair(
+      [at("x.js", 100), at("y.js", 100)],
+      [at("x.js", 120), at("y.js", 0, { fromCache: "disk" })]
+    );
+
+    expect(pair.sameUrls).toEqual({ count: 1, avgTtfbA: 100, avgTtfbB: 120, delta: 20 });
+  });
+
+  it("has no same-URL TTFB when the flows share no URL on the host", () => {
+    expect(hostPair([at("a.js", 100)], [at("b.js", 100)]).sameUrls).toBeUndefined();
+  });
+});
+
 describe("compareFlows — hops", () => {
   it("joins the hosts of both flows, A's busiest first and B-only hosts last", () => {
     const b = generateFlow([
@@ -345,7 +386,7 @@ describe("compareFlows — caveats", () => {
       {
         id: "request-mix",
         affects: ["cdnHitRatio", "hosts"],
-        text: "B made 4 fewer network requests than A (5 → 1): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers.",
+        text: "B made 4 fewer network requests than A (5 → 1): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.",
       },
     ]);
   });

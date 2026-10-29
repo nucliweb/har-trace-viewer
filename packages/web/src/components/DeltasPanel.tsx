@@ -78,9 +78,10 @@ export function DeltaCell({ text, rating }: { text: string; rating: DeltaRating 
 }
 
 function HopRow({ pair }: { pair: HopPair }) {
-  const { a, b } = pair;
+  const { a, b, sameUrls } = pair;
   const requests = (b?.requests ?? 0) - (a?.requests ?? 0);
-  const ttfb = a && b ? b.avgTtfbMs - a.avgTtfbMs : null;
+  // Over the URLs both flows requested: averages over all requests mix different resources.
+  const ttfb = sameUrls ? Math.round(sameUrls.delta) : null;
   const provider = (b ?? a)!.provider;
   return (
     <tr>
@@ -96,10 +97,17 @@ function HopRow({ pair }: { pair: HopPair }) {
       <DeltaCell text={formatDelta(requests, "count")} rating={rateDelta(requests)} />
       <td className={hopsStyles.num}>{a ? formatMs(a.avgTtfbMs) : "—"}</td>
       <td className={hopsStyles.num}>{b ? formatMs(b.avgTtfbMs) : "—"}</td>
-      <DeltaCell
-        text={ttfb === null ? "" : formatDelta(Math.round(ttfb), "ms")}
-        rating={rateDelta(ttfb === null ? null : Math.round(ttfb))}
-      />
+      <td
+        className={hopsStyles.num}
+        title={
+          sameUrls
+            ? `Avg TTFB over these requests: ${formatMs(sameUrls.avgTtfbA)} → ${formatMs(sameUrls.avgTtfbB)}`
+            : undefined
+        }
+      >
+        {sameUrls?.count ?? 0}
+      </td>
+      <DeltaCell text={ttfb === null ? "" : formatDelta(ttfb, "ms")} rating={rateDelta(ttfb)} />
       <td className={styles.left}>{(b ?? a)!.providerName}</td>
     </tr>
   );
@@ -206,7 +214,12 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
               <th scope="col">Δ</th>
               <th scope="col">Avg TTFB A</th>
               <th scope="col">Avg TTFB B</th>
-              <th scope="col">Δ</th>
+              <th scope="col" title="Requests both flows made to the same URL">
+                Same URLs
+              </th>
+              <th scope="col" title="B − A average TTFB over the same URLs">
+                Δ TTFB
+              </th>
               <th scope="col" className={styles.left}>
                 Provider
               </th>
