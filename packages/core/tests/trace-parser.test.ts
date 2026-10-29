@@ -7,8 +7,10 @@ import { parseTraceFile } from "../src/parsers/trace-parser-node.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const fixturePath = join(__dirname, "fixtures/webperf-snippets.trace.fixture.json");
-const gzPath =
-  "/Users/joanleon/projects/har-trace-viewer/fixtures/WebPerf-Snippets-Disable-Cache_Trace-20260519T123602.json.gz";
+const gzPath = join(
+  __dirname,
+  "../../../fixtures/WebPerf-Snippets-Disable-Cache_Trace-20260519T123602.json.gz"
+);
 
 describe("parseTrace", () => {
   it("extracts navigationStart", () => {
