@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -9,7 +11,17 @@ afterEach(() => {
   delete window.__HTV_COMPARE__;
 });
 
+// The product version: the published CLI package, which bundles this app into its reports.
+const productVersion = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "../../cli/package.json"), "utf8")
+).version;
+
 describe("App", () => {
+  it("shows the product version in the header", () => {
+    render(<App />);
+    expect(screen.getByRole("banner")).toHaveTextContent(`v${productVersion}`);
+  });
+
   it("shows the builder when no flow is embedded", () => {
     render(<App />);
     expect(screen.getByText("Build your flow")).toBeInTheDocument();

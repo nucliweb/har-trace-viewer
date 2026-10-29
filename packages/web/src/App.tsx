@@ -72,8 +72,13 @@ export function App() {
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <div className={styles.logo}>
-          htv <span>HAR TRACE VIEWER</span>
+        <div className={styles.brand}>
+          <div className={styles.logo}>
+            htv <span>HAR TRACE VIEWER</span>
+          </div>
+          <span className={styles.version} title="HTV version">
+            v{__HTV_VERSION__}
+          </span>
         </div>
         <div className={styles.headerActions}>
           {flow && (
