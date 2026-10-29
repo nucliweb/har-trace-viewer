@@ -67,7 +67,8 @@ export interface ParsedTrace {
 // ── Diagram types ─────────────────────────────────────────────────────────────
 
 // What a node is, whatever its id: the diagram draws, colours and places nodes by kind.
-export type NodeKind = "browser" | "gfw" | "edge" | "origin" | "third-parties";
+// "cache" is the browser's own HTTP cache (memory and disk), next to the browser.
+export type NodeKind = "browser" | "cache" | "gfw" | "edge" | "origin" | "third-parties";
 
 // A page whose third parties fall in several clusters gets one node per cluster,
 // `third-parties:<cluster id>`, instead of the single "third-parties" node.
@@ -106,6 +107,7 @@ export type PathId =
   | "edge-origin"
   | "browser-origin"
   | "browser-third-parties"
+  | "browser-cache"
   | ThirdPartyClusterPathId;
 
 // Browser → one third-party cluster node: `browser-third-parties:<cluster id>`.

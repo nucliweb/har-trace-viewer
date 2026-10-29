@@ -12,6 +12,19 @@
   min-height: 0;
 }
 
+.diagram {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Beside the cache list (CacheSidebar, 280 px on the left) on screens wide enough for both;
+   narrower screens keep the whole width for the diagram and let the list cover it. */
+@media (min-width: 900px) {
+  .diagramBesideCache {
+    padding-left: 280px;
+  }
+}
+
 /* Toolbar: a right-aligned row above the diagram (Hops, Export, Metrics, Cache). */
 .toolbar {
   display: flex;

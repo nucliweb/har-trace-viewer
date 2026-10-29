@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
-import { makeFlow } from "./fixtures.js";
+import { makeCompareFlows, makeFlow } from "./fixtures.js";
 
 const flow = makeFlow();
 const stepOf = (type: string) => flow.steps.findIndex((s) => s.badge?.type === type);
@@ -99,5 +99,26 @@ describe("DiagramView", () => {
       expect(screen.queryByText("First-party")).not.toBeInTheDocument();
       expect(screen.getByText("Domains")).toBeInTheDocument();
     });
+  });
+});
+
+describe("DiagramView — cache list beside the diagram", () => {
+  const [, repeatView] = makeCompareFlows();
+  // The cache list docks on the left: the diagram moves aside so the browser and its cache
+  // stay in view.
+  const diagram = () => document.querySelector("#diagram-svg")!.parentElement!;
+
+  it("moves the diagram aside while a step lists cache hits, and back afterwards", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={repeatView} />);
+    const critical = repeatView.steps.findIndex((s) => s.kind === "critical");
+    expect(repeatView.steps[critical].cacheResourceRefs?.length).toBeGreaterThan(0);
+
+    expect(diagram().className).not.toContain("diagramBesideCache");
+    await goTo(user, critical);
+    expect(screen.getByText("1 resources")).toBeInTheDocument();
+    expect(diagram().className).toContain("diagramBesideCache");
+    await goTo(user, 0);
+    expect(diagram().className).not.toContain("diagramBesideCache");
   });
 });

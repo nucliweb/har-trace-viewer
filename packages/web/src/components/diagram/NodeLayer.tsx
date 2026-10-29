@@ -6,6 +6,7 @@ import type { NodePosition } from "./layout.js";
 
 export const NODE_COLORS: Record<NodeKind, string> = {
   browser: "var(--color-node-browser)",
+  cache: "var(--color-node-browser)",
   gfw: "var(--color-red)",
   edge: "var(--color-node-edge)",
   origin: "var(--color-node-origin)",
@@ -14,6 +15,7 @@ export const NODE_COLORS: Record<NodeKind, string> = {
 
 const NODE_LABELS: Record<NodeKind, string> = {
   browser: "Browser",
+  cache: "Browser cache",
   gfw: "GFW checkpoint",
   edge: "Edge / CDN",
   origin: "Origin Server",
@@ -30,14 +32,18 @@ interface Props {
 
 function statsText(node: DiagramNode): string {
   const stats = node.resourceStats!;
+  // Flows older than the cache node counted the cache hits on the browser.
   if (node.id === "browser") return `${stats.count} cached`;
   const base = `${stats.count} ${stats.label ?? "req"}`;
   return stats.avgMs !== undefined ? `${base} · avg ${Math.round(stats.avgMs)}ms` : base;
 }
 
-// Caption baselines below the node centre: under the glyph, or beside a stacked cluster.
+// Caption baselines below the node centre: under the glyph, or beside a stacked cluster
+// (and the narrower browser cache glyph).
 const CAPTION_BELOW = { gfw: 28, other: 34 };
-const CAPTION_RIGHT = { dx: 32, firstY: -9 };
+const CAPTION_RIGHT = { dx: 32, cacheDx: 18, firstY: -9 };
+// Smaller node names: the GFW checkpoint, and the browser cache that fits in its band.
+const SMALL_NAMES = new Set<NodeKind>(["gfw", "cache"]);
 
 export function NodeLayer({ nodes, positions, activeNodes }: Props) {
   return (
@@ -52,7 +58,11 @@ export function NodeLayer({ nodes, positions, activeNodes }: Props) {
         // The edge and every third-party cluster are named after their provider.
         const named = node.id === "edge" || kind !== node.id;
         const caption = pos.captionRight
-          ? { x: x + CAPTION_RIGHT.dx, y: y + CAPTION_RIGHT.firstY, anchor: "start" as const }
+          ? {
+              x: x + (kind === "cache" ? CAPTION_RIGHT.cacheDx : CAPTION_RIGHT.dx),
+              y: y + CAPTION_RIGHT.firstY,
+              anchor: "start" as const,
+            }
           : {
               x,
               y: y + (node.id === "gfw" ? CAPTION_BELOW.gfw : CAPTION_BELOW.other),
@@ -73,7 +83,7 @@ export function NodeLayer({ nodes, positions, activeNodes }: Props) {
               y={caption.y}
               textAnchor={caption.anchor}
               fill={color}
-              fontSize={node.id === "gfw" ? 12 : 13}
+              fontSize={SMALL_NAMES.has(kind) ? 12 : 13}
               fontFamily="var(--font-mono)"
             >
               {named ? node.label : NODE_LABELS[kind]}

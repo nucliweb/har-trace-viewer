@@ -37,6 +37,25 @@ function Browser({ color, active }: GlyphProps) {
   );
 }
 
+// Stacked discs: the browser's HTTP cache.
+function Cache({ color, active }: GlyphProps) {
+  const disc = (y: number) => `M -11,${y} a 11,4 0 0 0 22,0`;
+  return (
+    <>
+      <path
+        d="M -11,-9 L -11,9 a 11,4 0 0 0 22,0 L 11,-9"
+        fill="var(--color-bg)"
+        stroke={color}
+        strokeWidth={1.5}
+      />
+      <ellipse cy={-9} rx={11} ry={4} fill={tint(color, 15)} stroke={color} strokeWidth={1.5} />
+      <path d={disc(-3)} fill="none" stroke={color} {...rule} />
+      <path d={disc(3)} fill="none" stroke={color} {...rule} />
+      {active && <rect x={-15} y={-17} width={30} height={34} rx={6} stroke={color} {...halo} />}
+    </>
+  );
+}
+
 function Gfw({ color, active }: GlyphProps) {
   return (
     <>
@@ -118,6 +137,7 @@ function ThirdParties({ color, active }: GlyphProps) {
 
 const GLYPHS: Record<NodeKind, (props: GlyphProps) => JSX.Element> = {
   browser: Browser,
+  cache: Cache,
   gfw: Gfw,
   edge: Edge,
   origin: Origin,

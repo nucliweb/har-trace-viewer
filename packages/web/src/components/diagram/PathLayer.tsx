@@ -14,6 +14,7 @@ const PATH_COLORS: Partial<Record<PathId, string>> = {
   "edge-origin": "var(--color-node-origin)",
   "browser-origin": "var(--color-node-origin)",
   "browser-third-parties": "var(--color-node-third-parties)",
+  "browser-cache": "var(--color-node-browser)",
 };
 
 type Direction = "request" | "response";
@@ -30,10 +31,21 @@ interface Props {
   idPrefix?: string;
 }
 
-/** One blur-and-merge filter for every path: the glow takes the colour of the stroke. */
+/**
+ * One blur-and-merge filter for every path: the glow takes the colour of the stroke. Its region
+ * is the whole diagram: one relative to the path's bounding box is empty for a straight
+ * horizontal or vertical path (zero height or width), which would hide the path altogether.
+ */
 export function GlowFilter({ idPrefix = "" }: { idPrefix?: string }) {
   return (
-    <filter id={`${idPrefix}${GLOW_FILTER_ID}`}>
+    <filter
+      id={`${idPrefix}${GLOW_FILTER_ID}`}
+      filterUnits="userSpaceOnUse"
+      x="0"
+      y="0"
+      width="100%"
+      height="100%"
+    >
       <feGaussianBlur stdDeviation="3" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />

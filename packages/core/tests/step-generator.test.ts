@@ -349,22 +349,22 @@ describe("generateFlow — node resourceStats", () => {
     };
   }
 
-  it("browser node gets resourceStats when browser cache hits exist", () => {
+  it("cache node counts the browser cache hits; the browser node carries no stats", () => {
     const cached = makeEntry({ fromCache: "disk" });
     const network = makeEntry({ url: "https://example.com/b.css", fromCache: false });
     const flow = generateFlow([{ name: "Page", har: makeHar([cached, network]) }]);
 
-    const browser = flow.nodes.find((n) => n.id === "browser")!;
-    expect(browser.resourceStats?.count).toBe(1);
-    expect(browser.resourceStats?.avgMs).toBeUndefined();
+    const cache = flow.nodes.find((n) => n.id === "cache")!;
+    expect(cache.resourceStats).toEqual({ count: 1, label: "from cache" });
+    expect(flow.nodes.find((n) => n.id === "browser")!.resourceStats).toBeUndefined();
   });
 
-  it("browser node has no resourceStats when no cache hits", () => {
+  it("cache node has no resourceStats when no cache hits", () => {
     const network = makeEntry({ fromCache: false });
     const flow = generateFlow([{ name: "Page", har: makeHar([network]) }]);
 
-    const browser = flow.nodes.find((n) => n.id === "browser")!;
-    expect(browser.resourceStats).toBeUndefined();
+    expect(flow.nodes.find((n) => n.id === "cache")!.resourceStats).toBeUndefined();
+    expect(flow.nodes.find((n) => n.id === "browser")!.resourceStats).toBeUndefined();
   });
 
   it("edge node gets CDN hit stats when CDN is present", () => {
@@ -1534,5 +1534,249 @@ describe("step kinds", () => {
     expect(stepKindFromTitle("Something else", "lcp")).toBe("lcp");
     expect(stepKindFromTitle("Something else", "onload")).toBe("loaded");
     expect(stepKindFromTitle("Something else")).toBe("secondary");
+  });
+});
+
+describe("generateFlow — browser cache node", () => {
+  const cachedImage = (n: number, fromCache: HarEntry["fromCache"]) =>
+    makeSyntheticEntry({
+      url: `https://example.com/cached-${n}.png`,
+      startTime: 120 + n,
+      mimeType: "image/png",
+      resourceType: "image",
+      priority: "Low",
+      fromCache,
+    });
+  const analyzeEntries = (entries: HarEntry[]) => {
+    const flow = generateFlow([{ name: "Page", har: makeHar(entries) }]);
+    const step = (kind: DiagramStep["kind"]) => flow.steps.find((s) => s.kind === kind)!;
+    return { flow, analysis: flow.pageAnalyses[0], step };
+  };
+
+  it("keeps the cache node absent, without a path, when nothing came from the browser cache", () => {
+    const { flow, analysis } = analyzeEntries([criticalCss(100), secondaryImage(120)]);
+
+    expect(analysis.nodes.find((n) => n.id === "cache")?.present).toBe(false);
+    expect(analysis.paths.map((p) => p.id)).not.toContain("browser-cache");
+    for (const step of flow.steps) {
+      expect(step.activeNodes).not.toContain("cache");
+      expect(step.activePaths).not.toContain("browser-cache");
+    }
+  });
+
+  it("adds the cache node and its path from the browser when the page used the cache", () => {
+    const { analysis } = analyzeEntries([
+      criticalCss(100),
+      cachedImage(1, "memory"),
+      cachedImage(2, "memory"),
+    ]);
+
+    expect(analysis.nodes.find((n) => n.id === "cache")).toEqual({
+      id: "cache",
+      label: "Browser cache",
+      subLabel: "memory",
+      present: true,
+      region: "client",
+      resourceStats: { count: 2, label: "from cache" },
+    });
+    expect(analysis.paths).toContainEqual({ id: "browser-cache", from: "browser", to: "cache" });
+    // The cache hits are counted on the cache node only.
+    expect(analysis.nodes.find((n) => n.id === "browser")?.resourceStats).toBeUndefined();
+  });
+
+  it("names the stores the page read from", () => {
+    const subLabel = (entries: HarEntry[]) =>
+      analyzeEntries(entries).analysis.nodes.find((n) => n.id === "cache")?.subLabel;
+
+    expect(subLabel([cachedImage(1, "disk")])).toBe("disk");
+    expect(subLabel([cachedImage(1, "memory"), cachedImage(2, "disk")])).toBe("memory + disk");
+  });
+
+  it("activates the cache hop on the steps that read from the cache", () => {
+    const { step } = analyzeEntries([
+      criticalCss(100),
+      secondaryImage(110),
+      cachedImage(1, "memory"),
+      cachedImage(2, "memory"),
+    ]);
+    const secondary = step("secondary");
+
+    expect(secondary.activeNodes).toContain("cache");
+    expect(secondary.activePaths).toContain("browser-cache");
+    expect(secondary.pathTimings?.["browser-cache"]).toBe("2 from cache");
+    expect(secondary.pathDirections?.["browser-cache"]).toBe("response");
+    expect(step("critical").activeNodes).not.toContain("cache");
+    expect(step("critical").activePaths).not.toContain("browser-cache");
+  });
+
+  it("splits the timing by store when a step read from both", () => {
+    const { step } = analyzeEntries([
+      secondaryImage(110),
+      cachedImage(1, "memory"),
+      cachedImage(2, "memory"),
+      cachedImage(3, "disk"),
+    ]);
+
+    expect(step("secondary").pathTimings?.["browser-cache"]).toBe("2 memory · 1 disk");
+  });
+
+  it("lights only the cache hop for a step served entirely from the cache", () => {
+    const { step } = analyzeEntries([criticalCss(100), cachedImage(1, "memory")]);
+    const secondary = step("secondary");
+
+    expect(secondary.activeNodes).toEqual(["browser", "cache"]);
+    expect(secondary.activePaths).toEqual(["browser-cache"]);
+  });
+
+  it("activates the cache hop on the third-party step for cached third parties", () => {
+    const cachedTag = makeSyntheticEntry({
+      ...thirdPartyScript(130),
+      fromCache: "disk",
+    });
+    const { step } = analyzeEntries([thirdPartyScript(120), cachedTag]);
+    const thirdParty = step("third-party");
+
+    expect(thirdParty.activePaths).toEqual(["browser-third-parties", "browser-cache"]);
+    expect(thirdParty.pathTimings?.["browser-cache"]).toBe("1 from cache");
+  });
+
+  it("closes the page with the cache hop when the page used the cache", () => {
+    const withCache = analyzeEntries([
+      criticalCss(100),
+      cachedImage(1, "memory"),
+      cachedImage(2, "disk"),
+    ]);
+    const loaded = withCache.step("loaded");
+
+    expect(loaded.activeNodes).toEqual(["browser", "cache"]);
+    expect(loaded.activePaths).toEqual(["browser-cache"]);
+    expect(loaded.pathTimings).toEqual({ "browser-cache": "1 memory · 1 disk" });
+    expect(loaded.pathDirections).toEqual({ "browser-cache": "response" });
+
+    const withoutCache = analyzeEntries([criticalCss(100)]).step("loaded");
+    expect(withoutCache.activeNodes).toEqual(["browser"]);
+    expect(withoutCache.activePaths).toEqual([]);
+  });
+
+  it("reads the recorded warm-cache visit: the secondary step reads its hits from the cache", () => {
+    const flow = generateFlow([{ name: "Cache", har: loadRootHar("Cache-20260519T123746") }]);
+    const cache = flow.pageAnalyses[0].nodes.find((n) => n.id === "cache")!;
+    const secondary = flow.steps.find((s) => s.kind === "secondary")!;
+
+    expect(cache.present).toBe(true);
+    expect(cache.resourceStats?.count).toBeGreaterThan(0);
+    expect(secondary.activePaths).toContain("browser-cache");
+    expect(secondary.pathTimings?.["browser-cache"]).toMatch(
+      /^\d+ (from cache|memory · \d+ disk)$/
+    );
+  });
+
+  it("leaves older flows without the node: normalizeFlow adds nothing", () => {
+    const flow = analyzeEntries([cachedImage(1, "memory")]).flow;
+    const legacy = JSON.parse(JSON.stringify(flow)) as Flow;
+    legacy.pageAnalyses[0].nodes = legacy.pageAnalyses[0].nodes.filter((n) => n.id !== "cache");
+
+    const normalized = normalizeFlow(legacy);
+
+    expect(normalized.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("cache");
+    expect(normalized.version).toBe(FLOW_VERSION);
+  });
+});
+
+describe("generateFlow — document served by the CDN cache", () => {
+  const VERCEL_HIT = { "x-vercel-cache": "HIT", "x-vercel-id": "cdg1::abcde-1779186962459" };
+  const VERCEL_MISS = { "x-vercel-cache": "MISS", "x-vercel-id": "cdg1::abcde-1779186962459" };
+  const CLOUDFLARE_HIT = { "cf-ray": "8a1b2c3d4e5f-LHR", "cf-cache-status": "HIT" };
+  const CLOUDFLARE_MISS = { "cf-ray": "8a1b2c3d4e5f-LHR", "cf-cache-status": "MISS" };
+
+  function flowFor(
+    documentHeaders: Record<string, string>,
+    entries: HarEntry[] = [],
+    options: Parameters<typeof generateFlow>[1] = {}
+  ) {
+    const har = makeHar(entries);
+    har.documentEntry.responseHeaders = documentHeaders;
+    const flow = generateFlow([{ name: "Page", har }], options);
+    const step = (kind: DiagramStep["kind"]) => flow.steps.find((s) => s.kind === kind)!;
+    return { flow, step, origin: flow.nodes.find((n) => n.id === "origin")! };
+  }
+
+  it("stops the request and the first byte at the edge on a Vercel HIT", () => {
+    const { step } = flowFor(VERCEL_HIT);
+
+    for (const kind of ["request", "ttfb"] as const) {
+      expect(step(kind).activeNodes, kind).toEqual(["browser", "edge"]);
+      expect(step(kind).activePaths, kind).toEqual(["browser-edge"]);
+    }
+    expect(step("request").pathDirections).toEqual({ "browser-edge": "request" });
+    expect(step("ttfb").pathDirections).toEqual({ "browser-edge": "response" });
+    expect(Object.keys(step("ttfb").pathTimings ?? {})).toEqual(["browser-edge"]);
+    expect(step("ttfb").description).toContain("edge cache in Paris");
+  });
+
+  it("stops at the edge on a Cloudflare HIT too", () => {
+    const { step } = flowFor(CLOUDFLARE_HIT);
+
+    expect(step("ttfb").activePaths).toEqual(["browser-edge"]);
+    expect(step("ttfb").description).toContain("edge cache in London");
+  });
+
+  it("reaches the origin on a MISS", () => {
+    for (const headers of [VERCEL_MISS, CLOUDFLARE_MISS]) {
+      const { step } = flowFor(headers);
+
+      expect(step("request").activeNodes).toEqual(["browser", "edge", "origin"]);
+      expect(step("ttfb").activePaths).toEqual(["browser-edge", "edge-origin"]);
+      expect(step("ttfb").pathDirections).toEqual({
+        "browser-edge": "response",
+        "edge-origin": "response",
+      });
+      expect(step("ttfb").description).not.toContain("edge cache");
+    }
+  });
+
+  it("reaches the origin when the cache status is unknown", () => {
+    const { step } = flowFor({ "cf-ray": "8a1b2c3d4e5f-LHR" });
+
+    expect(step("ttfb").activePaths).toEqual(["browser-edge", "edge-origin"]);
+  });
+
+  it("stops at the edge behind the GFW as well", () => {
+    const { step } = flowFor(CLOUDFLARE_HIT, [], { clientRegion: "cn" });
+
+    expect(step("request").activeNodes).toEqual(["browser", "gfw", "edge"]);
+    expect(step("request").activePaths).toEqual(["browser-gfw", "gfw-edge"]);
+  });
+
+  it("keeps resources that the CDN served at the edge, and shows 0 req on an idle origin", () => {
+    const hitCss = makeSyntheticEntry({ ...criticalCss(100), responseHeaders: CLOUDFLARE_HIT });
+    const { step, origin } = flowFor(CLOUDFLARE_HIT, [hitCss]);
+
+    expect(step("critical").activeNodes).toEqual(["browser", "edge"]);
+    expect(step("critical").activePaths).toEqual(["browser-edge"]);
+    expect(origin.present).toBe(true);
+    expect(origin.resourceStats).toEqual({ count: 0 });
+  });
+
+  it("sends a resource the CDN missed to the origin, which then counts it", () => {
+    const missCss = makeSyntheticEntry({ ...criticalCss(100), responseHeaders: CLOUDFLARE_MISS });
+    const { step, origin } = flowFor(CLOUDFLARE_HIT, [missCss]);
+
+    expect(step("critical").activePaths).toEqual(["browser-edge", "edge-origin"]);
+    expect(origin.resourceStats).toMatchObject({ count: 1, label: "CDN miss" });
+  });
+
+  it("gives the origin no stats when only the document reached it", () => {
+    const { origin } = flowFor(CLOUDFLARE_MISS);
+
+    expect(origin.resourceStats).toBeUndefined();
+  });
+
+  it("stops the Chrome fixture's document at the edge: it is a Vercel HIT", () => {
+    const flow = generateFlow([{ name: "Home", har: loadHar() }]);
+
+    expect(loadHar().documentEntry.responseHeaders["x-vercel-cache"]).toBe("HIT");
+    expect(flow.steps[1].activePaths).toEqual(["browser-edge"]);
+    expect(flow.steps[2].activePaths).toEqual(["browser-edge"]);
   });
 });

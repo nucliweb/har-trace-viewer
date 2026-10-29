@@ -43,7 +43,7 @@ export interface NodePosition {
   cy: number;
   present: boolean;
   // Stacked third-party clusters caption themselves right of their glyph, so the paths
-  // arriving from the left never cross a caption.
+  // arriving from the left never cross a caption; so does the browser cache, low in its band.
   captionRight?: boolean;
 }
 
@@ -124,6 +124,7 @@ const CLUSTER_MAX_SPACING = 80;
 // Distance from a node centre to where its paths attach, roughly half the glyph width.
 const ANCHOR_RADIUS: Record<NodeKind, number> = {
   browser: 20,
+  cache: 15,
   gfw: 17,
   edge: 19,
   origin: 19,
@@ -319,13 +320,19 @@ function clusterYs(count: number): number[] {
 function positions(
   nodes: DiagramNode[],
   columns: LayoutSpec["columns"],
-  options: LayoutOptions
+  options: LayoutOptions,
+  cacheSubzoneY: number
 ): Partial<Record<NodeId, NodePosition>> {
   const result: Partial<Record<NodeId, NodePosition>> = {};
   const clusters = options.hasThirdPartyZone ? nodes.filter((n) => isCluster(n.id)) : [];
   const stackYs = clusterYs(clusters.length);
   for (const node of nodes) {
     const kind = nodeKind(node.id);
+    if (kind === "cache") {
+      const { cx, cy } = cachePosition(columns, cacheSubzoneY);
+      result[node.id] = { cx, cy, present: node.present, captionRight: true };
+      continue;
+    }
     const cx = columns[kind];
     if (cx === undefined) continue;
     const stackIndex = clusters.indexOf(node);
@@ -339,6 +346,37 @@ function positions(
 }
 
 const round = (value: number) => Math.round(value);
+
+// The browser cache sits in the cache sub-zone, in the browser column, centred in the band.
+// Its hop from the browser leaves just under the browser caption and runs straight down.
+const BROWSER_CACHE_START = 44;
+// Request lane left of the hop, response lane right of it.
+const VERTICAL_LANE_OFFSET = 5;
+// The timing label is centred on the hop; TimingLabel draws its 14 px background above the
+// baseline.
+const VERTICAL_LABEL_BASELINE = 7;
+
+function cachePosition(columns: LayoutSpec["columns"], cacheSubzoneY: number) {
+  return { cx: columns.browser!, cy: round((cacheSubzoneY + HEIGHT) / 2) };
+}
+
+function verticalHop(from: NodePosition, to: NodePosition, path: DiagramPath): PathGeometry {
+  const x = from.cx;
+  const y0 = from.cy + BROWSER_CACHE_START;
+  const y1 = to.cy - ANCHOR_RADIUS[nodeKind(path.to)];
+  const lane = (offset: number) => bezier(x + offset, y0, x + offset, y1);
+  const labelY = round((y0 + y1) / 2) + VERTICAL_LABEL_BASELINE;
+  return {
+    d: lane(0),
+    requestD: lane(-VERTICAL_LANE_OFFSET),
+    responseD: lane(VERTICAL_LANE_OFFSET),
+    labelX: x,
+    labelY,
+    labelBelow: false,
+    requestLabelY: labelY,
+    responseLabelY: labelY,
+  };
+}
 
 // The zone edges for a diagram `width` units wide: the 900-wide bounds, scaled proportionally.
 function scaledEdges(bounds: number[], width: number): number[] {
@@ -617,6 +655,7 @@ function pathGeometry(
   nodes: Layout["nodes"],
   fan?: ClusterFan
 ): PathGeometry {
+  if (path.id === "browser-cache") return verticalHop(from, to, path);
   const ends = anchors(from, to, path);
   const { run, x0, y0, x1, y1 } = ends;
   const rise = Math.sign(to.cy - from.cy);
@@ -714,7 +753,13 @@ export function layout(
   const spec = LAYOUTS[layoutId(options)];
   const edges = scaledEdges(spec.bounds, width);
   const clientZoneEnd = edges[1];
-  const nodePositions = positions(nodes, scaledColumns(spec.columns, spec.bounds, width), options);
+  const cacheSubzoneY = options.hasThirdPartyZone ? CLUSTER_CACHE_SUBZONE_Y : CACHE_SUBZONE_Y;
+  const nodePositions = positions(
+    nodes,
+    scaledColumns(spec.columns, spec.bounds, width),
+    options,
+    cacheSubzoneY
+  );
   // Paths to stacked clusters fan out in stack order, top first.
   const clusterIds = options.hasThirdPartyZone
     ? nodes.filter((n) => isCluster(n.id)).map((n) => n.id)
@@ -756,7 +801,7 @@ export function layout(
   return {
     width,
     height: HEIGHT,
-    cacheSubzoneY: options.hasThirdPartyZone ? CLUSTER_CACHE_SUBZONE_Y : CACHE_SUBZONE_Y,
+    cacheSubzoneY,
     zones: zones(nodes, options, edges),
     nodes: nodePositions,
     paths: pathGeometries,

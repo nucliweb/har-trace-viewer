@@ -62,6 +62,7 @@ function NodeRendererView({
         height={geometry.height}
         hasGfw={options.hasGfw}
         cacheSubzoneY={geometry.cacheSubzoneY}
+        hasCacheNode={geometry.nodes.cache?.present ?? false}
       />
       <PathLayer
         paths={paths}

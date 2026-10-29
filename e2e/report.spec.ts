@@ -211,6 +211,29 @@ test("each step's cache list shows the cache hits the step references", async ({
   expect(collected.errors).toEqual([]);
 });
 
+test("a warm-cache visit draws the hop to the browser cache on the steps that read from it", async ({
+  page,
+}) => {
+  const collected = await open(page, cachedUrl);
+  const steps = await embeddedStepResources(page);
+  const svg = page.locator("#diagram-svg");
+  const hop = svg.locator("#path-browser-cache-res");
+
+  await page.getByRole("tab", { name: /^Step 1:/ }).click();
+  await expect(svg.getByText("Browser cache", { exact: true })).toBeVisible();
+  await expect(hop).toHaveCount(0);
+
+  const secondary = steps.findIndex((s) => s.title === "Secondary resources");
+  const cached = steps[secondary].cacheResources.length;
+  expect(cached).toBeGreaterThan(0);
+  await page.getByRole("tab", { name: `Step ${secondary + 1}: Secondary resources` }).click();
+  await expect(hop).toBeAttached();
+  await expect(hop.locator("..").locator("text")).toHaveText(
+    new RegExp(`^(${cached} from cache|\\d+ memory · \\d+ disk)$`)
+  );
+  expect(collected.errors).toEqual([]);
+});
+
 test("theme toggle flips data-theme and the body background", async ({ page }) => {
   await open(page, bundleUrl);
   const theme = () => page.evaluate(() => document.documentElement.dataset.theme);

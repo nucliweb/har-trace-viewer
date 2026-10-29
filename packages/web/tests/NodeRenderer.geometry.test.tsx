@@ -56,6 +56,8 @@ interface Scenario {
   thirdPartyUrl?: string;
   // Third-party requests served from several CDNs and regions: one node per cluster.
   thirdParties?: { url: string; headers: Header[] }[];
+  // Resources served from the browser cache (memory and disk): a cache node in the cache band.
+  cache?: true;
 }
 
 const request = (url: string, headers: Header[] = []) => ({ url, headers });
@@ -163,8 +165,32 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-function rawEntry(url: string, mimeType: string, headers: Header[] = []) {
+// The same layouts with a page that used the browser cache. Every other node keeps its place.
+const CACHE_SCENARIOS: Scenario[] = [
+  "noGfw_cdn",
+  "noGfw_noCdn",
+  "gfw_cdn",
+  "gfw_cdn_4",
+  "gfw_noCdn",
+  "noGfw_cdn_2clusters",
+  "noGfw_noCdn_4clusters",
+  "noGfw_cdn_5clusters",
+  "gfw_cdn_5clusters",
+].map((name) => ({
+  ...SCENARIOS.find((s) => s.layout === name)!,
+  layout: `${name}_cache`,
+  cache: true,
+}));
+SCENARIOS.push(...CACHE_SCENARIOS);
+
+function rawEntry(
+  url: string,
+  mimeType: string,
+  headers: Header[] = [],
+  fromCache?: "memory" | "disk"
+) {
   return {
+    ...(fromCache ? { _fromCache: fromCache } : {}),
     pageref: "page_1",
     startedDateTime: "2026-01-01T00:00:00.000Z",
     time: 40,
@@ -190,6 +216,12 @@ function syntheticFlow(scenario: Scenario) {
   for (const { url, headers } of scenario.thirdParties ?? []) {
     entries.push(rawEntry(url, "text/javascript", headers));
   }
+  if (scenario.cache) {
+    entries.push(
+      rawEntry("https://example.com/logo.png", "image/png", [], "memory"),
+      rawEntry("https://example.com/font.woff2", "font/woff2", [], "disk")
+    );
+  }
   const har = parseHar({
     log: {
       pages: [
@@ -214,7 +246,11 @@ function states(base: Pick<Props, "nodes" | "paths">): Record<string, Props> {
   const present = base.nodes.filter((n) => n.present).map((n) => n.id);
   const ids = base.paths.map((p) => p.id);
   // Paths to stacked clusters carry their average, as wide as it gets in practice.
-  const timing = (id: string) => (id.startsWith("browser-third-parties:") ? "avg 1234ms" : "120ms");
+  // The cache hop carries the widest split by store.
+  const timing = (id: string) => {
+    if (id === "browser-cache") return "12 memory · 2 disk";
+    return id.startsWith("browser-third-parties:") ? "avg 1234ms" : "120ms";
+  };
   const timings = Object.fromEntries(ids.map((id) => [id, timing(id)])) as Record<PathId, string>;
   const directions = (direction: Direction) =>
     direction
@@ -486,7 +522,8 @@ describe("NodeRenderer geometry", () => {
       const geometry = actual[scenario.layout].idle;
       const present = nodes.filter((n) => n.present);
       const centres = new Map(present.map((n, i) => [n.id, geometry.nodes[i].centre]));
-      for (const path of paths) {
+      // The cache hop leaves from under the browser caption: checked on its own below.
+      for (const path of paths.filter((p) => p.id !== "browser-cache")) {
         const from = centres.get(path.from);
         const to = centres.get(path.to);
         if (!from || !to) continue;
@@ -646,6 +683,154 @@ describe("NodeRenderer geometry", () => {
   }
 });
 
+describe("browser cache node", () => {
+  const actual = renderGeometry();
+  // The stacked discs are narrower than the other glyphs: 30 x 34 with the active halo.
+  const cacheGlyphBox = ([x, y]: [number, number]): Box => ({
+    x0: x - 15,
+    x1: x + 15,
+    y0: y - 17,
+    y1: y + 17,
+  });
+  // Captions of the cache node use 12 px text.
+  const captionBox = (t: TextGeometry): Box => {
+    const box = textBox(t);
+    return t.anchor === "start" ? { ...box, x1: t.x + t.text.length * LABEL_CHAR_WIDTH } : box;
+  };
+
+  for (const scenario of CACHE_SCENARIOS) {
+    describe(scenario.layout, () => {
+      const { nodes, paths } = syntheticFlow(scenario).pageAnalyses[0];
+      const geometry = layout(nodes, paths);
+      const present = nodes.filter((n) => n.present);
+      const rendered = (state: string) => actual[scenario.layout][state];
+      const node = (state: string, id: string) =>
+        rendered(state).nodes[present.findIndex((n) => n.id === id)];
+      const client = geometry.zones[0];
+      const band: Box = { x0: client.x0, x1: client.x1, y0: geometry.cacheSubzoneY, y1: 480 };
+      const bandLabel = () => rendered("center").zones.find((z) => z.text === "CACHE")!;
+
+      it("places the cache node in the cache band, in the browser column", () => {
+        const cache = node("center", "cache");
+        const browser = node("center", "browser");
+        expect(cache.centre[0]).toBe(browser.centre[0]);
+        const centreY = (band.y0 + band.y1) / 2;
+        expect(Math.abs(cache.centre[1] - centreY)).toBeLessThanOrEqual(2);
+        expect(cache.texts.map((t) => t.text)).toEqual([
+          "Browser cache",
+          "memory + disk",
+          "2 from cache",
+        ]);
+        for (const box of [cacheGlyphBox(cache.centre), ...cache.texts.map(captionBox)]) {
+          expect(box.x0, "inside the client zone").toBeGreaterThanOrEqual(band.x0);
+          expect(box.x1, "inside the client zone").toBeLessThanOrEqual(band.x1);
+          expect(box.y0, "inside the band").toBeGreaterThanOrEqual(band.y0);
+          expect(box.y1, "inside the band").toBeLessThanOrEqual(band.y1);
+        }
+      });
+
+      it("joins the browser and its cache with a vertical hop under the browser caption", () => {
+        const browser = node("idle", "browser");
+        const cache = node("idle", "cache");
+        const captionBottom = Math.max(...browser.texts.map((t) => t.y)) + CAPTION_DESCENT;
+        for (const { d } of rendered("idle").paths["browser-cache"].d) {
+          const points = numbers(d);
+          const xs = points.filter((_, i) => i % 2 === 0);
+          expect(new Set(xs), "vertical").toEqual(new Set([browser.centre[0]]));
+          const [startY, endY] = [points[1], points.at(-1)!];
+          expect(startY, "below the browser caption").toBeGreaterThan(captionBottom);
+          expect(startY - captionBottom, "right under it").toBeLessThan(ATTACH_DISTANCE);
+          expect(cache.centre[1] - endY, "at the top of the cache").toBeGreaterThan(0);
+          expect(cache.centre[1] - endY, "at the top of the cache").toBeLessThan(ATTACH_DISTANCE);
+        }
+        // Request and response lanes run side by side.
+        const lanes = rendered("request").paths["browser-cache"].d.map((p) => numbers(p.d)[0]);
+        expect(lanes.map((x) => x - browser.centre[0]).sort()).toEqual([-5, 5]);
+      });
+
+      it("moves the band label to the corner, clear of the cache caption", () => {
+        const label = bandLabel();
+        expect(label.anchor).toBe("start");
+        expect(label.x).toBe(band.x0 + 8);
+        const cache = node("center", "cache");
+        const labelBox = textBox(label);
+        for (const box of [cacheGlyphBox(cache.centre), ...cache.texts.map(captionBox)]) {
+          expect(gap(labelBox, box)).toBeGreaterThanOrEqual(BOX_SEPARATION);
+        }
+      });
+
+      it("keeps the cache caption and timing label clear of every other caption and label", () => {
+        for (const state of ["center", "historyCenter"] as const) {
+          const g = rendered(state);
+          const cache = node(state, "cache");
+          const own = [
+            { name: "cache glyph", ...cacheGlyphBox(cache.centre) },
+            ...cache.texts.map((t) => ({ name: `"${t.text}"`, ...captionBox(t) })),
+            ...g.paths["browser-cache"].labels.map((l) => ({
+              name: "cache label",
+              ...labelBox(l),
+            })),
+          ];
+          const others = [
+            ...present.flatMap((n, i) =>
+              n.id === "cache"
+                ? []
+                : [
+                    { name: `${n.id} glyph`, ...glyphBox(g.nodes[i].centre) },
+                    ...g.nodes[i].texts.map((t) => ({ name: `"${t.text}"`, ...textBox(t) })),
+                  ]
+            ),
+            ...g.zones.map((z) => ({
+              name: `zone "${z.text}"`,
+              ...(z.anchor === "start" ? captionBox(z) : textBox(z)),
+            })),
+            ...Object.entries(g.paths)
+              .filter(([id]) => id !== "browser-cache")
+              .flatMap(([id, p]) => p.labels.map((l) => ({ name: `${id} label`, ...labelBox(l) }))),
+          ];
+          for (const a of own) {
+            for (const b of others) {
+              expect(gap(a, b), `${state}: ${a.name} vs ${b.name}`).toBeGreaterThanOrEqual(
+                BOX_SEPARATION
+              );
+            }
+          }
+        }
+      });
+
+      it("keeps the other paths off the cache node and its timing label", () => {
+        const g = rendered("center");
+        const cache = node("center", "cache");
+        const boxes = [
+          cacheGlyphBox(cache.centre),
+          ...cache.texts.map(captionBox),
+          ...g.paths["browser-cache"].labels.map(labelBox),
+        ];
+        for (const [id, path] of Object.entries(g.paths)) {
+          if (id === "browser-cache") continue;
+          for (const { d } of path.d) {
+            const points = numbers(d);
+            if (points.length !== 8) continue;
+            for (let i = 0; i <= 200; i++) {
+              const [x, y] = cubic(points, i / 200);
+              for (const b of boxes) {
+                const inside = x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
+                expect(inside, `${id} at (${Math.round(x)}, ${Math.round(y)})`).toBe(false);
+              }
+            }
+          }
+        }
+      });
+
+      it("keeps every other node where the layout without cache puts it", () => {
+        const name = scenario.layout.replace(/_cache$/, "");
+        const without = actual[name].idle.nodes;
+        expect(rendered("idle").nodes.slice(0, -1)).toEqual(without);
+      });
+    });
+  }
+});
+
 describe("wide layout", () => {
   const WIDE = 1400;
 
@@ -678,7 +863,7 @@ describe("wide layout", () => {
       });
 
       it("attaches every path to the nodes it joins", () => {
-        for (const path of paths) {
+        for (const path of paths.filter((p) => p.id !== "browser-cache")) {
           const from = wide.nodes[path.from];
           const to = wide.nodes[path.to];
           if (!from || !to) continue;

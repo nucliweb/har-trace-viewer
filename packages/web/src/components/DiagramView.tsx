@@ -101,15 +101,21 @@ export function DiagramView({ flow }: Props) {
         </button>
       </div>
       <div className={styles.canvas}>
-        <NodeRenderer
-          nodes={analysis.nodes}
-          paths={analysis.paths}
-          activeNodes={step.activeNodes}
-          activePaths={step.activePaths}
-          pathTimings={step.pathTimings}
-          pathDirections={step.pathDirections}
-          historicalPaths={historicalPaths}
-        />
+        {/* The cache list docks on the left: the diagram moves aside so the browser and the
+            hop to its cache stay in view. */}
+        <div
+          className={`${styles.diagram} ${cacheResources.length > 0 ? styles.diagramBesideCache : ""}`}
+        >
+          <NodeRenderer
+            nodes={analysis.nodes}
+            paths={analysis.paths}
+            activeNodes={step.activeNodes}
+            activePaths={step.activePaths}
+            pathTimings={step.pathTimings}
+            pathDirections={step.pathDirections}
+            historicalPaths={historicalPaths}
+          />
+        </div>
         {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}
         <BadgeRow steps={flow.steps} pageIndex={pageIndex} stepIndex={stepIndex} />
         {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}

@@ -186,6 +186,8 @@ interface TopologyOptions {
   thirdPartyRegion: NetworkRegion;
   // Two or more clusters replace the single third-parties node with one node each.
   thirdPartyClusters: ThirdPartyCluster[];
+  // Entries the browser cache served: a cache node and its path from the browser.
+  cacheEntries: HarEntry[];
 }
 
 // Several clusters get a node each; one cluster (or none) keeps the single node.
@@ -203,6 +205,7 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
     originSubLabel,
     thirdPartyRegion,
     thirdPartyClusters,
+    cacheEntries,
   } = opts;
   const browserRegion: NetworkRegion = hasGfw ? "china" : "client";
 
@@ -274,26 +277,80 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
     paths.push({ id: "browser-third-parties", from: "browser", to: "third-parties" });
   }
 
+  const hasCache = cacheEntries.length > 0;
+  nodes.push({
+    id: "cache",
+    label: "Browser cache",
+    subLabel: hasCache ? cacheStores(cacheEntries) : undefined,
+    present: hasCache,
+    region: "client",
+    resourceStats: hasCache ? { count: cacheEntries.length, label: "from cache" } : undefined,
+  });
+  if (hasCache) paths.push({ id: "browser-cache", from: "browser", to: "cache" });
+
   return { nodes, paths };
 }
 
-function serverNodes(hasCdn: boolean, hasGfw: boolean): NodeId[] {
-  if (hasGfw) return hasCdn ? ["browser", "gfw", "edge", "origin"] : ["browser", "gfw", "origin"];
-  return hasCdn ? ["browser", "edge", "origin"] : ["browser", "origin"];
+// The stores the browser cache served the page from: "memory", "disk" or "memory + disk".
+function cacheStores(entries: HarEntry[]): string {
+  const memory = entries.some((e) => e.fromCache === "memory");
+  const disk = entries.some((e) => e.fromCache === "disk");
+  if (memory && disk) return "memory + disk";
+  return memory ? "memory" : "disk";
 }
 
-function serverPaths(hasCdn: boolean, hasGfw: boolean): PathId[] {
-  if (hasGfw)
-    return hasCdn ? ["browser-gfw", "gfw-edge", "edge-origin"] : ["browser-gfw", "gfw-origin"];
-  return hasCdn ? ["browser-edge", "edge-origin"] : ["browser-origin"];
+// "3 from cache" when a single store served the entries, "2 memory · 1 disk" otherwise.
+function cacheTiming(entries: HarEntry[]): string {
+  const memory = entries.filter((e) => e.fromCache === "memory").length;
+  const disk = entries.length - memory;
+  return memory > 0 && disk > 0
+    ? `${memory} memory · ${disk} disk`
+    : `${entries.length} from cache`;
+}
+
+// A step that reads `cached` entries from the browser cache also lights the hop to it,
+// the entries coming back to the browser.
+function withCacheHop<T extends Omit<DiagramStep, "pageIndex">>(step: T, cached: HarEntry[]): T {
+  if (cached.length === 0) return step;
+  return {
+    ...step,
+    activeNodes: [...step.activeNodes, "cache"],
+    activePaths: [...step.activePaths, "browser-cache"],
+    pathTimings: { ...step.pathTimings, "browser-cache": cacheTiming(cached) },
+    pathDirections: { ...step.pathDirections, "browser-cache": "response" },
+  };
+}
+
+// Whether requests sent through the CDN went on to the origin: only a CDN cache hit stops at
+// the edge (a miss, a stale or bypassed response, or no cache status at all reaches it).
+// Without a CDN every request reaches the origin.
+function reachesOrigin(hasCdn: boolean, requests: HarEntry[]): boolean {
+  return !hasCdn || requests.some((e) => detectCdnCacheStatus(e.responseHeaders) !== "hit");
+}
+
+// The server chain of a request: through the GFW checkpoint and the edge when there are
+// any, on to the origin unless `toOrigin` is false (a CDN cache hit stops at the edge).
+function serverNodes(hasCdn: boolean, hasGfw: boolean, toOrigin = true): NodeId[] {
+  const nodes: NodeId[] = hasGfw ? ["browser", "gfw"] : ["browser"];
+  if (hasCdn) nodes.push("edge");
+  if (toOrigin || !hasCdn) nodes.push("origin");
+  return nodes;
+}
+
+function serverPaths(hasCdn: boolean, hasGfw: boolean, toOrigin = true): PathId[] {
+  if (!hasCdn) return hasGfw ? ["browser-gfw", "gfw-origin"] : ["browser-origin"];
+  const paths: PathId[] = hasGfw ? ["browser-gfw", "gfw-edge"] : ["browser-edge"];
+  if (toOrigin) paths.push("edge-origin");
+  return paths;
 }
 
 function serverPathDirections(
   hasCdn: boolean,
   hasGfw: boolean,
-  direction: "request" | "response"
+  direction: "request" | "response",
+  toOrigin = true
 ): Partial<Record<PathId, "request" | "response">> {
-  return Object.fromEntries(serverPaths(hasCdn, hasGfw).map((id) => [id, direction]));
+  return Object.fromEntries(serverPaths(hasCdn, hasGfw, toOrigin).map((id) => [id, direction]));
 }
 
 function firstActivePath(hasCdn: boolean, hasGfw: boolean): PathId {
@@ -309,6 +366,8 @@ interface PageContext {
   thirdPartyEntries: HarEntry[];
   // Third-party network requests grouped by CDN provider and region.
   thirdPartyClusters: ThirdPartyCluster[];
+  // Every entry but the main document that the browser cache served.
+  cacheEntries: HarEntry[];
 }
 
 function describePage(har: ParsedHar): PageContext {
@@ -324,6 +383,7 @@ function describePage(har: ParsedHar): PageContext {
     documentRoot,
     thirdPartyEntries,
     thirdPartyClusters: clusterThirdParties(thirdPartyEntries.filter((e) => e.fromCache === false)),
+    cacheEntries: har.entries.filter((e) => e !== har.documentEntry && e.fromCache !== false),
   };
 }
 
@@ -335,7 +395,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const { documentEntry, pages, entries } = har;
   const page = pages[0];
 
-  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters } =
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters, cacheEntries } =
     describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
 
@@ -379,29 +439,37 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
 
   const reqConnectionLabel = `DNS ${formatMs(dns)} · TCP ${formatMs(connect)}${ssl > 0 ? ` · TLS ${formatMs(ssl)}` : ""}`;
   const firstPath = firstActivePath(hasCdn, hasGfw);
+  // A document the CDN served from its cache never reaches the origin.
+  const documentToOrigin = reachesOrigin(hasCdn, [documentEntry]);
+  const popCity = hasCdn
+    ? detectCdnPopCity(documentEntry.responseHeaders, cdnResult.cdnProvider, hasGfw)
+    : null;
+  const servedBy = documentToOrigin
+    ? ""
+    : `, served from its edge cache${popCity ? ` in ${popCity}` : ""}`;
 
   const requestStep: PageStep = {
     kind: "request",
     title: "First request in flight",
     description: "Browser sends the HTTP request for the HTML document.",
     timestamp: requestSentAt,
-    activeNodes: serverNodes(hasCdn, hasGfw),
-    activePaths: serverPaths(hasCdn, hasGfw),
+    activeNodes: serverNodes(hasCdn, hasGfw, documentToOrigin),
+    activePaths: serverPaths(hasCdn, hasGfw, documentToOrigin),
     metrics: [],
     pathTimings: { [firstPath]: reqConnectionLabel },
-    pathDirections: serverPathDirections(hasCdn, hasGfw, "request"),
+    pathDirections: serverPathDirections(hasCdn, hasGfw, "request", documentToOrigin),
   };
 
   const ttfbStep: PageStep = {
     kind: "ttfb",
     title: "TTFB — First byte received",
-    description: `${edgeLabel} responds with the first byte of the HTML document.`,
+    description: `${edgeLabel} responds with the first byte of the HTML document${servedBy}.`,
     timestamp: firstByteAt,
-    activeNodes: serverNodes(hasCdn, hasGfw),
-    activePaths: serverPaths(hasCdn, hasGfw),
+    activeNodes: serverNodes(hasCdn, hasGfw, documentToOrigin),
+    activePaths: serverPaths(hasCdn, hasGfw, documentToOrigin),
     metrics: [{ label: "TTFB", value: formatMs(documentEntry.ttfb) }],
     pathTimings: { [firstPath]: `TTFB ${formatMs(documentEntry.ttfb)}` },
-    pathDirections: serverPathDirections(hasCdn, hasGfw, "response"),
+    pathDirections: serverPathDirections(hasCdn, hasGfw, "response", documentToOrigin),
     badge: { type: "ttfb", value: formatMs(documentEntry.ttfb), node: "browser" },
   };
 
@@ -415,6 +483,20 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const thirdPartyAt = firstStart(startTimes(thirdPartyEntries), secondaryAt);
 
   const timeline: TimedItem<PageStep>[] = [];
+
+  // The hops a resource group travels: its network requests go to the edge, and on to the
+  // origin unless the CDN served all of them from its cache. A group the browser cache
+  // served entirely stays on the client; an empty group keeps the whole chain.
+  const resourceHops = (network: HarEntry[], cached: HarEntry[]) => {
+    if (network.length === 0 && cached.length > 0) {
+      return { activeNodes: ["browser"] as NodeId[], activePaths: [] as PathId[] };
+    }
+    const toOrigin = network.length === 0 || reachesOrigin(hasCdn, network);
+    return {
+      activeNodes: serverNodes(hasCdn, hasGfw, toOrigin),
+      activePaths: serverPaths(hasCdn, hasGfw, toOrigin),
+    };
+  };
 
   const criticalNetwork = criticalEntries.filter((e) => e.fromCache === false);
   const criticalCache = criticalEntries.filter((e) => e.fromCache !== false);
@@ -431,23 +513,25 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   timeline.push({
     timestamp: criticalAt,
     rank: 0,
-    item: {
-      kind: "critical",
-      title: "Critical resources loading",
-      description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
-      timestamp: criticalAt,
-      activeNodes: serverNodes(hasCdn, hasGfw),
-      activePaths: serverPaths(hasCdn, hasGfw),
-      metrics: criticalMetrics,
-      pathTimings:
-        criticalNetwork.length > 0
-          ? {
-              [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(avgMs(criticalNetwork))}`,
-            }
-          : {},
-      resourceRefs: refs(criticalNetwork),
-      cacheResourceRefs: refs(criticalCache),
-    },
+    item: withCacheHop(
+      {
+        kind: "critical",
+        title: "Critical resources loading",
+        description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
+        timestamp: criticalAt,
+        ...resourceHops(criticalNetwork, criticalCache),
+        metrics: criticalMetrics,
+        pathTimings:
+          criticalNetwork.length > 0
+            ? {
+                [firstPath]: `${criticalNetwork.length} files · avg ${formatMs(avgMs(criticalNetwork))}`,
+              }
+            : {},
+        resourceRefs: refs(criticalNetwork),
+        cacheResourceRefs: refs(criticalCache),
+      },
+      criticalCache
+    ),
   });
 
   // Paints are placed where they fall relative to the resource requests.
@@ -486,23 +570,25 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   timeline.push({
     timestamp: secondaryAt,
     rank: 2,
-    item: {
-      kind: "secondary",
-      title: "Secondary resources",
-      description: "Async scripts, images, and fonts load in the background.",
-      timestamp: secondaryAt,
-      activeNodes: serverNodes(hasCdn, hasGfw),
-      activePaths: serverPaths(hasCdn, hasGfw),
-      metrics: secondaryMetrics,
-      pathTimings:
-        secondaryNetwork.length > 0
-          ? {
-              [firstPath]: `${secondaryNetwork.length} resources · avg ${formatMs(avgMs(secondaryNetwork))}`,
-            }
-          : {},
-      resourceRefs: refs(secondaryNetwork),
-      cacheResourceRefs: refs(secondaryCache),
-    },
+    item: withCacheHop(
+      {
+        kind: "secondary",
+        title: "Secondary resources",
+        description: "Async scripts, images, and fonts load in the background.",
+        timestamp: secondaryAt,
+        ...resourceHops(secondaryNetwork, secondaryCache),
+        metrics: secondaryMetrics,
+        pathTimings:
+          secondaryNetwork.length > 0
+            ? {
+                [firstPath]: `${secondaryNetwork.length} ${secondaryNetwork.length === 1 ? "resource" : "resources"} · avg ${formatMs(avgMs(secondaryNetwork))}`,
+              }
+            : {},
+        resourceRefs: refs(secondaryNetwork),
+        cacheResourceRefs: refs(secondaryCache),
+      },
+      secondaryCache
+    ),
   });
 
   if (trace?.lcp != null) {
@@ -559,16 +645,19 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     timeline.push({
       timestamp: thirdPartyAt,
       rank: 4,
-      item: {
-        kind: "third-party",
-        title: "Third-party requests",
-        description: "Browser fetches resources from external domains.",
-        timestamp: thirdPartyAt,
-        ...thirdPartyHops,
-        metrics: thirdPartyMetrics,
-        resourceRefs: refs(thirdPartyNetwork),
-        cacheResourceRefs: refs(thirdPartyCache),
-      },
+      item: withCacheHop(
+        {
+          kind: "third-party",
+          title: "Third-party requests",
+          description: "Browser fetches resources from external domains.",
+          timestamp: thirdPartyAt,
+          ...thirdPartyHops,
+          metrics: thirdPartyMetrics,
+          resourceRefs: refs(thirdPartyNetwork),
+          cacheResourceRefs: refs(thirdPartyCache),
+        },
+        thirdPartyCache
+      ),
     });
   }
 
@@ -581,25 +670,29 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const overviewEntries = entries
     .filter((e) => e !== documentEntry)
     .sort((a, b) => a.startTime - b.startTime);
-  const loadedStep: PageStep = {
-    kind: "loaded",
-    title: "Page loaded",
-    description: "The load event fires — all resources have been downloaded.",
-    timestamp: page.onLoad ?? undefined,
-    activeNodes: ["browser"],
-    activePaths: [],
-    metrics: [
-      { label: "onLoad", value: formatOptionalMs(page.onLoad) },
-      { label: "DCL", value: formatOptionalMs(page.onContentLoad) },
-      { label: "CLS", value: formatCls(trace?.cls) },
-      { label: "INP", value: formatOptionalMs(trace?.inp ?? null) },
-    ],
-    resourceRefs: refs(overviewEntries),
-    badge:
-      page.onLoad === null
-        ? undefined
-        : { type: "onload", value: formatMs(page.onLoad), node: "browser" },
-  };
+  // A page that used the browser cache closes with the hop to it, every cache hit counted.
+  const loadedStep: PageStep = withCacheHop<PageStep>(
+    {
+      kind: "loaded",
+      title: "Page loaded",
+      description: "The load event fires — all resources have been downloaded.",
+      timestamp: page.onLoad ?? undefined,
+      activeNodes: ["browser"],
+      activePaths: [],
+      metrics: [
+        { label: "onLoad", value: formatOptionalMs(page.onLoad) },
+        { label: "DCL", value: formatOptionalMs(page.onContentLoad) },
+        { label: "CLS", value: formatCls(trace?.cls) },
+        { label: "INP", value: formatOptionalMs(trace?.inp ?? null) },
+      ],
+      resourceRefs: refs(overviewEntries),
+      badge:
+        page.onLoad === null
+          ? undefined
+          : { type: "onload", value: formatMs(page.onLoad), node: "browser" },
+    },
+    cacheEntries
+  );
 
   return [connectionStep, requestStep, ttfbStep, ...sortByTimeline(timeline), loadedStep];
 }
@@ -618,7 +711,7 @@ function generateTransitionStep(fromPage: string, toPage: string): PageStep {
 function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
   const { har } = pageFlow;
   const { documentEntry, entries } = har;
-  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters } =
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters, cacheEntries } =
     describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
   const apacFallback: NetworkRegion = hasGfw ? "asia-pacific" : "edge";
@@ -636,6 +729,7 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     originSubLabel: documentEntry.responseHeaders["server"] ?? null,
     thirdPartyRegion: detectThirdPartyRegion(thirdPartyEntries),
     thirdPartyClusters,
+    cacheEntries,
   });
 
   const ownNonDocNetwork = entries.filter(
@@ -647,12 +741,15 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
   const originEntries = hasCdn
     ? ownNonDocNetwork.filter((e) => detectCdnCacheStatus(e.responseHeaders) !== "hit")
     : ownNonDocNetwork;
-  const browserCacheEntries = entries.filter((e) => !e.isDocument && e.fromCache !== false);
   const thirdPartyNetworkEntries = thirdPartyEntries.filter((e) => e.fromCache === false);
+  // Behind a CDN that served the document and every resource from its cache, nothing reached
+  // the origin: it says so with "0 req".
+  const originIdle =
+    hasCdn && originEntries.length === 0 && !reachesOrigin(hasCdn, [documentEntry]);
 
   for (const node of nodes) {
-    if (node.id === "browser" && browserCacheEntries.length > 0) {
-      node.resourceStats = { count: browserCacheEntries.length };
+    if (node.id === "origin" && originIdle) {
+      node.resourceStats = { count: 0 };
     } else if (node.id === "edge" && hasCdn && cdnHitEntries.length > 0) {
       node.resourceStats = {
         count: cdnHitEntries.length,

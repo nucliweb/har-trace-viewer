@@ -1,6 +1,10 @@
 import { GFW_ZONE_CAPTION_OFFSET, type Zone } from "./layout.js";
 
 const LABEL_Y = 22;
+// With a cache node in the band, the band label moves to its bottom-left corner and the GFW
+// zone caption, which the hop to the cache would cross, moves under the zone name.
+const CORNER_INSET = 8;
+const GFW_CAPTION_TOP_Y = LABEL_Y + 16;
 
 const zoneText = {
   fontSize: 12,
@@ -13,9 +17,10 @@ interface Props {
   height: number;
   hasGfw: boolean;
   cacheSubzoneY: number;
+  hasCacheNode?: boolean;
 }
 
-export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY }: Props) {
+export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY, hasCacheNode = false }: Props) {
   // The client zone (China behind the GFW) hosts the browser cache sub-zone.
   const client = zones[0];
   const clientWidth = client.x1 - client.x0;
@@ -88,9 +93,10 @@ export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY }: Props) {
         strokeDasharray="3 5"
       />
       <text
-        x={clientCentre}
+        x={hasCacheNode ? client.x0 + CORNER_INSET : clientCentre}
         y={height - 8}
         {...zoneText}
+        {...(hasCacheNode ? { textAnchor: "start" } : {})}
         fill="var(--color-cyan)"
         opacity={0.35}
         letterSpacing="0.06em"
@@ -101,7 +107,7 @@ export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY }: Props) {
       {hasGfw && (
         <text
           x={clientCentre}
-          y={cacheSubzoneY - GFW_ZONE_CAPTION_OFFSET}
+          y={hasCacheNode ? GFW_CAPTION_TOP_Y : cacheSubzoneY - GFW_ZONE_CAPTION_OFFSET}
           {...zoneText}
           fill="var(--color-red)"
           opacity={0.5}
