@@ -82,7 +82,8 @@
 
 /* Cache analysis and metrics toggle buttons */
 .cacheBtn,
-.metricsBtn {
+.metricsBtn,
+.hopsBtn {
   position: absolute;
   top: var(--space-sm);
   right: var(--space-sm);
@@ -106,8 +107,13 @@
   right: calc(var(--space-sm) + 80px);
 }
 
+.hopsBtn {
+  right: calc(var(--space-sm) + 260px);
+}
+
 .cacheBtn:hover,
-.metricsBtn:hover {
+.metricsBtn:hover,
+.hopsBtn:hover {
   border-color: var(--color-cyan);
   color: var(--color-cyan);
 }
@@ -121,7 +127,8 @@
 @media (prefers-reduced-motion: reduce) {
   .badge,
   .cacheBtn,
-  .metricsBtn {
+  .metricsBtn,
+  .hopsBtn {
     animation: none;
     transition: none;
   }
@@ -138,13 +145,18 @@
   }
 
   .cacheBtn,
-  .metricsBtn {
+  .metricsBtn,
+  .hopsBtn {
     min-height: 44px;
     padding: 0 12px;
   }
 
   .metricsBtn {
     right: calc(var(--space-sm) + 80px);
+  }
+
+  .hopsBtn {
+    right: calc(var(--space-sm) + 170px);
   }
 }
 

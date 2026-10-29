@@ -8,3 +8,4 @@ export * from "./steps/step-generator.js";
 export * from "./utils/domain.js";
 export * from "./steps/expand-page-flows.js";
 export * from "./analysis/metrics-summary.js";
+export * from "./analysis/hops.js";

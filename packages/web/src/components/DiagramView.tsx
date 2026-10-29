@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { getStepCacheResources, getStepResources } from "@htv/core";
+import { analyzeHops, getStepCacheResources, getStepResources } from "@htv/core";
 import type { Flow, HarEntry, PathId } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
@@ -10,6 +10,7 @@ import { ResourceSidebar } from "./ResourceSidebar.js";
 import { CacheSidebar } from "./CacheSidebar.js";
 import { CachePanel } from "./CachePanel.js";
 import { MetricsSummary } from "./MetricsSummary.js";
+import { HopsPanel } from "./HopsPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
 import styles from "./DiagramView.module.css";
 
@@ -71,6 +72,8 @@ export function DiagramView({ flow }: Props) {
   const [sidebarResources, setSidebarResources] = useState<HarEntry[] | null>(null);
   const [showCachePanel, setShowCachePanel] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
+  const [showHops, setShowHops] = useState(false);
+  const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
 
   const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
   const closeSidebar = () => setSidebarResources(null);
@@ -157,11 +160,32 @@ export function DiagramView({ flow }: Props) {
           />
         )}
         {showMetrics && <MetricsSummary flow={flow} onClose={() => setShowMetrics(false)} />}
+        {showHops && (
+          <HopsPanel
+            hops={hops}
+            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            onClose={() => setShowHops(false)}
+          />
+        )}
+        <button
+          className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowHops((v) => !v);
+            setShowMetrics(false);
+            setShowCachePanel(false);
+          }}
+          aria-label="Toggle hops"
+          aria-expanded={showHops}
+          title="Hops per host"
+        >
+          Hops
+        </button>
         <button
           className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
           onClick={() => {
             setShowMetrics((v) => !v);
             setShowCachePanel(false);
+            setShowHops(false);
           }}
           aria-label="Toggle metrics summary"
           aria-expanded={showMetrics}
@@ -174,6 +198,7 @@ export function DiagramView({ flow }: Props) {
           onClick={() => {
             setShowCachePanel((v) => !v);
             setShowMetrics(false);
+            setShowHops(false);
           }}
           aria-label="Toggle cache analysis"
           title="Cache Analysis"

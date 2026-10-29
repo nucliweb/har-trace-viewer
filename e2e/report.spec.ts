@@ -297,6 +297,30 @@ for (const scheme of ["light", "dark"] as const) {
   }
 }
 
+for (const scheme of ["light", "dark"] as const) {
+  test(`hops panel lists hosts and has no axe violations: ${scheme} theme`, async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme: scheme });
+    const page = await context.newPage();
+    await open(page, bundleUrl);
+    await page.getByRole("button", { name: "Toggle hops" }).click();
+    const table = page.getByRole("table", { name: "Hops per host" });
+    await expect(table).toBeVisible();
+    expect(await table.getByRole("row").count()).toBeGreaterThanOrEqual(2);
+    await page.waitForTimeout(500);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(
+      results.violations.map((v) => ({
+        id: v.id,
+        impact: v.impact,
+        nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5),
+      }))
+    ).toEqual([]);
+    await context.close();
+  });
+}
+
 // Browsers block <script type="module" crossorigin> over file://, so the non-bundled report needs
 // an HTTP server. The README documents this and points to --bundle for double-click use.
 test("non-bundled report is blocked over file:// (documented: use --bundle or serve it)", async ({
