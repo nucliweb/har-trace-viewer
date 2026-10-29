@@ -4,7 +4,13 @@ import { join } from "path";
 import { fileURLToPath } from "url";
 import { parseHar, parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
-import { FLOW_VERSION, generateFlow, normalizeFlow } from "../src/steps/step-generator.js";
+import {
+  FLOW_VERSION,
+  MAX_THIRD_PARTY_CLUSTERS,
+  generateFlow,
+  nodeKind,
+  normalizeFlow,
+} from "../src/steps/step-generator.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import { firefoxHar } from "./helpers/firefox-har.js";
 import {
@@ -656,7 +662,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(3);
+    expect(FLOW_VERSION).toBe(4);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 
@@ -806,6 +812,24 @@ describe("normalizeFlow", () => {
     const current = generateFlow([{ name: "Home", har: loadHar() }], { clientRegion: "cn" });
 
     expect(normalizeFlow(current)).toEqual(current);
+  });
+
+  it("keeps the single third-parties node of a version-3 flow and gives it no clusters", () => {
+    const current = generateFlow([{ name: "Home", har: makeHar([thirdPartyScript(200)]) }]);
+    const legacy = JSON.parse(JSON.stringify(current)) as Flow;
+    legacy.version = 3;
+    for (const analysis of legacy.pageAnalyses) {
+      delete (analysis as Partial<typeof analysis>).thirdPartyClusters;
+    }
+
+    const normalized = normalizeFlow(legacy);
+
+    expect(normalized.version).toBe(3);
+    expect(normalized.pageAnalyses[0].thirdPartyClusters).toEqual([]);
+    expect(normalized.pageAnalyses[0].nodes).toEqual(legacy.pageAnalyses[0].nodes);
+    expect(
+      normalized.pageAnalyses[0].nodes.filter((n) => nodeKind(n.id) === "third-parties")
+    ).toEqual([expect.objectContaining({ id: "third-parties" })]);
   });
 });
 
@@ -1101,5 +1125,360 @@ describe("generateFlow — chronological steps", () => {
       pageTitles(1).indexOf("Third-party requests")
     );
     expect(pageTitles(1)[0]).toBe("→ User navigates to B");
+  });
+});
+
+describe("generateFlow — third-party clusters", () => {
+  const thirdParty = (
+    url: string,
+    responseHeaders: Record<string, string>,
+    extra: Partial<HarEntry> = {}
+  ) =>
+    makeSyntheticEntry({
+      url,
+      startTime: 200,
+      mimeType: "application/javascript",
+      resourceType: "script",
+      priority: "Low",
+      responseHeaders,
+      ...extra,
+    });
+  const cloudflareLax = (url: string, extra: Partial<HarEntry> = {}, cache = "MISS") =>
+    thirdParty(
+      url,
+      { "cf-ray": "8a1b2c3d4e5f-LAX", server: "cloudflare", "cf-cache-status": cache },
+      extra
+    );
+  const cloudfrontFra = (url: string) =>
+    thirdParty(url, { "x-amz-cf-pop": "FRA56-P1", "x-cache": "Hit from cloudfront" });
+  const direct = (url: string) => thirdParty(url, {});
+
+  function analyze(entries: HarEntry[], options: Parameters<typeof generateFlow>[1] = {}) {
+    const flow = generateFlow([{ name: "P", har: makeHar(entries) }], options);
+    return { flow, analysis: flow.pageAnalyses[0] };
+  }
+
+  const twoProviders = () => [
+    cloudflareLax(
+      "https://cdnjs.cloudflare.com/a.js",
+      { duration: 100, transferSize: 1000 },
+      "HIT"
+    ),
+    cloudfrontFra("https://d1.cloudfront.net/x.js"),
+    cloudflareLax(
+      "https://cdnjs.cloudflare.com/b.js",
+      { duration: 200, transferSize: 2000 },
+      "HIT"
+    ),
+    cloudflareLax("https://static.cfassets.com/c.js", { duration: 300, transferSize: 3000 }),
+    cloudfrontFra("https://d1.cloudfront.net/y.js"),
+  ];
+
+  it("groups third parties by CDN provider and region, biggest first", () => {
+    const { analysis } = analyze(twoProviders());
+
+    expect(analysis.thirdPartyClusters).toHaveLength(2);
+    const [cloudflare, cloudfront] = analysis.thirdPartyClusters;
+    expect(cloudflare).toMatchObject({
+      label: "Cloudflare · LAX",
+      provider: "cloudflare",
+      region: "united-states",
+      hosts: ["cdnjs.cloudflare.com", "static.cfassets.com"],
+      requests: 3,
+      avgMs: 200,
+      bytes: 6000,
+    });
+    expect(cloudflare.pop).toMatchObject({ code: "lax", city: "Los Angeles" });
+    expect(cloudflare.hitRatio).toBeCloseTo(2 / 3);
+    expect(cloudfront).toMatchObject({
+      label: "CloudFront · FRA",
+      provider: "cloudfront",
+      region: "europe",
+      hosts: ["d1.cloudfront.net"],
+      requests: 2,
+      hitRatio: 1,
+    });
+    expect(cloudflare.id).not.toBe(cloudfront.id);
+  });
+
+  it("labels third parties without a CDN as Direct", () => {
+    const { analysis } = analyze([
+      direct("https://widgets.thirdparty.com/a.js"),
+      direct("https://pixel.tracker.io/p.gif"),
+    ]);
+
+    expect(analysis.thirdPartyClusters).toEqual([
+      expect.objectContaining({
+        label: "Direct",
+        provider: "unknown",
+        region: "origin",
+        pop: null,
+        hosts: ["widgets.thirdparty.com", "pixel.tracker.io"],
+        requests: 2,
+        hitRatio: 0,
+      }),
+    ]);
+  });
+
+  it("keeps every direct third party in one Direct cluster, in the region most of its hosts share", () => {
+    const { analysis } = analyze([
+      direct("https://widgets.thirdparty.com/a.js"),
+      direct("https://static.analytics.de/tag.js"),
+      direct("https://consent.privacy.eu/c.js"),
+      direct("https://pixel.tracker.io/p.gif"),
+      direct("https://pixel.tracker.io/q.gif"),
+      direct("https://pixel.tracker.io/r.gif"),
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+    ]);
+
+    const directCluster = analysis.thirdPartyClusters.find((c) => c.provider === "unknown")!;
+    expect(directCluster).toMatchObject({
+      id: "direct",
+      label: "Direct",
+      // Two European hosts against two hosts with no region hint: the tie goes to the region
+      // of the busier hosts (origin: pixel.tracker.io with three requests).
+      region: "origin",
+      requests: 6,
+    });
+    expect(analysis.thirdPartyClusters.filter((c) => c.provider === "unknown")).toHaveLength(1);
+    expect(analysis.nodes.find((n) => n.label === "Direct")?.subLabel).toBe("pixel.tracker.io +3");
+  });
+
+  it("places the Direct cluster in the region of most of its hosts", () => {
+    const { analysis } = analyze([
+      direct("https://static.analytics.de/tag.js"),
+      direct("https://consent.privacy.eu/c.js"),
+      direct("https://pixel.tracker.io/p.gif"),
+      direct("https://pixel.tracker.io/q.gif"),
+    ]);
+
+    expect(analysis.thirdPartyClusters).toEqual([
+      expect.objectContaining({ label: "Direct", region: "europe", requests: 4 }),
+    ]);
+  });
+
+  it("captions a Direct cluster with its busiest host, cut from the left when too long", () => {
+    const { analysis } = analyze([
+      direct("https://a-very-long-subdomain.of.some-analytics-vendor.com/x.js"),
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+    ]);
+
+    expect(analysis.nodes.find((n) => n.label === "Direct")?.subLabel).toBe("…nalytics-vendor.com");
+  });
+
+  it("shortens a long busiest host to its last labels that fit", () => {
+    const { analysis } = analyze([
+      direct("https://media-us2.digital.nuance.com/a.js"),
+      direct("https://media-us2.digital.nuance.com/b.js"),
+      direct("https://pixel.tracker.io/p.gif"),
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+    ]);
+
+    expect(analysis.nodes.find((n) => n.label === "Direct")?.subLabel).toBe(
+      "…digital.nuance.com +1"
+    );
+  });
+
+  it("places a Google Frontend without PoP in the United States and an Akamai edge at the edge", () => {
+    const { analysis } = analyze([
+      thirdParty("https://fonts.googleapis.com/css", { server: "Google Frontend" }),
+      thirdParty("https://fonts.googleapis.com/css2", { server: "Google Frontend" }),
+      thirdParty("https://assets.akamaized.net/a.js", { server: "AkamaiNetStorage" }),
+    ]);
+
+    expect(analysis.thirdPartyClusters.map((c) => [c.label, c.region])).toEqual([
+      ["Google", "united-states"],
+      ["Akamai Edge", "edge"],
+    ]);
+  });
+
+  const cdn = {
+    cloudflareSin: (n: number) =>
+      thirdParty(`https://cdnjs.cloudflare.com/sin-${n}.js`, { "cf-ray": "abc-SIN" }),
+    cloudflareFra: (n: number) =>
+      thirdParty(`https://cdnjs.cloudflare.com/fra-${n}.js`, { "cf-ray": "abc-FRA" }),
+    fastly: (n: number) =>
+      thirdParty(`https://cdn.fastly-vendor.net/${n}.js`, { "x-served-by": "cache-sin18034-SIN" }),
+    akamai: (n: number) =>
+      thirdParty(`https://assets.akamaized.net/${n}.js`, { server: "AkamaiNetStorage" }),
+    google: (n: number) =>
+      thirdParty(`https://fonts.googleapis.com/${n}.css`, { server: "Google Frontend" }),
+    azure: (n: number) =>
+      thirdParty(`https://media.vendor.com/${n}.js`, { "x-azure-ref": "20261028T222212Z-1" }),
+  };
+  const times = (count: number, make: (n: number) => HarEntry) =>
+    Array.from({ length: count }, (_, n) => make(n));
+
+  it("splits a provider by region when the clusters stay within the cap", () => {
+    const { analysis } = analyze([
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+      cloudflareLax("https://cdnjs.cloudflare.com/b.js"),
+      cdn.cloudflareFra(1),
+      cloudfrontFra("https://d1.cloudfront.net/x.js"),
+    ]);
+
+    expect(analysis.thirdPartyClusters.map((c) => [c.id, c.label, c.region, c.requests])).toEqual([
+      ["cloudflare-united-states", "Cloudflare · LAX", "united-states", 2],
+      ["cloudflare-europe", "Cloudflare · FRA", "europe", 1],
+      ["cloudfront", "CloudFront · FRA", "europe", 1],
+    ]);
+  });
+
+  it("keeps a provider whole, naming its PoPs, when splitting it would exceed the cap", () => {
+    const { analysis } = analyze([
+      ...times(9, (n) => direct(`https://h${n % 4}.vendor-${n % 4}.com/${n}.js`)),
+      ...times(4, cdn.akamai),
+      ...times(3, cdn.google),
+      ...times(2, cdn.azure),
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+      cloudflareLax("https://cdnjs.cloudflare.com/b.js"),
+      cdn.cloudflareSin(1),
+    ]);
+
+    expect(MAX_THIRD_PARTY_CLUSTERS).toBe(5);
+    expect(analysis.thirdPartyClusters.map((c) => [c.label, c.requests])).toEqual([
+      ["Direct", 9],
+      ["Akamai Edge", 4],
+      ["Google", 3],
+      ["Cloudflare · LAX, SIN", 3],
+      ["Azure Front Door", 2],
+    ]);
+    const cloudflare = analysis.thirdPartyClusters.find((c) => c.provider === "cloudflare")!;
+    expect(cloudflare).toMatchObject({ id: "cloudflare", region: "united-states" });
+  });
+
+  it("names as many PoPs as fit a diagram caption, or none for a long provider name", () => {
+    const azure = (pop: string, n: number) =>
+      thirdParty(`https://media.vendor.com/${pop}-${n}.js`, {
+        "x-azure-ref": `Ref A: 1 Ref B: ${pop}30EDGE0815 Ref C: 2026-01-01`,
+      });
+    const { analysis } = analyze([
+      ...times(3, (n) => azure("IAD", n)),
+      ...times(2, (n) => azure("AMS", n)),
+      ...times(4, (n) => direct(`https://h${n}.vendor-${n}.com/a.js`)),
+      ...times(3, cdn.akamai),
+      ...times(2, cdn.google),
+      cloudfrontFra("https://d1.cloudfront.net/x.js"),
+    ]);
+
+    expect(analysis.thirdPartyClusters.map((c) => [c.label, c.pop?.city])).toContainEqual([
+      "Azure Front Door",
+      "Washington DC",
+    ]);
+    for (const cluster of analysis.thirdPartyClusters) {
+      expect(cluster.label.length, cluster.label).toBeLessThanOrEqual(22);
+    }
+  });
+
+  it("merges the smallest CDN clusters into Other third parties past the cap, never Direct", () => {
+    const { analysis } = analyze([
+      direct("https://pixel.tracker.io/p.gif"),
+      ...times(6, (n) => cloudflareLax(`https://cdnjs.cloudflare.com/${n}.js`)),
+      ...times(5, (n) => cloudfrontFra(`https://d1.cloudfront.net/${n}.js`)),
+      ...times(4, cdn.fastly),
+      ...times(3, cdn.akamai),
+      ...times(2, cdn.google),
+    ]);
+
+    expect(analysis.thirdPartyClusters.map((c) => [c.label, c.requests])).toEqual([
+      ["Cloudflare · LAX", 6],
+      ["CloudFront · FRA", 5],
+      ["Fastly CDN · SIN", 4],
+      ["Direct", 1],
+      ["Other third parties", 3 + 2],
+    ]);
+    const other = analysis.thirdPartyClusters.at(-1)!;
+    expect(other).toMatchObject({ id: "other", provider: "mixed", pop: null });
+    expect(other.hosts).toEqual(["assets.akamaized.net", "fonts.googleapis.com"]);
+  });
+
+  it("draws one node and one browser path per cluster instead of the single third-parties node", () => {
+    const { analysis } = analyze(twoProviders());
+    const [cloudflare, cloudfront] = analysis.thirdPartyClusters;
+
+    const thirdPartyNodes = analysis.nodes.filter((n) => nodeKind(n.id) === "third-parties");
+    expect(thirdPartyNodes).toEqual([
+      {
+        id: `third-parties:${cloudflare.id}`,
+        label: "Cloudflare · LAX",
+        subLabel: "Los Angeles",
+        present: true,
+        region: "united-states",
+        resourceStats: { count: 3, avgMs: 200 },
+      },
+      {
+        id: `third-parties:${cloudfront.id}`,
+        label: "CloudFront · FRA",
+        subLabel: "Frankfurt",
+        present: true,
+        region: "europe",
+        resourceStats: { count: 2, avgMs: 50 },
+      },
+    ]);
+    expect(
+      analysis.paths.filter((p) => p.from === "browser" && nodeKind(p.to) === "third-parties")
+    ).toEqual([
+      {
+        id: `browser-third-parties:${cloudflare.id}`,
+        from: "browser",
+        to: `third-parties:${cloudflare.id}`,
+      },
+      {
+        id: `browser-third-parties:${cloudfront.id}`,
+        from: "browser",
+        to: `third-parties:${cloudfront.id}`,
+      },
+    ]);
+  });
+
+  it("keeps the single third-parties node when every third party falls in one cluster", () => {
+    const { analysis } = analyze([
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js"),
+      cloudflareLax("https://cdnjs.cloudflare.com/b.js"),
+    ]);
+
+    expect(analysis.thirdPartyClusters).toHaveLength(1);
+    const thirdPartyNodes = analysis.nodes.filter((n) => nodeKind(n.id) === "third-parties");
+    expect(thirdPartyNodes).toEqual([
+      expect.objectContaining({
+        id: "third-parties",
+        label: "3rd Parties",
+        region: "united-states",
+      }),
+    ]);
+    expect(analysis.paths.map((p) => p.id)).toContain("browser-third-parties");
+  });
+
+  it("activates every cluster in the third-party step, with a timing per cluster path", () => {
+    const { flow, analysis } = analyze(twoProviders());
+    const [cloudflare, cloudfront] = analysis.thirdPartyClusters;
+    const step = flow.steps.find((s) => s.title === "Third-party requests")!;
+
+    expect(step.activeNodes).toEqual([
+      "browser",
+      `third-parties:${cloudflare.id}`,
+      `third-parties:${cloudfront.id}`,
+    ]);
+    expect(step.activePaths).toEqual([
+      `browser-third-parties:${cloudflare.id}`,
+      `browser-third-parties:${cloudfront.id}`,
+    ]);
+    expect(step.pathTimings).toEqual({
+      [`browser-third-parties:${cloudflare.id}`]: "avg 200ms",
+      [`browser-third-parties:${cloudfront.id}`]: "avg 50ms",
+    });
+    // Still one step: the sidebar lists every third-party request, grouped by domain.
+    expect(step.resourceRefs).toHaveLength(5);
+    expect(flow.steps.filter((s) => s.title === "Third-party requests")).toHaveLength(1);
+  });
+
+  it("references only paths and nodes of the page topology in every step", () => {
+    const { flow, analysis } = analyze(twoProviders(), { clientRegion: "cn" });
+    const nodeIds = new Set(analysis.nodes.map((n) => n.id));
+    const pathIds = new Set(analysis.paths.map((p) => p.id));
+    for (const step of flow.steps) {
+      for (const id of step.activeNodes) expect(nodeIds.has(id), id).toBe(true);
+      for (const id of step.activePaths) expect(pathIds.has(id), id).toBe(true);
+    }
   });
 });

@@ -1,8 +1,5 @@
 .root {
-  position: absolute;
-  top: var(--space-sm);
-  right: calc(var(--space-sm) + 170px);
-  z-index: 6;
+  position: relative;
 }
 
 .button {
@@ -80,11 +77,6 @@
 }
 
 @media (max-width: 640px) {
-  .root {
-    top: calc(var(--space-sm) + 52px);
-    right: var(--space-sm);
-  }
-
   .button {
     min-height: 44px;
   }

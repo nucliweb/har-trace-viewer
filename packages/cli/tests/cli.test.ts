@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach } from "vitest";
+import { FLOW_VERSION } from "@htv/core";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -312,7 +313,7 @@ describe("client region (built CLI)", () => {
     const flow = extractFlow(
       readFileSync(join(out, "index.html"), "utf-8")
     ) as unknown as EmbeddedFlow;
-    expect(flow.version).toBe(3);
+    expect(flow.version).toBe(FLOW_VERSION);
     expect(flow.clientRegion).toBe("default");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
     expect(flow.nodes.map((n) => n.id)).not.toContain("gfw");

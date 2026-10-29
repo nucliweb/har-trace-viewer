@@ -1,3 +1,4 @@
+import { nodeKind } from "@htv/core";
 import type { DiagramPath, PathId } from "@htv/core";
 import type { HistoricalPath } from "../../types.js";
 import styles from "../NodeRenderer.module.css";
@@ -145,7 +146,10 @@ function PathGroup({
   historicalPaths,
   reducedMotion,
 }: PathGroupProps) {
-  const color = PATH_COLORS[path.id] ?? "var(--color-node-browser)";
+  // Every path to a third-party cluster takes the third-parties colour.
+  const color =
+    PATH_COLORS[nodeKind(path.to) === "third-parties" ? "browser-third-parties" : path.id] ??
+    "var(--color-node-browser)";
   const timing = pathTimings?.[path.id];
 
   if (!active) {

@@ -42,7 +42,12 @@ function NodeRendererView({
       <defs>
         <GlowFilter />
       </defs>
-      <ZoneBands zones={geometry.zones} height={geometry.height} hasGfw={options.hasGfw} />
+      <ZoneBands
+        zones={geometry.zones}
+        height={geometry.height}
+        hasGfw={options.hasGfw}
+        cacheSubzoneY={geometry.cacheSubzoneY}
+      />
       <PathLayer
         paths={paths}
         geometry={geometry.paths}

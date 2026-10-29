@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { generateFlow, parseHar } from "@htv/core";
+import { generateFlow, nodeKind, parseHar } from "@htv/core";
 import type { ClientRegion, PathId } from "@htv/core";
 import type { ComponentProps } from "react";
 import { NodeRenderer } from "../src/components/NodeRenderer.js";
@@ -31,7 +31,7 @@ const ATTACH_DISTANCE = 25;
 
 // Captions are centred under their glyph; the last baseline gets a few pixels for descenders.
 // A bypassing path keeps this far below the caption while within its half-width.
-const CAPTION_HALF_WIDTH = { gfw: 50, edge: 75 } as const;
+const CAPTION_HALF_WIDTH = { gfw: 50, edge: 75, origin: 75 } as const;
 const CAPTION_DESCENT = 4;
 const CAPTION_CLEARANCE = 12;
 
@@ -53,7 +53,44 @@ interface Scenario {
   clientRegion: ClientRegion;
   documentHeaders: Header[];
   thirdPartyUrl?: string;
+  // Third-party requests served from several CDNs and regions: one node per cluster.
+  thirdParties?: { url: string; headers: Header[] }[];
 }
+
+const request = (url: string, headers: Header[] = []) => ({ url, headers });
+const CLOUDFLARE_LAX = (n: number) =>
+  request(`https://cdnjs.cloudflare.com/lib-${n}.js`, [["cf-ray", "8a1b2c3d4e5f-LAX"]]);
+const CLOUDFRONT_FRA = (n: number) =>
+  request(`https://d1.cloudfront.net/tag-${n}.js`, [["x-amz-cf-pop", "FRA56-P1"]]);
+const AZURE_IAD = (n: number) =>
+  request(`https://media-us2.digital.vendor.com/m-${n}.js`, [
+    ["x-azure-ref", "Ref A: 1 Ref B: IAD30EDGE0815 Ref C: 2026-01-01"],
+  ]);
+const DIRECT_LONG_HOST = (n: number) =>
+  request(`https://a-very-long-subdomain.of.some-analytics-vendor.com/${n}.js`);
+
+// Two clusters: Cloudflare in the United States and CloudFront in Europe.
+const TWO_CLUSTERS = [CLOUDFLARE_LAX(1), CLOUDFLARE_LAX(2), CLOUDFRONT_FRA(1)];
+const GOOGLE = (n: number) =>
+  request(`https://fonts.googleapis.com/css-${n}`, [["server", "Google Frontend"]]);
+const FASTLY = (n: number) =>
+  request(`https://cdn.fastly-vendor.net/${n}.js`, [["x-served-by", "cache-sin18034-SIN"]]);
+// Four providers, with the widest captions a cluster can have.
+const FOUR_CLUSTERS = [
+  AZURE_IAD(1),
+  AZURE_IAD(2),
+  AZURE_IAD(3),
+  AZURE_IAD(4),
+  CLOUDFLARE_LAX(1),
+  CLOUDFLARE_LAX(2),
+  CLOUDFLARE_LAX(3),
+  DIRECT_LONG_HOST(1),
+  DIRECT_LONG_HOST(2),
+  request("https://pixel.tracker.io/p.gif"),
+  GOOGLE(1),
+];
+// Six providers capped to five clusters: the two smallest CDNs merge into Other.
+const FIVE_CLUSTERS = [...FOUR_CLUSTERS, GOOGLE(2), CLOUDFRONT_FRA(1), FASTLY(1)];
 
 const CLOUDFLARE: Header[] = [
   ["cf-ray", "8a1b2c3d4e5f-LHR"],
@@ -93,6 +130,36 @@ const SCENARIOS: Scenario[] = [
     documentHeaders: [],
     thirdPartyUrl: "https://widgets.thirdparty.com/embed.js",
   },
+  {
+    layout: "noGfw_cdn_2clusters",
+    clientRegion: "default",
+    documentHeaders: CLOUDFLARE,
+    thirdParties: TWO_CLUSTERS,
+  },
+  {
+    layout: "noGfw_noCdn_4clusters",
+    clientRegion: "default",
+    documentHeaders: [],
+    thirdParties: FOUR_CLUSTERS,
+  },
+  {
+    layout: "noGfw_cdn_5clusters",
+    clientRegion: "default",
+    documentHeaders: CLOUDFLARE,
+    thirdParties: FIVE_CLUSTERS,
+  },
+  {
+    layout: "gfw_cdn_5clusters",
+    clientRegion: "cn",
+    documentHeaders: CLOUDFLARE,
+    thirdParties: FIVE_CLUSTERS,
+  },
+  {
+    layout: "gfw_noCdn_2clusters",
+    clientRegion: "cn",
+    documentHeaders: [],
+    thirdParties: TWO_CLUSTERS,
+  },
 ];
 
 function rawEntry(url: string, mimeType: string, headers: Header[] = []) {
@@ -119,6 +186,9 @@ function syntheticFlow(scenario: Scenario) {
     rawEntry("https://example.com/app.js", "application/javascript", scenario.documentHeaders),
   ];
   if (scenario.thirdPartyUrl) entries.push(rawEntry(scenario.thirdPartyUrl, "text/javascript"));
+  for (const { url, headers } of scenario.thirdParties ?? []) {
+    entries.push(rawEntry(url, "text/javascript", headers));
+  }
   const har = parseHar({
     log: {
       pages: [
@@ -142,7 +212,9 @@ type Direction = "request" | "response" | undefined;
 function states(base: Pick<Props, "nodes" | "paths">): Record<string, Props> {
   const present = base.nodes.filter((n) => n.present).map((n) => n.id);
   const ids = base.paths.map((p) => p.id);
-  const timings = Object.fromEntries(ids.map((id) => [id, "120ms"])) as Record<PathId, string>;
+  // Paths to stacked clusters carry their average, as wide as it gets in practice.
+  const timing = (id: string) => (id.startsWith("browser-third-parties:") ? "avg 1234ms" : "120ms");
+  const timings = Object.fromEntries(ids.map((id) => [id, timing(id)])) as Record<PathId, string>;
   const directions = (direction: Direction) =>
     direction
       ? (Object.fromEntries(ids.map((id) => [id, direction])) as Record<PathId, typeof direction>)
@@ -159,7 +231,7 @@ function states(base: Pick<Props, "nodes" | "paths">): Record<string, Props> {
     activeNodes: [],
     activePaths: [],
     historicalPaths: Object.fromEntries(
-      ids.map((id) => [id, { timing: "120ms", direction }])
+      ids.map((id) => [id, { timing: timing(id), direction }])
     ) as Props["historicalPaths"],
   });
   return {
@@ -177,6 +249,9 @@ interface TextGeometry {
   text: string;
   x: number;
   y: number;
+  // Only recorded for text that starts at x (captions beside a stacked cluster); the rest
+  // is centred on it.
+  anchor?: "start";
 }
 
 interface PathGeometry {
@@ -199,6 +274,7 @@ const texts = (root: Element): TextGeometry[] =>
     text: t.textContent ?? "",
     x: Number(t.getAttribute("x")),
     y: Number(t.getAttribute("y")),
+    ...(t.getAttribute("text-anchor") === "start" ? { anchor: "start" as const } : {}),
   }));
 
 // The SVG children are: <defs>, the zone bands group, one group per path, one group per node.
@@ -268,6 +344,54 @@ function curveDistance(a: number[], b: number[]): number {
     Math.max(...from.map(([x, y]) => Math.min(...to.map(([u, v]) => Math.hypot(x - u, y - v)))));
   return Math.max(oneWay(pa, pb), oneWay(pb, pa));
 }
+
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+// Separate boxes keep at least this far apart, horizontally or vertically.
+const BOX_SEPARATION = 8;
+// Monospace glyphs are 0.6 em wide; node captions use 12-13 px, path labels 12 px.
+const CHAR_WIDTH = 0.6 * 13;
+const LABEL_CHAR_WIDTH = 0.6 * 12;
+const GLYPH_RADIUS = 22;
+
+const textBox = ({ text, x, y, anchor }: TextGeometry): Box => {
+  const width = text.length * CHAR_WIDTH;
+  return {
+    x0: anchor === "start" ? x : x - width / 2,
+    x1: anchor === "start" ? x + width : x + width / 2,
+    y0: y - 11,
+    y1: y + CAPTION_DESCENT,
+  };
+};
+
+// TimingLabel draws its background 14 px tall, ending at the baseline, a few pixels wider
+// than the text.
+const labelBox = ({ text, x, y }: TextGeometry): Box => {
+  const width = text.length * LABEL_CHAR_WIDTH + 8;
+  return { x0: x - width / 2, x1: x + width / 2, y0: y - 14, y1: y };
+};
+
+const glyphBox = ([x, y]: [number, number]): Box => ({
+  x0: x - GLYPH_RADIUS,
+  x1: x + GLYPH_RADIUS,
+  y0: y - GLYPH_RADIUS,
+  y1: y + GLYPH_RADIUS,
+});
+
+const union = (boxes: Box[]): Box => ({
+  x0: Math.min(...boxes.map((b) => b.x0)),
+  y0: Math.min(...boxes.map((b) => b.y0)),
+  x1: Math.max(...boxes.map((b) => b.x1)),
+  y1: Math.max(...boxes.map((b) => b.y1)),
+});
+
+// Distance between two boxes along the axis that separates them; negative when they overlap.
+const gap = (a: Box, b: Box) => Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1);
 
 interface Deviation {
   points: number;
@@ -376,17 +500,29 @@ describe("NodeRenderer geometry", () => {
       }
     });
 
-    if (scenario.layout !== "noGfw_noCdn" && scenario.layout !== "noGfw_noCdn_thirdParties") {
-      it(`routes the ${scenario.layout} browser-third-parties path below the captions it passes`, () => {
-        const { nodes } = syntheticFlow(scenario).pageAnalyses[0];
-        const geometry = actual[scenario.layout].idle;
-        const present = nodes.filter((n) => n.present);
-        const d = numbers(geometry.paths["browser-third-parties"].d[0].d);
-        const label = actual[scenario.layout].center.paths["browser-third-parties"].labels[0];
-        for (const id of ["gfw", "edge"] as const) {
+    it(`routes the ${scenario.layout} third-party paths below the captions they pass`, () => {
+      const { nodes, paths } = syntheticFlow(scenario).pageAnalyses[0];
+      const geometry = actual[scenario.layout].idle;
+      const present = nodes.filter((n) => n.present);
+      const centre = (id: string) => geometry.nodes[present.findIndex((n) => n.id === id)].centre;
+      const thirdPartyPaths = paths.filter(
+        (p) => nodeKind(p.to) === "third-parties" && present.some((n) => n.id === p.to)
+      );
+      const clustered = thirdPartyPaths.length > 1;
+      let checked = 0;
+      for (const path of thirdPartyPaths) {
+        const d = numbers(geometry.paths[path.id].d[0].d);
+        const label = actual[scenario.layout].center.paths[path.id].labels[0];
+        const [browserX] = centre("browser");
+        const [targetX] = centre(path.to);
+        for (const id of ["gfw", "edge", "origin"] as const) {
           const index = present.findIndex((n) => n.id === id);
           if (index < 0) continue;
           const node = geometry.nodes[index];
+          // Only the nodes the path passes on its way: origin shares the column of a
+          // single third-parties node, or sits past it in its own zone.
+          if (node.centre[0] <= browserX || node.centre[0] >= targetX) continue;
+          checked++;
           const bottom = Math.max(...node.texts.map((t) => t.y)) + CAPTION_DESCENT;
           // Coarse samples (t = 0.1 ... 0.9) plus a fine pass over the part below the glyph.
           const samples = [
@@ -396,11 +532,97 @@ describe("NodeRenderer geometry", () => {
           for (const t of samples) {
             const [x, y] = cubic(d, t);
             if (Math.abs(x - node.centre[0]) > CAPTION_HALF_WIDTH[id]) continue;
-            expect(y, `${id} t=${t} at x=${Math.round(x)}`).toBeGreaterThanOrEqual(
+            expect(y, `${path.id} under ${id} t=${t} at x=${Math.round(x)}`).toBeGreaterThanOrEqual(
               bottom + CAPTION_CLEARANCE
             );
           }
-          expect(label.y, `${id} label`).toBeGreaterThan(bottom + CAPTION_CLEARANCE);
+          // A single path labels the lowest point of its dip; clusters label their arrival.
+          if (!clustered)
+            expect(label.y, `${id} label`).toBeGreaterThan(bottom + CAPTION_CLEARANCE);
+        }
+      }
+      // Without a CDN, a single third-parties node shares the origin column: nothing to pass.
+      const passesNothing = scenario.layout.startsWith("noGfw_noCdn") && !clustered;
+      if (!passesNothing) expect(checked, "captions passed").toBeGreaterThan(0);
+    });
+
+    if (scenario.thirdParties) {
+      it(`keeps the ${scenario.layout} captions and timing labels apart`, () => {
+        for (const state of ["center", "historyCenter"] as const) {
+          const geometry = actual[scenario.layout][state];
+          // Every glyph, caption line and timing label, with what it belongs to: the lines
+          // of one caption stack by design.
+          const boxes = [
+            ...geometry.nodes.flatMap((node, i) => [
+              { owner: `node[${i}]`, name: `node[${i}] glyph`, ...glyphBox(node.centre) },
+              ...node.texts.map((t) => ({
+                owner: `node[${i}]`,
+                name: `"${t.text}"`,
+                ...textBox(t),
+              })),
+            ]),
+            ...Object.entries(geometry.paths).flatMap(([id, path]) =>
+              path.labels.map((label) => ({ owner: id, name: `${id} label`, ...labelBox(label) }))
+            ),
+          ];
+          for (const [i, a] of boxes.entries()) {
+            for (const b of boxes.slice(i + 1)) {
+              if (a.owner === b.owner) continue;
+              expect(gap(a, b), `${state}: ${a.name} vs ${b.name}`).toBeGreaterThanOrEqual(
+                BOX_SEPARATION
+              );
+            }
+          }
+        }
+      });
+
+      it(`keeps the ${scenario.layout} cluster paths off every caption but the browser's`, () => {
+        const { nodes, paths } = syntheticFlow(scenario).pageAnalyses[0];
+        const geometry = actual[scenario.layout].idle;
+        const present = nodes.filter((n) => n.present);
+        // The browser caption sits where every path leaves; the paths avoid it when they can.
+        const captions = [
+          ...geometry.nodes.flatMap((node, i) =>
+            present[i].id === "browser" ? [] : node.texts.map((t) => ({ t, ...textBox(t) }))
+          ),
+          // Zone captions below the zone names: the GFW zone and the cache sub-zone.
+          ...geometry.zones.filter((z) => z.y > 40).map((t) => ({ t, ...textBox(t) })),
+        ];
+        for (const path of paths.filter((p) => p.id.startsWith("browser-third-parties:"))) {
+          const d = numbers(geometry.paths[path.id].d[0].d);
+          for (let i = 0; i <= 200; i++) {
+            const [x, y] = cubic(d, i / 200);
+            for (const c of captions) {
+              const inside = x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1;
+              expect(
+                inside,
+                `${path.id} at (${Math.round(x)}, ${Math.round(y)}) crosses "${c.t.text}"`
+              ).toBe(false);
+            }
+          }
+        }
+      });
+
+      it(`stacks the ${scenario.layout} cluster nodes inside the diagram, in their own zone`, () => {
+        const { nodes } = syntheticFlow(scenario).pageAnalyses[0];
+        const geometry = actual[scenario.layout].idle;
+        const present = nodes.filter((n) => n.present);
+        const clusters = present
+          .map((n, i) => ({ n, node: geometry.nodes[i] }))
+          .filter(({ n }) => n.id.startsWith("third-parties:"));
+        expect(clusters.length).toBe(Number(/(\d)clusters/.exec(scenario.layout)![1]));
+        // Zone captions sit along the top; the cache and firewall captions further down.
+        const lastZone = geometry.zones.filter((z) => z.y < 40).at(-1)!;
+        expect(lastZone.text).toMatch(/THIRD PARTIES|[A-Z]/);
+        const ys = clusters.map(({ node }) => node.centre[1]);
+        expect(ys).toEqual([...ys].sort((a, b) => a - b));
+        for (const { node } of clusters) {
+          expect(node.centre[0], "same column").toBe(clusters[0].node.centre[0]);
+          const box = union([glyphBox(node.centre), ...node.texts.map(textBox)]);
+          expect(box.x0).toBeGreaterThanOrEqual(0);
+          expect(box.x1).toBeLessThanOrEqual(900);
+          expect(box.y0, "below the zone captions").toBeGreaterThan(lastZone.y + 8);
+          expect(box.y1).toBeLessThanOrEqual(480);
         }
       });
     }

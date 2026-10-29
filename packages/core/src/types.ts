@@ -66,7 +66,14 @@ export interface ParsedTrace {
 
 // ── Diagram types ─────────────────────────────────────────────────────────────
 
-export type NodeId = "browser" | "gfw" | "edge" | "origin" | "third-parties";
+// What a node is, whatever its id: the diagram draws, colours and places nodes by kind.
+export type NodeKind = "browser" | "gfw" | "edge" | "origin" | "third-parties";
+
+// A page whose third parties fall in several clusters gets one node per cluster,
+// `third-parties:<cluster id>`, instead of the single "third-parties" node.
+export type ThirdPartyClusterNodeId = `third-parties:${string}`;
+
+export type NodeId = NodeKind | ThirdPartyClusterNodeId;
 
 export type NetworkRegion =
   | "china"
@@ -98,7 +105,11 @@ export type PathId =
   | "browser-edge"
   | "edge-origin"
   | "browser-origin"
-  | "browser-third-parties";
+  | "browser-third-parties"
+  | ThirdPartyClusterPathId;
+
+// Browser → one third-party cluster node: `browser-third-parties:<cluster id>`.
+export type ThirdPartyClusterPathId = `browser-third-parties:${string}`;
 
 export interface DiagramPath {
   id: PathId;
@@ -163,11 +174,33 @@ export interface FlowHints {
   suggestedClientRegion?: ClientRegionSuggestion;
 }
 
+// Third-party network requests of a page that share a CDN provider and a region.
+export interface ThirdPartyCluster {
+  // Unique within the page, e.g. "cloudflare-united-states", "direct-origin", "other".
+  id: string;
+  // "Cloudflare · LAX", "Google", "Direct" (no CDN) or "Other third parties".
+  label: string;
+  // "unknown" when no CDN serves them; "mixed" for the merged "Other third parties".
+  provider: CdnProvider | "mixed";
+  region: NetworkRegion;
+  // The PoP that served most of the cluster's requests, when the headers name one.
+  pop: PopDetection | null;
+  // Hostnames, busiest first (in order of first request on a tie).
+  hosts: string[];
+  requests: number;
+  avgMs: number;
+  bytes: number; // transfer size
+  hitRatio: number; // CDN cache hits / requests, 0 without a CDN
+}
+
 // Topology and cache analysis of a single page of the flow.
 export interface PageAnalysis {
   nodes: DiagramNode[];
   paths: DiagramPath[];
   cacheReport: CacheReport;
+  // Biggest first, at most four. Empty without third-party network requests, and for
+  // flows older than version 4, whose topology keeps a single third-parties node.
+  thirdPartyClusters: ThirdPartyCluster[];
 }
 
 export interface Flow {
@@ -235,12 +268,13 @@ export type CdnProvider =
   | "vercel"
   | "netlify"
   | "azure-front-door"
+  | "azure-cdn"
   | "bunny"
   | "keycdn"
   | "unknown";
 
 // Where a PoP code was read from. "fly" is a hosting platform, not a CDN.
-export type PopProvider = Exclude<CdnProvider, "unknown" | "gfe" | "akamai"> | "fly";
+export type PopProvider = Exclude<CdnProvider, "unknown" | "gfe" | "akamai" | "azure-cdn"> | "fly";
 
 export interface PopDetection {
   code: string; // lowercase IATA code, e.g. "fra"

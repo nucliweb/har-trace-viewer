@@ -9,6 +9,7 @@ import {
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
+import { clusterNode, clusterPath, clusterThirdParties } from "./third-party-clusters.js";
 import { firstStart, sortByTimeline, type TimedItem } from "./timeline.js";
 import type {
   ClientRegion,
@@ -25,16 +26,26 @@ import type {
   PageFlow,
   ParsedHar,
   PathId,
+  ThirdPartyCluster,
 } from "../types.js";
 
 // Readers of a flow resolve step resources through these.
 export { getStepCacheResources, getStepResources } from "./step-resources.js";
+export {
+  MAX_THIRD_PARTY_CLUSTERS,
+  clusterThirdParties,
+  nodeKind,
+  thirdPartyNodeId,
+  thirdPartyPathId,
+} from "./third-party-clusters.js";
 
 // Bump when the Flow shape changes in a way readers must detect.
 // 2: per-page topology and cache report (Flow.pageAnalyses, DiagramStep.pageIndex).
 // 3: steps reference page entries by index (DiagramStep.resourceRefs, cacheResourceRefs)
 //    instead of carrying copies (resources, cacheResources).
-export const FLOW_VERSION = 3;
+// 4: third parties grouped by CDN provider and region (PageAnalysis.thirdPartyClusters);
+//    a page with several clusters has one `third-parties:<id>` node per cluster.
+export const FLOW_VERSION = 4;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 
@@ -57,18 +68,22 @@ function withDerivedPageIndex(steps: DiagramStep[]): DiagramStep[] {
 // current shape. Version 0 means "pre-versioning". Version ≤ 1 flows had a
 // single topology and cache report: every page gets a copy of the top-level ones.
 // Version ≤ 2 steps carried copies of their entries: they become references.
+// Version ≤ 3 analyses have no third-party clusters: their single third-parties node stays.
 export function normalizeFlow(flow: Flow): Flow {
   const steps = flow.steps.every((step) => typeof step.pageIndex === "number")
     ? flow.steps
     : withDerivedPageIndex(flow.steps);
   const pageCount = Math.max(flow.pages.length, (steps.at(-1)?.pageIndex ?? 0) + 1);
-  const pageAnalyses =
+  const pageAnalyses = (
     flow.pageAnalyses ??
     Array.from({ length: pageCount }, () => ({
       nodes: flow.nodes,
       paths: flow.paths,
       cacheReport: flow.cacheReport,
-    }));
+    }))
+  ).map((analysis) =>
+    analysis.thirdPartyClusters ? analysis : { ...analysis, thirdPartyClusters: [] }
+  );
 
   const withRefs = inlineResourcesToRefs(flow.pages, steps);
 
@@ -128,7 +143,12 @@ interface TopologyOptions {
   originRegion: NetworkRegion;
   originSubLabel?: string | null;
   thirdPartyRegion: NetworkRegion;
+  // Two or more clusters replace the single third-parties node with one node each.
+  thirdPartyClusters: ThirdPartyCluster[];
 }
+
+// Several clusters get a node each; one cluster (or none) keeps the single node.
+const hasClusterNodes = (clusters: ThirdPartyCluster[]) => clusters.length > 1;
 
 function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: DiagramPath[] } {
   const {
@@ -141,6 +161,7 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
     originRegion,
     originSubLabel,
     thirdPartyRegion,
+    thirdPartyClusters,
   } = opts;
   const browserRegion: NetworkRegion = hasGfw ? "china" : "client";
 
@@ -172,14 +193,19 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
       subLabel: originSubLabel ?? undefined,
       present: true,
       region: originRegion,
-    },
-    {
+    }
+  );
+  const clustered = hasClusterNodes(thirdPartyClusters);
+  if (clustered) {
+    nodes.push(...thirdPartyClusters.map(clusterNode));
+  } else {
+    nodes.push({
       id: "third-parties",
       label: "3rd Parties",
       present: hasThirdPartyNodes,
       region: thirdPartyRegion,
-    }
-  );
+    });
+  }
 
   let paths: DiagramPath[];
   if (hasGfw && hasCdn) {
@@ -187,25 +213,24 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
       { id: "browser-gfw", from: "browser", to: "gfw" },
       { id: "gfw-edge", from: "gfw", to: "edge" },
       { id: "edge-origin", from: "edge", to: "origin" },
-      { id: "browser-third-parties", from: "browser", to: "third-parties" },
     ];
   } else if (hasGfw) {
     paths = [
       { id: "browser-gfw", from: "browser", to: "gfw" },
       { id: "gfw-origin", from: "gfw", to: "origin" },
-      { id: "browser-third-parties", from: "browser", to: "third-parties" },
     ];
   } else if (hasCdn) {
     paths = [
       { id: "browser-edge", from: "browser", to: "edge" },
       { id: "edge-origin", from: "edge", to: "origin" },
-      { id: "browser-third-parties", from: "browser", to: "third-parties" },
     ];
   } else {
-    paths = [
-      { id: "browser-origin", from: "browser", to: "origin" },
-      { id: "browser-third-parties", from: "browser", to: "third-parties" },
-    ];
+    paths = [{ id: "browser-origin", from: "browser", to: "origin" }];
+  }
+  if (clustered) {
+    paths.push(...thirdPartyClusters.map(clusterPath));
+  } else {
+    paths.push({ id: "browser-third-parties", from: "browser", to: "third-parties" });
   }
 
   return { nodes, paths };
@@ -241,19 +266,23 @@ interface PageContext {
   hasCdn: boolean;
   documentRoot: string;
   thirdPartyEntries: HarEntry[];
+  // Third-party network requests grouped by CDN provider and region.
+  thirdPartyClusters: ThirdPartyCluster[];
 }
 
 function describePage(har: ParsedHar): PageContext {
   const cdnResult = detectNode(har.documentEntry.responseHeaders);
   const documentRoot = getRootDomain(har.documentEntry.url);
+  // Third-party iframes are HTML documents too; only the main document is not a resource.
+  const thirdPartyEntries = har.entries.filter(
+    (e) => e !== har.documentEntry && isThirdParty(e, documentRoot)
+  );
   return {
     cdnResult,
     hasCdn: cdnResult.type === "edge",
     documentRoot,
-    // Third-party iframes are HTML documents too; only the main document is not a resource.
-    thirdPartyEntries: har.entries.filter(
-      (e) => e !== har.documentEntry && isThirdParty(e, documentRoot)
-    ),
+    thirdPartyEntries,
+    thirdPartyClusters: clusterThirdParties(thirdPartyEntries.filter((e) => e.fromCache === false)),
   };
 }
 
@@ -265,7 +294,8 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   const { documentEntry, pages, entries } = har;
   const page = pages[0];
 
-  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries } = describePage(har);
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters } =
+    describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
 
   const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
@@ -454,6 +484,30 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     ];
     if (thirdPartyCache.length > 0)
       thirdPartyMetrics.push({ label: "From cache", value: String(thirdPartyCache.length) });
+    const timing = (requests: number, ms: number) => `${requests} req · avg ${formatMs(ms)}`;
+    // Several clusters: every cluster node and its path light up, each path with its average
+    // (the cluster's caption carries its request count).
+    const thirdPartyHops = hasClusterNodes(thirdPartyClusters)
+      ? {
+          activeNodes: ["browser" as const, ...thirdPartyClusters.map((c) => clusterNode(c).id)],
+          activePaths: thirdPartyClusters.map((c) => clusterPath(c).id),
+          pathTimings: Object.fromEntries(
+            thirdPartyClusters.map((c) => [clusterPath(c).id, `avg ${formatMs(c.avgMs)}`])
+          ),
+        }
+      : {
+          activeNodes: ["browser" as const, "third-parties" as const],
+          activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties" as const] : [],
+          pathTimings:
+            thirdPartyNetwork.length > 0
+              ? {
+                  "browser-third-parties": timing(
+                    thirdPartyNetwork.length,
+                    avgMs(thirdPartyNetwork)
+                  ),
+                }
+              : {},
+        };
     timeline.push({
       timestamp: thirdPartyAt,
       rank: 4,
@@ -461,15 +515,8 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
         title: "Third-party requests",
         description: "Browser fetches resources from external domains.",
         timestamp: thirdPartyAt,
-        activeNodes: ["browser", "third-parties"],
-        activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties"] : [],
+        ...thirdPartyHops,
         metrics: thirdPartyMetrics,
-        pathTimings:
-          thirdPartyNetwork.length > 0
-            ? {
-                "browser-third-parties": `${thirdPartyNetwork.length} req · avg ${formatMs(avgMs(thirdPartyNetwork))}`,
-              }
-            : {},
         resourceRefs: refs(thirdPartyNetwork),
         cacheResourceRefs: refs(thirdPartyCache),
       },
@@ -520,7 +567,8 @@ function generateTransitionStep(fromPage: string, toPage: string): PageStep {
 function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
   const { har } = pageFlow;
   const { documentEntry, entries } = har;
-  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries } = describePage(har);
+  const { cdnResult, hasCdn, documentRoot, thirdPartyEntries, thirdPartyClusters } =
+    describePage(har);
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
   const apacFallback: NetworkRegion = hasGfw ? "asia-pacific" : "edge";
 
@@ -535,7 +583,8 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
       : null,
     originRegion: detectOriginRegion(documentEntry.responseHeaders),
     originSubLabel: documentEntry.responseHeaders["server"] ?? null,
-    thirdPartyRegion: hasThirdPartyNodes ? detectThirdPartyRegion(thirdPartyEntries) : "origin",
+    thirdPartyRegion: detectThirdPartyRegion(thirdPartyEntries),
+    thirdPartyClusters,
   });
 
   const ownNonDocNetwork = entries.filter(
@@ -573,7 +622,7 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     }
   }
 
-  return { nodes, paths, cacheReport: analyzeCacheForHar(har) };
+  return { nodes, paths, cacheReport: analyzeCacheForHar(har), thirdPartyClusters };
 }
 
 export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow {

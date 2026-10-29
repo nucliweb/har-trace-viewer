@@ -2029,5 +2029,3228 @@
         }
       ]
     }
+  },
+  "noGfw_cdn_2clusters": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": []
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 120,237 C 300,402 611,402 665,222"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudfront",
+              "d": "M 120,243 C 300,418 611,418 665,302"
+            }
+          ],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 120,237 C 300,402 611,402 665,222"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudfront",
+              "d": "M 120,243 C 300,418 611,418 665,302"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 120,245 C 177,245 245,245 293,245" },
+            { "id": "path-browser-edge-req", "d": "M 120,235 C 177,235 245,235 293,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 331,242 C 382,237 443,226 486,220" },
+            { "id": "path-edge-origin-req", "d": "M 331,232 C 382,227 443,216 486,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 120,242 C 300,407 611,407 665,227" },
+            {
+              "id": "path-browser-third-parties:cloudflare-req",
+              "d": "M 120,232 C 300,397 611,397 665,217"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            { "id": null, "d": "M 120,248 C 300,423 611,423 665,307" },
+            {
+              "id": "path-browser-third-parties:cloudfront-req",
+              "d": "M 120,238 C 300,413 611,413 665,297"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 120,235 C 177,235 245,235 293,235" },
+            { "id": "path-browser-edge-res", "d": "M 120,245 C 177,245 245,245 293,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 331,232 C 382,227 443,216 486,210" },
+            { "id": "path-edge-origin-res", "d": "M 331,242 C 382,237 443,226 486,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 120,232 C 300,397 611,397 665,217" },
+            {
+              "id": "path-browser-third-parties:cloudflare-res",
+              "d": "M 120,242 C 300,407 611,407 665,227"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            { "id": null, "d": "M 120,238 C 300,413 611,413 665,297" },
+            {
+              "id": "path-browser-third-parties:cloudfront-res",
+              "d": "M 120,248 C 300,423 611,423 665,307"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,237 C 300,402 611,402 665,222" }],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 120,243 C 300,418 611,418 665,302" }],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,235 C 177,235 245,235 293,235" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,232 C 382,227 443,216 486,210" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,232 C 300,397 611,397 665,217" }],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 120,238 C 300,413 611,413 665,297" }],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,245 C 177,245 245,245 293,245" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,242 C 382,237 443,226 486,220" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,242 C 300,407 611,407 665,227" }],
+          "labels": [{ "text": "avg 1234ms", "x": 308, "y": 346 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 120,248 C 300,423 611,423 665,307" }],
+          "labels": [{ "text": "avg 1234ms", "x": 495, "y": 386 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    }
+  },
+  "noGfw_noCdn_4clusters": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 130,237 C 223,232 332,221 411,215" }],
+          "labels": []
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 130,237 C 307,342 612,342 665,142"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 130,237 C 307,360 612,360 665,222"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:direct",
+              "d": "M 130,243 C 307,384 612,384 665,302"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 130,243 C 307,402 612,402 665,382" }
+          ],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": "path-browser-origin", "d": "M 130,237 C 223,232 332,221 411,215" }],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 216.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 130,237 C 307,342 612,342 665,142"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 130,237 C 307,360 612,360 665,222"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:direct",
+              "d": "M 130,243 C 307,384 612,384 665,302"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 130,243 C 307,402 612,402 665,382" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 130,242 C 223,237 332,226 411,220" },
+            { "id": "path-browser-origin-req", "d": "M 130,232 C 223,227 332,216 411,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 209.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 130,242 C 307,347 612,347 665,147" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-req",
+              "d": "M 130,232 C 307,337 612,337 665,137"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 130,242 C 307,365 612,365 665,227" },
+            {
+              "id": "path-browser-third-parties:cloudflare-req",
+              "d": "M 130,232 C 307,355 612,355 665,217"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 130,248 C 307,389 612,389 665,307" },
+            {
+              "id": "path-browser-third-parties:direct-req",
+              "d": "M 130,238 C 307,379 612,379 665,297"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 130,248 C 307,407 612,407 665,387" },
+            {
+              "id": "path-browser-third-parties:gfe-req",
+              "d": "M 130,238 C 307,397 612,397 665,377"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [
+            { "id": null, "d": "M 130,232 C 223,227 332,216 411,210" },
+            { "id": "path-browser-origin-res", "d": "M 130,242 C 223,237 332,226 411,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 248.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 130,232 C 307,337 612,337 665,137" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-res",
+              "d": "M 130,242 C 307,347 612,347 665,147"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 130,232 C 307,355 612,355 665,217" },
+            {
+              "id": "path-browser-third-parties:cloudflare-res",
+              "d": "M 130,242 C 307,365 612,365 665,227"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 130,238 C 307,379 612,379 665,297" },
+            {
+              "id": "path-browser-third-parties:direct-res",
+              "d": "M 130,248 C 307,389 612,389 665,307"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 130,238 C 307,397 612,397 665,377" },
+            {
+              "id": "path-browser-third-parties:gfe-res",
+              "d": "M 130,248 C 307,407 612,407 665,387"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 130,237 C 223,232 332,221 411,215" }],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 216.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 130,237 C 307,342 612,342 665,142" }],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 130,237 C 307,360 612,360 665,222" }],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 130,243 C 307,384 612,384 665,302" }],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 130,243 C 307,402 612,402 665,382" }],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 130,232 C 223,227 332,216 411,210" }],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 209.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 130,232 C 307,337 612,337 665,137" }],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 130,232 C 307,355 612,355 665,217" }],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 130,238 C 307,379 612,379 665,297" }],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 130,238 C 307,397 612,397 665,377" }],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 130, "y": 22 },
+        { "text": "ORIGIN", "x": 440, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 130, "y": 472 }
+      ],
+      "paths": {
+        "browser-origin": {
+          "d": [{ "id": null, "d": "M 130,242 C 223,237 332,226 411,220" }],
+          "labels": [{ "text": "120ms", "x": 270.5, "y": 248.75 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 130,242 C 307,347 612,347 665,147" }],
+          "labels": [{ "text": "avg 1234ms", "x": 301, "y": 304 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 130,242 C 307,365 612,365 665,227" }],
+          "labels": [{ "text": "avg 1234ms", "x": 466, "y": 330 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 130,248 C 307,389 612,389 665,307" }],
+          "labels": [{ "text": "avg 1234ms", "x": 384, "y": 353 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 130,248 C 307,407 612,407 665,387" }],
+          "labels": [{ "text": "avg 1234ms", "x": 549, "y": 395 }]
+        }
+      },
+      "nodes": [
+        { "centre": [110, 240], "texts": [{ "text": "Browser", "x": 110, "y": 274 }] },
+        {
+          "centre": [430, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 430, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 430, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 142],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 133, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 146, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 159, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 382],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 373, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 386, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 399, "anchor": "start" }
+          ]
+        }
+      ]
+    }
+  },
+  "noGfw_cdn_5clusters": {
+    "idle": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": []
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 120,237 C 300,412 611,412 665,122"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 120,237 C 300,436 611,436 665,192"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:direct",
+              "d": "M 120,243 C 300,452 611,452 665,262"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 120,243 C 300,476 611,476 665,332" }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": "path-browser-third-parties:other", "d": "M 120,243 C 300,500 611,500 665,402" }
+          ],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": "path-browser-edge", "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 120,237 C 300,412 611,412 665,122"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 120,237 C 300,436 611,436 665,192"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:direct",
+              "d": "M 120,243 C 300,452 611,452 665,262"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 120,243 C 300,476 611,476 665,332" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": "path-browser-third-parties:other", "d": "M 120,243 C 300,500 611,500 665,402" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 120,245 C 177,245 245,245 293,245" },
+            { "id": "path-browser-edge-req", "d": "M 120,235 C 177,235 245,235 293,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 331,242 C 382,237 443,226 486,220" },
+            { "id": "path-edge-origin-req", "d": "M 331,232 C 382,227 443,216 486,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 120,242 C 300,417 611,417 665,127" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-req",
+              "d": "M 120,232 C 300,407 611,407 665,117"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 120,242 C 300,441 611,441 665,197" },
+            {
+              "id": "path-browser-third-parties:cloudflare-req",
+              "d": "M 120,232 C 300,431 611,431 665,187"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 120,248 C 300,457 611,457 665,267" },
+            {
+              "id": "path-browser-third-parties:direct-req",
+              "d": "M 120,238 C 300,447 611,447 665,257"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 120,248 C 300,481 611,481 665,337" },
+            {
+              "id": "path-browser-third-parties:gfe-req",
+              "d": "M 120,238 C 300,471 611,471 665,327"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": null, "d": "M 120,248 C 300,505 611,505 665,407" },
+            {
+              "id": "path-browser-third-parties:other-req",
+              "d": "M 120,238 C 300,495 611,495 665,397"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [
+            { "id": null, "d": "M 120,235 C 177,235 245,235 293,235" },
+            { "id": "path-browser-edge-res", "d": "M 120,245 C 177,245 245,245 293,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 331,232 C 382,227 443,216 486,210" },
+            { "id": "path-edge-origin-res", "d": "M 331,242 C 382,237 443,226 486,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 120,232 C 300,407 611,407 665,117" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-res",
+              "d": "M 120,242 C 300,417 611,417 665,127"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 120,232 C 300,431 611,431 665,187" },
+            {
+              "id": "path-browser-third-parties:cloudflare-res",
+              "d": "M 120,242 C 300,441 611,441 665,197"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 120,238 C 300,447 611,447 665,257" },
+            {
+              "id": "path-browser-third-parties:direct-res",
+              "d": "M 120,248 C 300,457 611,457 665,267"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 120,238 C 300,471 611,471 665,327" },
+            {
+              "id": "path-browser-third-parties:gfe-res",
+              "d": "M 120,248 C 300,481 611,481 665,337"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": null, "d": "M 120,238 C 300,495 611,495 665,397" },
+            {
+              "id": "path-browser-third-parties:other-res",
+              "d": "M 120,248 C 300,505 611,505 665,407"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,240 C 177,240 245,240 293,240" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,237 C 382,232 443,221 486,215" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 120,237 C 300,412 611,412 665,122" }],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,237 C 300,436 611,436 665,192" }],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 120,243 C 300,452 611,452 665,262" }],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 120,243 C 300,476 611,476 665,332" }],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 120,243 C 300,500 611,500 665,402" }],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,235 C 177,235 245,235 293,235" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,232 C 382,227 443,216 486,210" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 120,232 C 300,407 611,407 665,117" }],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,232 C 300,431 611,431 665,187" }],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 120,238 C 300,447 611,447 665,257" }],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 120,238 C 300,471 611,471 665,327" }],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 120,238 C 300,495 611,495 665,397" }],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CLIENT", "x": 107.5, "y": 22 },
+        { "text": "EUROPE", "x": 312.5, "y": 22 },
+        { "text": "ORIGIN", "x": 515, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 107.5, "y": 472 }
+      ],
+      "paths": {
+        "browser-edge": {
+          "d": [{ "id": null, "d": "M 120,245 C 177,245 245,245 293,245" }],
+          "labels": [{ "text": "120ms", "x": 206.5, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 331,242 C 382,237 443,226 486,220" }],
+          "labels": [{ "text": "120ms", "x": 408.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 120,242 C 300,417 611,417 665,127" }],
+          "labels": [{ "text": "avg 1234ms", "x": 252, "y": 330 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 120,242 C 300,441 611,441 665,197" }],
+          "labels": [{ "text": "avg 1234ms", "x": 477, "y": 380 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 120,248 C 300,457 611,457 665,267" }],
+          "labels": [{ "text": "avg 1234ms", "x": 327, "y": 388 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 120,248 C 300,481 611,481 665,337" }],
+          "labels": [{ "text": "avg 1234ms", "x": 551, "y": 426 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 120,248 C 300,505 611,505 665,407" }],
+          "labels": [{ "text": "avg 1234ms", "x": 402, "y": 452 }]
+        }
+      },
+      "nodes": [
+        { "centre": [100, 240], "texts": [{ "text": "Browser", "x": 100, "y": 274 }] },
+        {
+          "centre": [312, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 312, "y": 274 },
+            { "text": "London", "x": 312, "y": 287 }
+          ]
+        },
+        {
+          "centre": [505, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 505, "y": 249 },
+            { "text": "cloudflare", "x": 505, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 505, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    }
+  },
+  "gfw_cdn_5clusters": {
+    "idle": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": []
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 217,240 C 252,240 293,240 323,240" }],
+          "labels": []
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 361,237 C 406,232 458,221 496,215" }],
+          "labels": []
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 95,237 C 283,460 608,460 665,122"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 95,237 C 283,476 608,476 665,192"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": "path-browser-third-parties:direct", "d": "M 95,243 C 283,488 608,488 665,262" }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 95,243 C 283,504 608,504 665,332" }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": "path-browser-third-parties:other", "d": "M 95,243 C 198,502 608,502 665,402" }
+          ],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": "path-gfw-edge", "d": "M 217,240 C 252,240 293,240 323,240" }],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": "path-edge-origin", "d": "M 361,237 C 406,232 458,221 496,215" }],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:azure-front-door",
+              "d": "M 95,237 C 283,460 608,460 665,122"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 95,237 C 283,476 608,476 665,192"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": "path-browser-third-parties:direct", "d": "M 95,243 C 283,488 608,488 665,262" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": "path-browser-third-parties:gfe", "d": "M 95,243 C 283,504 608,504 665,332" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": "path-browser-third-parties:other", "d": "M 95,243 C 198,502 608,502 665,402" }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 95,245 C 124,245 158,245 183,245" },
+            { "id": "path-browser-gfw-req", "d": "M 95,235 C 124,235 158,235 183,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 217,245 C 252,245 293,245 323,245" },
+            { "id": "path-gfw-edge-req", "d": "M 217,235 C 252,235 293,235 323,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 361,242 C 406,237 458,226 496,220" },
+            { "id": "path-edge-origin-req", "d": "M 361,232 C 406,227 458,216 496,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 95,242 C 283,465 608,465 665,127" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-req",
+              "d": "M 95,232 C 283,455 608,455 665,117"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 95,242 C 283,481 608,481 665,197" },
+            {
+              "id": "path-browser-third-parties:cloudflare-req",
+              "d": "M 95,232 C 283,471 608,471 665,187"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 95,248 C 283,493 608,493 665,267" },
+            {
+              "id": "path-browser-third-parties:direct-req",
+              "d": "M 95,238 C 283,483 608,483 665,257"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 95,248 C 283,509 608,509 665,337" },
+            {
+              "id": "path-browser-third-parties:gfe-req",
+              "d": "M 95,238 C 283,499 608,499 665,327"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": null, "d": "M 95,248 C 198,507 608,507 665,407" },
+            {
+              "id": "path-browser-third-parties:other-req",
+              "d": "M 95,238 C 198,497 608,497 665,397"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 95,235 C 124,235 158,235 183,235" },
+            { "id": "path-browser-gfw-res", "d": "M 95,245 C 124,245 158,245 183,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [
+            { "id": null, "d": "M 217,235 C 252,235 293,235 323,235" },
+            { "id": "path-gfw-edge-res", "d": "M 217,245 C 252,245 293,245 323,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [
+            { "id": null, "d": "M 361,232 C 406,227 458,216 496,210" },
+            { "id": "path-edge-origin-res", "d": "M 361,242 C 406,237 458,226 496,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [
+            { "id": null, "d": "M 95,232 C 283,455 608,455 665,117" },
+            {
+              "id": "path-browser-third-parties:azure-front-door-res",
+              "d": "M 95,242 C 283,465 608,465 665,127"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 95,232 C 283,471 608,471 665,187" },
+            {
+              "id": "path-browser-third-parties:cloudflare-res",
+              "d": "M 95,242 C 283,481 608,481 665,197"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [
+            { "id": null, "d": "M 95,238 C 283,483 608,483 665,257" },
+            {
+              "id": "path-browser-third-parties:direct-res",
+              "d": "M 95,248 C 283,493 608,493 665,267"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [
+            { "id": null, "d": "M 95,238 C 283,499 608,499 665,327" },
+            {
+              "id": "path-browser-third-parties:gfe-res",
+              "d": "M 95,248 C 283,509 608,509 665,337"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [
+            { "id": null, "d": "M 95,238 C 198,497 608,497 665,397" },
+            {
+              "id": "path-browser-third-parties:other-res",
+              "d": "M 95,248 C 198,507 608,507 665,407"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 217,240 C 252,240 293,240 323,240" }],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 361,237 C 406,232 458,221 496,215" }],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 95,237 C 283,460 608,460 665,122" }],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,237 C 283,476 608,476 665,192" }],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 95,243 C 283,488 608,488 665,262" }],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 95,243 C 283,504 608,504 665,332" }],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 95,243 C 198,502 608,502 665,402" }],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,235 C 124,235 158,235 183,235" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 217,235 C 252,235 293,235 323,235" }],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 361,232 C 406,227 458,216 496,210" }],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 95,232 C 283,455 608,455 665,117" }],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,232 C 283,471 608,471 665,187" }],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 95,238 C 283,483 608,483 665,257" }],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 95,238 C 283,499 608,499 665,327" }],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 95,238 C 198,497 608,497 665,397" }],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "EUROPE", "x": 343.5, "y": 22 },
+        { "text": "ORIGIN", "x": 522.5, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,245 C 124,245 158,245 183,245" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-edge": {
+          "d": [{ "id": null, "d": "M 217,245 C 252,245 293,245 323,245" }],
+          "labels": [{ "text": "120ms", "x": 270, "y": 205 }]
+        },
+        "edge-origin": {
+          "d": [{ "id": null, "d": "M 361,242 C 406,237 458,226 496,220" }],
+          "labels": [{ "text": "120ms", "x": 428.5, "y": 180 }]
+        },
+        "browser-third-parties:azure-front-door": {
+          "d": [{ "id": null, "d": "M 95,242 C 283,465 608,465 665,127" }],
+          "labels": [{ "text": "avg 1234ms", "x": 294, "y": 381 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,242 C 283,481 608,481 665,197" }],
+          "labels": [{ "text": "avg 1234ms", "x": 488, "y": 403 }]
+        },
+        "browser-third-parties:direct": {
+          "d": [{ "id": null, "d": "M 95,248 C 283,493 608,493 665,267" }],
+          "labels": [{ "text": "avg 1234ms", "x": 359, "y": 425 }]
+        },
+        "browser-third-parties:gfe": {
+          "d": [{ "id": null, "d": "M 95,248 C 283,509 608,509 665,337" }],
+          "labels": [{ "text": "avg 1234ms", "x": 553, "y": 440 }]
+        },
+        "browser-third-parties:other": {
+          "d": [{ "id": null, "d": "M 95,248 C 198,507 608,507 665,407" }],
+          "labels": [{ "text": "avg 1234ms", "x": 424, "y": 465 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [342, 240],
+          "texts": [
+            { "text": "Cloudflare", "x": 342, "y": 274 },
+            { "text": "London", "x": 342, "y": 287 }
+          ]
+        },
+        {
+          "centre": [515, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 515, "y": 249 },
+            { "text": "cloudflare", "x": 515, "y": 262 },
+            { "text": "2 CDN miss · avg 40ms", "x": 515, "y": 275 }
+          ]
+        },
+        {
+          "centre": [684, 122],
+          "texts": [
+            { "text": "Azure Front Door · IAD", "x": 716, "y": 113, "anchor": "start" },
+            { "text": "Washington DC", "x": 716, "y": 126, "anchor": "start" },
+            { "text": "4 req · avg 40ms", "x": 716, "y": 139, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 192],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 183, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 196, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 209, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 262],
+          "texts": [
+            { "text": "Direct", "x": 716, "y": 253, "anchor": "start" },
+            { "text": "…nalytics-vendor.com +1", "x": 716, "y": 266, "anchor": "start" },
+            { "text": "3 req · avg 40ms", "x": 716, "y": 279, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 332],
+          "texts": [
+            { "text": "Google", "x": 716, "y": 323, "anchor": "start" },
+            { "text": "fonts.googleapis.com", "x": 716, "y": 336, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 349, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 402],
+          "texts": [
+            { "text": "Other third parties", "x": 716, "y": 393, "anchor": "start" },
+            { "text": "d1.cloudfront.net +1", "x": 716, "y": 406, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 419, "anchor": "start" }
+          ]
+        }
+      ]
+    }
+  },
+  "gfw_noCdn_2clusters": {
+    "idle": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": []
+        },
+        "gfw-origin": {
+          "d": [{ "id": "path-gfw-origin", "d": "M 217,237 C 286,232 367,221 426,215" }],
+          "labels": []
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 95,237 C 283,460 608,460 665,222"
+            }
+          ],
+          "labels": []
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudfront",
+              "d": "M 95,243 C 283,472 608,472 665,302"
+            }
+          ],
+          "labels": []
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "center": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": "path-browser-gfw", "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": "path-gfw-origin", "d": "M 217,237 C 286,232 367,221 426,215" }],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 216.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudflare",
+              "d": "M 95,237 C 283,460 608,460 665,222"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            {
+              "id": "path-browser-third-parties:cloudfront",
+              "d": "M 95,243 C 283,472 608,472 665,302"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "request": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 95,245 C 124,245 158,245 183,245" },
+            { "id": "path-browser-gfw-req", "d": "M 95,235 C 124,235 158,235 183,235" }
+          ],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [
+            { "id": null, "d": "M 217,242 C 286,237 367,226 426,220" },
+            { "id": "path-gfw-origin-req", "d": "M 217,232 C 286,227 367,216 426,210" }
+          ],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 209.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 95,242 C 283,465 608,465 665,227" },
+            {
+              "id": "path-browser-third-parties:cloudflare-req",
+              "d": "M 95,232 C 283,455 608,455 665,217"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            { "id": null, "d": "M 95,248 C 283,477 608,477 665,307" },
+            {
+              "id": "path-browser-third-parties:cloudfront-req",
+              "d": "M 95,238 C 283,467 608,467 665,297"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "response": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [
+            { "id": null, "d": "M 95,235 C 124,235 158,235 183,235" },
+            { "id": "path-browser-gfw-res", "d": "M 95,245 C 124,245 158,245 183,245" }
+          ],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [
+            { "id": null, "d": "M 217,232 C 286,227 367,216 426,210" },
+            { "id": "path-gfw-origin-res", "d": "M 217,242 C 286,237 367,226 426,220" }
+          ],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 248.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [
+            { "id": null, "d": "M 95,232 C 283,455 608,455 665,217" },
+            {
+              "id": "path-browser-third-parties:cloudflare-res",
+              "d": "M 95,242 C 283,465 608,465 665,227"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [
+            { "id": null, "d": "M 95,238 C 283,467 608,467 665,297" },
+            {
+              "id": "path-browser-third-parties:cloudfront-res",
+              "d": "M 95,248 C 283,477 608,477 665,307"
+            }
+          ],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyCenter": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,240 C 124,240 158,240 183,240" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 217,237 C 286,232 367,221 426,215" }],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 216.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,237 C 283,460 608,460 665,222" }],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 95,243 C 283,472 608,472 665,302" }],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyRequest": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,235 C 124,235 158,235 183,235" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 217,232 C 286,227 367,216 426,210" }],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 209.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,232 C 283,455 608,455 665,217" }],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 95,238 C 283,467 608,467 665,297" }],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    },
+    "historyResponse": {
+      "zones": [
+        { "text": "CHINA", "x": 131, "y": 22 },
+        { "text": "ORIGIN", "x": 441, "y": 22 },
+        { "text": "3RD PARTIES", "x": 760, "y": 22 },
+        { "text": "CACHE", "x": 131, "y": 472 },
+        { "text": "GREAT FIREWALL ZONE", "x": 131, "y": 422 }
+      ],
+      "paths": {
+        "browser-gfw": {
+          "d": [{ "id": null, "d": "M 95,245 C 124,245 158,245 183,245" }],
+          "labels": [{ "text": "120ms", "x": 139, "y": 205 }]
+        },
+        "gfw-origin": {
+          "d": [{ "id": null, "d": "M 217,242 C 286,237 367,226 426,220" }],
+          "labels": [{ "text": "120ms", "x": 321.5, "y": 248.75 }]
+        },
+        "browser-third-parties:cloudflare": {
+          "d": [{ "id": null, "d": "M 95,242 C 283,465 608,465 665,227" }],
+          "labels": [{ "text": "avg 1234ms", "x": 343, "y": 398 }]
+        },
+        "browser-third-parties:cloudfront": {
+          "d": [{ "id": null, "d": "M 95,248 C 283,477 608,477 665,307" }],
+          "labels": [{ "text": "avg 1234ms", "x": 504, "y": 423 }]
+        }
+      },
+      "nodes": [
+        { "centre": [75, 240], "texts": [{ "text": "Browser", "x": 75, "y": 274 }] },
+        {
+          "centre": [200, 240],
+          "texts": [
+            { "text": "GFW checkpoint", "x": 200, "y": 268 },
+            { "text": "DPI inspection", "x": 200, "y": 281 }
+          ]
+        },
+        {
+          "centre": [445, 215],
+          "texts": [
+            { "text": "Origin Server", "x": 445, "y": 249 },
+            { "text": "2 req · avg 40ms", "x": 445, "y": 262 }
+          ]
+        },
+        {
+          "centre": [684, 222],
+          "texts": [
+            { "text": "Cloudflare · LAX", "x": 716, "y": 213, "anchor": "start" },
+            { "text": "Los Angeles", "x": 716, "y": 226, "anchor": "start" },
+            { "text": "2 req · avg 40ms", "x": 716, "y": 239, "anchor": "start" }
+          ]
+        },
+        {
+          "centre": [684, 302],
+          "texts": [
+            { "text": "CloudFront · FRA", "x": 716, "y": 293, "anchor": "start" },
+            { "text": "Frankfurt", "x": 716, "y": 306, "anchor": "start" },
+            { "text": "1 req · avg 40ms", "x": 716, "y": 319, "anchor": "start" }
+          ]
+        }
+      ]
+    }
   }
 }

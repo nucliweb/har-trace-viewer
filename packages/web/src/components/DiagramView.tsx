@@ -111,6 +111,48 @@ export function DiagramView({ flow }: Props) {
     // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
     <div ref={viewRef} className={styles.view} role="region" aria-label="Diagram" tabIndex={0}>
+      {/* A band of its own above the diagram, so it never covers the zone captions. */}
+      <div className={styles.toolbar}>
+        <button
+          className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowHops((v) => !v);
+            setShowMetrics(false);
+            setShowCachePanel(false);
+          }}
+          aria-label="Toggle hops"
+          aria-expanded={showHops}
+          title="Hops per host"
+        >
+          Hops
+        </button>
+        <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
+        <button
+          className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowMetrics((v) => !v);
+            setShowCachePanel(false);
+            setShowHops(false);
+          }}
+          aria-label="Toggle metrics summary"
+          aria-expanded={showMetrics}
+          title="Metrics summary"
+        >
+          Metrics
+        </button>
+        <button
+          className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowCachePanel((v) => !v);
+            setShowMetrics(false);
+            setShowHops(false);
+          }}
+          aria-label="Toggle cache analysis"
+          title="Cache Analysis"
+        >
+          Cache
+        </button>
+      </div>
       <div className={styles.canvas}>
         <NodeRenderer
           nodes={analysis.nodes}
@@ -167,45 +209,6 @@ export function DiagramView({ flow }: Props) {
             onClose={() => setShowHops(false)}
           />
         )}
-        <button
-          className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowHops((v) => !v);
-            setShowMetrics(false);
-            setShowCachePanel(false);
-          }}
-          aria-label="Toggle hops"
-          aria-expanded={showHops}
-          title="Hops per host"
-        >
-          Hops
-        </button>
-        <button
-          className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowMetrics((v) => !v);
-            setShowCachePanel(false);
-            setShowHops(false);
-          }}
-          aria-label="Toggle metrics summary"
-          aria-expanded={showMetrics}
-          title="Metrics summary"
-        >
-          Metrics
-        </button>
-        <button
-          className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowCachePanel((v) => !v);
-            setShowMetrics(false);
-            setShowHops(false);
-          }}
-          aria-label="Toggle cache analysis"
-          title="Cache Analysis"
-        >
-          Cache
-        </button>
-        <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
       </div>
       <StepPanel state={state} resources={resources} onOpenResources={openSidebar} />
     </div>

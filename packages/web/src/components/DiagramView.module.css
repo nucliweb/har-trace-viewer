@@ -80,13 +80,21 @@
   }
 }
 
-/* Cache analysis and metrics toggle buttons */
+/* Toolbar: a right-aligned row above the diagram (Hops, Export, Metrics, Cache). */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-sm) 0;
+  position: relative;
+  z-index: 6;
+}
+
 .cacheBtn,
 .metricsBtn,
 .hopsBtn {
-  position: absolute;
-  top: var(--space-sm);
-  right: var(--space-sm);
   padding: 5px 12px;
   border: 1px solid var(--color-border2);
   border-radius: 4px;
@@ -100,15 +108,6 @@
     border-color var(--transition-fast),
     color var(--transition-fast),
     background var(--transition-fast);
-  z-index: 5;
-}
-
-.metricsBtn {
-  right: calc(var(--space-sm) + 80px);
-}
-
-.hopsBtn {
-  right: calc(var(--space-sm) + 260px);
 }
 
 .cacheBtn:hover,
@@ -144,19 +143,15 @@
     gap: var(--space-xs);
   }
 
+  .toolbar {
+    gap: var(--space-xs);
+  }
+
   .cacheBtn,
   .metricsBtn,
   .hopsBtn {
     min-height: 44px;
     padding: 0 12px;
-  }
-
-  .metricsBtn {
-    right: calc(var(--space-sm) + 80px);
-  }
-
-  .hopsBtn {
-    right: calc(var(--space-sm) + 170px);
   }
 }
 

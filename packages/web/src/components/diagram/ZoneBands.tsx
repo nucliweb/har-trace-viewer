@@ -1,7 +1,6 @@
-import type { Zone } from "./layout.js";
+import { GFW_ZONE_CAPTION_OFFSET, type Zone } from "./layout.js";
 
 const LABEL_Y = 22;
-const CACHE_SUBZONE_Y = 370;
 
 const zoneText = {
   fontSize: 12,
@@ -13,9 +12,10 @@ interface Props {
   zones: Zone[];
   height: number;
   hasGfw: boolean;
+  cacheSubzoneY: number;
 }
 
-export function ZoneBands({ zones, height, hasGfw }: Props) {
+export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY }: Props) {
   // The client zone (China behind the GFW) hosts the browser cache sub-zone.
   const client = zones[0];
   const clientWidth = client.x1 - client.x0;
@@ -72,16 +72,16 @@ export function ZoneBands({ zones, height, hasGfw }: Props) {
 
       <rect
         x={client.x0}
-        y={CACHE_SUBZONE_Y}
+        y={cacheSubzoneY}
         width={clientWidth}
-        height={height - CACHE_SUBZONE_Y}
+        height={height - cacheSubzoneY}
         fill="color-mix(in srgb, var(--color-cyan) 7%, transparent)"
       />
       <line
         x1={client.x0}
-        y1={CACHE_SUBZONE_Y}
+        y1={cacheSubzoneY}
         x2={client.x1}
-        y2={CACHE_SUBZONE_Y}
+        y2={cacheSubzoneY}
         stroke="var(--color-border2)"
         strokeWidth={1}
         opacity={0.6}
@@ -101,7 +101,7 @@ export function ZoneBands({ zones, height, hasGfw }: Props) {
       {hasGfw && (
         <text
           x={clientCentre}
-          y={CACHE_SUBZONE_Y - 8}
+          y={cacheSubzoneY - GFW_ZONE_CAPTION_OFFSET}
           {...zoneText}
           fill="var(--color-red)"
           opacity={0.5}

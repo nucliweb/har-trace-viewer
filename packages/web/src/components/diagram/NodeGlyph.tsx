@@ -1,5 +1,5 @@
 import type { JSX } from "react";
-import type { NodeId } from "@htv/core";
+import type { NodeKind } from "@htv/core";
 
 interface GlyphProps {
   color: string;
@@ -116,7 +116,7 @@ function ThirdParties({ color, active }: GlyphProps) {
   );
 }
 
-const GLYPHS: Record<NodeId, (props: GlyphProps) => JSX.Element> = {
+const GLYPHS: Record<NodeKind, (props: GlyphProps) => JSX.Element> = {
   browser: Browser,
   gfw: Gfw,
   edge: Edge,
@@ -125,7 +125,7 @@ const GLYPHS: Record<NodeId, (props: GlyphProps) => JSX.Element> = {
 };
 
 /** The shape of a node, drawn around (0, 0). */
-export function NodeGlyph({ id, ...props }: GlyphProps & { id: NodeId }) {
+export function NodeGlyph({ id, ...props }: GlyphProps & { id: NodeKind }) {
   const Glyph = GLYPHS[id];
   return <Glyph {...props} />;
 }

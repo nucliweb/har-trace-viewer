@@ -6,10 +6,13 @@ import {
   detectCdnPopCity,
   detectCdnRegion,
   detectNode,
+  detectThirdPartyHop,
+  detectThirdPartyRegion,
   hasThirdParties,
   suggestClientRegion,
 } from "../src/inference/node-detector.js";
 import { detectPop } from "../src/inference/pops.js";
+import { detectCdnCacheStatus } from "../src/inference/cache-analyzer.js";
 import { parseHarJson } from "../src/parsers/har-parser.js";
 import type { CdnProvider, HarEntry, ParsedHar } from "../src/types.js";
 
@@ -300,5 +303,164 @@ describe("hasThirdParties with multi-label public suffixes", () => {
     expect(hasThirdParties([{ url: "https://news.co.uk/a.js" }], "https://www.bbc.co.uk/")).toBe(
       true
     );
+  });
+});
+
+describe("detectThirdPartyHop", () => {
+  it("reads the provider, PoP and region of a CDN-served third party", () => {
+    expect(
+      detectThirdPartyHop("https://cdnjs.cloudflare.com/a.js", { "cf-ray": "abc-SIN" })
+    ).toEqual({
+      provider: "cloudflare",
+      name: "Cloudflare",
+      region: "asia-pacific",
+      regionSource: "pop",
+      pop: expect.objectContaining({ code: "sin", city: "Singapore" }),
+    });
+  });
+
+  it("falls back to the provider's default region without a PoP", () => {
+    expect(
+      detectThirdPartyHop("https://www.google.com/x", { server: "Google Frontend" }).region
+    ).toBe("united-states");
+    expect(
+      detectThirdPartyHop("https://a.akamaized.net/x", { server: "AkamaiNetStorage" }).region
+    ).toBe("edge");
+    expect(
+      detectThirdPartyHop("https://cdnjs.cloudflare.com/x", { server: "cloudflare" }).region
+    ).toBe("edge");
+  });
+
+  it("serves third parties without a CDN directly, from their origin", () => {
+    expect(detectThirdPartyHop("https://widgets.thirdparty.com/a.js", {})).toEqual({
+      provider: "unknown",
+      name: "Direct",
+      region: "origin",
+      regionSource: "none",
+      pop: null,
+    });
+    expect(detectThirdPartyHop("https://static.analytics.de/tag.js", {}).region).toBe("europe");
+    expect(detectThirdPartyHop("https://x.blob.core.windows.net/a.js", {}).region).toBe(
+      "azure-cloud"
+    );
+  });
+});
+
+describe("detectThirdPartyRegion", () => {
+  const entry = (url: string, responseHeaders: Record<string, string> = {}) => ({
+    url,
+    responseHeaders,
+  });
+
+  it("returns the region of the provider with the most requests", () => {
+    expect(
+      detectThirdPartyRegion([
+        entry("https://x.blob.core.windows.net/a.js"),
+        entry("https://cdnjs.cloudflare.com/a.js", { "cf-ray": "abc-LAX" }),
+        entry("https://cdnjs.cloudflare.com/b.js", { "cf-ray": "abc-LAX" }),
+        entry("https://cdnjs.cloudflare.com/c.js", { "cf-ray": "abc-SIN" }),
+        entry("https://d1.cloudfront.net/x.js", { "x-amz-cf-pop": "FRA56-P1" }),
+      ])
+    ).toBe("united-states");
+  });
+
+  it("places direct third parties in the region most of their hosts share", () => {
+    expect(
+      detectThirdPartyRegion([
+        entry("https://static.analytics.de/a.js"),
+        entry("https://consent.privacy.eu/b.js"),
+        entry("https://pixel.tracker.io/p.gif"),
+      ])
+    ).toBe("europe");
+  });
+
+  it("returns origin without third parties", () => {
+    expect(detectThirdPartyRegion([])).toBe("origin");
+  });
+});
+
+describe("Azure and generic x-cache detection", () => {
+  const cases: {
+    name: string;
+    headers: Record<string, string>;
+    url?: string;
+    provider: CdnProvider;
+    cache: ReturnType<typeof detectCdnCacheStatus>;
+  }[] = [
+    {
+      name: "x-azure-ref with x-cache TCP_HIT is Azure Front Door",
+      headers: {
+        "x-azure-ref": "20261028T222212Z-184bf95955c8bfmqhC1SELxag8",
+        "x-cache": "TCP_HIT",
+      },
+      provider: "azure-front-door",
+      cache: "hit",
+    },
+    {
+      name: "an x-fd-* header is Azure Front Door",
+      headers: { "x-fd-int-roxy-purgeid": "70915795" },
+      provider: "azure-front-door",
+      cache: "unknown",
+    },
+    {
+      name: "x-msedge-ref is Azure Front Door",
+      headers: { "x-msedge-ref": "Ref A: 1 Ref B: AMS04EDGE1210 Ref C: 2026-01-01" },
+      provider: "azure-front-door",
+      cache: "unknown",
+    },
+    {
+      name: "x-cache TCP_HIT alone names no provider",
+      headers: { "x-cache": "TCP_HIT" },
+      provider: "unknown",
+      cache: "hit",
+    },
+    {
+      name: "x-cache TCP_MISS alone names no provider",
+      headers: { "x-cache": "TCP_MISS" },
+      provider: "unknown",
+      cache: "miss",
+    },
+    {
+      name: "server ECAcc alone, without x-cache, names no provider",
+      headers: { server: "ECAcc (lha/8D2C)" },
+      provider: "unknown",
+      cache: "unknown",
+    },
+    {
+      name: "x-cache TCP_HIT with an ECAcc server is Azure CDN",
+      headers: { "x-cache": "TCP_HIT", server: "ECAcc (lha/8D2C)" },
+      provider: "azure-cdn",
+      cache: "hit",
+    },
+    {
+      name: "x-cache TCP_MISS with an ECS server is Azure CDN",
+      headers: { "x-cache": "TCP_MISS", server: "ECS (ama/4C6D)" },
+      provider: "azure-cdn",
+      cache: "miss",
+    },
+    {
+      name: "x-cache TCP_HIT on an azureedge.net host is Azure CDN",
+      headers: { "x-cache": "TCP_HIT" },
+      url: "https://assets.azureedge.net/app.js",
+      provider: "azure-cdn",
+      cache: "hit",
+    },
+  ];
+
+  it.each(cases)("$name", ({ headers, url, provider, cache }) => {
+    expect(detectNode(headers, url).cdnProvider).toBe(provider);
+    expect(detectCdnCacheStatus(headers)).toBe(cache);
+  });
+
+  it("serves a generic cache hit without provider evidence directly, from its origin", () => {
+    expect(
+      detectThirdPartyHop("https://cdn.example-vendor.com/a.js", { "x-cache": "TCP_HIT" })
+    ).toMatchObject({ provider: "unknown", name: "Direct", region: "origin" });
+  });
+
+  it("names Azure CDN after its provider and places it at the edge", () => {
+    expect(
+      detectThirdPartyHop("https://assets.azureedge.net/a.js", { "x-cache": "TCP_HIT" })
+    ).toMatchObject({ provider: "azure-cdn", name: "Azure CDN", region: "edge" });
   });
 });
