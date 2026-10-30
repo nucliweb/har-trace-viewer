@@ -1,6 +1,5 @@
-import { getRootDomain } from "@htv/core";
+import { formatBytes, formatMs, getRootDomain, shortUrl } from "@htv/core";
 import type { HarEntry, PreconnectSource, ResourceType } from "@htv/core";
-import { formatBytes, formatMs, shortUrl } from "../lib/format.js";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./ResourceSidebar.module.css";
 import {

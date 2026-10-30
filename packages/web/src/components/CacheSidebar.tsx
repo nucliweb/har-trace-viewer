@@ -1,5 +1,5 @@
+import { formatBytes, shortUrl } from "@htv/core";
 import type { HarEntry } from "@htv/core";
-import { formatBytes, shortUrl } from "../lib/format.js";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./CacheSidebar.module.css";
 import { Sidebar, SidebarGroup, SidebarRow, SidebarRows, SidebarTypeHeader } from "./Sidebar.js";

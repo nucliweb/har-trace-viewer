@@ -1,9 +1,8 @@
 import { useMemo, useRef, useState } from "react";
-import { compareFlows, compareStepMetrics, stepAtPair } from "@htv/core";
+import { compareFlows, compareStepMetrics, formatDelta, stepAtPair } from "@htv/core";
 import type { DiagramStep, Flow, FlowComparison, MetricDelta, StepPair } from "@htv/core";
 import { useStepNavigation } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
-import { formatDelta } from "../lib/format.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { CachePanel } from "./CachePanel.js";

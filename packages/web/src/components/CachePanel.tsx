@@ -1,5 +1,5 @@
+import { formatBytes } from "@htv/core";
 import type { CacheReport, CdnCacheStatus, RecommendationResource } from "@htv/core";
-import { formatBytes } from "../lib/format.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {

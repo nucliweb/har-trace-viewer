@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatDelta, formatDeltaPct, formatMs, shortUrl } from "../src/lib/format.js";
+import {
+  formatBytes,
+  formatDelta,
+  formatDeltaPct,
+  formatMetricValue,
+  formatMs,
+  shortUrl,
+} from "../src/utils/format.js";
 
 describe("formatBytes", () => {
   it.each([
@@ -69,5 +76,19 @@ describe("formatDeltaPct", () => {
     [null, ""],
   ])("formats %s as %s", (pct, expected) => {
     expect(formatDeltaPct(pct)).toBe(expected);
+  });
+});
+
+describe("formatMetricValue", () => {
+  it.each([
+    [340, "ms", "340 ms"],
+    [2500, "ms", "2.5 s"],
+    [4_100_000, "bytes", "4.1 MB"],
+    [61, "count", "61"],
+    [0.47, "ratio", "47%"],
+    [0.0123, "score", "0.012"],
+    [null, "ms", "n/a"],
+  ] as const)("formats %s %s as %s", (value, unit, expected) => {
+    expect(formatMetricValue(value, unit)).toBe(expected);
   });
 });

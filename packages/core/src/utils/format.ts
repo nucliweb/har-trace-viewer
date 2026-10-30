@@ -49,6 +49,26 @@ export function formatDelta(delta: number | null, unit: DeltaUnit): string {
   return `${sign(delta)}${body}`;
 }
 
+/**
+ * Formats a metric value in its unit: "340 ms", "4.1 MB", "61", "47%" (ratios), "0.012"
+ * (unitless scores such as CLS); "n/a" without a value.
+ */
+export function formatMetricValue(value: number | null, unit: DeltaUnit): string {
+  if (value === null) return "n/a";
+  switch (unit) {
+    case "ms":
+      return formatMs(value);
+    case "bytes":
+      return formatBytes(value);
+    case "ratio":
+      return `${Math.round(value * 100)}%`;
+    case "score":
+      return value.toFixed(3);
+    default:
+      return String(value);
+  }
+}
+
 /** Formats a percentage change, rounded: "−60%", "+12%"; empty without a value. */
 export function formatDeltaPct(pct: number | null): string {
   return pct === null ? "" : `${sign(Math.round(pct))}${Math.abs(Math.round(pct))}%`;

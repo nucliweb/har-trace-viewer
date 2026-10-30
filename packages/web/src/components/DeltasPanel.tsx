@@ -1,13 +1,20 @@
-import { rateDelta, rateMetric } from "@htv/core";
+import {
+  COMPARED_METRICS,
+  formatDelta,
+  formatDeltaPct,
+  formatMetricValue,
+  formatMs,
+  rateDelta,
+  rateMetric,
+} from "@htv/core";
 import type {
   ComparedMetric,
   ComparisonCaveat,
   DeltaRating,
+  DeltaUnit,
   FlowComparison,
   HopPair,
 } from "@htv/core";
-import { formatBytes, formatDelta, formatDeltaPct, formatMs } from "../lib/format.js";
-import type { DeltaUnit } from "../lib/format.js";
 import { RATING_CLASS, RATING_TEXT } from "./MetricsSummary.js";
 import metricsStyles from "./MetricsSummary.module.css";
 import hopsStyles from "./HopsPanel.module.css";
@@ -20,35 +27,10 @@ interface Props {
   onClose: () => void;
 }
 
-const UNITS: Record<ComparedMetric, DeltaUnit> = {
-  ttfb: "ms",
-  fcp: "ms",
-  lcp: "ms",
-  cls: "score",
-  inp: "ms",
-  dcl: "ms",
-  onLoad: "ms",
-  requests: "count",
-  bytes: "bytes",
-  cdnHitRatio: "ratio",
-  browserCacheHitRatio: "ratio",
-};
-
-function formatValue(unit: DeltaUnit, value: number | null): string {
-  if (value === null) return "n/a";
-  switch (unit) {
-    case "ms":
-      return formatMs(value);
-    case "bytes":
-      return formatBytes(value);
-    case "ratio":
-      return `${Math.round(value * 100)}%`;
-    case "score":
-      return value.toFixed(3);
-    default:
-      return String(value);
-  }
-}
+const UNITS = Object.fromEntries(COMPARED_METRICS.map((m) => [m.key, m.unit])) as Record<
+  ComparedMetric,
+  DeltaUnit
+>;
 
 /** B against A: better reads like a good rating, worse like a poor one. */
 export const DELTA_CLASS: Record<DeltaRating, string> = {
@@ -174,7 +156,7 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
                         className={`${hopsStyles.num} ${RATING_CLASS[rating]}`}
                         data-rating={rating}
                       >
-                        {formatValue(unit, value)}
+                        {formatMetricValue(value, unit)}
                         {rating !== "none" && (
                           <span
                             className={metricsStyles.srOnly}

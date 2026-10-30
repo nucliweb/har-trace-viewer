@@ -1,8 +1,7 @@
-import { summarizeHops } from "@htv/core";
+import { formatBytes, formatMs, summarizeHops } from "@htv/core";
 import type { HostHop } from "@htv/core";
 import { useMemo } from "react";
 import { regionLabel } from "../lib/region-label.js";
-import { formatBytes, formatMs } from "../lib/format.js";
 import styles from "./HopsPanel.module.css";
 
 interface Props {

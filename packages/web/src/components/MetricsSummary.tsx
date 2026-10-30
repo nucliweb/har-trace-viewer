@@ -1,7 +1,6 @@
-import { rateMetric, summarizeFlowMetrics } from "@htv/core";
+import { formatBytes, formatMs, rateMetric, summarizeFlowMetrics } from "@htv/core";
 import type { Flow, MetricRating, PageMetricsSummary } from "@htv/core";
 import { useMemo } from "react";
-import { formatBytes, formatMs } from "../lib/format.js";
 import styles from "./MetricsSummary.module.css";
 
 interface Props {

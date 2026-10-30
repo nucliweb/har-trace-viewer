@@ -5,7 +5,12 @@ import { fileURLToPath } from "url";
 import { parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
-import { compareFlows, compareStepMetrics, stepAtPair } from "../src/analysis/compare.js";
+import {
+  COMPARED_METRICS,
+  compareFlows,
+  compareStepMetrics,
+  stepAtPair,
+} from "../src/analysis/compare.js";
 import {
   criticalCss,
   makeEntry,
@@ -419,6 +424,24 @@ describe("compareFlows — caveats", () => {
         affects: ["browserCacheHitRatio"],
         text: "B: 1 browser-cache hit is inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.",
       },
+    ]);
+  });
+});
+
+describe("COMPARED_METRICS", () => {
+  it("gives each compared metric its unit, in the order of the deltas", () => {
+    expect(COMPARED_METRICS.map((m) => [m.key, m.unit])).toEqual([
+      ["ttfb", "ms"],
+      ["fcp", "ms"],
+      ["lcp", "ms"],
+      ["cls", "score"],
+      ["inp", "ms"],
+      ["dcl", "ms"],
+      ["onLoad", "ms"],
+      ["requests", "count"],
+      ["bytes", "bytes"],
+      ["cdnHitRatio", "ratio"],
+      ["browserCacheHitRatio", "ratio"],
     ]);
   });
 });

@@ -1,6 +1,7 @@
 import type { DiagramStep, Flow, StepKind } from "../types.js";
 import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
+import type { DeltaUnit } from "../utils/format.js";
 import { getHostname } from "../utils/domain.js";
 import { summarizeFlowMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
@@ -159,28 +160,36 @@ export function stepAtPair(
   return { index: first ?? 0, current: false };
 }
 
-interface MetricSpec {
+export interface MetricSpec {
   key: ComparedMetric;
   label: string;
+  unit: DeltaUnit;
   value: (page: PageMetricsSummary) => number | null | undefined;
   higherIsBetter?: boolean;
 }
 
-// Same rows, labels and order as the metrics summary.
-const METRICS: MetricSpec[] = [
-  { key: "ttfb", label: "TTFB", value: (p) => p.ttfb },
-  { key: "fcp", label: "FCP", value: (p) => p.fcp },
-  { key: "lcp", label: "LCP", value: (p) => p.lcp },
-  { key: "cls", label: "CLS", value: (p) => p.cls },
-  { key: "inp", label: "INP", value: (p) => p.inp },
-  { key: "dcl", label: "DCL", value: (p) => p.dcl },
-  { key: "onLoad", label: "onLoad", value: (p) => p.onLoad },
-  { key: "requests", label: "Requests", value: (p) => p.requests },
-  { key: "bytes", label: "Transfer", value: (p) => p.transferBytes },
-  { key: "cdnHitRatio", label: "CDN hit ratio", value: (p) => p.cdnHitRatio, higherIsBetter: true },
+/** The metrics of a page summary, with their unit: same rows, labels and order as the summary. */
+export const COMPARED_METRICS: readonly MetricSpec[] = [
+  { key: "ttfb", label: "TTFB", unit: "ms", value: (p) => p.ttfb },
+  { key: "fcp", label: "FCP", unit: "ms", value: (p) => p.fcp },
+  { key: "lcp", label: "LCP", unit: "ms", value: (p) => p.lcp },
+  { key: "cls", label: "CLS", unit: "score", value: (p) => p.cls },
+  { key: "inp", label: "INP", unit: "ms", value: (p) => p.inp },
+  { key: "dcl", label: "DCL", unit: "ms", value: (p) => p.dcl },
+  { key: "onLoad", label: "onLoad", unit: "ms", value: (p) => p.onLoad },
+  { key: "requests", label: "Requests", unit: "count", value: (p) => p.requests },
+  { key: "bytes", label: "Transfer", unit: "bytes", value: (p) => p.transferBytes },
+  {
+    key: "cdnHitRatio",
+    label: "CDN hit ratio",
+    unit: "ratio",
+    value: (p) => p.cdnHitRatio,
+    higherIsBetter: true,
+  },
   {
     key: "browserCacheHitRatio",
     label: "Browser cache hit ratio",
+    unit: "ratio",
     value: (p) => p.browserCacheHitRatio,
     higherIsBetter: true,
   },
@@ -196,7 +205,7 @@ export function rateDelta(delta: number | null, higherIsBetter = false): DeltaRa
 function compareMetrics(a: Flow, b: Flow): MetricDelta[] {
   const [pageA] = summarizeFlowMetrics(a);
   const [pageB] = summarizeFlowMetrics(b);
-  return METRICS.map(({ key, label, value, higherIsBetter }) => {
+  return COMPARED_METRICS.map(({ key, label, value, higherIsBetter }) => {
     const valueA = value(pageA) ?? null;
     const valueB = value(pageB) ?? null;
     const delta = valueA === null || valueB === null ? null : valueB - valueA;
