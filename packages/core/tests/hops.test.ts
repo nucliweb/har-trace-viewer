@@ -168,15 +168,57 @@ describe("analyzeHops", () => {
     expect(hops.find((h) => h.host === "b.net")!.connection).toBeNull();
   });
 
-  it("averages TTFB, sums bytes and flags browser cache", () => {
+  it("counts browser-cache hits apart from the requests that reached the host", () => {
+    const hit = { "cf-ray": "a-LAX", "cf-cache-status": "HIT" };
+    const miss = { "cf-ray": "a-LAX", "cf-cache-status": "MISS" };
     const hops = analyzeHops(
       har([
-        entry("https://a.net/1", { ttfb: 100, transferSize: 500 }),
-        entry("https://a.net/2", { ttfb: 300, transferSize: 700, fromCache: "disk" }),
+        entry("https://a.net/1", { ttfb: 100, transferSize: 500, responseHeaders: hit }),
+        entry("https://a.net/2", { ttfb: 300, transferSize: 700, responseHeaders: miss }),
+        entry("https://a.net/3", {
+          ttfb: 1,
+          transferSize: 0,
+          responseHeaders: hit,
+          fromCache: "disk",
+        }),
+        entry("https://a.net/4", {
+          ttfb: 0,
+          transferSize: 0,
+          responseHeaders: hit,
+          fromCache: "memory",
+        }),
       ]),
       DOC
     );
-    expect(hops[0]).toMatchObject({ avgTtfbMs: 200, bytes: 1200, fromBrowserCache: true });
+
+    expect(hops[0]).toMatchObject({
+      requests: 2,
+      browserCacheHits: 2,
+      bytes: 1200,
+      avgTtfbMs: 200,
+      cacheHits: 1,
+      cacheMisses: 1,
+      hitRatio: 0.5,
+      fromBrowserCache: true,
+    });
+  });
+
+  it("keeps a host served only from the browser cache, without a TTFB", () => {
+    const hops = analyzeHops(
+      har([
+        entry("https://a.net/1"),
+        entry("https://c.net/1", { fromCache: "disk", responseHeaders: { "cf-ray": "a-LAX" } }),
+      ]),
+      DOC
+    );
+
+    expect(hops.find((h) => h.host === "c.net")).toMatchObject({
+      requests: 0,
+      browserCacheHits: 1,
+      avgTtfbMs: null,
+      provider: "cloudflare",
+    });
+    expect(hops.map((h) => h.host)).toEqual(["a.net", "c.net"]);
   });
 });
 

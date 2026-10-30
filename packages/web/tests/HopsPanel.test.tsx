@@ -71,6 +71,34 @@ describe("HopsPanel", () => {
     expect(rows[1]).toHaveTextContent("reused");
   });
 
+  it("counts browser-cache hits apart, leaving them out of requests and TTFB", () => {
+    const cached: ParsedHar = {
+      ...har,
+      entries: [
+        doc,
+        entry("https://static.example.com/a.js", { ttfb: 80 }),
+        entry("https://static.example.com/b.js", { ttfb: 1, fromCache: "disk" }),
+        entry("https://fonts.example.net/f.woff2", { ttfb: 0, fromCache: "memory" }),
+      ],
+    };
+    render(<HopsPanel hops={analyzeHops(cached, doc.url)} pageLabel="Page 1" onClose={noop} />);
+    const table = screen.getByRole("table", { name: "Hops per host" });
+    const columns = within(table)
+      .getAllByRole("columnheader")
+      .map((th) => th.textContent);
+    const cell = (host: string, column: string) =>
+      within(within(table).getByRole("row", { name: new RegExp(`^${host}`) })).getAllByRole("cell")[
+        columns.indexOf(column) - 1
+      ].textContent;
+
+    expect(columns).toContain("Cached");
+    expect(cell("static\\.example\\.com", "Requests")).toBe("1");
+    expect(cell("static\\.example\\.com", "Cached")).toBe("1");
+    expect(cell("static\\.example\\.com", "Avg TTFB")).toBe("80 ms");
+    expect(cell("fonts\\.example\\.net", "Requests")).toBe("0");
+    expect(cell("fonts\\.example\\.net", "Avg TTFB")).toBe("n/a");
+  });
+
   it("shows the page label and the summary line", () => {
     panel();
     expect(screen.getByRole("heading", { name: "Page 1 · Home" })).toBeInTheDocument();

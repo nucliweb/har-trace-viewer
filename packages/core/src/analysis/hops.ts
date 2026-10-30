@@ -10,13 +10,18 @@ export interface HostHop {
   provider: CdnProvider | "origin";
   providerName: string;
   pop: { code: string; city: string; region: NetworkRegion } | null;
+  /** Requests that reached the host; browser-cache hits never do and are counted apart. */
   requests: number;
+  browserCacheHits: number;
+  /** Bytes of the requests that reached the host. */
   bytes: number;
+  /** CDN cache status of the requests that reached the host. */
   cacheHits: number;
   cacheMisses: number;
   /** hits / (hits + misses); 0 when no entry reported a cache status. */
   hitRatio: number;
-  avgTtfbMs: number;
+  /** Over the requests that reached the host; null when the browser cache served them all. */
+  avgTtfbMs: number | null;
   /** First non-zero connection timings seen for the host; null when every entry reused a connection. */
   connection: { dns: number; connect: number; ssl: number } | null;
   fromBrowserCache: boolean;
@@ -53,16 +58,18 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
   const popCode = vote(pops.map((p) => p.code));
   const pop = pops.find((p) => p.code === popCode);
 
+  // A browser-cache hit replays a stored response: its timings and CDN headers are not this load's.
+  const network = entries.filter((e) => e.fromCache === false);
   let cacheHits = 0;
   let cacheMisses = 0;
-  for (const e of entries) {
+  for (const e of network) {
     const status = detectCdnCacheStatus(e.responseHeaders);
     if (status === "hit") cacheHits++;
     else if (status === "miss") cacheMisses++;
   }
   const judged = cacheHits + cacheMisses;
 
-  const handshake = entries.find(
+  const handshake = network.find(
     (e) => e.timing.dns > 0 || e.timing.connect > 0 || e.timing.ssl > 0
   );
 
@@ -72,12 +79,14 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
     provider: provider === "unknown" ? "origin" : provider,
     providerName,
     pop: pop ? { code: pop.code, city: pop.city, region: pop.region } : null,
-    requests: entries.length,
-    bytes: entries.reduce((sum, e) => sum + e.transferSize, 0),
+    requests: network.length,
+    browserCacheHits: entries.length - network.length,
+    bytes: network.reduce((sum, e) => sum + e.transferSize, 0),
     cacheHits,
     cacheMisses,
     hitRatio: judged > 0 ? cacheHits / judged : 0,
-    avgTtfbMs: entries.reduce((sum, e) => sum + e.ttfb, 0) / entries.length,
+    avgTtfbMs:
+      network.length > 0 ? network.reduce((sum, e) => sum + e.ttfb, 0) / network.length : null,
     connection: handshake
       ? {
           dns: Math.max(handshake.timing.dns, 0),
@@ -85,7 +94,7 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
           ssl: Math.max(handshake.timing.ssl, 0),
         }
       : null,
-    fromBrowserCache: entries.some((e) => e.fromCache !== false),
+    fromBrowserCache: network.length < entries.length,
   };
 }
 
@@ -102,7 +111,7 @@ export function analyzeHops(har: ParsedHar, documentUrl: string): HostHop[] {
   }
   return [...byHost]
     .map(([host, entries]) => buildHop(host, entries, documentRoot))
-    .sort((a, b) => b.requests - a.requests);
+    .sort((a, b) => b.requests - a.requests || b.browserCacheHits - a.browserCacheHits);
 }
 
 export function summarizeHops(hops: HostHop[]): HopsSummary {

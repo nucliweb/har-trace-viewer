@@ -53,6 +53,9 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
               <th scope="col">Provider</th>
               <th scope="col">PoP</th>
               <th scope="col">Requests</th>
+              <th scope="col" title="Served from the browser cache, without a request">
+                Cached
+              </th>
               <th scope="col">Bytes</th>
               <th scope="col">Hit ratio</th>
               <th scope="col">Avg TTFB</th>
@@ -75,6 +78,7 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
                   <td>{hop.providerName}</td>
                   <td>{hop.pop ? `${hop.pop.city} · ${regionLabel(hop.pop.region)}` : "n/a"}</td>
                   <td className={styles.num}>{hop.requests}</td>
+                  <td className={styles.num}>{hop.browserCacheHits}</td>
                   <td className={styles.num}>{formatBytes(hop.bytes)}</td>
                   <td className={styles.num}>{judged ? pct(hop.hitRatio) : "n/a"}</td>
                   <td className={styles.num}>{formatMs(hop.avgTtfbMs)}</td>
