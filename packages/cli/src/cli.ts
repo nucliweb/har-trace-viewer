@@ -41,9 +41,15 @@ export interface CompareArg {
   select?: string;
 }
 
+/** Where the report goes: the terminal, an HTML report or JSON. */
+export type OutputFormat = "tui" | "html" | "json";
+
+const OUTPUT_FORMATS: readonly OutputFormat[] = ["tui", "html", "json"];
+
 export interface Args {
   pages: PageArg[];
-  output: string;
+  output: string; // "" without --output
+  format?: OutputFormat; // undefined when --format is absent
   bundle: boolean;
   /** Compares the two pages of the flow: the first is A, the second B. */
   compare?: boolean;
@@ -53,6 +59,11 @@ export interface Args {
   region?: ClientRegion; // undefined when --region is absent
   help?: boolean;
   version?: boolean;
+}
+
+function parseFormat(value: string | undefined): OutputFormat {
+  if (OUTPUT_FORMATS.includes(value as OutputFormat)) return value as OutputFormat;
+  throw new Error(`Invalid --format "${value ?? ""}". Valid values: ${OUTPUT_FORMATS.join(", ")}.`);
 }
 
 function parseRegion(value: string | undefined): ClientRegion {
@@ -74,6 +85,7 @@ export function parseArgs(argv: string[]): Args {
       "compare-trace": { type: "string" },
       "compare-select": { type: "string" },
       output: { type: "string", short: "o" },
+      format: { type: "string" },
       bundle: { type: "boolean" },
       region: { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -86,6 +98,7 @@ export function parseArgs(argv: string[]): Args {
 
   const pages: PageArg[] = [];
   let output = "";
+  let format: OutputFormat | undefined;
   let bundle = false;
   let listPages = false;
   let help = false;
@@ -133,6 +146,9 @@ export function parseArgs(argv: string[]): Args {
       case "output":
         output = value;
         break;
+      case "format":
+        format = parseFormat(value);
+        break;
       case "bundle":
         bundle = true;
         break;
@@ -152,6 +168,7 @@ export function parseArgs(argv: string[]): Args {
     pages,
     output,
     bundle,
+    ...(format ? { format } : {}),
     ...(listPages ? { listPages } : {}),
     ...(compare ? { compare } : {}),
     ...(compareWith ? { compareWith } : {}),
@@ -207,14 +224,62 @@ export function bundleHtml(outputDir: string): void {
 }
 
 const isHtmlPath = (p: string) => p.toLowerCase().endsWith(".html");
+const isJsonPath = (p: string) => p.toLowerCase().endsWith(".json");
 
-export const USAGE = `Usage: htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] --output <dir|file.html> [options]`;
+export type OutputTarget =
+  | { kind: "tui" }
+  // A .html path is always a single self-contained file; a directory bundles with --bundle.
+  | { kind: "html"; path: string; singleFile: boolean; bundle: boolean }
+  // Without a path, the JSON goes to stdout.
+  | { kind: "json"; path?: string };
+
+/**
+ * Where the report goes, from --output and --format: no --output shows it in the terminal,
+ * a .json path or --format json writes JSON, any other path writes HTML.
+ */
+export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarget {
+  const { output, format } = args;
+  if (format === "tui" && output) {
+    throw new Error("--format tui shows the report in the terminal: drop --output");
+  }
+  if (format === "html" && (!output || isJsonPath(output))) {
+    throw new Error("--format html needs -o <dir|file.html>");
+  }
+  if (format === "json" && output && !isJsonPath(output)) {
+    throw new Error("--format json needs a .json --output path, or no --output to print to stdout");
+  }
+  if (format === "json" || isJsonPath(output))
+    return output ? { kind: "json", path: output } : { kind: "json" };
+  if (output) {
+    const singleFile = isHtmlPath(output);
+    return { kind: "html", path: output, singleFile, bundle: singleFile || args.bundle };
+  }
+  if (!stdoutIsTerminal) {
+    throw new Error(
+      "The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json."
+    );
+  }
+  return { kind: "tui" };
+}
+
+export const USAGE = `Usage: htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]`;
 
 export const HELP = `${USAGE}
 
-Generates a self-contained HTML performance report from HAR and Chrome trace files.
+Analyzes HAR and Chrome trace files: browses the report in the terminal, writes a
+self-contained HTML report to share, or writes JSON for other tools and AI agents.
 
-Options:
+Output (where the report goes):
+  (no --output)       Browse the report in the terminal: metrics, steps, hosts and
+                      cache, one tab each. Needs an interactive terminal.
+  -o, --output <path> file.html: a single self-contained HTML file that opens offline.
+                      file.json: the full analysis as JSON.
+                      Any other path: a directory with index.html and its assets.
+  --format <format>   tui | html | json. --format json without --output prints
+                      the JSON to stdout, e.g. to pipe it into an agent.
+  --bundle            For a directory --output: inline every asset into index.html.
+
+Input:
   --page <name>       Start a page in the report; repeat once per page.
                       The following --har and --trace attach to it.
   --har <file>        HAR file for the preceding --page (.har or .har.gz).
@@ -225,6 +290,8 @@ Options:
                       separated list of ids, or text/regex matched against id,
                       title and URL ("Run 1, First"). Default: all pages.
   --list-pages        Print the pages (id, title, entries) of each --har and exit.
+
+Comparison:
   --compare           Compare the two pages of the flow instead of chaining them:
                       the first page is A (top), the second B (bottom). The flow
                       must have exactly two pages, e.g. a WebPageTest first view
@@ -235,27 +302,28 @@ Options:
                       Chrome trace for the --compare-with HAR.
   --compare-select <value>
                       Page of a multi-page --compare-with HAR, as --select.
-  -o, --output <path> Directory where the report is written. With --bundle it
-                      may also be a .html file path.
-  --bundle            Inline all assets (CSS, JS, fonts) into a single
-                      self-contained index.html that opens offline.
+
+Other:
   --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")} (default: default).
                       "cn" draws the Great Firewall before the first server.
   -h, --help          Show this help.
   -v, --version       Show the version.
 
-Example (two pages):
+Examples:
+  htv --har page.har                          # browse in the terminal
+  htv --har page.har -o report.html           # share one HTML file
+  htv --har page.har --format json | my-agent # JSON for an AI agent
+
+  # Two pages, with a trace for the first one:
   htv --page "Home" --har home.har --trace home.json.gz \
-      --page "Checkout" --har checkout.har \
-      --output report/ --bundle
+      --page "Checkout" --har checkout.har -o report.html
 
-Example (WebPageTest first view vs repeat view, i.e. without and with cache):
-  htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare \
-      --output compare.html --bundle
+  # WebPageTest first view vs repeat view, i.e. without and with cache:
+  htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare -o compare.html
 
-Without --bundle the report loads ES modules from assets/, which browsers
-block over file://; serve the folder over HTTP (npx serve report/) or use
---bundle for a single file that opens by double-click.`;
+Without --bundle a directory report loads ES modules from assets/, which browsers
+block over file://; serve the folder over HTTP (npx serve report/) or write a
+.html file, which opens by double-click.`;
 
 export function printUsage() {
   console.error(USAGE);
@@ -267,13 +335,10 @@ export function validateArgs(args: Args): string | null {
     const missing = args.pages.find((p) => !p.har);
     return missing ? `Missing --har for page "${missing.name}"` : null;
   }
-  if (args.pages.length === 0 || !args.output) return "";
+  if (args.pages.length === 0) return "";
   if (args.compare && args.compareWith) return "Use either --compare or --compare-with, not both";
   if (args.compareWith && !args.compareWith.har) {
     return "--compare-trace and --compare-select need --compare-with";
-  }
-  if (isHtmlPath(args.output) && !args.bundle) {
-    return "--output must be a directory unless --bundle is set";
   }
   for (const p of args.pages) {
     if (!p.har) return `Missing --har for page "${p.name}"`;
@@ -341,7 +406,13 @@ async function comparisonSides(
   return [pageFlows[0], other[0]];
 }
 
-export async function generateReport(args: Args): Promise<string> {
+/** The flow to report and, for a comparison, the second flow (B). */
+export interface Report {
+  flow: Flow;
+  compare?: Flow;
+}
+
+export async function buildReport(args: Args): Promise<Report> {
   const pageFlows: PageFlow[] = [];
   for (const p of args.pages) pageFlows.push(...(await readPageFlows(p)));
 
@@ -356,14 +427,37 @@ export async function generateReport(args: Args): Promise<string> {
       `Note: latencies look compatible with China/GFW routing (${suggestion.reason}). Re-run with --region ${suggestion.region} to show the GFW topology.`
     );
   }
+  return compare ? { flow, compare } : { flow };
+}
 
-  const target = resolve(args.output);
-  const singleFile = isHtmlPath(target);
-  const outputDir = singleFile ? mkdtempSync(join(tmpdir(), "htv-report-")) : target;
+/**
+ * The report as JSON for other tools: the full flow (or both flows of a comparison), with the
+ * htv version that produced it. Each flow carries its own data-model version.
+ */
+export function reportJson({ flow, compare }: Report, htvVersion: string): string {
+  const body = compare
+    ? { htvVersion, kind: "comparison", a: flow, b: compare }
+    : { htvVersion, kind: "flow", flow };
+  return JSON.stringify(body, null, 2);
+}
+
+/** Writes the HTML report and returns the path of its page. */
+export function writeHtmlReport(
+  { flow, compare }: Report,
+  target: Extract<OutputTarget, { kind: "html" }>
+): string {
+  const path = resolve(target.path);
+  const outputDir = target.singleFile ? mkdtempSync(join(tmpdir(), "htv-report-")) : path;
   try {
-    return writeReport(flow, compare, outputDir, args.bundle, singleFile ? target : undefined);
+    return writeReport(
+      flow,
+      compare,
+      outputDir,
+      target.bundle,
+      target.singleFile ? path : undefined
+    );
   } finally {
-    if (singleFile) rmSync(outputDir, { recursive: true, force: true });
+    if (target.singleFile) rmSync(outputDir, { recursive: true, force: true });
   }
 }
 

@@ -1,5 +1,18 @@
 #!/usr/bin/env node
-import { parseArgs, printUsage, HELP, validateArgs, generateReport, listPagesReport } from "./cli";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import {
+  parseArgs,
+  printUsage,
+  HELP,
+  validateArgs,
+  listPagesReport,
+  outputTarget,
+  buildReport,
+  reportJson,
+  writeHtmlReport,
+} from "./cli";
+import { runTui } from "./tui/run.js";
 import type { Args } from "./cli";
 
 async function main() {
@@ -33,8 +46,28 @@ async function main() {
     return;
   }
 
-  const indexPath = await generateReport(args);
-  console.log(`Report generated: ${indexPath}`);
+  const target = outputTarget(args, process.stdout.isTTY === true);
+  const report = await buildReport(args);
+  switch (target.kind) {
+    case "json": {
+      const json = reportJson(report, __HTV_VERSION__);
+      if (!target.path) {
+        process.stdout.write(`${json}\n`);
+        return;
+      }
+      const path = resolve(target.path);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, `${json}\n`);
+      console.log(`Report generated: ${path}`);
+      return;
+    }
+    case "html":
+      console.log(`Report generated: ${writeHtmlReport(report, target)}`);
+      return;
+    case "tui":
+      await runTui(report, __HTV_VERSION__);
+      return;
+  }
 }
 
 main().catch((err) => {

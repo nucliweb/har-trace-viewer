@@ -2,13 +2,29 @@
 
 [![CI](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml)
 
-Generates static HTML reports from HAR and Chrome trace files, visualizing page load steps, network requests, and performance data.
+Analyzes HAR and Chrome trace files and shows the page load step by step, with its network requests, hosts, CDN and cache behavior and performance metrics: in the terminal, as a self-contained HTML report to share, or as JSON for other tools and AI agents.
 
 ## Usage
 
 ```bash
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] --output <dir|file.html> [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [-o <dir|file.html|file.json>] [--format tui|html|json] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
 ```
+
+### Output
+
+The destination picks the format:
+
+| Command                            | Output                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `htv --har page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache tabs (needs an interactive terminal) |
+| `htv --har page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                       |
+| `htv --har page.har -o r.json`     | The full analysis as JSON                                                                                 |
+| `htv --har page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                         |
+| `htv --har page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                    |
+
+In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps, `↑`/`↓` and `PgUp`/`PgDn` scroll, `p` moves to the next page of a multi-page flow, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
+
+The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
 
 ### Options
 
@@ -23,8 +39,9 @@ htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id
 | `--compare-with <file>`    | Compare the flow (A, one page) with another HAR (B)                                                                                                                         |
 | `--compare-trace <file>`   | Chrome trace for the `--compare-with` HAR                                                                                                                                   |
 | `--compare-select <value>` | Page of a multi-page `--compare-with` HAR, as `--select`                                                                                                                    |
-| `-o, --output <path>`      | Directory where the report is written; with `--bundle` it can also be a `.html` file path                                                                                   |
-| `--bundle`                 | Inline all assets (CSS, JS, fonts) into a single self-contained HTML file                                                                                                   |
+| `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                  |
+| `--format <format>`        | `tui`, `html` or `json`; `--format json` without `--output` prints the JSON to stdout                                                                                       |
+| `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
 | `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                    |
 | `-v, --version`            | Print the version and exit                                                                                                                                                  |
@@ -55,7 +72,7 @@ htv --page "Home" --har home.har --output report/ --region cn
 Comparison of a WebPageTest first view and repeat view (without and with cache), both from the same HAR:
 
 ```bash
-htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare --output compare.html --bundle
+htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare --output compare.html
 ```
 
 Comparison of two recordings, each with its trace:
@@ -70,12 +87,10 @@ A comparison report stacks the two diagrams (A on top, B below) and drives them 
 Portable single-file report:
 
 ```bash
-htv --page "Home" --har home.har --output report/ --bundle
+htv --page "Home" --har home.har --output report.html
 ```
 
-With `--bundle`, `--output` can be a `.html` path (`--output report.html`) to write just that single file; without `--bundle` a `.html` output path is an error.
-
-Without `--bundle`, the report loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`) or use `--bundle` for a file that opens by double-click.
+A directory report (`--output report/`) without `--bundle` loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`), add `--bundle`, or write a `.html` file, which opens by double-click.
 
 ## Packages
 

@@ -1,14 +1,16 @@
 # har-trace-viewer
 
-Command-line tool that turns a HAR file, and optionally a Chrome DevTools trace, into a self-contained HTML performance report.
+Command-line tool that analyzes a HAR file, and optionally a Chrome DevTools trace, and shows the page load in the terminal, writes it as a self-contained HTML report, or writes it as JSON for other tools and AI agents.
 
 ```bash
-npx har-trace-viewer --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] --output <dir|file.html> [--bundle] [--select <id|text>] [--region default|cn] [--compare | --compare-with <file.har[.gz]>]
+npx har-trace-viewer --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [--select <id|text>] [--region default|cn] [--compare | --compare-with <file.har[.gz]>]
 ```
 
-Install it globally with `npm i -g har-trace-viewer` to get the `htv` command (`htv --page <name> --har <file.har> --output <dir>`).
+Install it globally with `npm i -g har-trace-viewer` to get the `htv` command.
 
-Pass `--page` once per page you want in the report, each followed by its `--har` and optional `--trace`. A HAR recorded across several navigations (several entries in `log.pages`) is expanded into one flow page per navigation, named after the page titles (prefixed with the `--page` name when given), and its `--trace` is attached to the page whose document URL matches the trace. The output directory receives an `index.html` with the viewer and the analyzed data embedded. `--output` is a directory; with `--bundle` it can also be a `.html` path, which writes only that single file (`--output report.html --bundle`). Without `--bundle` a `.html` output path is an error. `htv --help` prints the full usage and `htv --version` the installed version. With `--bundle`, the JavaScript and CSS are inlined and Google Fonts are embedded, so the report is a single file that opens offline.
+The destination picks the format. Without `--output`, the report opens in the terminal with four tabs: Overview (the metrics summary), Steps (the diagram's steps with the route, metrics and resources of each), Hosts and Cache (the cache report and its recommendations, with the resources they name); `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps, `↑`/`↓` and `PgUp`/`PgDn` scroll, `p` moves to the next page, `a`/`b` pick the side of a comparison and `q` quits. It needs an interactive terminal. `--output report.html` writes a single self-contained HTML file with the interactive diagram, inlined JavaScript, CSS and fonts, which opens offline. `--output report.json` writes the full analysis as JSON (`{ "htvVersion", "kind": "flow", "flow" }`, or `"kind": "comparison"` with `"a"` and `"b"`), and `--format json` without `--output` prints it to stdout, to pipe into another tool or an AI agent. Any other `--output` is a directory that receives an `index.html` and its assets (`--bundle` inlines them). `htv --help` prints the full usage and `htv --version` the installed version.
+
+Pass `--page` once per page you want in the report, each followed by its `--har` and optional `--trace`. A HAR recorded across several navigations (several entries in `log.pages`) is expanded into one flow page per navigation, named after the page titles (prefixed with the `--page` name when given), and its `--trace` is attached to the page whose document URL matches the trace.
 
 `--select <value>` narrows the preceding `--har` when it holds several pages, as a WebPageTest export does (runs and first/repeat views). The value is a page id (`page_1_0_1`), a comma-separated list of ids, or text matched case-insensitively against page id, title and URL (`--select "Run 1, First"`; a regular expression also works). An unknown selection exits with an error listing the available pages. `--list-pages` prints the pages of each `--har` (id, entry count, title) and exits without generating. WebPageTest pages are named `Run 1 · First view` and `Run 1 · Repeat view`.
 

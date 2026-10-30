@@ -13,7 +13,7 @@ import {
 import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { parseArgs, bundleHtml, validateArgs } from "../src/cli";
+import { parseArgs, bundleHtml, outputTarget, validateArgs } from "../src/cli";
 import { twoPageHar } from "../../core/tests/helpers/firefox-har";
 import { wptHar } from "../../core/tests/helpers/wpt-har";
 
@@ -157,6 +157,14 @@ describe("parseArgs", () => {
     ).toEqual({ har: "b.har", trace: "b.json", select: "page_1_1_1" });
   });
 
+  it("parses --format and rejects an unknown one listing the valid values", () => {
+    expect(parseArgs(["--format", "json"]).format).toBe("json");
+    expect(parseArgs([]).format).toBeUndefined();
+    expect(() => parseArgs(["--format", "xml"])).toThrow(
+      'Invalid --format "xml". Valid values: tui, html, json.'
+    );
+  });
+
   it("sets help and version with long and short flags", () => {
     expect(parseArgs(["--help"]).help).toBe(true);
     expect(parseArgs(["-h"]).help).toBe(true);
@@ -198,12 +206,14 @@ describe("--help, --version and --output (built CLI)", () => {
     expect(readdirSync(join(target, ".."))).toEqual(["out.html"]);
   });
 
-  it("exits 1 when --output is a .html path without --bundle", () => {
+  it("writes a self-contained single file to a .html output path, --bundle or not", () => {
     const target = join(makeTempDir(), "out.html");
     const res = runCli(["--har", HAR, "--output", target]);
-    expect(res.status).toBe(1);
-    expect(res.stderr).toContain("--output must be a directory unless --bundle is set");
-    expect(existsSync(target)).toBe(false);
+    expect(res.status, res.stderr).toBe(0);
+    const html = readFileSync(target, "utf-8");
+    expect(html).toContain("window.__HTV_FLOW__");
+    expect(html).not.toContain("./assets/");
+    expect(readdirSync(join(target, ".."))).toEqual(["out.html"]);
   });
 
   it("reads a gzipped HAR", () => {
@@ -414,7 +424,11 @@ describe("bundleHtml local inlining", () => {
 
   it("leaves no network call in the CLI sources", () => {
     const srcDir = join(CLI_ROOT, "src");
-    for (const file of readdirSync(srcDir)) {
+    const files = readdirSync(srcDir, { recursive: true, encoding: "utf-8" }).filter((f) =>
+      /\.tsx?$/.test(f)
+    );
+    expect(files).toContain(join("tui", "App.tsx"));
+    for (const file of files) {
       expect(readFileSync(join(srcDir, file), "utf-8"), file).not.toMatch(/\bfetch\(/);
     }
   });
@@ -545,6 +559,118 @@ describe("selecting pages of a multi-page HAR (built CLI)", () => {
     expect(res.stderr).toContain("No page matches the selection");
     expect(res.stderr).toContain("page_1_1_1");
     expect(existsSync(out)).toBe(false);
+  });
+});
+
+describe("outputTarget", () => {
+  const base = { pages: [{ name: "Page 1", har: "a.har" }], output: "", bundle: false };
+
+  it("opens the terminal report without --output when stdout is a terminal", () => {
+    expect(outputTarget(base, true)).toEqual({ kind: "tui" });
+    expect(outputTarget({ ...base, format: "tui" }, true)).toEqual({ kind: "tui" });
+  });
+
+  it("asks for a file or JSON when there is no terminal to draw on", () => {
+    expect(() => outputTarget(base, false)).toThrow(
+      "The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json."
+    );
+  });
+
+  it("picks the format from the --output path", () => {
+    expect(outputTarget({ ...base, output: "r.json" }, true)).toEqual({
+      kind: "json",
+      path: "r.json",
+    });
+    expect(outputTarget({ ...base, output: "R.HTML" }, true)).toEqual({
+      kind: "html",
+      path: "R.HTML",
+      singleFile: true,
+      bundle: true,
+    });
+    expect(outputTarget({ ...base, output: "report" }, true)).toEqual({
+      kind: "html",
+      path: "report",
+      singleFile: false,
+      bundle: false,
+    });
+    expect(outputTarget({ ...base, output: "report", bundle: true }, true)).toMatchObject({
+      bundle: true,
+    });
+  });
+
+  it("writes JSON to stdout with --format json and no --output", () => {
+    expect(outputTarget({ ...base, format: "json" }, false)).toEqual({ kind: "json" });
+  });
+
+  it("rejects a --format that contradicts --output", () => {
+    expect(() => outputTarget({ ...base, format: "html" }, true)).toThrow(
+      "--format html needs -o <dir|file.html>"
+    );
+    expect(() => outputTarget({ ...base, format: "json", output: "r.html" }, true)).toThrow(
+      "--format json needs a .json --output path, or no --output to print to stdout"
+    );
+    expect(() => outputTarget({ ...base, format: "html", output: "r.json" }, true)).toThrow(
+      "--format html needs -o <dir|file.html>"
+    );
+    expect(() => outputTarget({ ...base, format: "tui", output: "r.html" }, true)).toThrow(
+      "--format tui shows the report in the terminal: drop --output"
+    );
+  });
+});
+
+describe("JSON output (built CLI)", () => {
+  const pkgVersion = JSON.parse(readFileSync(join(CLI_ROOT, "package.json"), "utf-8")).version;
+
+  it("writes the flow, its model version and the htv version to a .json path", () => {
+    const target = join(makeTempDir(), "flow.json");
+    const res = runCli(["--page", "Home", "--har", HAR, "--trace", TRACE, "-o", target]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).toContain(`Report generated: ${target}`);
+    const report = JSON.parse(readFileSync(target, "utf-8"));
+    expect(report).toMatchObject({ htvVersion: pkgVersion, kind: "flow" });
+    expect(report.flow.version).toBe(FLOW_VERSION);
+    expect(report.flow.pages.map((p: { name: string }) => p.name)).toEqual(["Home"]);
+    expect(report.flow.pages[0].har.entries.length).toBeGreaterThan(0);
+  });
+
+  it("writes both sides of a comparison", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    const target = join(dir, "compare.json");
+    const res = runCli([
+      "--har",
+      harPath,
+      "--select",
+      "page_1_0_1,page_1_1_1",
+      "--compare",
+      "-o",
+      target,
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const report = JSON.parse(readFileSync(target, "utf-8"));
+    expect(report.kind).toBe("comparison");
+    expect(report.a.pages[0].name).toBe("Run 1 · First view");
+    expect(report.b.pages[0].name).toBe("Run 1 · Repeat view");
+  });
+
+  it("prints only the JSON to stdout with --format json, notes going to stderr", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    const res = runCli(["--har", harPath, "--select", "page_1_1_1", "--format", "json"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(JSON.parse(res.stdout).flow.pages).toHaveLength(1);
+    expect(res.stderr).toContain("Note:");
+  });
+
+  it("exits 1 without --output when stdout is not a terminal", () => {
+    const res = runCli(["--har", HAR]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("The terminal report needs an interactive terminal");
   });
 });
 
