@@ -21,12 +21,30 @@ import type {
   Flow,
   FlowComparison,
   HarEntry,
+  StepPair,
 } from "@htv/core";
-import { BLANK, DELTA_COLOR, RATING_COLOR, heading, line, seg, table, wrap } from "./lines.js";
+import {
+  BLANK,
+  DELTA_COLOR,
+  RATING_COLOR,
+  heading,
+  hstack,
+  line,
+  panel,
+  seg,
+  table,
+  wrap,
+} from "./lines.js";
 import type { Line } from "./lines.js";
 
 // Resources listed per step, busiest first; the rest are counted.
 const MAX_STEP_RESOURCES = 12;
+// Below this width the panels of a tab stack instead of sitting side by side.
+const SIDE_BY_SIDE_MIN = 96;
+// The three cache summary panels need more room to share a row.
+const CACHE_ROW_MIN = 120;
+const METRICS_WIDTH = 38;
+const LIST_WIDTH = 36;
 
 const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
 
@@ -42,41 +60,26 @@ function route(flow: Flow, step: DiagramStep): string {
   return step.activeNodes.map((id) => nodes.find((n) => n.id === id)?.label ?? id).join(" → ");
 }
 
-// ── Overview ──────────────────────────────────────────────────────────────────
-
-/** The metrics summary of every page, rated like the web app, then the current page's nodes. */
-export function overviewLines(flow: Flow, pageIndex: number, width: number): Line[] {
-  const summaries = summarizeFlowMetrics(flow);
-  const rows = COMPARED_METRICS.map((metric) => [
-    metric.label,
-    ...summaries.map((summary) => {
-      const value = metric.value(summary) ?? null;
-      return seg(formatMetricValue(value, metric.unit), {
-        color: RATING_COLOR[rateMetric(metric.key, value)],
-      });
-    }),
-  ]);
-  const lines: Line[] = [
-    heading("Metrics"),
-    ...table(["Metric", ...summaries.map((s) => s.name)], rows, [
-      "left",
-      ...summaries.map(() => "right" as const),
-    ]),
-    BLANK,
-    heading(`Network · ${pageLabel(flow, pageIndex)}`),
-    ...nodeLines(flow, pageIndex),
-  ];
-  const suggestion = flow.hints.suggestedClientRegion;
-  if (suggestion && flow.clientRegion === "default") {
-    lines.push(
-      BLANK,
-      ...wrap(`Note: ${suggestion.reason}. Re-run with --region ${suggestion.region}.`, width)
-    );
+/** Two panels side by side when the width allows, else one above the other. */
+function pair(
+  left: { title: string; body: Line[]; width: number },
+  right: { title: string; body: Line[] },
+  width: number
+): Line[] {
+  if (width < SIDE_BY_SIDE_MIN) {
+    return [...panel(left.title, left.body, width), ...panel(right.title, right.body, width)];
   }
-  return lines;
+  const rightWidth = width - left.width - 1;
+  const minHeight = Math.max(left.body.length, right.body.length) + 2;
+  return hstack([
+    { lines: panel(left.title, left.body, left.width, { minHeight }), width: left.width },
+    { lines: panel(right.title, right.body, rightWidth, { minHeight }), width: rightWidth },
+  ]);
 }
 
-function nodeLines(flow: Flow, pageIndex: number): Line[] {
+// ── Overview ──────────────────────────────────────────────────────────────────
+
+function nodeRows(flow: Flow, pageIndex: number): Line[] {
   const nodes = (flow.pageAnalyses[pageIndex]?.nodes ?? []).filter((n) => n.present);
   return table(
     ["Node", "Detail", "Requests"],
@@ -91,12 +94,34 @@ function nodeLines(flow: Flow, pageIndex: number): Line[] {
   );
 }
 
+/** The rated metrics of one page beside its network nodes, and the region note when there is one. */
+export function overviewRegion(flow: Flow, pageIndex: number, width: number): Line[] {
+  const summary = summarizeFlowMetrics(flow)[pageIndex];
+  const rows = COMPARED_METRICS.map((metric) => {
+    const value = metric.value(summary) ?? null;
+    const style =
+      value === null ? { dim: true } : { color: RATING_COLOR[rateMetric(metric.key, value)] };
+    return [metric.label, seg(formatMetricValue(value, metric.unit), style)];
+  });
+  const lines = pair(
+    {
+      title: "Metrics",
+      body: table(["Metric", "Value"], rows, ["left", "right"]),
+      width: METRICS_WIDTH,
+    },
+    { title: "Network", body: nodeRows(flow, pageIndex) },
+    width
+  );
+  const suggestion = flow.hints.suggestedClientRegion;
+  if (suggestion && flow.clientRegion === "default") {
+    const text = `${suggestion.reason}. Re-run with --region ${suggestion.region} to draw the Great Firewall.`;
+    lines.push(...panel("Note", wrap(text, width - 4), width));
+  }
+  return lines;
+}
+
 /** Both flows' metrics with B − A, numbered against the notes that change how they read. */
-export function compareOverviewLines(
-  comparison: FlowComparison,
-  names: { a: string; b: string },
-  width: number
-): Line[] {
+export function compareOverviewRegion(comparison: FlowComparison, width: number): Line[] {
   const { metrics, caveats } = comparison;
   const marker = (target: string) => {
     const numbers = caveats.flatMap((c, i) =>
@@ -108,7 +133,10 @@ export function compareOverviewLines(
   const rows = metrics.map((m) => {
     const unit = unitOf(m.key);
     const rated = (value: number | null) =>
-      seg(formatMetricValue(value, unit), { color: RATING_COLOR[rateMetric(m.key, value)] });
+      seg(
+        formatMetricValue(value, unit),
+        value === null ? { dim: true } : { color: RATING_COLOR[rateMetric(m.key, value)] }
+      );
     return [
       `${m.label}${marker(m.key)}`,
       rated(m.a),
@@ -117,25 +145,21 @@ export function compareOverviewLines(
       seg(formatDeltaPct(m.deltaPct), { dim: true }),
     ];
   });
-  const lines: Line[] = [
-    heading("Metrics · B − A"),
-    ...table(["Metric", `A ${names.a}`, `B ${names.b}`, "Δ", "Δ %"], rows, [
-      "left",
-      "right",
-      "right",
-      "right",
-      "right",
-    ]),
-  ];
+  const lines = panel(
+    "Metrics · B − A",
+    table(["Metric", "A", "B", "Δ", "Δ %"], rows, ["left", "right", "right", "right", "right"]),
+    width
+  );
   if (caveats.length > 0) {
-    lines.push(BLANK, heading("Notes"));
+    const notes: Line[] = [];
     caveats.forEach((caveat, i) => {
-      const [first, ...rest] = wrap(caveat.text, width - 4, "    ");
-      lines.push(
+      const [first, ...rest] = wrap(caveat.text, width - 8, "    ");
+      notes.push(
         [seg(`[${i + 1}] `, { color: "yellow" }), seg(first[0].text.trimStart())],
         ...rest
       );
     });
+    lines.push(...panel("Notes", notes, width));
   }
   return lines;
 }
@@ -162,26 +186,45 @@ function resourceRows(entries: HarEntry[]): Line[] {
   return lines;
 }
 
-/** One step of the flow: what happens, the route it lights up, its metrics and resources. */
-export function stepLines(flow: Flow, stepIndex: number, width: number): Line[] {
+/**
+ * The step titles as a list with the current one highlighted. A list taller than `maxRows`
+ * shows a window around the selection, with the number of steps hidden above and below.
+ */
+function stepListRows(titles: string[], selected: number, width: number, maxRows: number): Line[] {
+  const row = (i: number): Line => {
+    const text = `${i === selected ? "▸" : " "} ${String(i + 1).padStart(2)}  ${titles[i]}`;
+    return i === selected ? [seg(text.padEnd(width), { inverse: true, bold: true })] : [seg(text)];
+  };
+  if (titles.length <= maxRows) return titles.map((_, i) => row(i));
+  const visible = Math.max(1, maxRows - 2);
+  const start = Math.min(Math.max(0, selected - Math.floor(visible / 2)), titles.length - visible);
+  const end = start + visible;
+  const more = (count: number, arrow: string): Line => [
+    seg(`  ${arrow} ${count} more`, { dim: true }),
+  ];
+  return [
+    start > 0 ? more(start, "↑") : BLANK,
+    ...Array.from({ length: visible }, (_, i) => row(start + i)),
+    end < titles.length ? more(titles.length - end, "↓") : BLANK,
+  ];
+}
+
+function stepDetailRows(flow: Flow, stepIndex: number, width: number): Line[] {
   const step = flow.steps[stepIndex];
-  const lines: Line[] = [
-    line(
-      seg(`Step ${stepIndex + 1} / ${flow.steps.length}`, { dim: true }),
-      seg(`  ${pageLabel(flow, step.pageIndex)}`, { dim: true })
-    ),
-    heading(step.title),
+  const rows: Line[] = [[seg(step.title, { bold: true })]];
+  if (flow.pages.length > 1) rows.push([seg(pageLabel(flow, step.pageIndex), { dim: true })]);
+  rows.push(
     ...wrap(step.description, width),
     BLANK,
-    line(seg("Route  ", { dim: true }), route(flow, step)),
-  ];
+    line(seg("Route  ", { dim: true }), route(flow, step))
+  );
   if (step.badge) {
-    lines.push(
+    rows.push(
       line(seg("Badge  ", { dim: true }), `${step.badge.type.toUpperCase()} ${step.badge.value}`)
     );
   }
   if (step.metrics.length > 0) {
-    lines.push(
+    rows.push(
       BLANK,
       ...table(
         ["Metric", "Value"],
@@ -191,55 +234,76 @@ export function stepLines(flow: Flow, stepIndex: number, width: number): Line[] 
     );
   }
   const network = getStepResources(flow, step);
-  if (network.length > 0) {
-    lines.push(BLANK, heading(`Network requests · ${network.length}`), ...resourceRows(network));
-  }
+  if (network.length > 0)
+    rows.push(BLANK, heading(`Network requests · ${network.length}`), ...resourceRows(network));
   const cached = getStepCacheResources(flow, step);
-  if (cached.length > 0) {
-    lines.push(
-      BLANK,
-      heading(`From the browser cache · ${cached.length}`),
-      ...resourceRows(cached)
-    );
-  }
-  return lines;
+  if (cached.length > 0)
+    rows.push(BLANK, heading(`From the browser cache · ${cached.length}`), ...resourceRows(cached));
+  return rows;
 }
 
-/** One pair of a comparison: the step each flow shows, their joined metrics and routes. */
-export function pairLines(
+/** The step list beside the current step: what happens, its route, metrics and resources. */
+export function stepsRegion(flow: Flow, stepIndex: number, width: number, height: number): Line[] {
+  const listWidth = width < SIDE_BY_SIDE_MIN ? width : LIST_WIDTH;
+  const detailWidth = width < SIDE_BY_SIDE_MIN ? width : width - listWidth - 1;
+  return pair(
+    {
+      title: "Steps",
+      body: stepListRows(
+        flow.steps.map((s) => s.title),
+        stepIndex,
+        listWidth - 4,
+        height - 2
+      ),
+      width: listWidth,
+    },
+    {
+      title: `Step ${stepIndex + 1} / ${flow.steps.length}`,
+      body: stepDetailRows(flow, stepIndex, detailWidth - 4),
+    },
+    width
+  );
+}
+
+/** The paired steps of a comparison beside the current pair: both sides' step, routes and deltas. */
+export function pairStepsRegion(
   a: Flow,
   b: Flow,
+  pairs: StepPair[],
+  pairIndex: number,
   views: { a: { index: number; current: boolean }; b: { index: number; current: boolean } },
-  position: { index: number; total: number },
-  width: number
+  width: number,
+  height: number
 ): Line[] {
+  const listWidth = width < SIDE_BY_SIDE_MIN ? width : LIST_WIDTH;
+  const detailWidth = (width < SIDE_BY_SIDE_MIN ? width : width - listWidth - 1) - 4;
+  const titles = pairs.map((p) => (p.a !== undefined ? a.steps[p.a] : b.steps[p.b!]).title);
   const stepA = a.steps[views.a.index];
   const stepB = b.steps[views.b.index];
-  const title = (side: "A" | "B", step: DiagramStep, current: boolean): Line => [
-    seg(`${side}  `, { bold: true, color: side === "A" ? "cyan" : "yellow" }),
+  const side = (tag: "A" | "B", step: DiagramStep, current: boolean): Line => [
+    seg(`${tag}  `, { bold: true, color: tag === "A" ? "cyan" : "yellow" }),
     seg(step.title, current ? { bold: true } : { dim: true }),
     ...(current ? [] : [seg("  (holds its previous step)", { dim: true })]),
   ];
-  const rows = compareStepMetrics(
-    views.a.current ? stepA : undefined,
-    views.b.current ? stepB : undefined
-  );
-  const lines: Line[] = [
-    line(seg(`Step ${position.index + 1} / ${position.total}`, { dim: true })),
-    title("A", stepA, views.a.current),
-    title("B", stepB, views.b.current),
+  const rows: Line[] = [
+    side("A", stepA, views.a.current),
+    side("B", stepB, views.b.current),
     BLANK,
-    ...wrap((views.a.current ? stepA : stepB).description, width),
+    ...wrap((views.a.current ? stepA : stepB).description, detailWidth),
     BLANK,
     line(seg("Route A  ", { dim: true }), route(a, stepA)),
     line(seg("Route B  ", { dim: true }), route(b, stepB)),
   ];
-  if (rows.length > 0) {
-    lines.push(
+  const metrics = compareStepMetrics(
+    views.a.current ? stepA : undefined,
+    views.b.current ? stepB : undefined
+  );
+  if (metrics.length > 0) {
+    rows.push(
       BLANK,
       ...table(
         ["Metric", "A", "B", "Δ"],
-        rows.map((row) => [
+        metrics.map((row) => [
           row.label,
           row.a ?? "",
           row.b ?? "",
@@ -257,18 +321,26 @@ export function pairLines(
       )
     );
   }
-  return lines;
+  return pair(
+    {
+      title: "Steps",
+      body: stepListRows(titles, pairIndex, listWidth - 4, height - 2),
+      width: listWidth,
+    },
+    { title: `Step ${pairIndex + 1} / ${pairs.length}`, body: rows },
+    width
+  );
 }
 
 // ── Hosts ─────────────────────────────────────────────────────────────────────
 
 /** Every host of a page: requests, browser-cache hits, bytes, TTFB, CDN cache hits, provider and PoP. */
-export function hostLines(flow: Flow, pageIndex: number): Line[] {
+export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const { har } = flow.pages[pageIndex];
   const hops = analyzeHops(har, har.documentEntry.url);
-  return [
-    heading(`Hosts · ${pageLabel(flow, pageIndex)}`),
-    ...table(
+  return panel(
+    `Hosts · ${pageLabel(flow, pageIndex)}`,
+    table(
       [
         "Host",
         "Requests",
@@ -293,18 +365,20 @@ export function hostLines(flow: Flow, pageIndex: number): Line[] {
       ]),
       ["left", "right", "right", "right", "right", "right", "left", "left", "left"]
     ),
-  ];
+    width
+  );
 }
 
 /** The hosts of both flows joined by name; the TTFB delta covers the URLs both requested. */
-export function hostDeltaLines(
+export function hostDeltaRegion(
   comparison: FlowComparison,
-  names: { a: string; b: string }
+  names: { a: string; b: string },
+  width: number
 ): Line[] {
   const notes = comparison.caveats.flatMap((c, i) => (c.affects.includes("hosts") ? [i + 1] : []));
-  return [
-    heading(`Hosts · A ${names.a} vs B ${names.b}${notes.length ? ` [${notes.join(",")}]` : ""}`),
-    ...table(
+  return panel(
+    `Hosts · A ${names.a} vs B ${names.b}${notes.length ? ` [${notes.join(",")}]` : ""}`,
+    table(
       [
         "Host",
         "Req A",
@@ -335,7 +409,8 @@ export function hostDeltaLines(
       }),
       ["left", "right", "right", "right", "right", "right", "right", "right", "left"]
     ),
-  ];
+    width
+  );
 }
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
@@ -356,62 +431,20 @@ const fileName = (url: string) => {
 };
 
 const kv = (label: string, value: string): Line => [
-  seg(label.padEnd(24), { dim: true }),
+  seg(label.padEnd(19), { dim: true }),
   seg(value),
 ];
 
-/** The cache report of a page: document, static assets, browser cache and recommendations. */
-export function cacheLines(report: CacheReport, title: string, width: number): Line[] {
-  const { document: doc, ownResources: own, browser, recommendations } = report;
-  const inferred = browser.inferred ?? 0;
-  const revalidated = browser.revalidated ?? 0;
-  const directives = Object.entries({
-    immutable: doc.immutable,
-    "must-revalidate": doc.mustRevalidate,
-    "no-store": doc.noStore,
-  })
-    .filter(([, on]) => on)
-    .map(([name]) => name)
-    .join(", ");
-
-  const lines: Line[] = [
-    heading(title),
-    BLANK,
-    heading("Document"),
-    kv("CDN cache", doc.cdnStatus === "unknown" ? "—" : doc.cdnStatus.toUpperCase()),
-    kv("max-age", doc.maxAge === null ? "—" : `${doc.maxAge}s`),
-    ...(directives ? [kv("Directives", directives)] : []),
-    kv("CDN age", doc.age === null ? "—" : `${doc.age}s`),
-  ];
-  if (own.total > 0) {
-    lines.push(
-      BLANK,
-      heading(`Static assets · ${own.total}`),
-      kv("CDN hits", `${own.cdnHits}/${own.total} ${pct(own.cdnHitRatio)}`),
-      kv("Immutable", `${own.immutableCount}/${own.total} ${pct(own.immutableRatio)}`)
-    );
-  }
-  lines.push(
-    BLANK,
-    heading("Browser cache"),
-    kv(
-      "Hit ratio",
-      `${pct(browser.hitRatio)} (${browser.fromDisk + browser.fromMemory + inferred}/${browser.total})`
-    )
-  );
-  if (browser.fromDisk > 0) lines.push(kv("From disk", String(browser.fromDisk)));
-  if (browser.fromMemory > 0) lines.push(kv("From memory", String(browser.fromMemory)));
-  if (inferred > 0) lines.push(kv("Inferred (WebPageTest)", String(inferred)));
-  if (revalidated > 0) lines.push(kv("Revalidated (304)", String(revalidated)));
-
-  if (recommendations.length > 0) lines.push(BLANK, heading("Recommendations"));
-  for (const rec of recommendations) {
+function recommendationRows(recommendations: CacheRecommendation[], width: number): Line[] {
+  const rows: Line[] = [];
+  recommendations.forEach((rec, i) => {
     const { icon, color } = SEVERITY[rec.severity];
-    lines.push(BLANK, [seg(`${icon} `, { color, bold: true }), seg(rec.label, { bold: true })]);
-    lines.push(...wrap(rec.description, width, "  "));
+    if (i > 0) rows.push(BLANK);
+    rows.push([seg(`${icon} `, { color, bold: true }), seg(rec.label, { bold: true })]);
+    rows.push(...wrap(rec.description, width, "  "));
     if (rec.resources && rec.resources.length > 0) {
       const total = rec.resources.reduce((sum, r) => sum + r.transferSize, 0);
-      lines.push(
+      rows.push(
         [seg(`  ${rec.resources.length} resources · ${formatBytes(total)}`, { dim: true })],
         ...table(
           ["  Resource", "Size", "Cache-Control"],
@@ -424,6 +457,69 @@ export function cacheLines(report: CacheReport, title: string, width: number): L
         ).slice(1)
       );
     }
+  });
+  return rows;
+}
+
+/** The cache report of a page: document, static assets and browser cache, then the recommendations. */
+export function cacheRegion(report: CacheReport, width: number): Line[] {
+  const { document: doc, ownResources: own, browser, recommendations } = report;
+  const inferred = browser.inferred ?? 0;
+  const revalidated = browser.revalidated ?? 0;
+  const directives = Object.entries({
+    immutable: doc.immutable,
+    "must-revalidate": doc.mustRevalidate,
+    "no-store": doc.noStore,
+  })
+    .filter(([, on]) => on)
+    .map(([name]) => name)
+    .join(", ");
+
+  const document: Line[] = [
+    kv("CDN cache", doc.cdnStatus === "unknown" ? "—" : doc.cdnStatus.toUpperCase()),
+    kv("max-age", doc.maxAge === null ? "—" : `${doc.maxAge}s`),
+    ...(directives ? [kv("Directives", directives)] : []),
+    kv("CDN age", doc.age === null ? "—" : `${doc.age}s`),
+  ];
+  const assets: Line[] =
+    own.total > 0
+      ? [
+          kv("CDN hits", `${own.cdnHits}/${own.total} ${pct(own.cdnHitRatio)}`),
+          kv("Immutable", `${own.immutableCount}/${own.total} ${pct(own.immutableRatio)}`),
+        ]
+      : [[seg("No own static assets", { dim: true })]];
+  const cache: Line[] = [
+    kv(
+      "Hit ratio",
+      `${pct(browser.hitRatio)} (${browser.fromDisk + browser.fromMemory + inferred}/${browser.total})`
+    ),
+    ...(browser.fromDisk > 0 ? [kv("From disk", String(browser.fromDisk))] : []),
+    ...(browser.fromMemory > 0 ? [kv("From memory", String(browser.fromMemory))] : []),
+    ...(inferred > 0 ? [kv("Inferred (WPT)", String(inferred))] : []),
+    ...(revalidated > 0 ? [kv("Revalidated (304)", String(revalidated))] : []),
+  ];
+  const panels = [
+    { title: "Document", body: document },
+    { title: `Static assets · ${own.total}`, body: assets },
+    { title: "Browser cache", body: cache },
+  ];
+
+  let lines: Line[];
+  if (width >= CACHE_ROW_MIN) {
+    const third = Math.floor((width - 2) / 3);
+    const widths = [third, third, width - 2 * third - 2];
+    const minHeight = Math.max(...panels.map((p) => p.body.length)) + 2;
+    lines = hstack(
+      panels.map((p, i) => ({
+        lines: panel(p.title, p.body, widths[i], { minHeight }),
+        width: widths[i],
+      }))
+    );
+  } else {
+    lines = panels.flatMap((p) => panel(p.title, p.body, width));
+  }
+  if (recommendations.length > 0) {
+    lines.push(...panel("Recommendations", recommendationRows(recommendations, width - 4), width));
   }
   return lines;
 }

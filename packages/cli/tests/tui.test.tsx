@@ -88,6 +88,19 @@ describe("TuiApp — a flow", () => {
     expect(lastFrame()).toContain(`Step 2 / ${flow.steps.length}`);
   });
 
+  it("windows the step list around the selected step on a short terminal", async () => {
+    const flow = firstView();
+    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={12} />);
+
+    await press(stdin, "2");
+    expect(lastFrame()).toContain("▸  1  DNS + initial connection");
+    expect(lastFrame()).not.toContain("Page loaded");
+
+    await press(stdin, ...Array(flow.steps.length).fill(KEYS.right));
+    expect(lastFrame()).toContain(`▸  ${flow.steps.length}  Page loaded`);
+    expect(lastFrame()).not.toContain("1  DNS + initial connection");
+  });
+
   it("lists the hosts with their requests, TTFB and provider", async () => {
     const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 

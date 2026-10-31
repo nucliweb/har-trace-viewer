@@ -25,7 +25,7 @@ The destination picks the format:
 | `htv page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                         |
 | `htv page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                    |
 
-In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps, `↑`/`↓` and `PgUp`/`PgDn` scroll, `p` moves to the next page of a multi-page flow, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
+In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
 
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
 

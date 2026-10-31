@@ -2,16 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
 import { compareFlows, stepAtPair } from "@htv/core";
 import type { Flow } from "@htv/core";
+import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
 import type { Line } from "./lines.js";
 import {
-  cacheLines,
-  compareOverviewLines,
-  hostDeltaLines,
-  hostLines,
-  overviewLines,
+  cacheRegion,
+  compareOverviewRegion,
+  hostDeltaRegion,
+  hostsRegion,
+  overviewRegion,
   pageLabel,
-  pairLines,
-  stepLines,
+  pairStepsRegion,
+  stepsRegion,
 } from "./views.js";
 
 interface Props {
@@ -27,8 +28,10 @@ interface Props {
 const TABS = ["Overview", "Steps", "Hosts", "Cache"] as const;
 type Side = "a" | "b";
 
-// Title and tab bar above the content, key help below it.
-const CHROME_LINES = 3;
+// The header block and the status bar around the scrolling region.
+const HEADER_LINES = 3;
+const STATUS_LINES = 1;
+const MIN_COLUMNS = 60;
 const DEFAULT_SIZE = { rows: 24, columns: 100 };
 
 function useTerminalSize(rows?: number, columns?: number) {
@@ -48,13 +51,57 @@ function useTerminalSize(rows?: number, columns?: number) {
   return size;
 }
 
+/** The framed header: the version and the context in the top edge, the tabs and the pages inside. */
+function headerLines(
+  width: number,
+  version: string,
+  context: string,
+  tab: number,
+  pages: { names: string[]; current: number } | null
+): Line[] {
+  const title = ` htv v${version} `;
+  const ctx = context ? ` ${context} ` : "";
+  const fill = Math.max(1, width - 4 - title.length - ctx.length);
+  const top: Line = [
+    frame("╭─"),
+    seg(title, { bold: true, color: "cyan" }),
+    frame("─".repeat(fill)),
+    seg(ctx, { bold: true }),
+    frame("─╮"),
+  ];
+  const tabs: Line = TABS.flatMap((name, i) => [
+    seg(` ${i + 1} ${name} `, i === tab ? { inverse: true, bold: true, color: "cyan" } : {}),
+    seg(" "),
+  ]);
+  const strip: Line = pages
+    ? [
+        seg("Pages ", { dim: true }),
+        ...pages.names.flatMap((name, i) => [
+          seg(` ${name} `, i === pages.current ? { inverse: true } : { dim: true }),
+          seg(" "),
+        ]),
+      ]
+    : [];
+  const inner = width - 4;
+  // The strip is a convenience: when it does not fit next to the tabs, the context names the page.
+  if (lineWidth(tabs) + 2 + lineWidth(strip) > inner) strip.length = 0;
+  const gap = Math.max(1, inner - lineWidth(tabs) - lineWidth(strip));
+  const mid: Line = [
+    frame("│ "),
+    ...padLine(truncateLine([...tabs, seg(" ".repeat(gap)), ...strip], inner), inner),
+    frame(" │"),
+  ];
+  const bottom: Line = [frame(`╰${"─".repeat(width - 2)}╯`)];
+  return [top, mid, bottom];
+}
+
 function LineView({ line }: { line: Line }) {
   return (
     <Text wrap="truncate-end">
       {line.length === 0
         ? " "
         : line.map((s, i) => (
-            <Text key={i} color={s.color} bold={s.bold} dimColor={s.dim}>
+            <Text key={i} color={s.color} bold={s.bold} dimColor={s.dim} inverse={s.inverse}>
               {s.text}
             </Text>
           ))}
@@ -64,7 +111,8 @@ function LineView({ line }: { line: Line }) {
 
 /**
  * The report in the terminal: an overview of the metrics, the diagram's steps, the hosts and
- * the cache analysis, one tab each. A comparison shows both flows with their B − A deltas.
+ * the cache analysis, one tab each, drawn as framed panels. A comparison shows both flows with
+ * their B − A deltas.
  */
 export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const { exit } = useApp();
@@ -81,45 +129,50 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     [flow, compare]
   );
   const stepCount = comparison ? comparison.pairs.length : flow.steps.length;
-  const width = Math.max(40, size.columns - 2);
-  const viewport = Math.max(1, size.rows - CHROME_LINES - 1);
+  const pageCount = flow.pages.length;
+  const width = Math.max(MIN_COLUMNS, size.columns);
+  const viewport = Math.max(1, size.rows - HEADER_LINES - STATUS_LINES);
+  const current = TABS[tab];
 
-  const content = useMemo((): Line[] => {
-    switch (TABS[tab]) {
+  const region = useMemo((): Line[] => {
+    switch (current) {
       case "Overview":
         return comparison
-          ? compareOverviewLines(comparison, names, width)
-          : overviewLines(flow, page, width);
+          ? compareOverviewRegion(comparison, width)
+          : overviewRegion(flow, page, width);
       case "Steps":
         if (comparison && compare) {
           const views = {
             a: stepAtPair(comparison.pairs, step, "a"),
             b: stepAtPair(comparison.pairs, step, "b"),
           };
-          return pairLines(flow, compare, views, { index: step, total: stepCount }, width);
+          return pairStepsRegion(flow, compare, comparison.pairs, step, views, width, viewport);
         }
-        return stepLines(flow, step, width);
+        return stepsRegion(flow, step, width, viewport);
       case "Hosts":
-        return comparison ? hostDeltaLines(comparison, names) : hostLines(flow, page);
+        return comparison
+          ? hostDeltaRegion(comparison, names, width)
+          : hostsRegion(flow, page, width);
       case "Cache": {
-        if (compare) {
-          const shown = side === "a" ? flow : compare;
-          const title = `Cache · ${side.toUpperCase()} ${names[side]}`;
-          return cacheLines(shown.pageAnalyses[0].cacheReport, title, width);
-        }
-        return cacheLines(
-          flow.pageAnalyses[page].cacheReport,
-          `Cache · ${pageLabel(flow, page)}`,
-          width
-        );
+        const shown = compare ? (side === "a" ? flow : compare) : flow;
+        const pageIndex = compare ? 0 : page;
+        return cacheRegion(shown.pageAnalyses[pageIndex].cacheReport, width);
       }
     }
-  }, [tab, step, page, side, width, flow, compare, comparison, names, stepCount]);
+  }, [current, step, page, side, width, viewport, flow, compare, comparison, names]);
 
-  const maxScroll = Math.max(0, content.length - viewport);
+  const maxScroll = Math.max(0, region.length - viewport);
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
   const showTab = (index: number) => {
     setTab((index + TABS.length) % TABS.length);
+    setScroll(0);
+  };
+  const movePage = (delta: number) => {
+    setPage((p) => (p + delta + pageCount) % pageCount);
+    setScroll(0);
+  };
+  const moveStep = (delta: number) => {
+    setStep((s) => Math.min(stepCount - 1, Math.max(0, s + delta)));
     setScroll(0);
   };
 
@@ -131,68 +184,59 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     const digit = Number(input);
     if (digit >= 1 && digit <= TABS.length) showTab(digit - 1);
     else if (key.tab) showTab(tab + (key.shift ? -1 : 1));
-    else if (key.rightArrow && TABS[tab] === "Steps") {
-      setStep((s) => Math.min(stepCount - 1, s + 1));
-      setScroll(0);
-    } else if (key.leftArrow && TABS[tab] === "Steps") {
-      setStep((s) => Math.max(0, s - 1));
-      setScroll(0);
+    else if (key.rightArrow || key.leftArrow) {
+      const delta = key.rightArrow ? 1 : -1;
+      if (current === "Steps") moveStep(delta);
+      else if (!compare && pageCount > 1) movePage(delta);
     } else if (key.downArrow) scrollTo(scroll + 1);
     else if (key.upArrow) scrollTo(scroll - 1);
     else if (key.pageDown || input === " ") scrollTo(scroll + viewport);
     else if (key.pageUp) scrollTo(scroll - viewport);
-    else if (input === "p" && !compare && flow.pages.length > 1) {
-      setPage((p) => (p + 1) % flow.pages.length);
-      setScroll(0);
+    else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
+      movePage(input === "p" ? 1 : -1);
     } else if ((input === "a" || input === "b") && compare) {
       setSide(input);
       setScroll(0);
     }
   });
 
-  const title = compare
-    ? `A ${names.a}  ·  B ${names.b}`
-    : flow.pages.map((p) => p.name).join(" → ");
-  const visible = content.slice(scroll, scroll + viewport);
+  const context = compare
+    ? current === "Cache"
+      ? `Cache · ${side.toUpperCase()} ${names[side]}`
+      : `A ${names.a} · B ${names.b}`
+    : pageLabel(flow, page);
+  const pages =
+    !compare && pageCount > 1 ? { names: flow.pages.map((p) => p.name), current: page } : null;
+  const header = headerLines(width, version, context, tab, pages);
+  const visible = region.slice(scroll, scroll + viewport);
+
   const help = [
     "1-4/Tab tabs",
-    TABS[tab] === "Steps" ? "←/→ step" : null,
+    current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
     maxScroll > 0 ? "↑/↓ PgUp/PgDn scroll" : null,
-    !compare && flow.pages.length > 1 ? "p page" : null,
-    compare && TABS[tab] === "Cache" ? "a/b side" : null,
+    compare && current === "Cache" ? "a/b side" : null,
     "q quit",
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join("  ·  ");
   const position =
-    maxScroll > 0 ? `  ${scroll + 1}-${scroll + visible.length}/${content.length}` : "";
+    maxScroll > 0 ? `${scroll + 1}-${scroll + visible.length}/${region.length} ` : "";
+  const statusText = ` ${help}`;
+  const statusGap = Math.max(1, width - statusText.length - position.length);
+  const status: Line = [seg(`${statusText}${" ".repeat(statusGap)}${position}`, { inverse: true })];
 
   return (
     <Box flexDirection="column">
-      <Text wrap="truncate-end">
-        <Text bold color="cyan">
-          htv v{version}
-        </Text>
-        <Text dimColor> · </Text>
-        <Text>{title}</Text>
-      </Text>
-      <Text wrap="truncate-end">
-        {TABS.map((name, i) => (
-          <Text key={name} inverse={i === tab} color={i === tab ? "cyan" : undefined}>
-            {` ${i + 1} ${name} `}
-          </Text>
-        ))}
-      </Text>
+      {header.map((line, i) => (
+        <LineView key={`h${i}`} line={line} />
+      ))}
       {visible.map((line, i) => (
         <LineView key={scroll + i} line={line} />
       ))}
       {Array.from({ length: viewport - visible.length }, (_, i) => (
         <Text key={`pad-${i}`}> </Text>
       ))}
-      <Text dimColor wrap="truncate-end">
-        {help}
-        {position}
-      </Text>
+      <LineView line={status} />
     </Box>
   );
 }
