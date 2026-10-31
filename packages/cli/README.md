@@ -3,10 +3,11 @@
 Command-line tool that analyzes a HAR file, and optionally a Chrome DevTools trace, and shows the page load in the terminal, writes it as a self-contained HTML report, or writes it as JSON for other tools and AI agents.
 
 ```bash
-npx har-trace-viewer --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [--select <id|text>] [--region default|cn] [--compare | --compare-with <file.har[.gz]>]
+npx har-trace-viewer <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [--select <id|text>] [--region default|cn]
+npx har-trace-viewer --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [--compare | --compare-with <file.har[.gz]>] [options]
 ```
 
-Install it globally with `npm i -g har-trace-viewer` to get the `htv` command.
+Install it globally with `npm i -g har-trace-viewer` to get the `htv` command. A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
 
 The destination picks the format. Without `--output`, the report opens in the terminal with four tabs: Overview (the metrics summary), Steps (the diagram's steps with the route, metrics and resources of each), Hosts and Cache (the cache report and its recommendations, with the resources they name); `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps, `↑`/`↓` and `PgUp`/`PgDn` scroll, `p` moves to the next page, `a`/`b` pick the side of a comparison and `q` quits. It needs an interactive terminal. `--output report.html` writes a single self-contained HTML file with the interactive diagram, inlined JavaScript, CSS and fonts, which opens offline. `--output report.json` writes the full analysis as JSON (`{ "htvVersion", "kind": "flow", "flow" }`, or `"kind": "comparison"` with `"a"` and `"b"`), and `--format json` without `--output` prints it to stdout, to pipe into another tool or an AI agent. Any other `--output` is a directory that receives an `index.html` and its assets (`--bundle` inlines them). `htv --help` prints the full usage and `htv --version` the installed version.
 

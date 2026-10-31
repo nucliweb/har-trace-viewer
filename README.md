@@ -7,20 +7,23 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 ## Usage
 
 ```bash
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [-o <dir|file.html|file.json>] [--format tui|html|json] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
 ```
+
+A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
 
 ### Output
 
 The destination picks the format:
 
-| Command                            | Output                                                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `htv --har page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache tabs (needs an interactive terminal) |
-| `htv --har page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                       |
-| `htv --har page.har -o r.json`     | The full analysis as JSON                                                                                 |
-| `htv --har page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                         |
-| `htv --har page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                    |
+| Command                      | Output                                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `htv page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache tabs (needs an interactive terminal) |
+| `htv page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                       |
+| `htv page.har -o r.json`     | The full analysis as JSON                                                                                 |
+| `htv page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                         |
+| `htv page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                    |
 
 In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps, `↑`/`↓` and `PgUp`/`PgDn` scroll, `p` moves to the next page of a multi-page flow, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
 
@@ -30,6 +33,7 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 
 | Flag                       | Description                                                                                                                                                                 |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<file>`                   | A HAR (`.har`, `.har.gz`) or a Chrome trace (`.json`, `.json.gz`) given without its flag, attached to the preceding `--page`                                                |
 | `--page <name>`            | Page label (can be specified multiple times for multi-page reports)                                                                                                         |
 | `--har <file>`             | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                                                                                   |
 | `--trace <file>`           | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                                                                                        |

@@ -131,8 +131,26 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--foo"])).toThrow(/Unknown option '--foo'/);
   });
 
-  it("rejects positional arguments", () => {
-    expect(() => parseArgs(["stray"])).toThrow();
+  it("takes a positional .har or .har.gz as the --har of the preceding page", () => {
+    expect(parseArgs(["page.har"]).pages).toEqual([{ name: "Page 1", har: "page.har" }]);
+    expect(
+      parseArgs(["--page", "Home", "home.HAR.GZ", "--page", "Cart", "cart.har"]).pages
+    ).toEqual([
+      { name: "Home", har: "home.HAR.GZ" },
+      { name: "Cart", har: "cart.har" },
+    ]);
+  });
+
+  it("takes a positional .json or .json.gz as the --trace of the preceding page", () => {
+    expect(parseArgs(["--page", "Home", "home.har", "home.json.gz"]).pages).toEqual([
+      { name: "Home", har: "home.har", trace: "home.json.gz" },
+    ]);
+  });
+
+  it("rejects a positional argument that is neither a HAR nor a trace", () => {
+    expect(() => parseArgs(["stray"])).toThrow(
+      'Unexpected argument "stray": pass HAR files as .har or .har.gz and traces as .json or .json.gz, or use --har and --trace.'
+    );
   });
 
   it("sets compare with --compare", () => {
@@ -615,6 +633,18 @@ describe("outputTarget", () => {
     expect(() => outputTarget({ ...base, format: "tui", output: "r.html" }, true)).toThrow(
       "--format tui shows the report in the terminal: drop --output"
     );
+  });
+});
+
+describe("positional files (built CLI)", () => {
+  it("analyzes a HAR given without --har", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "page.har");
+    writeFileSync(harPath, readFileSync(HAR));
+    const res = runCli([harPath, "--format", "json"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(JSON.parse(res.stdout).flow.pages[0].har.entries.length).toBeGreaterThan(0);
   });
 });
 

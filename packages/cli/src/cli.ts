@@ -61,6 +61,9 @@ export interface Args {
   version?: boolean;
 }
 
+const HAR_FILE = /\.har(\.gz)?$/i;
+const TRACE_FILE = /\.json(\.gz)?$/i;
+
 function parseFormat(value: string | undefined): OutputFormat {
   if (OUTPUT_FORMATS.includes(value as OutputFormat)) return value as OutputFormat;
   throw new Error(`Invalid --format "${value ?? ""}". Valid values: ${OUTPUT_FORMATS.join(", ")}.`);
@@ -92,7 +95,7 @@ export function parseArgs(argv: string[]): Args {
       version: { type: "boolean", short: "v" },
     },
     tokens: true,
-    allowPositionals: false,
+    allowPositionals: true,
     strict: true,
   });
 
@@ -111,8 +114,22 @@ export function parseArgs(argv: string[]): Args {
     if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
     return pages[pages.length - 1];
   };
+  // A file given without its flag: a HAR by its extension, a trace by its own.
+  const addPositional = (value: string) => {
+    if (HAR_FILE.test(value)) lastPage().har = value;
+    else if (TRACE_FILE.test(value)) lastPage().trace = value;
+    else {
+      throw new Error(
+        `Unexpected argument "${value}": pass HAR files as .har or .har.gz and traces as .json or .json.gz, or use --har and --trace.`
+      );
+    }
+  };
 
   for (const token of tokens ?? []) {
+    if (token.kind === "positional") {
+      addPositional(token.value);
+      continue;
+    }
     if (token.kind !== "option") continue;
     const value = token.value as string;
     switch (token.name) {
@@ -262,7 +279,8 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
   return { kind: "tui" };
 }
 
-export const USAGE = `Usage: htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]`;
+export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]
+       htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]`;
 
 export const HELP = `${USAGE}
 
@@ -280,8 +298,11 @@ Output (where the report goes):
   --bundle            For a directory --output: inline every asset into index.html.
 
 Input:
+  <file>              A HAR (.har or .har.gz) or a Chrome trace (.json or .json.gz)
+                      given without its flag, attached to the preceding --page.
+                      A HAR with another extension needs --har.
   --page <name>       Start a page in the report; repeat once per page.
-                      The following --har and --trace attach to it.
+                      The following files, --har and --trace attach to it.
   --har <file>        HAR file for the preceding --page (.har or .har.gz).
                       Without a --page, a page named "Page 1" is created.
   --trace <file>      Chrome trace for the preceding --page (.json or .json.gz).
@@ -310,9 +331,9 @@ Other:
   -v, --version       Show the version.
 
 Examples:
-  htv --har page.har                          # browse in the terminal
-  htv --har page.har -o report.html           # share one HTML file
-  htv --har page.har --format json | my-agent # JSON for an AI agent
+  htv page.har                                # browse in the terminal
+  htv page.har trace.json.gz -o report.html   # share one HTML file, with a trace
+  htv page.har --format json | my-agent       # JSON for an AI agent
 
   # Two pages, with a trace for the first one:
   htv --page "Home" --har home.har --trace home.json.gz \
