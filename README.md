@@ -141,4 +141,4 @@ git tag v<version>
 git push --follow-tags
 ```
 
-The workflow needs an `NPM_TOKEN` repository secret (an npm automation token), or npm trusted publishing configured for this repository.
+The workflow publishes with npm trusted publishing: npm accepts the OIDC token of the run instead of a stored secret, and adds the provenance of the package. The package settings on npmjs.com name `nucliweb/har-trace-viewer`, the workflow `release.yml` and the environment `npm-publish` as its trusted publisher, and the `npm-publish` environment asks a maintainer to approve each run before it publishes.

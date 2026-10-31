@@ -26,7 +26,7 @@
   ],
   "type": "module",
   "bin": {
-    "htv": "./dist/index.js"
+    "htv": "dist/index.js"
   },
   "files": [
     "dist"

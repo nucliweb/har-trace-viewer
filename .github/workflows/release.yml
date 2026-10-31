@@ -4,21 +4,26 @@ on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The npm-publish environment asks a maintainer to approve the run before it publishes.
+    environment: npm-publish
+    # id-token: the OIDC token of the run, which npm (trusted publishing) accepts instead of a
+    # stored secret
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or later
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
       - name: Check tag matches CLI version
         run: |
           version="v$(node -p "require('./packages/cli/package.json').version")"
@@ -29,6 +34,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm publish --provenance --access public -w har-trace-viewer
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted publishing: npm exchanges the OIDC token of this run for a short-lived one and
+      # adds the provenance of the package
+      - name: Publish to npm
+        run: npm publish -w har-trace-viewer
