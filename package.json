@@ -1,5 +1,5 @@
 {
-  "name": "har-trace-viewer",
+  "name": "@htv/monorepo",
   "private": true,
   "type": "module",
   "workspaces": [
