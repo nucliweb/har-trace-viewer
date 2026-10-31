@@ -1,6 +1,6 @@
 {
   "name": "har-trace-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generate a self-contained HTML performance report from HAR and Chrome trace files",
   "license": "MIT",
   "repository": {
