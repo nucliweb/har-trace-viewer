@@ -11,6 +11,7 @@ import {
   buildReport,
   reportJson,
   reportFindings,
+  reportText,
   writeHtmlReport,
   checkOptions,
 } from "./cli";
@@ -66,6 +67,20 @@ async function main() {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, `${json}\n`);
       console.log(`${findings ? "Findings written" : "Report generated"}: ${path}`);
+      break;
+    }
+    case "markdown":
+    case "csv":
+    case "mermaid": {
+      const text = reportText(target.kind, report);
+      if (!target.path) {
+        process.stdout.write(text);
+        break;
+      }
+      const path = resolve(target.path);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, text);
+      console.log(`Report generated: ${path}`);
       break;
     }
     case "html":

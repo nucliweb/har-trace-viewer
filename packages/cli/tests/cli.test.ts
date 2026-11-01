@@ -178,9 +178,10 @@ describe("parseArgs", () => {
   it("parses --format and rejects an unknown one listing the valid values", () => {
     expect(parseArgs(["--format", "json"]).format).toBe("json");
     expect(parseArgs(["--format", "findings"]).format).toBe("findings");
+    expect(parseArgs(["--format", "markdown"]).format).toBe("markdown");
     expect(parseArgs([]).format).toBeUndefined();
     expect(() => parseArgs(["--format", "xml"])).toThrow(
-      'Invalid --format "xml". Valid values: tui, html, json, findings.'
+      'Invalid --format "xml". Valid values: tui, html, json, findings, markdown, csv, mermaid.'
     );
   });
 
@@ -784,6 +785,106 @@ describe("findings output (built CLI)", () => {
     expect(JSON.parse(readFileSync(shipped, "utf-8")).$schema).toBe(
       "https://json-schema.org/draft/2020-12/schema"
     );
+  });
+});
+
+describe("text exports (built CLI)", () => {
+  it("prints a Markdown report with --format markdown", () => {
+    const res = runCli(["--har", HAR, "--trace", TRACE, "--format", "markdown"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const lines = res.stdout.split("\n");
+    expect(lines).toContain("### Metrics");
+    expect(lines).toContain("| Metric | Value | Rating |");
+    expect(lines).toContain("### Hosts");
+  });
+
+  it("prints one CSV row per request with --format csv", () => {
+    const res = runCli(["--har", HAR, "--format", "csv"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const rows = res.stdout.split("\r\n");
+    expect(rows[0].startsWith("page,side,url,host,type,method,status,")).toBe(true);
+    expect(rows.length).toBeGreaterThan(3);
+    expect(rows.at(-1)).toBe("");
+  });
+
+  it("prints a Mermaid sequence diagram with --format mermaid", () => {
+    const res = runCli(["--har", HAR, "--format", "mermaid"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).toContain("```mermaid\nsequenceDiagram");
+  });
+
+  it("writes the report to a --output file of the format", () => {
+    const dir = makeTempDir();
+    const md = join(dir, "report.md");
+    const csv = join(dir, "requests.csv");
+
+    expect(runCli(["--har", HAR, "--format", "markdown", "-o", md]).status).toBe(0);
+    expect(runCli(["--har", HAR, "--format", "csv", "-o", csv]).status).toBe(0);
+
+    expect(readFileSync(md, "utf-8")).toContain("### Metrics");
+    expect(readFileSync(csv, "utf-8")).toContain("page,side,url");
+  });
+
+  it("picks the format from a .md or .csv --output alone", () => {
+    const target = join(makeTempDir(), "requests.csv");
+    const res = runCli(["--har", HAR, "-o", target]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(readFileSync(target, "utf-8")).toContain("page,side,url");
+  });
+
+  it("opens a comparison with its table and marks the side in the CSV", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    const args = ["--har", harPath, "--select", "page_1_0_1,page_1_1_1", "--compare"];
+
+    const md = runCli([...args, "--format", "markdown"]);
+    expect(md.status, md.stderr).toBe(0);
+    const lines = md.stdout.split("\n");
+    expect(lines).toContain("## Comparison");
+    expect(lines).toContain("| Metric | A | B | Delta | Rating |");
+
+    const csv = runCli([...args, "--format", "csv"]);
+    expect(csv.status, csv.stderr).toBe(0);
+    const sides = new Set(
+      csv.stdout
+        .split("\r\n")
+        .slice(1, -1)
+        .map((r) => r.match(/,(a|b),/)?.[1])
+    );
+    expect(sides).toEqual(new Set(["a", "b"]));
+  });
+
+  it("rejects an --output of another type", () => {
+    const res = runCli(["--har", HAR, "--format", "csv", "-o", "report.md"]);
+
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--format csv needs a .csv --output path");
+  });
+});
+
+describe("outputTarget — text formats", () => {
+  const base = { pages: [{ name: "Page 1", har: "a.har" }], output: "", bundle: false };
+
+  it("prints to stdout without --output, even without a terminal", () => {
+    expect(outputTarget({ ...base, format: "markdown" }, false)).toEqual({ kind: "markdown" });
+    expect(outputTarget({ ...base, format: "csv" }, false)).toEqual({ kind: "csv" });
+    expect(outputTarget({ ...base, format: "mermaid" }, true)).toEqual({ kind: "mermaid" });
+  });
+
+  it("infers markdown and csv from the --output extension", () => {
+    expect(outputTarget({ ...base, output: "r.md" }, true)).toEqual({
+      kind: "markdown",
+      path: "r.md",
+    });
+    expect(outputTarget({ ...base, output: "r.CSV" }, true)).toEqual({
+      kind: "csv",
+      path: "r.CSV",
+    });
   });
 });
 

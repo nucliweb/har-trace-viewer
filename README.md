@@ -13,8 +13,8 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 ## Usage
 
 ```bash
-htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [options]
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
 ```
 
 A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
@@ -30,6 +30,9 @@ The destination picks the format:
 | `htv page.har -o r.json`         | The full analysis as JSON                                                                                                     |
 | `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                             |
 | `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                |
+| `htv page.har --format markdown` | A [Markdown report](#markdown-csv-and-mermaid) to paste into a ticket or a doc, on stdout (or `-o report.md`)                 |
+| `htv page.har --format csv`      | One CSV row per request, on stdout (or `-o requests.csv`)                                                                     |
+| `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                   |
 | `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                        |
 
 In the terminal, `1`–`5` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings or cache a comparison shows, and `q` quits.
@@ -89,6 +92,14 @@ $ htv page.har trace.json.gz --format findings
 
 The same findings open the terminal report, on the Findings tab (`1`), grouped by severity with the metric, the summary, what to do and up to three evidence rows each; and in the HTML report and the web app, the Findings button opens them for the current page, with the number of critical and warning findings on the button. In a comparison, `a`/`b` pick the side on the Findings tab, and each diagram has its own Findings button.
 
+### Markdown, CSV and Mermaid
+
+`--format markdown` writes a report for a ticket or a doc, in GitHub-flavoured Markdown without HTML. Each page has a title with its name and URL, a Metrics table (value and web.dev rating), its [findings](#findings) grouped by severity (critical, warning, info; the good ones in one line) with the summary, the recommendation, up to five evidence rows and a note with the source and confidence, and a Hosts table (provider, PoP, requests, cache hits, bytes, median TTFB, protocol). A comparison opens with a table of the metrics of A and B, their delta and rating, before the sections of each side. `-o report.md` alone picks this format.
+
+`--format csv` writes one row per request of every page, as RFC 4180 CSV with `\r\n` line endings and a header row: `page, side, url, host, type, method, status, protocol, encoding, from_cache, start_ms, blocked_ms, dns_ms, connect_ms, ssl_ms, send_ms, wait_ms, receive_ms, duration_ms, transfer_bytes, body_bytes, priority`. Times are ms with at most one decimal; a phase that did not apply (DNS on a reused connection) is empty, and `connect_ms` is the TCP handshake alone, with TLS in `ssl_ms`. `side` is `a` or `b` in a comparison and empty otherwise. `-o requests.csv` alone picks this format. The findings are not available as CSV; `--format findings` gives them as JSON, which any JSON tool converts to CSV.
+
+`--format mermaid` writes, per page, a fenced `mermaid` block with a sequence diagram of the document request: Browser, the GFW when `--region cn` draws it, the CDN edge (provider and PoP) and the origin (region), with the TTFB and the CDN cache status on the response. GitHub, GitLab and most doc tools render it. An `--output` takes `.md`, `.mmd` or `.mermaid`.
+
 ### Options
 
 | Flag                       | Description                                                                                                                                                                 |
@@ -104,7 +115,7 @@ The same findings open the terminal report, on the Findings tab (`1`), grouped b
 | `--compare-trace <file>`   | Chrome trace for the `--compare-with` HAR                                                                                                                                   |
 | `--compare-select <value>` | Page of a multi-page `--compare-with` HAR, as `--select`                                                                                                                    |
 | `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                  |
-| `--format <format>`        | `tui`, `html`, `json` or `findings`; `--format json` and `--format findings` without `--output` print the JSON to stdout                                                    |
+| `--format <format>`        | `tui`, `html`, `json`, `findings`, `markdown`, `csv` or `mermaid`; every format but `tui` and `html` prints to stdout without `--output`                                    |
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
 | `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
 | `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |

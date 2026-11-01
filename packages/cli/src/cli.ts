@@ -19,6 +19,9 @@ import {
   generateFlow,
   isClientRegion,
   findingsDocument,
+  markdownReport,
+  mermaidReport,
+  requestsCsv,
   CLIENT_REGIONS,
 } from "@htv/core";
 import type { ClientRegion, Flow, PageFlow } from "@htv/core";
@@ -44,10 +47,31 @@ export interface CompareArg {
   select?: string;
 }
 
-/** Where the report goes: the terminal, an HTML report, JSON, or the findings as JSON. */
-export type OutputFormat = "tui" | "html" | "json" | "findings";
+/**
+ * Where the report goes: the terminal, an HTML report, JSON, the findings as JSON, a Markdown
+ * report, the requests as CSV or the document request as Mermaid diagrams.
+ */
+export type OutputFormat = "tui" | "html" | "json" | "findings" | "markdown" | "csv" | "mermaid";
 
-const OUTPUT_FORMATS: readonly OutputFormat[] = ["tui", "html", "json", "findings"];
+const OUTPUT_FORMATS: readonly OutputFormat[] = [
+  "tui",
+  "html",
+  "json",
+  "findings",
+  "markdown",
+  "csv",
+  "mermaid",
+];
+
+/** The formats written as text, with the --output extensions each accepts. */
+export type TextFormat = "markdown" | "csv" | "mermaid";
+const TEXT_EXTENSIONS: Record<TextFormat, readonly string[]> = {
+  markdown: [".md", ".markdown"],
+  csv: [".csv"],
+  mermaid: [".md", ".mmd", ".mermaid"],
+};
+const hasExtension = (path: string, extensions: readonly string[]) =>
+  extensions.some((ext) => path.toLowerCase().endsWith(ext));
 
 export interface Args {
   pages: PageArg[];
@@ -277,6 +301,8 @@ export type OutputTarget =
   | { kind: "json"; path?: string }
   // The findings document; without a path, it goes to stdout.
   | { kind: "findings"; path?: string }
+  // A Markdown report, the requests as CSV or Mermaid diagrams; without a path, to stdout.
+  | { kind: TextFormat; path?: string }
   // No report: only the result of --budget and --fail-on, on stdout.
   | { kind: "check" };
 
@@ -296,7 +322,15 @@ export function checkOptions(args: Args): CheckOptions | null {
  * writes JSON, any other path writes HTML.
  */
 export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarget {
-  const { output, format } = args;
+  const { output } = args;
+  // A .md or .csv path asks for that format when --format is absent, as .json does.
+  const format =
+    args.format ??
+    (hasExtension(output, TEXT_EXTENSIONS.markdown)
+      ? "markdown"
+      : hasExtension(output, TEXT_EXTENSIONS.csv)
+        ? "csv"
+        : undefined);
   if (format === "tui" && output) {
     throw new Error("--format tui shows the report in the terminal: drop --output");
   }
@@ -313,6 +347,14 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
     throw new Error(
       `--format ${format} needs a .json --output path, or no --output to print to stdout`
     );
+  }
+  if (format === "markdown" || format === "csv" || format === "mermaid") {
+    if (output && !hasExtension(output, TEXT_EXTENSIONS[format])) {
+      throw new Error(
+        `--format ${format} needs a ${TEXT_EXTENSIONS[format].join(" or ")} --output path, or no --output to print to stdout`
+      );
+    }
+    return output ? { kind: format, path: output } : { kind: format };
   }
   if (format === "findings") {
     return output ? { kind: "findings", path: output } : { kind: "findings" };
@@ -332,7 +374,7 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
   return { kind: "tui" };
 }
 
-export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [options]
+export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
        htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]`;
 
 export const HELP = `${USAGE}
@@ -352,6 +394,14 @@ Output (where the report goes):
                       --format findings writes only the findings of each page (rule
                       id, severity, metric, summary, recommendation, evidence) and its
                       metrics as compact JSON, to stdout or a .json --output.
+                      --format markdown writes a report to paste into a ticket or a
+                      doc (metrics, findings and hosts per page; a comparison table
+                      first for two sides), to stdout or a .md --output (-o file.md
+                      alone picks it). --format csv writes one row per request of
+                      every page, as RFC 4180 CSV, to stdout or a .csv --output.
+                      --format mermaid writes a sequence diagram of the document
+                      request per page (Browser, CDN edge, origin), to stdout or a
+                      .md, .mmd or .mermaid --output.
   --bundle            For a directory --output: inline every asset into index.html.
 
 Input:
@@ -566,6 +616,18 @@ export function reportFindings(
     schema: findingsSchemaUrl(htvVersion),
   });
   return JSON.stringify(doc, null, 2);
+}
+
+/** The report as text, for the Markdown, CSV and Mermaid formats. */
+export function reportText(format: TextFormat, { flow, compare }: Report): string {
+  switch (format) {
+    case "markdown":
+      return markdownReport(flow, compare);
+    case "csv":
+      return requestsCsv(flow, compare);
+    case "mermaid":
+      return mermaidReport(flow, compare);
+  }
 }
 
 /** Writes the HTML report and returns the path of its page. */
