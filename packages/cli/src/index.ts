@@ -11,7 +11,9 @@ import {
   buildReport,
   reportJson,
   writeHtmlReport,
+  checkOptions,
 } from "./cli";
+import { formatChecks, runChecks } from "./budget";
 import { runTui } from "./tui/run.js";
 import type { Args } from "./cli";
 
@@ -53,21 +55,30 @@ async function main() {
       const json = reportJson(report, __HTV_VERSION__);
       if (!target.path) {
         process.stdout.write(`${json}\n`);
-        return;
+        break;
       }
       const path = resolve(target.path);
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, `${json}\n`);
       console.log(`Report generated: ${path}`);
-      return;
+      break;
     }
     case "html":
       console.log(`Report generated: ${writeHtmlReport(report, target)}`);
-      return;
+      break;
     case "tui":
       await runTui(report, __HTV_VERSION__);
       return;
+    case "check":
+      break;
   }
+
+  const options = checkOptions(args);
+  if (!options) return;
+  const result = runChecks(report, options);
+  // Without a report the check result is the output; otherwise stdout keeps the report alone.
+  (target.kind === "check" ? console.log : console.error)(formatChecks(result));
+  if (!result.passed) process.exitCode = 2;
 }
 
 main().catch((err) => {

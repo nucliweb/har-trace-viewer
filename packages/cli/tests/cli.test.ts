@@ -14,7 +14,7 @@ import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs, bundleHtml, outputTarget, validateArgs } from "../src/cli";
-import { twoPageHar } from "../../core/tests/helpers/firefox-har";
+import { firefoxHar, twoPageHar } from "../../core/tests/helpers/firefox-har";
 import { wptHar } from "../../core/tests/helpers/wpt-har";
 
 const CLI_ROOT = resolve(__dirname, "..");
@@ -831,5 +831,142 @@ describe("comparison reports (built CLI)", () => {
 
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("--compare-with needs one page on each side; B has 3");
+  });
+});
+
+describe("budgets and --fail-on: arguments", () => {
+  const base = { pages: [{ name: "Page 1", har: "a.har" }], output: "", bundle: false };
+
+  it("collects every --budget, repeated or comma-separated, with --fail-on and --budget-strict", () => {
+    const args = parseArgs([
+      "a.har",
+      "--budget",
+      "lcp=2.5s,transfer=1mb",
+      "--budget",
+      "requests=80",
+      "--fail-on",
+      "warning",
+      "--budget-strict",
+    ]);
+    expect(args).toMatchObject({
+      budgets: [
+        { metric: "lcp", limit: 2500 },
+        { metric: "transfer", limit: 1_000_000 },
+        { metric: "requests", limit: 80 },
+      ],
+      failOn: "warning",
+      budgetStrict: true,
+    });
+  });
+
+  it("rejects an unknown --budget metric and an unknown --fail-on", () => {
+    expect(() => parseArgs(["a.har", "--budget", "speed=1"])).toThrow(
+      /Unknown --budget metric "speed"/
+    );
+    expect(() => parseArgs(["a.har", "--fail-on", "info"])).toThrow(/Invalid --fail-on "info"/);
+  });
+
+  it("prints the check result instead of opening the terminal report", () => {
+    const budgets = [{ metric: "lcp" as const, limit: 2500 }];
+    expect(outputTarget({ ...base, budgets }, false)).toEqual({ kind: "check" });
+    expect(outputTarget({ ...base, failOn: "critical" }, true)).toEqual({ kind: "check" });
+    expect(outputTarget({ ...base, budgets, format: "json" }, false)).toEqual({ kind: "json" });
+    expect(() => outputTarget({ ...base, budgets, format: "tui" }, true)).toThrow(
+      "--budget and --fail-on print a check result instead of the terminal report: drop --format tui"
+    );
+  });
+});
+
+describe("budgets and --fail-on (built CLI)", () => {
+  it("exits 0 and prints the check result to stdout when every budget passes", () => {
+    const res = runCli([
+      "--har",
+      HAR,
+      "--trace",
+      TRACE,
+      "--budget",
+      "lcp=60s,requests=100000,cdn-hit-ratio=0%",
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).toMatch(/pass\s+Page 1\s+lcp\s+\d+ ms\s+<= 60000 ms/);
+    expect(res.stdout).toMatch(/pass\s+Page 1\s+cdn-hit-ratio\s+[\d.]+%\s+>= 0\.0%/);
+    expect(res.stdout).toContain("All checks passed.");
+  });
+
+  it("exits 2 when a budget fails, still writing the report", () => {
+    const target = join(makeTempDir(), "report.html");
+    const res = runCli(["--har", HAR, "--budget", "requests=1", "-o", target]);
+
+    expect(res.status, res.stderr).toBe(2);
+    expect(existsSync(target)).toBe(true);
+    expect(res.stdout).toContain(`Report generated: ${target}`);
+    expect(res.stderr).toMatch(/FAIL\s+Page 1\s+requests\s+\d+\s+<= 1/);
+    expect(res.stderr).toContain("Checks failed: 1 of 1 budgets failed.");
+  });
+
+  it("exits 1 listing the valid metrics for an unknown --budget metric", () => {
+    const res = runCli(["--har", HAR, "--budget", "speed=100"]);
+
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain('Unknown --budget metric "speed"');
+    expect(res.stderr).toContain("ttfb, server-wait, fcp, lcp");
+  });
+
+  it("keeps stdout pure JSON with --format json, the check going to stderr", () => {
+    const res = runCli(["--har", HAR, "--format", "json", "--budget", "requests=1"]);
+
+    expect(res.status).toBe(2);
+    expect(JSON.parse(res.stdout).kind).toBe("flow");
+    expect(res.stderr).toContain("Budgets:");
+  });
+
+  it("passes a metric the recording lacks, unless --budget-strict", () => {
+    const lenient = runCli(["--har", HAR, "--budget", "lcp=2500"]);
+    expect(lenient.status, lenient.stderr).toBe(0);
+    expect(lenient.stdout).toMatch(/pass\s+Page 1\s+lcp\s+n\/a/);
+
+    const strict = runCli(["--har", HAR, "--budget", "lcp=2500", "--budget-strict"]);
+    expect(strict.status).toBe(2);
+    expect(strict.stdout).toMatch(/FAIL\s+Page 1\s+lcp\s+n\/a/);
+  });
+
+  it("exits 2 with --fail-on when a recommendation reaches the severity, 0 otherwise", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "firefox.har");
+    writeFileSync(harPath, JSON.stringify(firefoxHar()));
+
+    const warning = runCli([harPath, "--fail-on", "warning"]);
+    expect(warning.status, warning.stderr).toBe(2);
+    expect(warning.stdout).toMatch(/FAIL\s+Page 1\s+warning\s+cache: /);
+
+    const critical = runCli([harPath, "--fail-on", "critical"]);
+    expect(critical.status, critical.stderr).toBe(0);
+    expect(critical.stdout).toContain("no critical recommendations");
+  });
+
+  it("checks both sides of a comparison", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    const res = runCli([
+      "--har",
+      harPath,
+      "--select",
+      "page_1_0_1,page_1_1_1",
+      "--compare",
+      "--budget",
+      "requests=100000",
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).toContain("A: Run 1 · First view");
+    expect(res.stdout).toContain("B: Run 1 · Repeat view");
+  });
+
+  it("leaves the exit code and output alone without --budget or --fail-on", () => {
+    const res = runCli(["--har", HAR, "--format", "json"]);
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stderr).not.toContain("Budgets:");
   });
 });

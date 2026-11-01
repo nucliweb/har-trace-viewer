@@ -23,6 +23,8 @@ import {
 import type { ClientRegion, Flow, PageFlow } from "@htv/core";
 import { parseTraceFile, readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
+import { parseBudgets, parseFailOn } from "./budget";
+import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -57,6 +59,11 @@ export interface Args {
   compareWith?: CompareArg;
   listPages?: boolean;
   region?: ClientRegion; // undefined when --region is absent
+  /** Every --budget, in the order given. */
+  budgets?: Budget[];
+  failOn?: FailOnSeverity;
+  /** Fails a budget whose metric the page cannot provide instead of passing it. */
+  budgetStrict?: boolean;
   help?: boolean;
   version?: boolean;
 }
@@ -91,6 +98,9 @@ export function parseArgs(argv: string[]): Args {
       format: { type: "string" },
       bundle: { type: "boolean" },
       region: { type: "string" },
+      budget: { type: "string", multiple: true },
+      "fail-on": { type: "string" },
+      "budget-strict": { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -109,6 +119,9 @@ export function parseArgs(argv: string[]): Args {
   let region: ClientRegion | undefined;
   let compare = false;
   let compareWith: CompareArg | undefined;
+  const budgets: Budget[] = [];
+  let failOn: FailOnSeverity | undefined;
+  let budgetStrict = false;
   const compareArg = () => (compareWith ??= { har: "" });
   const lastPage = () => {
     if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
@@ -172,6 +185,15 @@ export function parseArgs(argv: string[]): Args {
       case "region":
         region = parseRegion(value);
         break;
+      case "budget":
+        budgets.push(...parseBudgets(value));
+        break;
+      case "fail-on":
+        failOn = parseFailOn(value);
+        break;
+      case "budget-strict":
+        budgetStrict = true;
+        break;
       case "help":
         help = true;
         break;
@@ -190,6 +212,9 @@ export function parseArgs(argv: string[]): Args {
     ...(compare ? { compare } : {}),
     ...(compareWith ? { compareWith } : {}),
     ...(region ? { region } : {}),
+    ...(budgets.length > 0 ? { budgets } : {}),
+    ...(failOn ? { failOn } : {}),
+    ...(budgetStrict ? { budgetStrict } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
   };
@@ -248,16 +273,35 @@ export type OutputTarget =
   // A .html path is always a single self-contained file; a directory bundles with --bundle.
   | { kind: "html"; path: string; singleFile: boolean; bundle: boolean }
   // Without a path, the JSON goes to stdout.
-  | { kind: "json"; path?: string };
+  | { kind: "json"; path?: string }
+  // No report: only the result of --budget and --fail-on, on stdout.
+  | { kind: "check" };
+
+/** The --budget and --fail-on checks to run, or null when neither was given. */
+export function checkOptions(args: Args): CheckOptions | null {
+  if (!args.budgets?.length && !args.failOn) return null;
+  return {
+    budgets: args.budgets ?? [],
+    strict: args.budgetStrict === true,
+    ...(args.failOn ? { failOn: args.failOn } : {}),
+  };
+}
 
 /**
  * Where the report goes, from --output and --format: no --output shows it in the terminal,
- * a .json path or --format json writes JSON, any other path writes HTML.
+ * or only prints the check result with --budget or --fail-on; a .json path or --format json
+ * writes JSON, any other path writes HTML.
  */
 export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarget {
   const { output, format } = args;
   if (format === "tui" && output) {
     throw new Error("--format tui shows the report in the terminal: drop --output");
+  }
+  const checks = checkOptions(args) !== null;
+  if (format === "tui" && checks) {
+    throw new Error(
+      "--budget and --fail-on print a check result instead of the terminal report: drop --format tui"
+    );
   }
   if (format === "html" && (!output || isJsonPath(output))) {
     throw new Error("--format html needs -o <dir|file.html>");
@@ -271,6 +315,7 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
     const singleFile = isHtmlPath(output);
     return { kind: "html", path: output, singleFile, bundle: singleFile || args.bundle };
   }
+  if (checks) return { kind: "check" };
   if (!stdoutIsTerminal) {
     throw new Error(
       "The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json."
@@ -324,6 +369,22 @@ Comparison:
   --compare-select <value>
                       Page of a multi-page --compare-with HAR, as --select.
 
+CI checks (each page, both sides of a comparison; the result goes to stderr after
+the report, or to stdout without --output instead of the terminal report):
+  --budget <metric>=<value>[,<metric>=<value>...]
+                      Fail when a page goes over a limit; repeatable. Metrics:
+                      ttfb, server-wait, fcp, lcp, dcl, onload, inp in ms
+                      (2500, 2500ms or 2.5s); cls (0.1); requests (80);
+                      transfer in bytes (500000, 500kb, 1.5mb; 1 kb = 1000 B);
+                      cdn-hit-ratio and cache-hit-ratio as minimums (0.9 or 90%).
+  --budget-strict     Fail a budget whose metric the page lacks (LCP without a
+                      trace); by default it passes as n/a.
+  --fail-on <severity>
+                      critical | warning: fail when a recommendation of that
+                      severity or worse exists.
+  Exit codes: 0 every check passed, 2 a check failed (the report is still
+  written), 1 usage or input errors.
+
 Other:
   --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")} (default: default).
                       "cn" draws the Great Firewall before the first server.
@@ -341,6 +402,9 @@ Examples:
 
   # WebPageTest first view vs repeat view, i.e. without and with cache:
   htv --har wpt.har --select page_1_0_1,page_1_1_1 --compare -o compare.html
+
+  # CI: exit 2 when LCP goes over 2.5 s, the page over 1.5 MB or a warning shows up:
+  htv page.har trace.json.gz --budget lcp=2.5s,transfer=1.5mb --fail-on warning
 
 Without --bundle a directory report loads ES modules from assets/, which browsers
 block over file://; serve the folder over HTTP (npx serve report/) or write a

@@ -53,8 +53,40 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 | `--format <format>`        | `tui`, `html` or `json`; `--format json` without `--output` prints the JSON to stdout                                                                                       |
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
 | `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
+| `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |
+| `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                     |
+| `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a recommendation of that severity or worse exists                                                                               |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                    |
 | `-v, --version`            | Print the version and exit                                                                                                                                                  |
+
+### CI budgets
+
+`--budget` and `--fail-on` turn htv into a check for CI. Each budget is checked on every page, and on both sides of a comparison:
+
+| Metric                                                      | Value                                                                                               |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `ttfb`, `server-wait`, `fcp`, `lcp`, `dcl`, `onload`, `inp` | Maximum in ms: `2500`, `2500ms` or `2.5s`                                                           |
+| `cls`                                                       | Maximum score: `0.1`                                                                                |
+| `requests`                                                  | Maximum number of network requests: `80`                                                            |
+| `transfer`                                                  | Maximum bytes on the wire: `500000`, `500kb`, `1.5mb` (1 kb = 1000 bytes, as the report shows them) |
+| `cdn-hit-ratio`, `cache-hit-ratio`                          | Minimum ratio: `0.9` or `90%`                                                                       |
+
+After the report is written, htv prints one line per budget per page (`pass` or `FAIL`, the actual value and the limit) and one line per recommendation that reaches `--fail-on`. The lines go to stderr, so `--format json` keeps stdout pure JSON; without `--output` no terminal report opens, and the result is printed to stdout instead, so the command runs without a TTY. A metric the page cannot provide (LCP without a trace, INP without interactions) shows `n/a` and passes, unless `--budget-strict` is given.
+
+Exit codes: `0` every check passed, `2` a budget or `--fail-on` failed (the report is still written), `1` usage or input errors.
+
+```bash
+$ htv page.har trace.json.gz --budget lcp=2.5s,transfer=500kb,cdn-hit-ratio=95% --fail-on warning
+Budgets:
+  pass  Page 1  lcp            181 ms  <= 2500 ms
+  FAIL  Page 1  transfer       800 KB  <= 500 KB
+  pass  Page 1  cdn-hit-ratio  100.0%  >= 95.0%
+Recommendations at warning or worse:
+  pass  no warning or critical recommendations
+Checks failed: 1 of 3 budgets failed.
+$ echo $?
+2
+```
 
 ### Examples
 
@@ -98,6 +130,12 @@ Portable single-file report:
 
 ```bash
 htv --page "Home" --har home.har --output report.html
+```
+
+CI check that still publishes the report: exits 2 when the LCP goes over 2.5 s, the CDN serves less than 90% of the own resources or a critical recommendation shows up:
+
+```bash
+htv page.har trace.json.gz -o report.html --budget lcp=2.5s,cdn-hit-ratio=90% --fail-on critical
 ```
 
 A directory report (`--output report/`) without `--bundle` loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`), add `--bundle`, or write a `.html` file, which opens by double-click.
