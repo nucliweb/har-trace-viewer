@@ -206,19 +206,18 @@ describe("WaterfallPanel", () => {
     expect(rowButton(4)).toHaveFocus();
   });
 
-  it("renders at most 300 rows at once, with a button for the next ones", async () => {
-    const user = userEvent.setup();
-    // 800 entries plus the document: enough to need three pages, small enough to stay fast
-    // under coverage instrumentation.
-    const many = Array.from({ length: 800 }, (_, i) =>
+  it("renders at most 300 rows at once, with a button for the next ones", () => {
+    // 650 entries plus the document need three pages of 300. A plain click event and a wide
+    // timeout keep the test about the paging, not about how fast an instrumented render runs.
+    const many = Array.from({ length: 650 }, (_, i) =>
       makeEntry({ url: `https://example.com/asset-${i}.js`, startTime: 100 + i / 10 })
     );
     renderPanel({ har: makeHar(many), trace: undefined });
 
     expect(rows()).toHaveLength(300);
-    await user.click(screen.getByRole("button", { name: "Show 300 more (501 left)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show 300 more (351 left)" }));
     expect(rows()).toHaveLength(600);
-  });
+  }, 30_000);
 
   it("closes with its close button", async () => {
     const user = userEvent.setup();
