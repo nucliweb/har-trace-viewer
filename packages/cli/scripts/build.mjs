@@ -20,17 +20,69 @@ execFileSync("npm", ["run", "build"], {
   env: { ...process.env, NODE_ENV: "production" },
 });
 
-await build({
+// Ink loads its React DevTools bridge only when DEV=true, and it needs the optional
+// `react-devtools-core`, which the package does not ship. Bundled as is, the bridge would patch
+// globals before failing; this stand-in fails the way the missing package does, so Ink prints its
+// usual "not installed" warning and the report runs without DevTools.
+const inkDevtoolsStub = {
+  name: "ink-devtools-stub",
+  setup(build) {
+    build.onResolve({ filter: /^\.\/devtools\.js$/ }, (args) =>
+      /[\\/]node_modules[\\/]ink[\\/]/.test(args.importer)
+        ? { path: "ink-devtools", namespace: "ink-devtools-stub" }
+        : undefined
+    );
+    build.onLoad({ filter: /.*/, namespace: "ink-devtools-stub" }, () => ({
+      contents:
+        "const error = new Error(\"Cannot find package 'react-devtools-core'\");\n" +
+        'error.code = "ERR_MODULE_NOT_FOUND";\n' +
+        "throw error;\n",
+      loader: "js",
+    }));
+  },
+};
+
+// Ink and React are bundled, so the published package installs with no dependencies.
+const { metafile } = await build({
   entryPoints: [join(cliDir, "src/index.ts")],
   bundle: true,
   platform: "node",
   format: "esm",
   jsx: "automatic",
-  external: ["ink", "react"],
-  define: { __HTV_VERSION__: JSON.stringify(version) },
+  define: {
+    __HTV_VERSION__: JSON.stringify(version),
+    // Selects the production builds of React and its reconciler
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
+  plugins: [inkDevtoolsStub],
+  // Some of Ink's CommonJS dependencies (signal-exit, stack-utils) require() Node builtins, and
+  // an ES module has no require of its own
+  banner: {
+    js: 'import { createRequire as __htvCreateRequire } from "node:module";\nconst require = __htvCreateRequire(import.meta.url);',
+  },
+  legalComments: "eof",
+  metafile: true,
   outfile: join(dist, "index.js"),
   logLevel: "info",
 });
+
+// The license of every bundled package, which their terms ask to ship along with the code.
+const licenses = new Map();
+for (const input of Object.keys(metafile.inputs)) {
+  const match = /^(.*node_modules\/(?:@[^/]+\/)?[^/]+)\//.exec(input);
+  if (!match) continue;
+  const pkgDir = resolve(cliDir, match[1]);
+  const pkg = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
+  const id = `${pkg.name}@${pkg.version}`;
+  if (licenses.has(id)) continue;
+  const licenseFile = readdirSync(pkgDir).find((file) => /^(?:licen[cs]e|copying)/i.test(file));
+  const text = licenseFile ? readFileSync(join(pkgDir, licenseFile), "utf8").trim() : pkg.license;
+  licenses.set(id, `${id} (${pkg.license})\n\n${text}`);
+}
+writeFileSync(
+  join(dist, "THIRD-PARTY-LICENSES.txt"),
+  [...licenses.values()].sort().join(`\n\n${"-".repeat(80)}\n\n`) + "\n"
+);
 
 // Loaded only by the web app's "try the demo" button, never by a report.
 const SITE_ONLY_CHUNK = /^demo-flow-.*\.js$/;

@@ -1,8 +1,17 @@
 // Package smoke test: packs the CLI, installs the tarball into a fresh project and runs the
-// installed `htv` the way a user would. Run `npm run build` first; needs network access to
-// install the runtime dependencies.
+// installed `htv` the way a user would. Run `npm run build` first. The package bundles its
+// dependencies, so the install adds nothing but the package itself.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +37,24 @@ function assert(condition, message) {
   if (!condition) throw new Error(`Smoke test failed: ${message}`);
 }
 
+/** Total size in bytes of the files under path, without following links such as .bin/htv. */
+function sizeOf(path) {
+  const stat = lstatSync(path);
+  if (!stat.isDirectory()) return stat.size;
+  return readdirSync(path).reduce((total, entry) => total + sizeOf(join(path, entry)), 0);
+}
+
+/** The packages installed at the top of node_modules, scoped ones as "@scope/name". */
+function installedPackages(nodeModules) {
+  return readdirSync(nodeModules)
+    .filter((entry) => !entry.startsWith("."))
+    .flatMap((entry) =>
+      entry.startsWith("@")
+        ? readdirSync(join(nodeModules, entry)).map((name) => `${entry}/${name}`)
+        : [entry]
+    );
+}
+
 const work = mkdtempSync(join(tmpdir(), "htv-smoke-"));
 try {
   const packDir = join(work, "pack");
@@ -44,9 +71,26 @@ try {
   run("npm", ["init", "-y"], project);
   run("npm", ["install", "--no-audit", "--no-fund", tarball], project);
 
+  const nodeModules = join(project, "node_modules");
+  const installed = installedPackages(nodeModules);
+  assert(
+    installed.length === 1 &&
+      installed[0] === "har-trace-viewer" &&
+      !existsSync(join(nodeModules, "har-trace-viewer", "node_modules")),
+    `the install added more than the package itself: ${installed.join(", ")}`
+  );
+  console.log(`installed: ${installed.join(", ")} (${sizeOf(nodeModules)} bytes)`);
+
   const printed = run("npx", ["--no-install", "htv", "--version"], project).trim();
   assert(printed.includes(version), `--version printed "${printed}", expected ${version}`);
-  console.log(`htv --version: ${printed}`);
+  const bin = join(nodeModules, ".bin", "htv");
+  const runs = 5;
+  const start = process.hrtime.bigint();
+  for (let i = 0; i < runs; i++) run(bin, ["--version"], project);
+  const averageMs = Number(process.hrtime.bigint() - start) / 1e6 / runs;
+  console.log(
+    `htv --version: ${printed} (${averageMs.toFixed(0)} ms on average over ${runs} runs)`
+  );
 
   const htmlPath = join(project, "report.html");
   const jsonPath = join(project, "report.json");
