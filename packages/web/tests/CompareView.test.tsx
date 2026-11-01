@@ -138,6 +138,18 @@ describe("CompareView", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens the waterfall of each side inside its own diagram", async () => {
+    const user = userEvent.setup();
+    render(<CompareView a={a} b={b} />);
+
+    await user.click(within(pane("B")).getByRole("button", { name: "Toggle waterfall" }));
+    const details = within(pane("B")).getByRole("region", { name: "Waterfall details" });
+    expect(within(details).getAllByRole("listitem")).toHaveLength(b.pages[0].har.entries.length);
+    expect(
+      within(pane("A")).queryByRole("region", { name: "Waterfall details" })
+    ).not.toBeInTheDocument();
+  });
+
   describe("Deltas panel", () => {
     async function openDeltas() {
       const user = userEvent.setup();

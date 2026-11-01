@@ -12,6 +12,7 @@ import { CachePanel } from "./CachePanel.js";
 import { MetricsSummary } from "./MetricsSummary.js";
 import { HopsPanel } from "./HopsPanel.js";
 import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
+import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
 import styles from "./DiagramView.module.css";
@@ -41,6 +42,7 @@ export function DiagramView({ flow }: Props) {
   const [showMetrics, setShowMetrics] = useState(false);
   const [showHops, setShowHops] = useState(false);
   const [showFindings, setShowFindings] = useState(false);
+  const [showWaterfall, setShowWaterfall] = useState(false);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
   const allFindings = useMemo(() => collectFindings(flow), [flow]);
   const findings = useMemo(
@@ -74,6 +76,19 @@ export function DiagramView({ flow }: Props) {
           activeClassName={styles.cacheBtnActive}
           onClick={() => {
             setShowFindings((v) => !v);
+            setShowWaterfall(false);
+            setShowHops(false);
+            setShowMetrics(false);
+            setShowCachePanel(false);
+          }}
+        />
+        <WaterfallButton
+          active={showWaterfall}
+          className={styles.waterfallBtn}
+          activeClassName={styles.cacheBtnActive}
+          onClick={() => {
+            setShowWaterfall((v) => !v);
+            setShowFindings(false);
             setShowHops(false);
             setShowMetrics(false);
             setShowCachePanel(false);
@@ -83,6 +98,7 @@ export function DiagramView({ flow }: Props) {
           className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
           onClick={() => {
             setShowHops((v) => !v);
+            setShowWaterfall(false);
             setShowMetrics(false);
             setShowCachePanel(false);
             setShowFindings(false);
@@ -98,6 +114,7 @@ export function DiagramView({ flow }: Props) {
           className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
           onClick={() => {
             setShowMetrics((v) => !v);
+            setShowWaterfall(false);
             setShowCachePanel(false);
             setShowHops(false);
             setShowFindings(false);
@@ -112,6 +129,7 @@ export function DiagramView({ flow }: Props) {
           className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
           onClick={() => {
             setShowCachePanel((v) => !v);
+            setShowWaterfall(false);
             setShowMetrics(false);
             setShowHops(false);
             setShowFindings(false);
@@ -166,6 +184,14 @@ export function DiagramView({ flow }: Props) {
             findings={findings}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
             onClose={() => setShowFindings(false)}
+          />
+        )}
+        {showWaterfall && (
+          <WaterfallPanel
+            har={page.har}
+            trace={page.trace}
+            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            onClose={() => setShowWaterfall(false)}
           />
         )}
         {showHops && (

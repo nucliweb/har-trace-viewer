@@ -13,6 +13,7 @@ import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { CachePanel } from "./CachePanel.js";
 import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
+import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
 import { DELTA_CLASS, DeltaCell, DeltasPanel } from "./DeltasPanel.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
@@ -47,9 +48,11 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const { flow, name, stepIndex, current } = view;
   const [showCachePanel, setShowCachePanel] = useState(false);
   const [showFindings, setShowFindings] = useState(false);
+  const [showWaterfall, setShowWaterfall] = useState(false);
   const findings = useMemo(() => collectFindings(flow, { side }), [flow, side]);
   const step = flow.steps[stepIndex];
   const analysis = flow.pageAnalyses[step.pageIndex];
+  const page = flow.pages[step.pageIndex];
   const historicalPaths = useMemo(
     () => computeHistoricalPaths(flow.steps, stepIndex),
     [flow.steps, stepIndex]
@@ -77,6 +80,17 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           onClick={() => {
             setShowFindings((v) => !v);
             setShowCachePanel(false);
+            setShowWaterfall(false);
+          }}
+        />
+        <WaterfallButton
+          active={showWaterfall}
+          className={diagramStyles.waterfallBtn}
+          activeClassName={diagramStyles.cacheBtnActive}
+          onClick={() => {
+            setShowWaterfall((v) => !v);
+            setShowFindings(false);
+            setShowCachePanel(false);
           }}
         />
         <button
@@ -84,6 +98,7 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           onClick={() => {
             setShowCachePanel((v) => !v);
             setShowFindings(false);
+            setShowWaterfall(false);
           }}
           aria-label="Toggle cache analysis"
           aria-expanded={showCachePanel}
@@ -122,6 +137,14 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
             findings={findings}
             pageLabel={`${TAG[side]} · ${name}`}
             onClose={() => setShowFindings(false)}
+          />
+        )}
+        {showWaterfall && (
+          <WaterfallPanel
+            har={page.har}
+            trace={page.trace}
+            pageLabel={`${TAG[side]} · ${name}`}
+            onClose={() => setShowWaterfall(false)}
           />
         )}
       </div>

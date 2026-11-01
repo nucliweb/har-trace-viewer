@@ -92,6 +92,25 @@ describe("DiagramView", () => {
     expect(screen.queryByRole("region", { name: "Findings details" })).not.toBeInTheDocument();
   });
 
+  it("puts the waterfall right after the findings and opens it for the page", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+    const toolbar = document.querySelector<HTMLElement>("[class*=toolbar]")!;
+    const [, second] = within(toolbar).getAllByRole("button");
+    expect(second).toHaveAccessibleName("Toggle waterfall");
+    expect(second).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(second);
+    expect(second).toHaveAttribute("aria-expanded", "true");
+    const details = screen.getByRole("region", { name: "Waterfall details" });
+    const requests = within(details).getAllByRole("listitem");
+    expect(requests).toHaveLength(flow.pages[0].har.entries.length);
+    expect(requests[0]).toHaveTextContent("document");
+
+    await user.click(screen.getByRole("button", { name: /^Toggle findings/ }));
+    expect(screen.queryByRole("region", { name: "Waterfall details" })).not.toBeInTheDocument();
+  });
+
   it("shows the page's network report in the cache panel", async () => {
     const user = userEvent.setup();
     render(<DiagramView flow={flow} />);

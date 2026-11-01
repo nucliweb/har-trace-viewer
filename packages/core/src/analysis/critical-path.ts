@@ -219,6 +219,43 @@ function toChain(path: PageRequest[]): CriticalChain {
 }
 
 /**
+ * The blocking requests that held the first paint: requested before FCP, fonts aside, in the
+ * order they were sent. Looks each URL up once, so that it stays fast on large recordings.
+ */
+function heldFirstPaint(
+  har: ParsedHar,
+  trace: ParsedTrace | undefined
+): {
+  source: RenderBlockingReport["source"];
+  requests: { request: PageRequest; status: string }[];
+} {
+  const fcpMs = trace?.fcp ?? null;
+  const { source, blocking } = findBlocking(har, trace);
+  const entries = firstByUrl(har.entries);
+  const traced = firstByUrl(trace?.requests ?? []);
+  const requests = blocking
+    .map(({ url, status }) => ({
+      request: describe(entries.get(url) ?? null, traced.get(url) ?? null, url),
+      status,
+    }))
+    .filter(({ request }) => request.resourceType !== "font")
+    .filter(({ request }) => fcpMs === null || request.sentAtMs < fcpMs)
+    .sort((a, b) => a.request.sentAtMs - b.request.sentAtMs);
+  return { source, requests };
+}
+
+function firstByUrl<T extends { url: string }>(items: T[]): Map<string, T> {
+  const byUrl = new Map<string, T>();
+  for (const item of items) if (!byUrl.has(item.url)) byUrl.set(item.url, item);
+  return byUrl;
+}
+
+/** The URLs of the resources that held the first paint (see analyzeRenderBlocking). */
+export function renderBlockingUrls(har: ParsedHar, trace: ParsedTrace | undefined): Set<string> {
+  return new Set(heldFirstPaint(har, trace).requests.map(({ request }) => request.url));
+}
+
+/**
  * The resources that held the first paint, from the trace's render-blocking status (the HAR's
  * initiators and priorities without it): requested before FCP, fonts aside (whether a font
  * blocks depends on font-display, which neither records). With how long they held the first
@@ -237,12 +274,7 @@ export function analyzeRenderBlocking(
     endMs: docTiming.endMs,
   };
 
-  const { source, blocking } = findBlocking(har, trace);
-  const blockingRequests = blocking
-    .map(({ url, status }) => ({ request: pageRequest(har, trace, url), status }))
-    .filter(({ request }) => request.resourceType !== "font")
-    .filter(({ request }) => fcpMs === null || request.sentAtMs < fcpMs)
-    .sort((a, b) => a.request.sentAtMs - b.request.sentAtMs);
+  const { source, requests: blockingRequests } = heldFirstPaint(har, trace);
 
   const resources: RenderBlockingResource[] = uniqueByUrl(
     blockingRequests.map(({ request, status }) => ({

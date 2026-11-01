@@ -383,6 +383,69 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
+for (const scheme of ["light", "dark"] as const) {
+  test(`waterfall panel lists the requests, the document first, and has no axe violations: ${scheme} theme`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ colorScheme: scheme });
+    const page = await context.newPage();
+    const collected = await open(page, bundleUrl);
+    const button = page.getByRole("button", { name: "Toggle waterfall" });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    const details = page.getByRole("region", { name: "Waterfall details" });
+    await expect(details).toBeVisible();
+    const rows = details.getByRole("list", { name: /^Requests/ }).getByRole("listitem");
+    await expect(rows).toHaveCount(34);
+    await expect(rows.first()).toContainText("webperf-snippets.nucliweb.net");
+    await expect(rows.first()).toContainText("document");
+    await expect(details.getByRole("img", { name: /^Time ruler: TTFB 51 ms/ })).toBeVisible();
+
+    // The keyboard reaches each row and its tooltip.
+    await rows.first().getByRole("button").focus();
+    await page.keyboard.press("ArrowDown");
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText(/^https:\/\/.+\.css/);
+    await expect(tooltip).toContainText("Wait");
+
+    await page.waitForTimeout(500);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(
+      results.violations.map((v) => ({
+        id: v.id,
+        impact: v.impact,
+        nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5),
+      }))
+    ).toEqual([]);
+    expect(collected.errors).toEqual([]);
+    await context.close();
+  });
+}
+
+test("waterfall panel fits a phone screen and scrolls inside itself", async ({ browser }) => {
+  // Reduced motion: the panel appears in place, without sliding in from the right.
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 740 },
+    reducedMotion: "reduce",
+  });
+  const page = await context.newPage();
+  await open(page, bundleUrl);
+  await page.getByRole("button", { name: "Toggle waterfall" }).click();
+  const details = page.getByRole("region", { name: "Waterfall details" });
+  await expect(details).toBeVisible();
+
+  const box = await details.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(375 + 1);
+  // The rows keep their columns: the region scrolls sideways, the page does not.
+  expect(await details.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await context.close();
+});
+
 // Browsers block <script type="module" crossorigin> over file://, so the non-bundled report needs
 // an HTTP server. The README documents this and points to --bundle for double-click use.
 test("non-bundled report is blocked over file:// (documented: use --bundle or serve it)", async ({

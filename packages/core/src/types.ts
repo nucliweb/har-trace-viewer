@@ -389,6 +389,72 @@ export interface Flow {
   cacheReport?: CacheReport;
 }
 
+// ── Waterfall ─────────────────────────────────────────────────────────────────
+
+// Whether a request goes to the document's registrable domain (its subdomains included).
+export type WaterfallParty = "first" | "third";
+
+// A request's phases in ms, one after the other: `connect` is the TCP connection alone
+// (the HAR counts TLS inside it) and `ssl` the TLS handshake. Null when the HAR marks the
+// phase as not applicable (a reused connection skips dns, connect and ssl).
+export interface WaterfallPhases {
+  blocked: number | null;
+  dns: number | null;
+  connect: number | null;
+  ssl: number | null;
+  send: number;
+  wait: number;
+  receive: number;
+}
+
+// One request of the waterfall. Times in ms from the page origin.
+export interface WaterfallRow {
+  entryIndex: number; // index into the page's har.entries
+  url: string;
+  shortName: string; // the last path segment and the query, or the host for a bare origin
+  host: string;
+  party: WaterfallParty;
+  resourceType: ResourceType;
+  status: number;
+  fromCache: HarEntry["fromCache"];
+  transferSize: number;
+  startMs: number;
+  endMs: number;
+  phases: WaterfallPhases;
+  priority: ResourcePriority | null;
+  redirectURL?: string; // where a 3xx response points
+  renderBlocking?: boolean; // held the first paint (trace status, else the HAR's inference)
+  isLcpResource?: boolean; // the image the LCP element painted
+}
+
+// Page milestones in ms from the page origin; null when the recording lacks them.
+export interface WaterfallMarks {
+  ttfb: number | null; // the document's first byte
+  fcp: number | null;
+  lcp: number | null;
+  dcl: number | null; // DOMContentLoaded
+  onLoad: number | null;
+}
+
+export interface WaterfallFilter {
+  types?: ResourceType[];
+  host?: string;
+  party?: WaterfallParty;
+  search?: string; // a case-insensitive substring of the URL
+}
+
+// Where a waterfall's time axis ends: the end of the recording, or the last page mark (onLoad,
+// or a paint after it) to zoom on the load when late requests stretch the recording.
+export type WaterfallAxis = "end" | "load";
+
+export interface Waterfall {
+  rows: WaterfallRow[]; // sorted by start, in recording order on a tie
+  marks: WaterfallMarks;
+  // The end of the time axis: the last request end or the last mark, whatever the filter, so
+  // that a filtered waterfall keeps the scale of the whole page.
+  totalMs: number;
+}
+
 // ── Cache analysis ────────────────────────────────────────────────────────────
 
 export type CdnCacheStatus = "hit" | "miss" | "stale" | "bypass" | "unknown";

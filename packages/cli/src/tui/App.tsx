@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
-import { collectFindings, compareFlows, stepAtPair } from "@htv/core";
-import type { Flow } from "@htv/core";
+import type { Key } from "ink";
+import {
+  buildWaterfall,
+  collectFindings,
+  compareFlows,
+  filterWaterfallRows,
+  stepAtPair,
+} from "@htv/core";
+import type { Flow, WaterfallAxis, WaterfallParty } from "@htv/core";
 import { findingsRegion } from "./findings-view.js";
+import { waterfallRegion } from "./waterfall-view.js";
 import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
 import type { Line } from "./lines.js";
 import {
@@ -26,8 +34,12 @@ interface Props {
   columns?: number;
 }
 
-const TABS = ["Findings", "Overview", "Steps", "Hosts", "Cache & network"] as const;
+const TABS = ["Findings", "Waterfall", "Overview", "Steps", "Hosts", "Cache & network"] as const;
 type Side = "a" | "b";
+// The party filter of the waterfall, cycled with f.
+const PARTIES: (WaterfallParty | null)[] = [null, "first", "third"];
+const nextParty = (party: WaterfallParty | null) =>
+  PARTIES[(PARTIES.indexOf(party) + 1) % PARTIES.length];
 
 // The header block and the status bar around the scrolling region.
 const HEADER_LINES = 3;
@@ -70,10 +82,11 @@ function headerLines(
     seg(ctx, { bold: true }),
     frame("─╮"),
   ];
-  const tabs: Line = TABS.flatMap((name, i) => [
-    seg(` ${i + 1} ${name} `, i === tab ? { inverse: true, bold: true, color: "cyan" } : {}),
-    seg(" "),
-  ]);
+  // Six tabs and the pages of a flow share the line: the padding inside each label keeps
+  // them apart.
+  const tabs: Line = TABS.map((name, i) =>
+    seg(` ${i + 1} ${name} `, i === tab ? { inverse: true, bold: true, color: "cyan" } : {})
+  );
   const strip: Line = pages
     ? [
         seg("Pages ", { dim: true }),
@@ -111,8 +124,8 @@ function LineView({ line }: { line: Line }) {
 }
 
 /**
- * The report in the terminal: the findings, an overview of the metrics, the diagram's steps,
- * the hosts and the cache analysis, one tab each, drawn as framed panels. A comparison shows
+ * The report in the terminal: the findings, the request waterfall, an overview of the metrics,
+ * the diagram's steps, the hosts and the cache analysis, one tab each, drawn as framed panels. A comparison shows
  * both flows with their B − A deltas.
  */
 export function TuiApp({ flow, compare, version, rows, columns }: Props) {
@@ -124,6 +137,10 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const [page, setPage] = useState(0);
   const [side, setSide] = useState<Side>("a");
   const [scroll, setScroll] = useState(0);
+  const [search, setSearch] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [party, setParty] = useState<WaterfallParty | null>(null);
+  const [axis, setAxis] = useState<WaterfallAxis>("end");
 
   const names = useMemo(
     () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
@@ -134,12 +151,25 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     [flow, compare]
   );
   // The tabs that show one side of a comparison at a time, picked with a/b.
-  const sided = (tabName: string) => tabName === "Findings" || tabName === "Cache & network";
+  const sided = (tabName: string) =>
+    tabName === "Findings" || tabName === "Waterfall" || tabName === "Cache & network";
   const stepCount = comparison ? comparison.pairs.length : flow.steps.length;
   const pageCount = flow.pages.length;
   const width = Math.max(MIN_COLUMNS, size.columns);
   const viewport = Math.max(1, size.rows - HEADER_LINES - STATUS_LINES);
   const current = TABS[tab];
+
+  // The page the waterfall shows: the current page, or the side picked in a comparison.
+  const shownPage = compare ? (side === "a" ? flow : compare).pages[0] : flow.pages[page];
+  const waterfall = useMemo(
+    () => (current === "Waterfall" ? buildWaterfall(shownPage.har, shownPage.trace) : null),
+    [current, shownPage]
+  );
+  const waterfallView = useMemo(() => {
+    if (!waterfall) return null;
+    const rows = filterWaterfallRows(waterfall.rows, { search, party: party ?? undefined });
+    return waterfallRegion(waterfall, rows, { search, searching, party, axis }, width);
+  }, [waterfall, search, searching, party, axis, width]);
 
   const region = useMemo((): Line[] => {
     switch (current) {
@@ -147,6 +177,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         const list = compare ? findings[side] : findings.a.filter((f) => f.page.index === page);
         return findingsRegion(list, width);
       }
+      case "Waterfall":
+        return waterfallView?.lines ?? [];
       case "Overview":
         return comparison
           ? compareOverviewRegion(comparison, width)
@@ -171,9 +203,25 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         return cacheRegion(cacheReport, width, networkReport);
       }
     }
-  }, [current, step, page, side, width, viewport, flow, compare, comparison, names, findings]);
+  }, [
+    current,
+    step,
+    page,
+    side,
+    width,
+    viewport,
+    flow,
+    compare,
+    comparison,
+    names,
+    findings,
+    waterfallView,
+  ]);
 
-  const maxScroll = Math.max(0, region.length - viewport);
+  // Lines at the top of the region that stay in view while the rest scrolls.
+  const pinned = current === "Waterfall" ? (waterfallView?.pinned ?? 0) : 0;
+  const rowsViewport = Math.max(1, viewport - pinned);
+  const maxScroll = Math.max(0, region.length - pinned - rowsViewport);
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
   const showTab = (index: number) => {
     setTab((index + TABS.length) % TABS.length);
@@ -188,8 +236,31 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     setScroll(0);
   };
 
+  const editSearch = (input: string, key: Key) => {
+    if (key.escape) {
+      setSearch("");
+      setSearching(false);
+    } else if (key.return) setSearching(false);
+    else if (key.backspace || key.delete) setSearch((q) => q.slice(0, -1));
+    else if (input && !key.ctrl && !key.meta) setSearch((q) => q + input);
+    setScroll(0);
+  };
+
   useInput((input, key) => {
-    if (input === "q" || key.escape || (key.ctrl && input === "c")) {
+    if (key.ctrl && input === "c") {
+      exit();
+      return;
+    }
+    if (searching) {
+      editSearch(input, key);
+      return;
+    }
+    if (current === "Waterfall" && key.escape && search) {
+      setSearch("");
+      setScroll(0);
+      return;
+    }
+    if (input === "q" || key.escape) {
       exit();
       return;
     }
@@ -202,9 +273,17 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       else if (!compare && pageCount > 1) movePage(delta);
     } else if (key.downArrow) scrollTo(scroll + 1);
     else if (key.upArrow) scrollTo(scroll - 1);
-    else if (key.pageDown || input === " ") scrollTo(scroll + viewport);
-    else if (key.pageUp) scrollTo(scroll - viewport);
-    else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
+    else if (key.pageDown || input === " ") scrollTo(scroll + rowsViewport);
+    else if (key.pageUp) scrollTo(scroll - rowsViewport);
+    else if (input === "/" && current === "Waterfall") {
+      setSearching(true);
+      setScroll(0);
+    } else if (input === "f" && current === "Waterfall") {
+      setParty(nextParty);
+      setScroll(0);
+    } else if (input === "z" && current === "Waterfall") {
+      setAxis((a) => (a === "end" ? "load" : "end"));
+    } else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
       movePage(input === "p" ? 1 : -1);
     } else if ((input === "a" || input === "b") && compare) {
       setSide(input);
@@ -214,25 +293,35 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
 
   const context = compare
     ? sided(current)
-      ? `${current === "Findings" ? "Findings" : "Cache"} · ${side.toUpperCase()} ${names[side]}`
+      ? `${current === "Cache & network" ? "Cache" : current} · ${side.toUpperCase()} ${names[side]}`
       : `A ${names.a} · B ${names.b}`
     : pageLabel(flow, page);
   const pages =
     !compare && pageCount > 1 ? { names: flow.pages.map((p) => p.name), current: page } : null;
   const header = headerLines(width, version, context, tab, pages);
-  const visible = region.slice(scroll, scroll + viewport);
+  const scrolled = region.slice(pinned);
+  const visible = [...region.slice(0, pinned), ...scrolled.slice(scroll, scroll + rowsViewport)];
 
-  const help = [
-    `1-${TABS.length}/Tab tabs`,
-    current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
-    maxScroll > 0 ? "↑/↓ PgUp/PgDn scroll" : null,
-    compare && sided(current) ? "a/b side" : null,
-    "q quit",
-  ]
-    .filter(Boolean)
-    .join("  ·  ");
-  const position =
-    maxScroll > 0 ? `${scroll + 1}-${scroll + visible.length}/${region.length} ` : "";
+  const waterfallHelp = searching
+    ? ["type to search", "Enter keep", "Esc clear"]
+    : current === "Waterfall"
+      ? ["/ search", "f party", "z axis", search ? "Esc clear search" : null]
+      : [];
+  const help = searching
+    ? waterfallHelp.join("  ·  ")
+    : [
+        `1-${TABS.length}/Tab tabs`,
+        current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
+        maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn scroll") : null,
+        compare && sided(current) ? "a/b side" : null,
+        ...waterfallHelp,
+        "q quit",
+      ]
+        .filter(Boolean)
+        // Narrow terminals get a tighter separator, so that the help fits beside the position.
+        .join(width < 100 ? " · " : "  ·  ");
+  const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - scroll));
+  const position = maxScroll > 0 ? `${scroll + 1}-${scroll + shownRows}/${scrolled.length} ` : "";
   const statusText = ` ${help}`;
   const statusGap = Math.max(1, width - statusText.length - position.length);
   const status: Line = [seg(`${statusText}${" ".repeat(statusGap)}${position}`, { inverse: true })];
@@ -243,7 +332,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         <LineView key={`h${i}`} line={line} />
       ))}
       {visible.map((line, i) => (
-        <LineView key={scroll + i} line={line} />
+        <LineView key={i < pinned ? `p${i}` : scroll + i} line={line} />
       ))}
       {Array.from({ length: viewport - visible.length }, (_, i) => (
         <Text key={`pad-${i}`}> </Text>

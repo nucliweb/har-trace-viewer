@@ -204,7 +204,7 @@ describe("--help, --version and --output (built CLI)", () => {
     expect(res.stdout).toContain("--bundle");
     expect(res.stdout).toContain("Example");
     expect(res.stdout).toContain("tui | html | json | findings");
-    expect(res.stdout).toContain("findings, metrics, steps");
+    expect(res.stdout).toContain("findings, waterfall,");
   });
 
   it("prints the package.json version and exits 0 with --version", () => {

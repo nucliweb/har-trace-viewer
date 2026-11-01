@@ -383,9 +383,9 @@ Analyzes HAR and Chrome trace files: browses the report in the terminal, writes 
 self-contained HTML report to share, or writes JSON for other tools and AI agents.
 
 Output (where the report goes):
-  (no --output)       Browse the report in the terminal: findings, metrics, steps,
-                      hosts and cache & network, one tab each. Needs an interactive
-                      terminal.
+  (no --output)       Browse the report in the terminal: findings, waterfall,
+                      metrics, steps, hosts and cache & network, one tab each.
+                      Needs an interactive terminal.
   -o, --output <path> file.html: a single self-contained HTML file that opens offline.
                       file.json: the full analysis as JSON.
                       Any other path: a directory with index.html and its assets.

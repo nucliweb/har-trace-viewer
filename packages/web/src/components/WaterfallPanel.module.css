@@ -1,0 +1,589 @@
+.panel {
+  /* Phase colours, after DevTools' network timing: queueing grey, DNS teal, connection orange,
+     TLS purple, request green, waiting green, download blue. */
+  --phase-blocked: light-dark(#8494a8, #4f6276);
+  --phase-dns: light-dark(#0b8a8c, #22c4c4);
+  --phase-connect: light-dark(#c25e00, #ff9f40);
+  --phase-ssl: light-dark(#7b3fc4, #b78dff);
+  --phase-send: light-dark(#6aa84f, #8fe388);
+  --phase-wait: light-dark(#2e7d32, #2fd17a);
+  --phase-receive: light-dark(#1565c0, #4da3ff);
+
+  /* The request columns before the time axis, and where the axis starts in a row. */
+  --col-name: 200px;
+  --col-type: 72px;
+  --col-status: 44px;
+  --col-size: 64px;
+  --row-pad: 12px;
+  --col-gap: 8px;
+  --info: calc(
+    var(--row-pad) + var(--col-name) + var(--col-type) + var(--col-status) + var(--col-size) + 4 *
+      var(--col-gap)
+  );
+
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1040px;
+  max-width: 100%;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border2);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  animation: slideIn 180ms ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.headerTitle {
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-cyan);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pageLabel {
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeBtn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+/* ── Filter bar ─────────────────────────────────────────────────────────────── */
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.chips,
+.fields,
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.chip {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border2);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.chip:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.chipActive {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 10%, transparent);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--color-text2);
+}
+
+.select,
+.search {
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.select {
+  max-width: 200px;
+}
+
+.search {
+  flex: 1;
+  min-width: 140px;
+}
+
+.select:focus-visible,
+.search:focus-visible,
+.chip:focus-visible,
+.more:focus-visible,
+.body:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 1px;
+}
+
+.legend {
+  gap: var(--space-sm);
+  font-size: 11px;
+  color: var(--color-text2);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.swatchCached {
+  border: 1.5px solid var(--phase-receive);
+  background: transparent;
+}
+
+.count {
+  margin: 0;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+}
+
+/* ── Rows ───────────────────────────────────────────────────────────────────── */
+
+/* Scrolls both ways: on a phone the rows keep their columns and the axis its width. */
+.body {
+  overflow: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border2) transparent;
+}
+
+.table {
+  position: relative;
+  min-width: calc(var(--info) + 360px + var(--row-pad));
+  padding-bottom: var(--space-md);
+}
+
+.rulerRow,
+.row {
+  display: grid;
+  grid-template-columns:
+    var(--col-name) var(--col-type) var(--col-status) var(--col-size)
+    minmax(0, 1fr);
+  column-gap: var(--col-gap);
+  align-items: center;
+  padding: 0 var(--row-pad);
+}
+
+.rulerRow {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  align-items: end;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.headCell {
+  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text2);
+}
+
+.ruler {
+  position: relative;
+  height: calc(18px + var(--lanes, 1) * 15px);
+}
+
+.tick {
+  position: absolute;
+  bottom: 0;
+  padding: 0 0 3px 3px;
+  border-left: 1px solid var(--color-border2);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+/* Labels above the ticks, one lane per row of labels so that close marks do not overlap. */
+.markLabel {
+  position: absolute;
+  top: calc(var(--lane, 0) * 15px);
+  padding-left: 3px;
+  border-left: 2px solid currentColor;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.markLabelEnd {
+  transform: translateX(-100%);
+  padding: 0 3px 0 0;
+  border-left: none;
+  border-right: 2px solid currentColor;
+}
+
+.markLines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.markLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--info) + (100% - var(--info) - var(--row-pad)) * var(--at));
+  border-left: 1px dashed currentColor;
+  opacity: 0.7;
+}
+
+.mark_ttfb {
+  color: var(--color-cyan);
+}
+.mark_fcp {
+  color: var(--color-green);
+}
+.mark_lcp {
+  color: var(--color-orange);
+}
+.mark_dcl {
+  color: var(--phase-receive);
+}
+.mark_onLoad {
+  color: var(--color-red);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  position: relative;
+}
+
+.row {
+  width: 100%;
+  min-height: 24px;
+  margin: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  text-align: left;
+  cursor: default;
+}
+
+.row:hover,
+.rowActive {
+  background: color-mix(in srgb, var(--color-cyan) 7%, transparent);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: -2px;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell {
+  color: var(--color-text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.size {
+  text-align: right;
+}
+
+.statusError {
+  color: var(--color-red);
+  font-weight: 700;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.badgeLcp {
+  color: var(--color-orange);
+}
+
+.badgeBlocking {
+  color: var(--color-red);
+}
+
+/* Bars past the end of a zoomed axis are cut at its edge. */
+.track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+}
+
+.bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--phase-receive);
+}
+
+.bar > span {
+  flex-basis: 0;
+  min-width: 0;
+}
+
+/* Served by the browser cache: nothing crossed the network, so the bar is hollow. */
+.barCached {
+  background: transparent;
+  border: 1.5px solid var(--phase-receive);
+  box-sizing: border-box;
+}
+
+.phase_blocked {
+  background: var(--phase-blocked);
+}
+.phase_dns {
+  background: var(--phase-dns);
+}
+.phase_connect {
+  background: var(--phase-connect);
+}
+.phase_ssl {
+  background: var(--phase-ssl);
+}
+.phase_send {
+  background: var(--phase-send);
+}
+.phase_wait {
+  background: var(--phase-wait);
+}
+.phase_receive {
+  background: var(--phase-receive);
+}
+
+.tooltip {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: var(--row-pad);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(460px, calc(100vw - 4 * var(--row-pad)));
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border2);
+  border-radius: 6px;
+  background: var(--color-panel);
+  box-shadow: 0 4px 16px color-mix(in srgb, #000 20%, transparent);
+  font-size: 12px;
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+.tooltipUrl {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.tooltipMeta {
+  color: var(--color-text2);
+  overflow-wrap: anywhere;
+}
+
+.tooltipNote {
+  color: var(--color-orange);
+  font-weight: 700;
+}
+
+.tooltipPhases {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-md);
+  margin-top: 4px;
+}
+
+.tooltipPhase {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltipValue {
+  text-align: right;
+  color: var(--color-text2);
+}
+
+.empty {
+  padding: var(--space-md);
+  font-size: 12px;
+  color: var(--color-text2);
+}
+
+.more {
+  margin: var(--space-sm) var(--row-pad) 0;
+  padding: 5px 12px;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.more:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+/* Phones: the diagram's canvas is too short for the rows, so the waterfall takes the whole
+   screen, and the type chips scroll sideways on one line. */
+@media (max-width: 640px) {
+  .panel {
+    --col-name: 140px;
+    --col-type: 64px;
+
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    border-left: none;
+    z-index: 50;
+  }
+
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chip {
+    flex-shrink: 0;
+  }
+
+  .chip,
+  .select,
+  .search,
+  .more {
+    min-height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+
+  .chip,
+  .closeBtn {
+    transition: none;
+  }
+}

@@ -25,7 +25,7 @@
   }
 }
 
-/* Toolbar: a right-aligned row above the diagram (Findings, Hops, Export, Metrics, Cache). */
+/* Toolbar: a right-aligned row above the diagram (Findings, Waterfall, Hops, Export, Metrics, Cache). */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -40,7 +40,8 @@
 .cacheBtn,
 .metricsBtn,
 .hopsBtn,
-.findingsBtn {
+.findingsBtn,
+.waterfallBtn {
   padding: 5px 12px;
   border: 1px solid var(--color-border2);
   border-radius: 4px;
@@ -59,7 +60,8 @@
 .cacheBtn:hover,
 .metricsBtn:hover,
 .hopsBtn:hover,
-.findingsBtn:hover {
+.findingsBtn:hover,
+.waterfallBtn:hover {
   border-color: var(--color-cyan);
   color: var(--color-cyan);
 }
@@ -74,7 +76,8 @@
   .cacheBtn,
   .metricsBtn,
   .hopsBtn,
-  .findingsBtn {
+  .findingsBtn,
+  .waterfallBtn {
     animation: none;
     transition: none;
   }
@@ -89,7 +92,8 @@
   .cacheBtn,
   .metricsBtn,
   .hopsBtn,
-  .findingsBtn {
+  .findingsBtn,
+  .waterfallBtn {
     min-height: 44px;
     padding: 0 12px;
   }

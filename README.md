@@ -23,19 +23,19 @@ A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`h
 
 The destination picks the format:
 
-| Command                          | Output                                                                                                                        |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `htv page.har`                   | Browses the report in the terminal: Findings, Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
-| `htv page.har -o r.html`         | A single self-contained HTML file with the interactive diagram, which opens offline                                           |
-| `htv page.har -o r.json`         | The full analysis as JSON                                                                                                     |
-| `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                             |
-| `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                |
-| `htv page.har --format markdown` | A [Markdown report](#markdown-csv-and-mermaid) to paste into a ticket or a doc, on stdout (or `-o report.md`)                 |
-| `htv page.har --format csv`      | One CSV row per request, on stdout (or `-o requests.csv`)                                                                     |
-| `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                   |
-| `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                        |
+| Command                          | Output                                                                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `htv page.har`                   | Browses the report in the terminal: Findings, Waterfall, Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
+| `htv page.har -o r.html`         | A single self-contained HTML file with the interactive diagram, which opens offline                                                      |
+| `htv page.har -o r.json`         | The full analysis as JSON                                                                                                                |
+| `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                                        |
+| `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                           |
+| `htv page.har --format markdown` | A [Markdown report](#markdown-csv-and-mermaid) to paste into a ticket or a doc, on stdout (or `-o report.md`)                            |
+| `htv page.har --format csv`      | One CSV row per request, on stdout (or `-o requests.csv`)                                                                                |
+| `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                              |
+| `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                                   |
 
-In the terminal, `1`–`5` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings or cache a comparison shows, and `q` quits.
+In the terminal, `1`–`6` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings, waterfall or cache a comparison shows, `/`, `f` and `z` search, filter and zoom the waterfall, and `q` quits.
 
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
 
@@ -99,6 +99,14 @@ The same findings open the terminal report, on the Findings tab (`1`), grouped b
 `--format csv` writes one row per request of every page, as RFC 4180 CSV with `\r\n` line endings and a header row: `page, side, url, host, type, method, status, protocol, encoding, from_cache, start_ms, blocked_ms, dns_ms, connect_ms, ssl_ms, send_ms, wait_ms, receive_ms, duration_ms, transfer_bytes, body_bytes, priority`. Times are ms with at most one decimal; a phase that did not apply (DNS on a reused connection) is empty, and `connect_ms` is the TCP handshake alone, with TLS in `ssl_ms`. `side` is `a` or `b` in a comparison and empty otherwise. `-o requests.csv` alone picks this format. The findings are not available as CSV; `--format findings` gives them as JSON, which any JSON tool converts to CSV.
 
 `--format mermaid` writes, per page, a fenced `mermaid` block with a sequence diagram of the document request: Browser, the GFW when `--region cn` draws it, the CDN edge (provider and PoP) and the origin (region), with the TTFB and the CDN cache status on the response. GitHub, GitLab and most doc tools render it. An `--output` takes `.md`, `.mmd` or `.mermaid`.
+
+### Waterfall
+
+The waterfall lays every request of a page on one time axis, sorted by start: its short name, type, status and size, and a bar split into its phases (blocked, DNS, connect, TLS, send, wait, receive), with the TLS handshake drawn after the TCP connection and the phases a reused connection skips left out. Browser-cache hits are drawn hollow. Vertical marks show the document's TTFB, FCP and LCP (from the trace), DOMContentLoaded and onLoad, and badges point at the LCP resource and the render-blocking requests (from the trace's render-blocking status, or inferred from the HAR's initiators and priorities without one).
+
+In the HTML report and the web app, the Waterfall button opens it for the current page (each diagram of a comparison has its own). Chips filter by resource type, the selects by first or third party and by host, and the search box by URL. The Axis select spans the whole recording or zooms on the page load (up to the last mark), when late requests such as beacons stretch the recording. Hovering or focusing a row shows its full URL and the duration of each phase; `↑`/`↓` move between rows. It renders 300 rows at a time, with a button for the next ones, so that a HAR of thousands of requests stays responsive.
+
+In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled to the terminal width: `░` blocked, `▒` DNS, connect and TLS, `█` request and wait, `▓` download and `╌` a cache hit, with `L` before the LCP resource and `B` before the render-blocking requests. The ruler marks `T` TTFB, `F` FCP, `L` LCP, `D` DCL and `O` onLoad, and stays in view while the rows scroll. `/` opens a search that filters the rows by URL (`Enter` keeps it, `Esc` clears it), `f` cycles first party, third party and all, and `z` zooms the axis on the page load and back (`›` points at the requests after it).
 
 ### Options
 
