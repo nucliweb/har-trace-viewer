@@ -3,6 +3,7 @@ import type {
   HarPage,
   InferredCacheHit,
   HarTiming,
+  OptionalTimingPhase,
   ParsedHar,
   PreconnectSource,
   ResourcePriority,
@@ -68,7 +69,10 @@ const ZERO_TIMING: RawHarTiming = {
   receive: 0,
 };
 
+const OPTIONAL_PHASES: readonly OptionalTimingPhase[] = ["blocked", "dns", "connect", "ssl"];
+
 function parseTiming(raw: RawHarTiming): HarTiming {
+  const notApplicable = OPTIONAL_PHASES.filter((phase) => raw[phase] < 0);
   return {
     blocked: normalizeMs(raw.blocked),
     dns: normalizeMs(raw.dns),
@@ -77,6 +81,7 @@ function parseTiming(raw: RawHarTiming): HarTiming {
     send: normalizeMs(raw.send),
     wait: normalizeMs(raw.wait),
     receive: normalizeMs(raw.receive),
+    ...(notApplicable.length > 0 ? { notApplicable } : {}),
   };
 }
 
@@ -439,6 +444,8 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
 
     return {
       url: e.request.url,
+      method: e.request.method,
+      ...(e._resourceType === "ping" ? { ping: true as const } : {}),
       startTime,
       duration: e.time,
       timing,

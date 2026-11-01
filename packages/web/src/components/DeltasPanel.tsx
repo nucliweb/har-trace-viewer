@@ -77,8 +77,8 @@ function HopRow({ pair }: { pair: HopPair }) {
       <td className={hopsStyles.num}>{a?.requests ?? 0}</td>
       <td className={hopsStyles.num}>{b?.requests ?? 0}</td>
       <DeltaCell text={formatDelta(requests, "count")} rating={rateDelta(requests)} />
-      <td className={hopsStyles.num}>{a ? formatMs(a.avgTtfbMs) : "—"}</td>
-      <td className={hopsStyles.num}>{b ? formatMs(b.avgTtfbMs) : "—"}</td>
+      <td className={hopsStyles.num}>{a ? formatMs(a.medianTtfbMs) : "—"}</td>
+      <td className={hopsStyles.num}>{b ? formatMs(b.medianTtfbMs) : "—"}</td>
       <td
         className={hopsStyles.num}
         title={
@@ -194,8 +194,8 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
               <th scope="col">Requests A</th>
               <th scope="col">Requests B</th>
               <th scope="col">Δ</th>
-              <th scope="col">Avg TTFB A</th>
-              <th scope="col">Avg TTFB B</th>
+              <th scope="col">Median TTFB A</th>
+              <th scope="col">Median TTFB B</th>
               <th scope="col" title="Requests both flows made to the same URL">
                 Same URLs
               </th>

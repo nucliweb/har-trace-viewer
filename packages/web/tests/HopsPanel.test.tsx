@@ -95,9 +95,60 @@ describe("HopsPanel", () => {
     expect(columns).toContain("Cached");
     expect(cell("static\\.example\\.com", "Requests")).toBe("1");
     expect(cell("static\\.example\\.com", "Cached")).toBe("1");
-    expect(cell("static\\.example\\.com", "Avg TTFB")).toBe("80 ms");
+    expect(cell("static\\.example\\.com", "Median TTFB")).toBe("80 ms");
     expect(cell("fonts\\.example\\.net", "Requests")).toBe("0");
-    expect(cell("fonts\\.example\\.net", "Avg TTFB")).toBe("n/a");
+    expect(cell("fonts\\.example\\.net", "Median TTFB")).toBe("n/a");
+  });
+
+  it("shows the median TTFB before and after onLoad, leaving beacons aside", () => {
+    const later: ParsedHar = {
+      ...har,
+      entries: [
+        doc,
+        entry("https://static.example.com/a.js", { ttfb: 20, startTime: 50 }),
+        entry("https://static.example.com/b.js", { ttfb: 40, startTime: 60 }),
+        entry("https://static.example.com/c.js", { ttfb: 900, startTime: 70, method: "POST" }),
+        entry("https://static.example.com/lazy.js", { ttfb: 300, startTime: 900 }),
+      ],
+    };
+    render(<HopsPanel hops={analyzeHops(later, doc.url)} pageLabel="Page 1" onClose={noop} />);
+    const table = screen.getByRole("table", { name: "Hops per host" });
+    const columns = within(table)
+      .getAllByRole("columnheader")
+      .map((th) => th.textContent);
+    const row = within(table).getByRole("row", { name: /^static\.example\.com/ });
+    const cell = (column: string) =>
+      within(row).getAllByRole("cell")[columns.indexOf(column) - 1].textContent;
+
+    expect(cell("Median TTFB")).toBe("30 ms");
+    expect(cell("After onLoad")).toBe("300 ms");
+  });
+
+  it("shows a connection phase that did not happen as n/a", () => {
+    const plain = entry("http://plain.example.org/a.js", {
+      timing: {
+        dns: 5,
+        connect: 15,
+        ssl: 0,
+        send: 0,
+        wait: 50,
+        receive: 0,
+        blocked: 0,
+        notApplicable: ["ssl"],
+      },
+    });
+    render(
+      <HopsPanel
+        hops={analyzeHops({ ...har, entries: [doc, plain] }, doc.url)}
+        pageLabel="Page 1"
+        onClose={noop}
+      />
+    );
+    const table = screen.getByRole("table", { name: "Hops per host" });
+
+    expect(within(table).getByRole("row", { name: /^plain\.example\.org/ })).toHaveTextContent(
+      "5 ms / 15 ms / n/a"
+    );
   });
 
   it("shows the page label and the summary line", () => {

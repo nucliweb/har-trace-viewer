@@ -1,4 +1,11 @@
-import { formatBytes, formatMs, rateMetric, summarizeFlowMetrics } from "@htv/core";
+import {
+  SERVER_WAIT_LABEL,
+  TTFB_LABEL,
+  formatBytes,
+  formatMs,
+  rateMetric,
+  summarizeFlowMetrics,
+} from "@htv/core";
 import type { Flow, MetricRating, PageMetricsSummary } from "@htv/core";
 import { useMemo } from "react";
 import styles from "./MetricsSummary.module.css";
@@ -21,7 +28,12 @@ interface Row {
 }
 
 const ROWS: Row[] = [
-  { label: "TTFB", metric: "ttfb", value: (p) => p.ttfb, format: (p) => formatMs(p.ttfb) },
+  { label: TTFB_LABEL, metric: "ttfb", value: (p) => p.ttfb, format: (p) => formatMs(p.ttfb) },
+  {
+    label: SERVER_WAIT_LABEL,
+    value: (p) => p.serverWait,
+    format: (p) => formatMs(p.serverWait),
+  },
   { label: "FCP", metric: "fcp", value: (p) => p.fcp, format: (p) => formatMs(p.fcp) },
   { label: "LCP", metric: "lcp", value: (p) => p.lcp, format: (p) => formatMs(p.lcp) },
   { label: "CLS", metric: "cls", value: (p) => p.cls, format: (p) => formatCls(p.cls) },

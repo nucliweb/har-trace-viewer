@@ -8,7 +8,14 @@ export interface HarTiming {
   wait: number;
   receive: number;
   blocked: number;
+  // Phases the HAR marked -1, "does not apply": a request over a connection the browser
+  // already had open skips dns, connect and ssl; plain HTTP skips ssl. Their value above is
+  // 0, so sums still hold. Absent when every phase applied, and in flows parsed before it.
+  notApplicable?: OptionalTimingPhase[];
 }
+
+// The timing phases a HAR may mark -1 (not applicable).
+export type OptionalTimingPhase = "blocked" | "dns" | "connect" | "ssl";
 
 export type ResourceType =
   "document" | "stylesheet" | "script" | "image" | "font" | "fetch" | "other";
@@ -17,6 +24,9 @@ export type PreconnectSource = "link-header" | "early-hints";
 
 export interface HarEntry {
   url: string;
+  method?: string; // request method; absent in flows parsed before it was kept
+  // Chrome's "ping" resource type: navigator.sendBeacon or <a ping>. Absent otherwise.
+  ping?: true;
   startTime: number; // ms relative to first entry startedDateTime
   duration: number; // ms total
   timing: HarTiming;
@@ -115,7 +125,14 @@ export interface DiagramNode {
   subLabel?: string;
   present: boolean;
   region?: NetworkRegion;
-  resourceStats?: { count: number; avgMs?: number; label?: string };
+  resourceStats?: {
+    count: number;
+    avgMs?: number;
+    // What avgMs measures: the mean request duration when absent; "median-ttfb" on third-party
+    // nodes, the median TTFB of the requests that loaded the page (see ThirdPartyCluster).
+    avgMsKind?: "median-ttfb";
+    label?: string;
+  };
 }
 
 export type PathId =
@@ -224,7 +241,10 @@ export interface ThirdPartyCluster {
   // Hostnames, busiest first (in order of first request on a tie).
   hosts: string[];
   requests: number;
-  avgMs: number;
+  // Median TTFB of the requests sent before onLoad, beacons (POST, ping, 204/205) and 304
+  // revalidations aside; null when none qualifies. Flows generated before it measured the
+  // mean duration of every request: the name stays so their shape does not change.
+  avgMs: number | null;
   bytes: number; // transfer size
   hitRatio: number; // CDN cache hits / requests, 0 without a CDN
 }

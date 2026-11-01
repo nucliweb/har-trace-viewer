@@ -35,7 +35,10 @@ function statsText(node: DiagramNode): string {
   // Flows older than the cache node counted the cache hits on the browser.
   if (node.id === "browser") return `${stats.count} cached`;
   const base = `${stats.count} ${stats.label ?? "req"}`;
-  return stats.avgMs !== undefined ? `${base} · avg ${Math.round(stats.avgMs)}ms` : base;
+  if (stats.avgMs === undefined) return base;
+  // A third-party node's figure is its median TTFB: "median" does not fit a stacked caption.
+  const measure = stats.avgMsKind === "median-ttfb" ? "TTFB" : "avg";
+  return `${base} · ${measure} ${Math.round(stats.avgMs)}ms`;
 }
 
 // Caption baselines below the node centre: under the glyph, or beside a stacked cluster

@@ -1,6 +1,9 @@
+import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
+import { SERVER_WAIT_LABEL, TTFB_LABEL } from "../analysis/metrics-summary.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { tcpConnectMs } from "../utils/timing.js";
 import { isOwnNetworkResource } from "../analysis/network-requests.js";
+import { phaseMs, reusesConnection } from "../utils/timing.js";
 import {
   detectCdnPopCity,
   detectCdnRegion,
@@ -11,7 +14,12 @@ import {
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
-import { clusterNode, clusterPath, clusterThirdParties } from "./third-party-clusters.js";
+import {
+  clusterNode,
+  clusterPath,
+  clusterThirdParties,
+  ttfbCaption,
+} from "./third-party-clusters.js";
 import { firstStart, sortByTimeline, type TimedItem } from "./timeline.js";
 import type {
   ClientRegion,
@@ -63,6 +71,7 @@ const TRANSITION_TITLE_PREFIX = "→ User navigates to ";
 
 const KIND_BY_TITLE: Record<string, StepKind> = {
   "DNS + initial connection": "connection",
+  "Connection reused": "connection",
   "First request in flight": "request",
   "TTFB — First byte received": "ttfb",
   "Critical resources loading": "critical",
@@ -386,7 +395,10 @@ function describePage(har: ParsedHar): PageContext {
     hasCdn: cdnResult.type === "edge",
     documentRoot,
     thirdPartyEntries,
-    thirdPartyClusters: clusterThirdParties(thirdPartyEntries.filter((e) => e.fromCache === false)),
+    thirdPartyClusters: clusterThirdParties(
+      thirdPartyEntries.filter((e) => e.fromCache === false),
+      har.pages[0]?.onLoad ?? null
+    ),
     cacheEntries: har.entries.filter((e) => e !== har.documentEntry && e.fromCache !== false),
   };
 }
@@ -427,8 +439,10 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   // ── Fixed prologue: nothing can be fetched before the document is requested
   // and its first byte arrives (an Early-Hints preload is the one exception,
   // and it still reads better after the connection steps).
+  // A DNS phase the HAR marks -1 did not happen: the browser already had the address.
+  const dnsMs = phaseMs(documentEntry.timing, "dns");
   const connectionMetrics = [
-    { label: "DNS", value: formatMs(dns) },
+    ...(dnsMs === null ? [] : [{ label: "DNS", value: formatMs(dnsMs) }]),
     { label: "TCP connect", value: formatMs(tcp) },
   ];
   if (ssl > 0) connectionMetrics.push({ label: "TLS", value: formatMs(ssl) });
@@ -443,7 +457,11 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     metrics: connectionMetrics,
   };
 
-  const reqConnectionLabel = `DNS ${formatMs(dns)} · TCP ${formatMs(tcp)}${ssl > 0 ? ` · TLS ${formatMs(ssl)}` : ""}`;
+  const reqConnectionLabel = [
+    ...(dnsMs === null ? [] : [`DNS ${formatMs(dnsMs)}`]),
+    `TCP ${formatMs(tcp)}`,
+    ...(ssl > 0 ? [`TLS ${formatMs(ssl)}`] : []),
+  ].join(" · ");
   const firstPath = firstActivePath(hasCdn, hasGfw);
   // A document the CDN served from its cache never reaches the origin.
   const documentToOrigin = reachesOrigin(hasCdn, [documentEntry]);
@@ -473,11 +491,36 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     timestamp: firstByteAt,
     activeNodes: serverNodes(hasCdn, hasGfw, documentToOrigin),
     activePaths: serverPaths(hasCdn, hasGfw, documentToOrigin),
-    metrics: [{ label: "TTFB", value: formatMs(documentEntry.ttfb) }],
-    pathTimings: { [firstPath]: `TTFB ${formatMs(documentEntry.ttfb)}` },
+    // TTFB counts from the navigation start, as the web.dev thresholds do: whatever came before
+    // the document request (redirects), the connection and the request. The server wait (HAR
+    // `wait`) is only its last part.
+    metrics: [
+      { label: TTFB_LABEL, value: formatMs(firstByteAt) },
+      { label: SERVER_WAIT_LABEL, value: formatMs(documentEntry.ttfb) },
+    ],
+    pathTimings: { [firstPath]: `${SERVER_WAIT_LABEL} ${formatMs(documentEntry.ttfb)}` },
     pathDirections: serverPathDirections(hasCdn, hasGfw, "response", documentToOrigin),
-    badge: { type: "ttfb", value: formatMs(documentEntry.ttfb), node: "browser" },
+    badge: { type: "ttfb", value: formatMs(firstByteAt), node: "browser" },
   };
+
+  // A document sent over a connection the browser already had open (the HAR marks its TCP
+  // connect -1) resolved nothing and shook no hands: its first step says so instead of
+  // narrating a 0 ms handshake.
+  const prologue: PageStep[] = reusesConnection(documentEntry.timing)
+    ? [
+        {
+          kind: "connection",
+          title: "Connection reused",
+          description: `Browser reuses the connection it already had open to ${edgeLabel}: no DNS lookup, TCP or TLS handshake.`,
+          timestamp: documentEntry.startTime,
+          activeNodes: ["browser"],
+          activePaths: [],
+          metrics: [{ label: "Connection", value: "reused" }],
+        },
+        { ...requestStep, pathTimings: { [firstPath]: "connection reused" } },
+        ttfbStep,
+      ]
+    : [connectionStep, requestStep, ttfbStep];
 
   // ── Timeline: resource groups and paints, ordered by when they happen.
   // A group is one step whose timestamp is its first request; resources that
@@ -624,15 +667,18 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     ];
     if (thirdPartyCache.length > 0)
       thirdPartyMetrics.push({ label: "From cache", value: String(thirdPartyCache.length) });
-    const timing = (requests: number, ms: number) => `${requests} req · avg ${formatMs(ms)}`;
-    // Several clusters: every cluster node and its path light up, each path with its average
-    // (the cluster's caption carries its request count).
+    const timing = (requests: number, ms: number | null) =>
+      ms === null ? `${requests} req` : `${requests} req · ${ttfbCaption(ms)}`;
+    // Several clusters: every cluster node and its path light up, each path with its median
+    // TTFB when it has one (the cluster's caption carries its request count).
     const thirdPartyHops = hasClusterNodes(thirdPartyClusters)
       ? {
           activeNodes: ["browser" as const, ...thirdPartyClusters.map((c) => clusterNode(c).id)],
           activePaths: thirdPartyClusters.map((c) => clusterPath(c).id),
           pathTimings: Object.fromEntries(
-            thirdPartyClusters.map((c) => [clusterPath(c).id, `avg ${formatMs(c.avgMs)}`])
+            thirdPartyClusters.flatMap((c) =>
+              c.avgMs === null ? [] : [[clusterPath(c).id, ttfbCaption(c.avgMs)]]
+            )
           ),
         }
       : {
@@ -643,7 +689,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
               ? {
                   "browser-third-parties": timing(
                     thirdPartyNetwork.length,
-                    avgMs(thirdPartyNetwork)
+                    medianTtfbByLoad(thirdPartyNetwork, page.onLoad).beforeLoad
                   ),
                 }
               : {},
@@ -700,7 +746,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     cacheEntries
   );
 
-  return [connectionStep, requestStep, ttfbStep, ...sortByTimeline(timeline), loadedStep];
+  return [...prologue, ...sortByTimeline(timeline), loadedStep];
 }
 
 function generateTransitionStep(fromPage: string, toPage: string): PageStep {
@@ -767,9 +813,11 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
         label: hasCdn ? "CDN miss" : undefined,
       };
     } else if (node.id === "third-parties" && thirdPartyNetworkEntries.length > 0) {
+      const onLoad = har.pages[0]?.onLoad ?? null;
+      const ttfb = medianTtfbByLoad(thirdPartyNetworkEntries, onLoad).beforeLoad;
       node.resourceStats = {
         count: thirdPartyNetworkEntries.length,
-        avgMs: avgMs(thirdPartyNetworkEntries),
+        ...(ttfb === null ? {} : { avgMs: ttfb, avgMsKind: "median-ttfb" as const }),
       };
     }
   }

@@ -58,8 +58,18 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
               </th>
               <th scope="col">Bytes</th>
               <th scope="col">Hit ratio</th>
-              <th scope="col">Avg TTFB</th>
-              <th scope="col">DNS / TCP / TLS</th>
+              <th
+                scope="col"
+                title="Median TTFB of the requests sent before onLoad, beacons (POST, ping, 204/205) and 304 revalidations aside"
+              >
+                Median TTFB
+              </th>
+              <th scope="col" title="Median TTFB of the requests sent after onLoad, beacons aside">
+                After onLoad
+              </th>
+              <th scope="col" title="First new connection; n/a for a phase that did not happen">
+                DNS / TCP / TLS
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -81,7 +91,8 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
                   <td className={styles.num}>{hop.browserCacheHits}</td>
                   <td className={styles.num}>{formatBytes(hop.bytes)}</td>
                   <td className={styles.num}>{judged ? pct(hop.hitRatio) : "n/a"}</td>
-                  <td className={styles.num}>{formatMs(hop.avgTtfbMs)}</td>
+                  <td className={styles.num}>{formatMs(hop.medianTtfbMs)}</td>
+                  <td className={styles.num}>{formatMs(hop.afterLoadMedianTtfbMs)}</td>
                   <td className={styles.num}>{formatConnection(hop)}</td>
                 </tr>
               );

@@ -21,6 +21,7 @@ import type {
   Flow,
   FlowComparison,
   HarEntry,
+  HostHop,
   StepPair,
 } from "@htv/core";
 import {
@@ -86,9 +87,9 @@ function nodeRows(flow: Flow, pageIndex: number): Line[] {
     nodes.map((node) => {
       const stats = node.resourceStats;
       const detail = [node.subLabel, stats?.label].filter(Boolean).join(" · ");
-      const requests = stats
-        ? `${stats.count}${stats.avgMs !== undefined ? ` · avg ${formatMs(stats.avgMs)}` : ""}`
-        : "";
+      const measure = stats?.avgMsKind === "median-ttfb" ? "median TTFB" : "avg";
+      const average = stats?.avgMs !== undefined ? ` · ${measure} ${formatMs(stats.avgMs)}` : "";
+      const requests = stats ? `${stats.count}${average}` : "";
       return [seg(node.label, { bold: true }), detail, requests];
     })
   );
@@ -334,7 +335,16 @@ export function pairStepsRegion(
 
 // ── Hosts ─────────────────────────────────────────────────────────────────────
 
-/** Every host of a page: requests, browser-cache hits, bytes, TTFB, CDN cache hits, provider and PoP. */
+/** "DNS / TCP / TLS" of the host's first new connection, a phase that did not happen as n/a. */
+function connectionCost(hop: HostHop): string {
+  const c = hop.connection;
+  return c ? [c.dns, c.connect, c.ssl].map(formatMs).join(" / ") : "reused";
+}
+
+/**
+ * Every host of a page: requests, browser-cache hits, bytes, median TTFB before and after
+ * onLoad, connection cost, CDN cache hits, provider and PoP.
+ */
 export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const { har } = flow.pages[pageIndex];
   const hops = analyzeHops(har, har.documentEntry.url);
@@ -346,7 +356,9 @@ export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[
         "Requests",
         "Cached",
         "Transfer",
-        "Avg TTFB",
+        "Median TTFB",
+        "After onLoad",
+        "DNS / TCP / TLS",
         "CDN hits",
         "Provider",
         "PoP",
@@ -357,13 +369,27 @@ export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[
         String(hop.requests),
         String(hop.browserCacheHits),
         formatBytes(hop.bytes),
-        formatMs(hop.avgTtfbMs),
+        formatMs(hop.medianTtfbMs),
+        formatMs(hop.afterLoadMedianTtfbMs),
+        connectionCost(hop),
         hop.cacheHits + hop.cacheMisses > 0 ? pct(hop.hitRatio) : "n/a",
         hop.providerName,
         hop.pop ? `${hop.pop.city} (${hop.pop.code.toUpperCase()})` : "",
         hop.party,
       ]),
-      ["left", "right", "right", "right", "right", "right", "left", "left", "left"]
+      [
+        "left",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "left",
+        "left",
+        "left",
+      ]
     ),
     width
   );
@@ -384,8 +410,8 @@ export function hostDeltaRegion(
         "Req A",
         "Req B",
         "Δ",
-        "Avg TTFB A",
-        "Avg TTFB B",
+        "Median TTFB A",
+        "Median TTFB B",
         "Same URLs",
         "Δ TTFB",
         "Provider",
@@ -398,8 +424,8 @@ export function hostDeltaRegion(
           String(a?.requests ?? 0),
           String(b?.requests ?? 0),
           seg(formatDelta(requests, "count"), { color: DELTA_COLOR[rateDelta(requests)] }),
-          a ? formatMs(a.avgTtfbMs) : "—",
-          b ? formatMs(b.avgTtfbMs) : "—",
+          a ? formatMs(a.medianTtfbMs) : "—",
+          b ? formatMs(b.medianTtfbMs) : "—",
           String(sameUrls?.count ?? 0),
           seg(ttfb === null ? "" : formatDelta(ttfb, "ms"), {
             color: DELTA_COLOR[rateDelta(ttfb)],

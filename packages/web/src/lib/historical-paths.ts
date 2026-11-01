@@ -5,7 +5,7 @@ import type { HistoricalPath } from "../types.js";
 // Historical paths already have node-level resource stats; keeping per-step counts
 // creates misleading comparisons (e.g. "45 secondary resources" vs "102 3rd-party req").
 function toHistoricalTiming(timing: string): string {
-  return timing.replace(/^\d+ .+ · (avg .+)$/, "$1");
+  return timing.replace(/^\d+ .+ · ((?:avg|TTFB) .+)$/, "$1");
 }
 
 /** Paths lit by the earlier steps of the current step's page, with their last timing and direction. */

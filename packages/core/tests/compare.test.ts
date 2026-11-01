@@ -185,7 +185,8 @@ describe("compareFlows — metrics", () => {
     const { metrics } = compareFlows(firstView(), repeatView());
 
     expect(metrics.map((m) => m.label)).toEqual([
-      "TTFB",
+      "TTFB (from navigation)",
+      "Server wait",
       "FCP",
       "LCP",
       "CLS",
@@ -210,7 +211,8 @@ describe("compareFlows — metrics", () => {
       rating: "better",
     });
     expect(row("Requests")).toMatchObject({ a: 5, b: 1, delta: -4, rating: "better" });
-    expect(row("TTFB")).toMatchObject({ delta: 0, deltaPct: 0, rating: "same" });
+    expect(row("TTFB (from navigation)")).toMatchObject({ delta: 0, deltaPct: 0, rating: "same" });
+    expect(row("Server wait")).toMatchObject({ a: 50, b: 50, delta: 0, rating: "same" });
     expect(row("LCP")).toMatchObject({ a: 400, b: 250, rating: "better" });
   });
 
@@ -398,14 +400,14 @@ describe("compareStepMetrics", () => {
 });
 
 describe("compareFlows — caveats", () => {
-  it("warns that ratios and host averages cover other resources when the network requests differ", () => {
+  it("warns that ratios and host medians cover other resources when the network requests differ", () => {
     const { caveats } = compareFlows(firstView(), repeatView());
 
     expect(caveats).toEqual([
       {
         id: "request-mix",
         affects: ["cdnHitRatio", "hosts"],
-        text: "B made 4 fewer network requests than A (5 → 1): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.",
+        text: "B made 4 fewer network requests than A (5 → 1): the CDN hit ratio and the host medians are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.",
       },
     ]);
   });
@@ -446,6 +448,7 @@ describe("COMPARED_METRICS", () => {
   it("gives each compared metric its unit, in the order of the deltas", () => {
     expect(COMPARED_METRICS.map((m) => [m.key, m.unit])).toEqual([
       ["ttfb", "ms"],
+      ["serverWait", "ms"],
       ["fcp", "ms"],
       ["lcp", "ms"],
       ["cls", "score"],

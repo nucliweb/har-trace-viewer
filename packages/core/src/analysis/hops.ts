@@ -5,6 +5,8 @@ import type { CdnProvider, HarEntry, NetworkRegion, ParsedHar } from "../types.j
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { tcpConnectMs } from "../utils/timing.js";
 import { isBrowserCacheHit } from "./network-requests.js";
+import { phaseMs } from "../utils/timing.js";
+import { medianTtfbByLoad } from "./host-ttfb.js";
 
 export interface HostHop {
   host: string;
@@ -22,13 +24,18 @@ export interface HostHop {
   cacheMisses: number;
   /** hits / (hits + misses); 0 when no entry reported a cache status. */
   hitRatio: number;
-  /** Over the requests that reached the host; null when the browser cache served them all. */
-  avgTtfbMs: number | null;
+  /**
+   * Median TTFB of the requests that reached the host before onLoad, beacons (POST, ping,
+   * 204/205) and 304 revalidations aside; null when none did.
+   */
+  medianTtfbMs: number | null;
+  /** The same median over the requests sent after onLoad; null when none were. */
+  afterLoadMedianTtfbMs: number | null;
   /**
    * First non-zero connection timings seen for the host, `connect` the TCP handshake alone and
-   * `ssl` the TLS one; null when every entry reused a connection.
+   * `ssl` the TLS one, a phase that did not happen (plain HTTP has no TLS) as null; null when every entry reused a connection.
    */
-  connection: { dns: number; connect: number; ssl: number } | null;
+  connection: { dns: number | null; connect: number | null; ssl: number | null } | null;
   fromBrowserCache: boolean;
 }
 
@@ -52,7 +59,12 @@ function vote<T>(keys: T[]): T | undefined {
   return best;
 }
 
-function buildHop(host: string, entries: HarEntry[], documentRoot: string): HostHop {
+function buildHop(
+  host: string,
+  entries: HarEntry[],
+  documentRoot: string,
+  onLoad: number | null
+): HostHop {
   const nodes = entries.map((e) => detectNode(e.responseHeaders, e.url));
   // Entries without CDN headers (dynamic or bypassed responses) must not outvote a detected CDN.
   const detected = nodes.filter((n) => n.cdnProvider !== "unknown");
@@ -73,6 +85,7 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
     else if (status === "miss") cacheMisses++;
   }
   const judged = cacheHits + cacheMisses;
+  const ttfb = medianTtfbByLoad(network, onLoad);
 
   const handshake = network.find(
     (e) => e.timing.dns > 0 || e.timing.connect > 0 || e.timing.ssl > 0
@@ -90,13 +103,14 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
     cacheHits,
     cacheMisses,
     hitRatio: judged > 0 ? cacheHits / judged : 0,
-    avgTtfbMs:
-      network.length > 0 ? network.reduce((sum, e) => sum + e.ttfb, 0) / network.length : null,
+    medianTtfbMs: ttfb.beforeLoad,
+    afterLoadMedianTtfbMs: ttfb.afterLoad,
     connection: handshake
       ? {
-          dns: Math.max(handshake.timing.dns, 0),
-          connect: tcpConnectMs(handshake.timing),
-          ssl: Math.max(handshake.timing.ssl, 0),
+          dns: phaseMs(handshake.timing, "dns"),
+          connect:
+            phaseMs(handshake.timing, "connect") === null ? null : tcpConnectMs(handshake.timing),
+          ssl: phaseMs(handshake.timing, "ssl"),
         }
       : null,
     fromBrowserCache: network.length < entries.length,
@@ -106,6 +120,7 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
 /** One entry per hostname with its provider, PoP, cache and connection cost, busiest first. */
 export function analyzeHops(har: ParsedHar, documentUrl: string): HostHop[] {
   const documentRoot = getRootDomain(documentUrl);
+  const onLoad = har.pages[0]?.onLoad ?? null;
   const byHost = new Map<string, HarEntry[]>();
   for (const entry of har.entries) {
     const host = getHostname(entry.url);
@@ -115,7 +130,7 @@ export function analyzeHops(har: ParsedHar, documentUrl: string): HostHop[] {
     else byHost.set(host, [entry]);
   }
   return [...byHost]
-    .map(([host, entries]) => buildHop(host, entries, documentRoot))
+    .map(([host, entries]) => buildHop(host, entries, documentRoot, onLoad))
     .sort((a, b) => b.requests - a.requests || b.browserCacheHits - a.browserCacheHits);
 }
 

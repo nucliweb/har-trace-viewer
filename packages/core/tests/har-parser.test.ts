@@ -210,6 +210,68 @@ describe("parseHar — Firefox-style HAR", () => {
   });
 });
 
+describe("parseHar — timings that do not apply", () => {
+  const withTimings = (timings: Record<string, number>) => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/c.js", "text/javascript", {
+        timings: {
+          blocked: 1,
+          dns: 0,
+          connect: 0,
+          ssl: 0,
+          send: 1,
+          wait: 10,
+          receive: 2,
+          ...timings,
+        },
+      })
+    );
+    return parseHar(raw).entries.at(-1)!;
+  };
+
+  it("tells the phases a reused connection skipped (-1) apart from phases that took 0 ms", () => {
+    const { timing } = withTimings({ blocked: -1, dns: -1, connect: -1, ssl: -1 });
+
+    expect(timing.notApplicable).toEqual(["blocked", "dns", "connect", "ssl"]);
+    // Arithmetic over the phases still works: a phase that did not happen adds nothing.
+    expect([timing.blocked, timing.dns, timing.connect, timing.ssl]).toEqual([0, 0, 0, 0]);
+  });
+
+  it("marks only the phases that did not happen on a new plain-HTTP connection", () => {
+    const { timing } = withTimings({ dns: 12, connect: 30, ssl: -1 });
+
+    expect(timing.notApplicable).toEqual(["ssl"]);
+    expect([timing.dns, timing.connect]).toEqual([12, 30]);
+  });
+
+  it("leaves the marker out when every phase happened", () => {
+    expect(withTimings({ dns: 0, connect: 0, ssl: 0 }).timing.notApplicable).toBeUndefined();
+  });
+});
+
+describe("parseHar — beacons", () => {
+  const withRequest = (overrides: Record<string, unknown>) => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://stats.example.net/collect", "text/plain", overrides)
+    );
+    return parseHar(raw).entries.at(-1)!;
+  };
+
+  it("keeps the request method", () => {
+    expect(withRequest({}).method).toBe("GET");
+    expect(
+      withRequest({ request: { url: "https://stats.example.net/collect", method: "POST" } }).method
+    ).toBe("POST");
+  });
+
+  it("flags Chrome's ping resource type (navigator.sendBeacon, <a ping>)", () => {
+    expect(withRequest({ _resourceType: "ping" }).ping).toBe(true);
+    expect(withRequest({ _resourceType: "fetch" }).ping).toBeUndefined();
+  });
+});
+
 describe("parseHar — resource type inference", () => {
   const infer = (url: string, mimeType: string) => {
     const raw = firefoxHar();

@@ -43,11 +43,12 @@ describe("generateFlow — single page without trace", () => {
     expect(flow.steps).toHaveLength(7);
   });
 
-  it("step 1 is DNS with browser-only active nodes", () => {
+  it("step 1 is the connection, reused by the recorded reload, with browser-only active nodes", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
     const step = flow.steps[0];
 
-    expect(step.title).toContain("DNS");
+    expect(step.kind).toBe("connection");
+    expect(step.title).toBe("Connection reused");
     expect(step.activeNodes).toEqual(["browser"]);
     expect(step.activePaths).toEqual([]);
   });
@@ -58,7 +59,11 @@ describe("generateFlow — single page without trace", () => {
 
     expect(ttfbStep.title).toContain("TTFB");
     expect(ttfbStep.badge?.type).toBe("ttfb");
-    expect(ttfbStep.metrics.find((m) => m.label === "TTFB")?.value).toBe("49ms");
+    // blocked 1.8 + send 0.1 + wait 48.7: the reused connection adds nothing.
+    expect(ttfbStep.metrics).toEqual([
+      { label: "TTFB (from navigation)", value: "51ms" },
+      { label: "Server wait", value: "49ms" },
+    ]);
   });
 
   it("step 7 is onLoad with badge and metrics", () => {
@@ -421,14 +426,19 @@ describe("generateFlow — node resourceStats", () => {
     const ownEntry = makeEntry({ url: "https://example.com/a.css", fromCache: false });
     const thirdParty = makeEntry({
       url: "https://cdn.analytics.com/script.js",
-      duration: 120,
+      ttfb: 120,
       fromCache: false,
     });
     const flow = generateFlow([{ name: "Page", har: makeHar([ownEntry, thirdParty]) }]);
 
     const thirdParties = flow.nodes.find((n) => n.id === "third-parties")!;
-    expect(thirdParties.resourceStats?.count).toBe(1);
-    expect(thirdParties.resourceStats?.avgMs).toBe(120);
+    expect(thirdParties.resourceStats).toEqual({
+      count: 1,
+      avgMs: 120,
+      avgMsKind: "median-ttfb",
+    });
+    const step = flow.steps.find((s) => s.kind === "third-party")!;
+    expect(step.pathTimings).toEqual({ "browser-third-parties": "1 req · TTFB 120ms" });
   });
 });
 
@@ -1102,8 +1112,8 @@ describe("generateFlow — chronological steps", () => {
     const at = (needle: string) => flow.steps[indexOf(flow, needle)].timestamp;
 
     expect(at("DNS")).toBe(0);
-    // First byte = startTime + blocked + dns + connect (TLS included) + send + wait
-    // (the TTFB badge shows only the wait): 0 + 0 + 10 + 20 + 1 + 50.
+    // First byte = startTime + blocked + dns + connect (TLS included) + send + wait:
+    // 0 + 0 + 10 + 20 + 1 + 50.
     expect(at("TTFB")).toBe(81);
     expect(at("Critical")).toBe(60);
     expect(at("First Contentful")).toBe(90);
@@ -1162,6 +1172,70 @@ describe("generateFlow — chronological steps", () => {
   });
 });
 
+describe("generateFlow — a document sent over a reused connection", () => {
+  // The HAR marks dns, connect and ssl -1: the browser already had the connection open.
+  const reusedHar = () => {
+    const har = makeHar([criticalCss(60)]);
+    har.documentEntry.timing = {
+      ...har.documentEntry.timing,
+      dns: 0,
+      connect: 0,
+      ssl: 0,
+      notApplicable: ["dns", "connect", "ssl"],
+    };
+    return har;
+  };
+
+  it("says the connection was reused instead of narrating a 0 ms handshake", () => {
+    const [connection, request] = generateFlow([{ name: "Home", har: reusedHar() }]).steps;
+
+    expect(connection).toMatchObject({
+      kind: "connection",
+      title: "Connection reused",
+      description:
+        "Browser reuses the connection it already had open to Origin: no DNS lookup, TCP or TLS handshake.",
+      timestamp: 0,
+      activeNodes: ["browser"],
+      activePaths: [],
+      metrics: [{ label: "Connection", value: "reused" }],
+    });
+    expect(request.pathTimings).toEqual({ "browser-origin": "connection reused" });
+  });
+
+  it("leaves DNS out of a new connection whose address the browser already had", () => {
+    const har = makeHar([]);
+    har.documentEntry.timing = { ...har.documentEntry.timing, dns: 0, notApplicable: ["dns"] };
+    const [connection, request] = generateFlow([{ name: "Home", har }]).steps;
+
+    expect(connection.title).toBe("DNS + initial connection");
+    expect(connection.metrics.map((m) => m.label)).toEqual(["TCP connect"]);
+    expect(request.pathTimings).toEqual({ "browser-origin": "TCP 20ms" });
+  });
+
+  it("keeps narrating the handshake of a new connection", () => {
+    const [connection, request] = generateFlow([{ name: "Home", har: makeHar([]) }]).steps;
+
+    expect(connection.title).toBe("DNS + initial connection");
+    expect(connection.metrics).toContainEqual({ label: "DNS", value: "10ms" });
+    expect(request.pathTimings).toEqual({ "browser-origin": "DNS 10ms · TCP 20ms" });
+  });
+});
+
+describe("generateFlow — TTFB from the navigation start", () => {
+  it("shows the first byte from the navigation start, with the server wait apart", () => {
+    // startTime 0 + blocked 0 + dns 10 + connect 20 + send 1 + wait 50.
+    const flow = generateFlow([{ name: "Home", har: makeHar([]) }]);
+    const ttfb = flow.steps.find((s) => s.kind === "ttfb")!;
+
+    expect(ttfb.metrics).toEqual([
+      { label: "TTFB (from navigation)", value: "81ms" },
+      { label: "Server wait", value: "50ms" },
+    ]);
+    expect(ttfb.badge).toEqual({ type: "ttfb", value: "81ms", node: "browser" });
+    expect(ttfb.pathTimings).toEqual({ "browser-origin": "Server wait 50ms" });
+  });
+});
+
 describe("generateFlow — third-party clusters", () => {
   const thirdParty = (
     url: string,
@@ -1184,7 +1258,7 @@ describe("generateFlow — third-party clusters", () => {
       extra
     );
   const cloudfrontFra = (url: string) =>
-    thirdParty(url, { "x-amz-cf-pop": "FRA56-P1", "x-cache": "Hit from cloudfront" });
+    thirdParty(url, { "x-amz-cf-pop": "FRA56-P1", "x-cache": "Hit from cloudfront" }, { ttfb: 50 });
   const direct = (url: string) => thirdParty(url, {});
 
   function analyze(entries: HarEntry[], options: Parameters<typeof generateFlow>[1] = {}) {
@@ -1193,18 +1267,10 @@ describe("generateFlow — third-party clusters", () => {
   }
 
   const twoProviders = () => [
-    cloudflareLax(
-      "https://cdnjs.cloudflare.com/a.js",
-      { duration: 100, transferSize: 1000 },
-      "HIT"
-    ),
+    cloudflareLax("https://cdnjs.cloudflare.com/a.js", { ttfb: 100, transferSize: 1000 }, "HIT"),
     cloudfrontFra("https://d1.cloudfront.net/x.js"),
-    cloudflareLax(
-      "https://cdnjs.cloudflare.com/b.js",
-      { duration: 200, transferSize: 2000 },
-      "HIT"
-    ),
-    cloudflareLax("https://static.cfassets.com/c.js", { duration: 300, transferSize: 3000 }),
+    cloudflareLax("https://cdnjs.cloudflare.com/b.js", { ttfb: 200, transferSize: 2000 }, "HIT"),
+    cloudflareLax("https://static.cfassets.com/c.js", { ttfb: 300, transferSize: 3000 }),
     cloudfrontFra("https://d1.cloudfront.net/y.js"),
   ];
 
@@ -1233,6 +1299,47 @@ describe("generateFlow — third-party clusters", () => {
       hitRatio: 1,
     });
     expect(cloudflare.id).not.toBe(cloudfront.id);
+  });
+
+  it("takes the median TTFB of the requests that load the page, beacons and 304s aside", () => {
+    const { analysis } = analyze([
+      cloudflareLax("https://cdnjs.cloudflare.com/a.js", { ttfb: 20 }),
+      cloudflareLax("https://cdnjs.cloudflare.com/b.js", { ttfb: 30 }),
+      cloudflareLax("https://cdnjs.cloudflare.com/c.js", { ttfb: 400 }),
+      // Beacons, a revalidation and a request sent after onLoad (500 ms) do not load the page.
+      cloudflareLax("https://cdnjs.cloudflare.com/collect", { ttfb: 900, method: "POST" }),
+      cloudflareLax("https://cdnjs.cloudflare.com/beacon", { ttfb: 700, ping: true }),
+      cloudflareLax("https://cdnjs.cloudflare.com/pixel", { ttfb: 800, status: 204 }),
+      cloudflareLax("https://cdnjs.cloudflare.com/d.js", { ttfb: 2, status: 304 }),
+      cloudflareLax("https://cdnjs.cloudflare.com/late.js", { ttfb: 1000, startTime: 600 }),
+      cloudfrontFra("https://d1.cloudfront.net/x.js"),
+    ]);
+
+    expect(analysis.thirdPartyClusters[0]).toMatchObject({
+      label: "Cloudflare · LAX",
+      requests: 8,
+      avgMs: 30,
+    });
+  });
+
+  it("has no TTFB for a cluster that only sent beacons", () => {
+    const { flow, analysis } = analyze([
+      cloudflareLax("https://data.vendor.com/", { ttfb: 994, method: "POST", startTime: 8000 }),
+      cloudfrontFra("https://d1.cloudfront.net/x.js"),
+    ]);
+    const [cloudflare] = analysis.thirdPartyClusters;
+
+    expect(cloudflare).toMatchObject({ label: "Cloudflare · LAX", requests: 1, avgMs: null });
+    expect(analysis.nodes.find((n) => n.id === `third-parties:${cloudflare.id}`)).toMatchObject({
+      resourceStats: { count: 1 },
+    });
+    expect(
+      analysis.nodes.find((n) => n.id === `third-parties:${cloudflare.id}`)?.resourceStats
+    ).not.toHaveProperty("avgMs");
+    const step = flow.steps.find((s) => s.kind === "third-party")!;
+    expect(step.pathTimings).toEqual({
+      [`browser-third-parties:${analysis.thirdPartyClusters[1].id}`]: "TTFB 50ms",
+    });
   });
 
   it("labels third parties without a CDN as Direct", () => {
@@ -1438,7 +1545,7 @@ describe("generateFlow — third-party clusters", () => {
         subLabel: "Los Angeles",
         present: true,
         region: "united-states",
-        resourceStats: { count: 3, avgMs: 200 },
+        resourceStats: { count: 3, avgMs: 200, avgMsKind: "median-ttfb" },
       },
       {
         id: `third-parties:${cloudfront.id}`,
@@ -1446,7 +1553,7 @@ describe("generateFlow — third-party clusters", () => {
         subLabel: "Frankfurt",
         present: true,
         region: "europe",
-        resourceStats: { count: 2, avgMs: 50 },
+        resourceStats: { count: 2, avgMs: 50, avgMsKind: "median-ttfb" },
       },
     ]);
     expect(
@@ -1498,8 +1605,8 @@ describe("generateFlow — third-party clusters", () => {
       `browser-third-parties:${cloudfront.id}`,
     ]);
     expect(step.pathTimings).toEqual({
-      [`browser-third-parties:${cloudflare.id}`]: "avg 200ms",
-      [`browser-third-parties:${cloudfront.id}`]: "avg 50ms",
+      [`browser-third-parties:${cloudflare.id}`]: "TTFB 200ms",
+      [`browser-third-parties:${cloudfront.id}`]: "TTFB 50ms",
     });
     // Still one step: the sidebar lists every third-party request, grouped by domain.
     expect(step.resourceRefs).toHaveLength(5);

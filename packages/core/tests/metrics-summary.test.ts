@@ -7,6 +7,7 @@ import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
 import { rateMetric, summarizeFlowMetrics } from "../src/analysis/metrics-summary.js";
 import { firefoxEntry, firefoxHar } from "./helpers/firefox-har.js";
+import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
 import type { Flow } from "../src/types.js";
 
 const dir = join(fileURLToPath(new URL(".", import.meta.url)), "fixtures");
@@ -147,5 +148,33 @@ describe("rateMetric", () => {
     expect(rateMetric("lcp", undefined)).toBe("none");
     expect(rateMetric("onLoad", 99999)).toBe("none");
     expect(rateMetric("dcl", 10)).toBe("none");
+  });
+});
+
+describe("summarizeFlowMetrics — TTFB", () => {
+  it("measures TTFB from the navigation start and keeps the server wait apart", () => {
+    // Document: startTime 0 + blocked 0 + dns 10 + connect 20 + send 1 + wait 50.
+    const [page] = summarizeFlowMetrics(generateFlow([{ name: "Home", har: makeHar([]) }]));
+
+    expect(page.ttfb).toBe(81);
+    expect(page.serverWait).toBe(50);
+  });
+
+  it("counts a redirect before the document in the TTFB, not in the server wait", () => {
+    const har = makeHar([]);
+    const redirect = makeEntry({
+      url: "https://example.com/old",
+      startTime: 0,
+      status: 301,
+      mimeType: "",
+      resourceType: "other",
+    });
+    har.documentEntry.startTime = 120;
+    har.entries.unshift(redirect);
+
+    const [page] = summarizeFlowMetrics(generateFlow([{ name: "Home", har }]));
+
+    expect(page.ttfb).toBe(201);
+    expect(page.serverWait).toBe(50);
   });
 });

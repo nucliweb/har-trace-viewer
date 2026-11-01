@@ -25,8 +25,10 @@ function entry(
   } as HarEntry;
 }
 
-function har(entries: HarEntry[]): ParsedHar {
-  return { pages: [], entries, documentEntry: entries[0], preconnectHints: {} };
+function har(entries: HarEntry[], onLoad?: number): ParsedHar {
+  const pages =
+    onLoad === undefined ? [] : [{ id: "p", title: "", onContentLoad: null, onLoad: onLoad }];
+  return { pages, entries, documentEntry: entries[0], preconnectHints: {} };
 }
 
 const DOC = "https://www.example.com/";
@@ -182,6 +184,79 @@ describe("analyzeHops", () => {
     expect(connection("plain.other.net")).toEqual({ dns: 3, connect: 12, ssl: 0 });
   });
 
+  it("shows the connection phases that did not happen as null, not 0 ms", () => {
+    const hops = analyzeHops(
+      har([
+        // A new plain-HTTP connection whose DNS answer the browser already had.
+        entry("https://a.net/1", { timing: { connect: 30, notApplicable: ["dns", "ssl"] } }),
+        entry("https://a.net/2", {
+          timing: { notApplicable: ["blocked", "dns", "connect", "ssl"] },
+        }),
+        // Every request reused a connection: nothing to show but "reused".
+        entry("https://b.net/1", { timing: { notApplicable: ["dns", "connect", "ssl"] } }),
+      ]),
+      DOC
+    );
+
+    expect(hops.find((h) => h.host === "a.net")!.connection).toEqual({
+      dns: null,
+      connect: 30,
+      ssl: null,
+    });
+    expect(hops.find((h) => h.host === "b.net")!.connection).toBeNull();
+  });
+
+  it("takes the median TTFB per host, leaving beacons and 304 revalidations aside", () => {
+    const hops = analyzeHops(
+      har([
+        entry("https://a.net/1.js", { ttfb: 20 }),
+        entry("https://a.net/2.js", { ttfb: 30 }),
+        entry("https://a.net/3.js", { ttfb: 400 }),
+        entry("https://a.net/collect", { ttfb: 900, method: "POST" }),
+        entry("https://a.net/beacon", { ttfb: 800, ping: true }),
+        entry("https://a.net/pixel", { ttfb: 700, status: 204 }),
+        entry("https://a.net/reset", { ttfb: 600, status: 205 }),
+        entry("https://a.net/4.js", { ttfb: 1, status: 304 }),
+        entry("https://b.net/collect", { ttfb: 994, method: "POST" }),
+      ]),
+      DOC
+    );
+
+    // The mean of every request would be 333 ms; the median of 20, 30 and 400 is 30 ms.
+    expect(hops.find((h) => h.host === "a.net")).toMatchObject({
+      requests: 8,
+      medianTtfbMs: 30,
+    });
+    expect(hops.find((h) => h.host === "b.net")!.medianTtfbMs).toBeNull();
+  });
+
+  it("separates the requests sent after onLoad from the ones that loaded the page", () => {
+    const hops = analyzeHops(
+      har(
+        [
+          entry("https://a.net/1.js", { ttfb: 20, startTime: 100 }),
+          entry("https://a.net/2.js", { ttfb: 40, startTime: 480 }),
+          entry("https://a.net/lazy.js", { ttfb: 300, startTime: 900 }),
+          entry("https://a.net/later.js", { ttfb: 500, startTime: 5000 }),
+          entry("https://a.net/collect", { ttfb: 994, startTime: 8000, method: "POST" }),
+        ],
+        500
+      ),
+      DOC
+    );
+
+    expect(hops[0]).toMatchObject({ medianTtfbMs: 30, afterLoadMedianTtfbMs: 400 });
+  });
+
+  it("puts every request before onLoad when the load event never fired", () => {
+    const hops = analyzeHops(
+      har([entry("https://a.net/1.js", { ttfb: 20, startTime: 9000 })]),
+      DOC
+    );
+
+    expect(hops[0]).toMatchObject({ medianTtfbMs: 20, afterLoadMedianTtfbMs: null });
+  });
+
   it("counts browser-cache hits apart from the requests that reached the host", () => {
     const hit = { "cf-ray": "a-LAX", "cf-cache-status": "HIT" };
     const miss = { "cf-ray": "a-LAX", "cf-cache-status": "MISS" };
@@ -209,7 +284,7 @@ describe("analyzeHops", () => {
       requests: 2,
       browserCacheHits: 2,
       bytes: 1200,
-      avgTtfbMs: 200,
+      medianTtfbMs: 200,
       cacheHits: 1,
       cacheMisses: 1,
       hitRatio: 0.5,
@@ -229,7 +304,7 @@ describe("analyzeHops", () => {
     expect(hops.find((h) => h.host === "c.net")).toMatchObject({
       requests: 0,
       browserCacheHits: 1,
-      avgTtfbMs: null,
+      medianTtfbMs: null,
       provider: "cloudflare",
     });
     expect(hops.map((h) => h.host)).toEqual(["a.net", "c.net"]);

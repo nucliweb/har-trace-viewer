@@ -66,7 +66,9 @@ describe("TuiApp — a flow", () => {
     expect(frame).toContain("htv v9.9.9");
     expect(frame).toContain("First view");
     expect(frame).toMatch(/1 Overview.*2 Steps.*3 Hosts.*4 Cache/);
-    expect(frame).toMatch(/TTFB\s+50 ms/);
+    // TTFB from the navigation start (dns 10 + connect 20 + send 1 + wait 50) and the wait alone.
+    expect(frame).toMatch(/TTFB \(from navigation\)\s+81 ms/);
+    expect(frame).toMatch(/Server wait\s+50 ms/);
     expect(frame).toMatch(/LCP\s+400 ms/);
     expect(frame).toMatch(/onLoad\s+500 ms/);
   });
@@ -107,6 +109,45 @@ describe("TuiApp — a flow", () => {
     await press(stdin, "3");
     expect(lastFrame()).toMatch(/example\.com\s+4\s/);
     expect(lastFrame()).toContain("cdn.third.com");
+  });
+
+  it("shows the median TTFB per host, before and after onLoad, and the connection cost", async () => {
+    const har = makeHar([
+      criticalCss(100),
+      makeEntry({
+        url: "http://plain.example.org/a.js",
+        timing: { dns: 5, connect: 15, ssl: 0, send: 1, wait: 30, receive: 5, blocked: 0 },
+        ttfb: 30,
+      }),
+      makeEntry({ url: "http://plain.example.org/b.js", startTime: 900, ttfb: 70 }),
+    ]);
+    har.entries[2].timing.notApplicable = ["ssl"];
+    const flow = generateFlow([{ name: "Hosts", har }]);
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={flow} version="1.0.0" rows={40} columns={200} />
+    );
+
+    await press(stdin, "3");
+    const frame = lastFrame()!;
+    expect(frame).toMatch(/Median TTFB\s+After onLoad\s+DNS \/ TCP \/ TLS/);
+    expect(frame).toMatch(
+      /plain\.example\.org\s+2\s+0\s+\S+ \S+\s+30 ms\s+70 ms\s+5 ms \/ 15 ms \/ n\/a/
+    );
+  });
+
+  it("says when every request to a host reused a connection", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={200} />
+    );
+
+    await press(stdin, "3");
+    expect(lastFrame()).toMatch(/cdn\.third\.com.*reused/);
+  });
+
+  it("captions the third parties with their median TTFB", () => {
+    const { lastFrame } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
+
+    expect(lastFrame()).toMatch(/3rd Parties\s+1 · median TTFB 10 ms/);
   });
 
   it("counts browser-cache hits apart from the requests that reached each host", async () => {

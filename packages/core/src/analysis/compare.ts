@@ -4,7 +4,7 @@ import type { HostHop } from "./hops.js";
 import type { DeltaUnit } from "../utils/format.js";
 import { getHostname } from "../utils/domain.js";
 import { networkRequests } from "./network-requests.js";
-import { summarizeFlowMetrics } from "./metrics-summary.js";
+import { SERVER_WAIT_LABEL, TTFB_LABEL, summarizeFlowMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
 
 /** One position of a comparison: the step of each flow showing `kind`, when it has one. */
@@ -20,6 +20,7 @@ export type DeltaRating = "better" | "worse" | "same" | "none";
 
 export type ComparedMetric =
   | "ttfb"
+  | "serverWait"
   | "fcp"
   | "lcp"
   | "cls"
@@ -172,7 +173,8 @@ export interface MetricSpec {
 
 /** The metrics of a page summary, with their unit: same rows, labels and order as the summary. */
 export const COMPARED_METRICS: readonly MetricSpec[] = [
-  { key: "ttfb", label: "TTFB", unit: "ms", value: (p) => p.ttfb },
+  { key: "ttfb", label: TTFB_LABEL, unit: "ms", value: (p) => p.ttfb },
+  { key: "serverWait", label: SERVER_WAIT_LABEL, unit: "ms", value: (p) => p.serverWait },
   { key: "fcp", label: "FCP", unit: "ms", value: (p) => p.fcp },
   { key: "lcp", label: "LCP", unit: "ms", value: (p) => p.lcp },
   { key: "cls", label: "CLS", unit: "score", value: (p) => p.cls },
@@ -287,7 +289,7 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
 }
 
 // Share of the busier flow's network requests the other flow may lack before ratios and host
-// averages stop describing the same resources.
+// medians stop describing the same resources.
 const REQUEST_MIX_THRESHOLD = 0.2;
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -302,7 +304,7 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
     caveats.push({
       id: "request-mix",
       affects: ["cdnHitRatio", "hosts"],
-      text: `B made ${Math.abs(difference)} ${difference < 0 ? "fewer" : "more"} network requests than A (${requestsA} → ${requestsB}): the CDN hit ratio and the host averages are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.`,
+      text: `B made ${Math.abs(difference)} ${difference < 0 ? "fewer" : "more"} network requests than A (${requestsA} → ${requestsB}): the CDN hit ratio and the host medians are computed over different resources, so they can move without any change on the CDN or the servers. The host TTFB Δ compares only the URLs both flows requested.`,
     });
   }
   for (const [side, flow] of [

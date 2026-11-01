@@ -6,6 +6,7 @@ import type { Flow } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { MetricsSummary } from "../src/components/MetricsSummary.js";
 import { harJson, makeFlow } from "./fixtures.js";
+import { makeHar } from "../../core/tests/helpers/synthetic-har";
 
 const noop = () => undefined;
 
@@ -32,8 +33,9 @@ describe("MetricsSummary", () => {
     expect(screen.getByRole("table", { name: "Metrics per page" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Page 1 · Home" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Page 2 · Plain" })).toBeInTheDocument();
-    const rows = [
-      "TTFB",
+    for (const row of [
+      "TTFB (from navigation)",
+      "Server wait",
       "FCP",
       "LCP",
       "DCL",
@@ -41,12 +43,23 @@ describe("MetricsSummary", () => {
       "Requests",
       "Browser cache hits",
       "Transfer",
-    ];
-    for (const row of rows) {
+    ]) {
       expect(screen.getByRole("rowheader", { name: row })).toBeInTheDocument();
     }
     expect(screen.getByRole("rowheader", { name: "CDN hit ratio" })).toBeInTheDocument();
     expect(screen.getByRole("rowheader", { name: "Browser cache hit ratio" })).toBeInTheDocument();
+  });
+
+  it("shows the TTFB from the navigation start, rated, and the server wait apart, unrated", () => {
+    const har = makeHar([]);
+    // A redirect before the document: dns 10 + connect 20 + send 1 + wait 50 after 120 ms.
+    har.documentEntry.startTime = 120;
+    render(<MetricsSummary flow={generateFlow([{ name: "Home", har }])} onClose={noop} />);
+
+    expect(cell("TTFB (from navigation)", 0)).toHaveTextContent("201 ms");
+    expect(cell("TTFB (from navigation)", 0).dataset.rating).toBe("good");
+    expect(cell("Server wait", 0)).toHaveTextContent("50 ms");
+    expect(cell("Server wait", 0).dataset.rating).toBe("none");
   });
 
   it("shows n/a for a page without a trace", () => {

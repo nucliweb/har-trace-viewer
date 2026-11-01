@@ -1,3 +1,4 @@
+import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectThirdPartyHop, providerRegion } from "../inference/node-detector.js";
 import { getHostname } from "../utils/domain.js";
@@ -42,9 +43,9 @@ export const thirdPartyNodeId = (clusterId: string): ThirdPartyClusterNodeId =>
 export const thirdPartyPathId = (clusterId: string): ThirdPartyClusterPathId =>
   `browser-third-parties:${clusterId}`;
 
-function average(values: number[]): number {
-  return values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
-}
+// A diagram caption for a cluster's median TTFB: "TTFB 26ms". Path labels have room for
+// "avg 1234ms", not for "median TTFB 1234ms"; the node's avgMsKind says it is a median.
+export const ttfbCaption = (ms: number): string => `TTFB ${Math.round(ms)}ms`;
 
 // PoPs by the number of entries they served, busiest first (first seen on a tie).
 function popsByRequests(pops: (PopDetection | null)[]): PopDetection[] {
@@ -68,12 +69,12 @@ function hostsByRequests(entries: HarEntry[]): string[] {
   return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
 }
 
-function stats(entries: HarEntry[]) {
+function stats(entries: HarEntry[], onLoad: number | null) {
   const hits = entries.filter((e) => detectCdnCacheStatus(e.responseHeaders) === "hit").length;
   return {
     hosts: hostsByRequests(entries),
     requests: entries.length,
-    avgMs: average(entries.map((e) => e.duration)),
+    avgMs: medianTtfbByLoad(entries, onLoad).beforeLoad,
     bytes: entries.reduce((sum, e) => sum + e.transferSize, 0),
     hitRatio: entries.length === 0 ? 0 : hits / entries.length,
   };
@@ -88,7 +89,8 @@ const requestsOf = (entries: HarEntry[], hops: Map<HarEntry, Hop>) =>
 function toCluster(
   entries: HarEntry[],
   hops: Map<HarEntry, Hop>,
-  split: boolean
+  split: boolean,
+  onLoad: number | null
 ): ThirdPartyCluster {
   const { provider, name } = hops.get(entries[0])!;
   const region = providerRegion(provider, requestsOf(entries, hops));
@@ -102,7 +104,7 @@ function toCluster(
     provider,
     region,
     pop: pops[0] ?? null,
-    ...stats(entries),
+    ...stats(entries, onLoad),
   };
 }
 
@@ -123,8 +125,12 @@ const byRequests = (a: HarEntry[], b: HarEntry[]) => b.length - a.length;
 //   first, as long as the page stays within MAX_THIRD_PARTY_CLUSTERS.
 // - Past the cap, the smallest CDN clusters merge into "Other third parties", placed in the
 //   region most of its requests come from.
-// Clusters are ordered by requests (first request on a tie), with Other last.
-export function clusterThirdParties(entries: HarEntry[]): ThirdPartyCluster[] {
+// Clusters are ordered by requests (first request on a tie), with Other last. `onLoad` (ms, null
+// when the event never fired) sets apart the requests sent after the page loaded.
+export function clusterThirdParties(
+  entries: HarEntry[],
+  onLoad: number | null
+): ThirdPartyCluster[] {
   const hops = new Map(entries.map((e) => [e, detectThirdPartyHop(e.url, e.responseHeaders)]));
   const providers = groupBy(entries, (e) => hops.get(e)!.provider);
   const direct = providers.find((group) => hops.get(group[0])!.provider === "unknown");
@@ -145,7 +151,7 @@ export function clusterThirdParties(entries: HarEntry[]): ThirdPartyCluster[] {
 
   const ranked = clusters.sort((a, b) => byRequests(a.entries, b.entries));
   if (ranked.length <= MAX_THIRD_PARTY_CLUSTERS) {
-    return ranked.map((c) => toCluster(c.entries, hops, c.split));
+    return ranked.map((c) => toCluster(c.entries, hops, c.split, onLoad));
   }
   // Room for Other and Direct; the biggest CDN clusters fill the rest.
   const cdnRoom = MAX_THIRD_PARTY_CLUSTERS - 1 - (direct ? 1 : 0);
@@ -154,13 +160,13 @@ export function clusterThirdParties(entries: HarEntry[]): ThirdPartyCluster[] {
   const merged = new Set(mergedCdns.flatMap((c) => c.entries));
   const otherEntries = entries.filter((e) => merged.has(e));
   return [
-    ...kept.map((c) => toCluster(c.entries, hops, c.split)),
+    ...kept.map((c) => toCluster(c.entries, hops, c.split, onLoad)),
     {
       ...OTHER_CLUSTER,
       provider: "mixed",
       region: providerRegion("mixed", requestsOf(otherEntries, hops)),
       pop: null,
-      ...stats(otherEntries),
+      ...stats(otherEntries, onLoad),
     },
   ];
 }
@@ -198,7 +204,10 @@ export function clusterNode(cluster: ThirdPartyCluster): DiagramNode {
         : (cluster.pop?.city ?? hostsCaption(cluster.hosts)),
     present: true,
     region: cluster.region,
-    resourceStats: { count: cluster.requests, avgMs: cluster.avgMs },
+    resourceStats: {
+      count: cluster.requests,
+      ...(cluster.avgMs === null ? {} : { avgMs: cluster.avgMs, avgMsKind: "median-ttfb" }),
+    },
   };
 }
 
