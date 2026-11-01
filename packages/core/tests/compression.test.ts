@@ -324,3 +324,18 @@ describe("analyzeCompression — Chrome recordings of webperf-snippets", () => {
     expect(report.recommendations).toEqual([]);
   });
 });
+
+describe("analyzeCompression — ordering", () => {
+  it("lists the gzip responses biggest on the wire first", () => {
+    const report = analyzeCompression(
+      page([
+        js("small-gzip.js", { contentEncoding: "gzip", bodySize: 40_000, transferSize: 12_000 }),
+        js("big-gzip.js", { contentEncoding: "gzip", bodySize: 90_000, transferSize: 30_000 }),
+      ])
+    );
+    expect(report.gzipOnly.map((r) => r.url)).toEqual([
+      "https://example.com/big-gzip.js",
+      "https://example.com/small-gzip.js",
+    ]);
+  });
+});

@@ -8,6 +8,7 @@ import { generateFlow } from "../src/steps/step-generator.js";
 import { summarizeFlowMetrics } from "../src/analysis/metrics-summary.js";
 import { findingsDocument } from "../src/analysis/findings.js";
 import type { Flow } from "../src/types.js";
+import { makeTrace } from "./helpers/synthetic-har.js";
 import {
   secretHar,
   SECRETS,
@@ -485,6 +486,20 @@ describe("redactFlow", () => {
 
     expect(result.pages[0].har.entries[6].url).toBe("https://shop.example.com/reset/[redacted]");
     expect(report.tokens).toBe(1);
+  });
+});
+
+describe("redactFlows — trace requests", () => {
+  it("masks the hosts of the trace's requests along with the HAR's", () => {
+    const flow = flowOf(secretHar());
+    flow.pages[0].trace = {
+      ...makeTrace(900, 1_200),
+      requests: [{ url: PIXEL_URL, sentAtMs: 10 }],
+    };
+    const { flows } = redactFlows([flow], { hosts: "mask" });
+    const url = flows[0].pages[0].trace!.requests![0].url;
+    expect(url).toMatch(/^https:\/\/host-\d+\.redacted\/pixel\.gif/);
+    expect(url).not.toContain("vendor-one");
   });
 });
 

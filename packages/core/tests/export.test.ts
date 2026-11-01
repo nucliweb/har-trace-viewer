@@ -160,6 +160,15 @@ describe("markdownReport", () => {
     expect(out).toContain("| CLS | 0.300 | poor |");
   });
 
+  it("lists the good findings in one line", () => {
+    const har = makeHar([]);
+    const out = markdownReport(
+      generateFlow([{ name: "Fast", har, trace: makeTrace(900, 1_200) }])
+    ).split("\n");
+    const good = out.find((l) => l.startsWith("Good: "));
+    expect(good).toContain("Core Web Vitals are good");
+  });
+
   it("is deterministic", () => {
     expect(markdownReport(flowNamed("Home"))).toBe(markdownReport(flowNamed("Home")));
   });

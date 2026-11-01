@@ -135,6 +135,35 @@ describe("parseTrace — synthetic render events", () => {
     args: { data: { interactionId: 7, duration: 40, type: "pointerdown" } },
   });
 
+  it("names the LCP image from the paint candidate closest in time when the node painted twice", () => {
+    const imagePaint = (ts: number, candidateIndex: number, imageUrl: string) => ({
+      name: "LargestImagePaint::Candidate",
+      ts,
+      args: {
+        frame: "F1",
+        data: {
+          DOMNodeId: 10,
+          candidateIndex,
+          imageUrl,
+          nodeName: "IMG",
+          isOutermostMainFrame: true,
+        },
+      },
+    });
+    const trace = parseTraceJson(
+      JSON.stringify({
+        traceEvents: [
+          nav,
+          imagePaint(1_200_000, 1, "https://a.test/placeholder.jpg"),
+          lcp(1_400_000, 10, 1, { type: "image" }),
+          imagePaint(1_410_000, 1, "https://a.test/hero.jpg"),
+        ],
+      })
+    );
+
+    expect(trace.lcpCandidate).toMatchObject({ nodeId: 10, url: "https://a.test/hero.jpg" });
+  });
+
   it("ignores LCP candidates after the first interaction", () => {
     const trace = parseTraceJson(
       JSON.stringify({
