@@ -187,6 +187,39 @@ function bypassFlag(e: RawHarEntry): Pick<HarEntry, "bypassesCache"> {
   return bypasses ? { bypassesCache: true } : {};
 }
 
+// Chrome's _initiator, trimmed to its type and the URL and line that requested the resource:
+// a script initiator's URL is the first stack frame that has one, async parents included.
+function initiatorField(e: RawHarEntry): Pick<HarEntry, "initiator"> {
+  interface Frame {
+    url?: unknown;
+    lineNumber?: unknown;
+  }
+  interface Stack {
+    callFrames?: Frame[];
+    parent?: Stack;
+  }
+  const raw = (e as { _initiator?: unknown })._initiator;
+  if (typeof raw !== "object" || raw === null) return {};
+  const { type, url, lineNumber, stack } = raw as Frame & { type?: unknown; stack?: Stack };
+  if (typeof type !== "string" || type === "") return {};
+
+  let frame: Frame | undefined =
+    typeof url === "string" && url !== "" ? { url, lineNumber } : undefined;
+  for (let s = stack; frame === undefined && s; s = s.parent) {
+    frame = (Array.isArray(s.callFrames) ? s.callFrames : []).find(
+      (f) => typeof f.url === "string" && f.url !== ""
+    );
+  }
+  if (frame === undefined) return { initiator: { type } };
+  return {
+    initiator: {
+      type,
+      url: frame.url as string,
+      ...(typeof frame.lineNumber === "number" ? { lineNumber: frame.lineNumber } : {}),
+    },
+  };
+}
+
 // Repeated headers are joined with ", ", which means the same as listing them apart
 // (RFC 9110 §5.3). Set-Cookie is the exception: its values may contain commas, so only
 // the first one is kept.
@@ -615,6 +648,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       ...(redirectURL !== null ? { redirectURL } : {}),
       ...bypassFlag(e),
       ...transportFields(e, allResponseHeaders),
+      ...initiatorField(e),
     };
   });
 

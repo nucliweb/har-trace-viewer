@@ -62,6 +62,9 @@ export interface HarEntry {
   serverTiming?: ServerTimingMetric[];
   advertisesHttp3?: true;
   requestCookieBytes?: number;
+  // Who requested the resource, from Chrome's _initiator. Absent when the HAR has none, and in
+  // flows parsed before it was kept.
+  initiator?: HarInitiator;
 }
 
 // The HTTP version a response came over; "unknown" when the HAR does not say.
@@ -77,6 +80,15 @@ export interface ServerTimingMetric {
   name: string;
   dur?: number; // milliseconds
   desc?: string;
+}
+
+// Chrome's request initiator: "parser" (the document or a stylesheet referenced it), "script",
+// "preload", "other" (the navigation itself)... The url is the referencing document or
+// stylesheet, or the first script on the initiator's stack.
+export interface HarInitiator {
+  type: string;
+  url?: string;
+  lineNumber?: number;
 }
 
 export interface HarPage {
@@ -123,6 +135,56 @@ export interface ParsedTrace {
   inp: number | null; // ms; null when the trace has no interactions
   navigationId: string | null; // id of the main navigation, when the trace carries it
   url: string | null; // documentLoaderURL of the main navigation
+  // The LCP candidate `lcp` measures: the last one before the first interaction. Null without
+  // candidates; absent in flows parsed before it was kept.
+  lcpCandidate?: TraceLcpCandidate | null;
+  // When the first interaction (an EventTiming with an interactionId) started, in ms from
+  // navigationStart; null without interactions. Absent in flows parsed before it was kept.
+  firstInputMs?: number | null;
+  // The main frame's http(s) requests sent up to the last paint metric (FCP or LCP), in the
+  // order they were sent. Absent in flows parsed before they were kept.
+  requests?: TraceRequest[];
+}
+
+// A largestContentfulPaint::Candidate, with the image URL and node name of the matching
+// LargestImagePaint / LargestTextPaint candidate. Times in ms from navigationStart.
+export interface TraceLcpCandidate {
+  timeMs: number;
+  type?: string; // "image" or "text"
+  nodeId?: number;
+  // Chrome's description of the node: "IMG", "P class='intro'".
+  nodeName?: string;
+  url?: string; // the image's URL, on image candidates
+  size?: number; // painted area in px²
+  loadingAttr?: string; // the image's loading attribute: "eager" or "lazy"
+  // Image timings Chrome reports with the candidate (newer versions only).
+  imageDiscoveryMs?: number;
+  imageLoadStartMs?: number;
+  imageLoadEndMs?: number;
+}
+
+// One network request of the trace, from its ResourceSendRequest, ResourceReceiveResponse and
+// ResourceFinish events. Times in ms from navigationStart.
+export interface TraceRequest {
+  url: string;
+  resourceType?: string; // Chrome's: "Document", "Stylesheet", "Script", "Image", "Font"...
+  priority?: string; // the priority the request was sent with
+  fetchPriorityHint?: string; // the fetchpriority attribute: "auto", "high", "low"
+  // Chrome's render-blocking status: "blocking", "non_blocking", "in_body_parser_blocking",
+  // "potentially_blocking", "dynamically_injected_non_blocking". The final one when a preload
+  // changed it (PreloadRenderBlockingStatusChange).
+  renderBlocking?: string;
+  isLinkPreload?: boolean;
+  // Who requested it: type "parser", "script", "preload", "other"; url is the document or
+  // stylesheet that referenced it, or the script at the top of the stack.
+  initiator?: { type: string; url?: string };
+  sentAtMs: number; // when the renderer asked for it
+  startMs?: number; // when the network request started
+  responseStartMs?: number; // first byte of the response headers
+  responseEndMs?: number; // response headers received
+  endMs?: number; // last byte received
+  encodedDataLength?: number; // bytes on the wire
+  fromCache?: boolean;
 }
 
 // ── Diagram types ─────────────────────────────────────────────────────────────
@@ -296,6 +358,9 @@ export interface PageAnalysis {
   compressionReport?: CompressionReport;
   // Protocol and connection reuse per host. Absent in flows generated before it existed.
   connectionsReport?: ConnectionsReport;
+  // LCP attribution, render-blocking resources and critical request chains. Absent in flows
+  // generated before it existed.
+  renderReport?: RenderReport;
 }
 
 export interface Flow {
@@ -521,6 +586,118 @@ export interface ConnectionsReport {
   hosts: HostConnections[]; // busiest first
   // The document's Server-Timing metrics, in header order.
   serverTiming: ServerTimingMetric[];
+  recommendations: Recommendation[];
+}
+
+// ── Render report ─────────────────────────────────────────────────────────────
+// Times in ms from the start of the navigation: the trace's navigationStart, or the HAR page
+// origin when only the HAR times a request (both mark the start of the same navigation).
+
+export interface LcpElement {
+  nodeId?: number;
+  tagName?: string; // "IMG", "H1"
+  text?: string; // the element's text, when the source names it (Chrome traces do not)
+  type?: string; // "image" or "text"
+  loading?: string; // an image's loading attribute: "eager" or "lazy"
+}
+
+export interface LcpResource {
+  url: string;
+  discoveredAtMs: number; // when the browser asked for it: the request start
+  requestedAtMs: number; // when the network request started
+  respondedAtMs: number | null; // response headers received
+  loadedAtMs: number; // last byte received
+  transferSize: number; // bytes on the wire; 0 from the browser cache
+  priority: string | null; // the final priority, from the HAR, else the trace
+  fetchPriorityHint: string | null; // the fetchpriority attribute, from the trace
+  // Requested early by a preload: <link rel=preload> in the HTML, or a Link header of the
+  // document or its Early Hints.
+  preloaded: boolean;
+  fromCache: boolean;
+  initiator: HarInitiator | null;
+}
+
+// The web.dev LCP breakdown; the four phases add up to the LCP.
+export interface LcpPhases {
+  ttfb: number; // navigation start → first byte of the document
+  resourceLoadDelay: number; // first byte → the LCP resource's request start
+  resourceLoadDuration: number; // request start → last byte of the LCP resource
+  elementRenderDelay: number; // resource loaded (or first byte, for text) → LCP
+}
+
+// Facts about how the attribution was made:
+// "text-element": the LCP element is text, so it has no resource and no load phases;
+// "image-url-unknown": the trace does not name the LCP image (older Chrome);
+// "resource-not-found": neither the trace nor the HAR requested the LCP image (data: URI);
+// "har-timings": the trace has no request for the LCP image: the HAR times it;
+// "load-phases-unknown": nothing times the image's load (no request, no candidate load times),
+// so the render delay includes it;
+// "resource-from-cache": the browser cache served the LCP resource;
+// "stopped-at-first-input": the page was interacted with, which ends LCP; later candidates
+// do not count.
+export type LcpNote =
+  | "text-element"
+  | "image-url-unknown"
+  | "resource-not-found"
+  | "load-phases-unknown"
+  | "har-timings"
+  | "resource-from-cache"
+  | "stopped-at-first-input";
+
+export interface LcpAttribution {
+  lcpMs: number;
+  element: LcpElement | null;
+  resource: LcpResource | null;
+  phases: LcpPhases;
+  notes: LcpNote[];
+}
+
+// A request that kept the browser from painting: a stylesheet or a synchronous script.
+export interface RenderBlockingResource {
+  url: string;
+  resourceType: ResourceType;
+  transferSize: number;
+  startMs: number;
+  endMs: number;
+  // Chrome's render-blocking status from the trace ("blocking", "in_body_parser_blocking",
+  // "potentially_blocking"), or "inferred" from the HAR's initiator, type and priority.
+  status: string;
+  thirdParty: boolean;
+}
+
+export interface CriticalChainRequest {
+  url: string;
+  resourceType: ResourceType;
+  startMs: number;
+  endMs: number;
+  transferSize: number;
+}
+
+// One path of the critical request tree, from the document to a leaf: document → CSS → font,
+// document → script → script.
+export interface CriticalChain {
+  requests: CriticalChainRequest[]; // the document first
+  depth: number; // requests in the chain, the document included
+  durationMs: number; // document request start → last byte of the chain's last request
+  transferSize: number;
+}
+
+export interface RenderBlockingReport {
+  // Where the blocking status comes from: the trace's renderBlocking, the HAR's initiators and
+  // priorities, or nothing ("none": neither carries it, as in Firefox HARs).
+  source: "trace" | "har" | "none";
+  fcpMs: number | null;
+  documentEndMs: number; // last byte of the document
+  resources: RenderBlockingResource[]; // requested before FCP, in request order
+  totalBytes: number;
+  // How long they held the first paint: last blocking byte (capped at FCP) − documentEndMs.
+  heldMs: number;
+  chains: CriticalChain[]; // longest first
+}
+
+export interface RenderReport {
+  lcp: LcpAttribution | null; // null without a trace LCP candidate
+  renderBlocking: RenderBlockingReport;
   recommendations: Recommendation[];
 }
 

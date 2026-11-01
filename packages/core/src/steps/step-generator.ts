@@ -16,6 +16,7 @@ import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-ana
 import { analyzeNetwork } from "../analysis/network-report.js";
 import { analyzeCompression } from "../analysis/compression.js";
 import { analyzeConnections } from "../analysis/connections.js";
+import { analyzeRender } from "../analysis/render-report.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
 import {
   clusterNode,
@@ -833,6 +834,7 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     networkReport: analyzeNetwork(har),
     compressionReport: analyzeCompression(har),
     connectionsReport: analyzeConnections(har),
+    renderReport: analyzeRender(har, pageFlow.trace),
   };
 }
 
