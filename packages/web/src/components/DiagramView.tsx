@@ -127,6 +127,7 @@ export function DiagramView({ flow }: Props) {
             onClose={closeSidebar}
             preconnectHints={page.har.preconnectHints}
             documentHostname={new URL(page.har.documentEntry.url).hostname}
+            renderDeadline={page.trace?.lcp ?? page.trace?.fcp ?? null}
           />
         )}
         {showCachePanel && (

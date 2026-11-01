@@ -8,7 +8,7 @@ import {
   profileResourceCache,
   analyzeCacheForHar,
 } from "../src/inference/cache-analyzer.js";
-import type { InferredCacheHit } from "../src/types.js";
+import type { HarEntry, InferredCacheHit } from "../src/types.js";
 import { makeEntry, makeHar as makeSyntheticHar } from "./helpers/synthetic-har.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -220,12 +220,15 @@ describe("analyzeCacheForHar — fixture", () => {
     expect(report.recommendations.length).toBeGreaterThan(0);
   });
 
-  it("includes revalidation info recommendation for max-age=0 + CDN HIT", () => {
+  it("reports the CDN hit with its evidence instead of a revalidation note", () => {
     const report = analyzeCacheForHar(loadHar());
-    const rec = report.recommendations.find(
-      (r) => r.severity === "info" && r.label.toLowerCase().includes("revalidat")
-    );
-    expect(rec).toBeDefined();
+    const labels = report.recommendations.map((r) => r.label);
+    const rec = report.recommendations.find((r) => r.label === "Document served from CDN");
+
+    expect(labels.some((label) => label.toLowerCase().includes("revalidat"))).toBe(false);
+    expect(rec?.severity).toBe("good");
+    expect(rec?.description).toContain("x-vercel-cache: HIT");
+    expect(rec?.description).toMatch(/Age \d/);
   });
 
   it("includes good recommendation for long-term immutable static assets", () => {
@@ -236,12 +239,11 @@ describe("analyzeCacheForHar — fixture", () => {
     expect(rec).toBeDefined();
   });
 
-  it("includes no-browser-cache info recommendation", () => {
+  it("says nothing about browser cache hits on a first view", () => {
     const report = analyzeCacheForHar(loadHar());
-    const rec = report.recommendations.find(
-      (r) => r.severity === "info" && r.label.toLowerCase().includes("browser")
-    );
-    expect(rec).toBeDefined();
+    const labels = report.recommendations.map((r) => r.label.toLowerCase());
+
+    expect(labels.some((label) => label.includes("browser cache"))).toBe(false);
   });
 });
 
@@ -302,11 +304,16 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
     expect(rec).toBeDefined();
   });
 
-  it("no-store document generates critical recommendation", () => {
+  it("no-store on a document that looks static suggests caching it at the CDN", () => {
     const har = makeHar({ "cache-control": "no-store" }, []);
     const report = analyzeCacheForHar(har);
-    const rec = report.recommendations.find((r) => r.severity === "critical");
-    expect(rec).toBeDefined();
+    const rec = report.recommendations.find((r) => r.label === "Document not cached");
+
+    expect(rec?.severity).toBe("warning");
+    expect(rec?.description).toContain("s-maxage");
+    expect(rec?.description).toContain("stale-while-revalidate");
+    expect(rec?.description).not.toContain("must-revalidate");
+    expect(report.recommendations.some((r) => r.severity === "critical")).toBe(false);
   });
 
   it("high browser cache hit ratio generates good recommendation", () => {
@@ -448,51 +455,90 @@ describe("analyzeCacheForHar — revalidations", () => {
 });
 
 describe("analyzeCacheForHar — versioned assets that cannot be cached", () => {
-  const asset = (url: string, cacheControl: string, transferSize = 1000) =>
-    makeEntry({ url, transferSize, responseHeaders: { "cache-control": cacheControl } });
+  const asset = (
+    url: string,
+    cacheControl: string,
+    transferSize = 1000,
+    headers: Record<string, string> = {}
+  ) =>
+    makeEntry({
+      url,
+      transferSize,
+      responseHeaders: { "cache-control": cacheControl, ...headers },
+    });
+
+  const recommendation = (label: string, entries: ReturnType<typeof makeEntry>[]) =>
+    analyzeCacheForHar(makeSyntheticHar(entries)).recommendations.find((r) => r.label === label);
 
   const finding = (entries: ReturnType<typeof makeEntry>[]) =>
-    analyzeCacheForHar(makeSyntheticHar(entries)).recommendations.find(
-      (r) => r.label === "Versioned assets are not cached"
-    );
+    recommendation("Versioned assets are not cached", entries);
 
-  it("lists content-hashed assets that the browser may not reuse", () => {
+  const revalidating = (entries: ReturnType<typeof makeEntry>[]) =>
+    recommendation("Versioned assets revalidate on every use", entries);
+
+  it("lists versioned assets served with no-store as critical, biggest first", () => {
     const rec = finding([
       asset(
         "https://example.com/app/chunk-47TTPNLV.js",
         "no-cache, no-store, must-revalidate",
         20000
       ),
-      asset("https://example.com/app/styles-VC4FUF6G.css", "no-cache", 30000),
       asset("https://example.com/static/main.3f2a9c1b.js", "max-age=0", 50000),
       asset("https://example.com/assets/index-BkD3x9_a.js", "no-store", 1000),
     ]);
 
     expect(rec?.severity).toBe("critical");
-    expect(rec?.resources?.map((r) => r.url)).toEqual([
-      "https://example.com/static/main.3f2a9c1b.js",
-      "https://example.com/app/styles-VC4FUF6G.css",
-      "https://example.com/app/chunk-47TTPNLV.js",
-      "https://example.com/assets/index-BkD3x9_a.js",
+    expect(rec?.resources).toEqual([
+      {
+        url: "https://example.com/app/chunk-47TTPNLV.js",
+        transferSize: 20000,
+        cacheControl: "no-cache, no-store, must-revalidate",
+      },
+      {
+        url: "https://example.com/assets/index-BkD3x9_a.js",
+        transferSize: 1000,
+        cacheControl: "no-store",
+      },
     ]);
-    expect(rec?.resources?.[0]).toEqual({
-      url: "https://example.com/static/main.3f2a9c1b.js",
-      transferSize: 50000,
-      cacheControl: "max-age=0",
-    });
-    expect(rec?.description).toContain("4 content-hashed assets");
+    expect(rec?.description).toContain("2 versioned assets");
     expect(rec?.description).toContain("max-age=31536000, immutable");
   });
 
-  it("ignores hashed assets with a lifetime and unhashed assets without one", () => {
+  it.each([
+    "https://example.com/static/main.3f2a9c1b.js",
+    "https://example.com/static/main.3f2a9c1b.chunk.js",
+    "https://example.com/app/chunk-47TTPNLV.js",
+    "https://example.com/app/styles-VC4FUF6G.css",
+    "https://example.com/assets/index-BkD3x9_a.js",
+    "https://example.com/img/logo_a1b2c3d4e5.png",
+    "https://example.com/fonts/inter.8f3c2a1d9e.woff2",
+    "https://example.com/lib.js?v=1.2.3",
+    "https://example.com/theme.css?ver=6.4.2",
+    "https://example.com/app.js?hash=9f8e7d6c",
+  ])("treats %s as versioned", (url) => {
+    expect(finding([asset(url, "no-store")])?.resources?.map((r) => r.url)).toEqual([url]);
+  });
+
+  it.each([
+    "https://example.com/img/hero-1920x1080.jpg",
+    "https://example.com/img/banner_1200x630.webp",
+    "https://example.com/js/widget-v20240115.js",
+    "https://example.com/build-20260101.js",
+    "https://example.com/jquery-3.6.1.min.js",
+    "https://example.com/js/app-v2.13.10.js",
+    "https://example.com/bootstrap-datepicker.js",
+    "https://example.com/theme/nuance-c2c-button.css",
+    "https://example.com/app.js",
+    "https://example.com/app.js?utm_source=newsletter",
+    "https://example.com/api/data?v=2",
+  ])("does not treat %s as versioned", (url) => {
+    expect(finding([asset(url, "no-store")])).toBeUndefined();
+  });
+
+  it("ignores versioned assets with a lifetime", () => {
     expect(
       finding([
         asset("https://example.com/chunk-47TTPNLV.js", "public, max-age=31536000, immutable"),
-        asset("https://example.com/app.js", "no-store"),
-        asset("https://example.com/jquery-3.6.1.min.js", "no-store"),
-        asset("https://example.com/bootstrap-datepicker.js", "no-store"),
-        asset("https://example.com/build-20260101.js", "no-store"),
-        asset("https://example.com/theme/nuance-c2c-button.css", "no-store"),
       ])
     ).toBeUndefined();
   });
@@ -504,5 +550,144 @@ describe("analyzeCacheForHar — versioned assets that cannot be cached", () => 
         { ...asset("https://example.com/chunk-Q4K72MKY.js", "no-store"), status: 404 },
       ])
     ).toBeUndefined();
+  });
+
+  it("classifies no-cache and max-age=0 as revalidating, not as downloaded on every visit", () => {
+    const entries = [
+      asset("https://example.com/static/main.3f2a9c1b.js", "max-age=0", 50000, { etag: '"a1"' }),
+      asset("https://example.com/app/styles-VC4FUF6G.css", "no-cache", 30000, {
+        "last-modified": "Tue, 19 May 2026 10:00:00 GMT",
+      }),
+    ];
+    const report = analyzeCacheForHar(makeSyntheticHar(entries));
+    const rec = revalidating(entries);
+
+    expect(finding(entries)).toBeUndefined();
+    expect(report.recommendations.some((r) => r.severity === "critical")).toBe(false);
+    expect(rec?.severity).toBe("warning");
+    expect(rec?.resources?.map((r) => r.url)).toEqual([
+      "https://example.com/static/main.3f2a9c1b.js",
+      "https://example.com/app/styles-VC4FUF6G.css",
+    ]);
+    expect(rec?.description).toContain("2 versioned assets");
+    expect(rec?.description).toContain("304");
+    expect(rec?.description).toContain("max-age=31536000, immutable");
+    expect(rec?.description).not.toContain("ETag or Last-Modified");
+  });
+
+  it("names the revalidating assets that have no ETag or Last-Modified", () => {
+    const rec = revalidating([
+      asset("https://example.com/static/main.3f2a9c1b.js", "no-cache", 1000, { etag: '"a1"' }),
+      asset("https://example.com/app/chunk-47TTPNLV.js", "max-age=0"),
+    ]);
+
+    expect(rec?.description).toContain("1 of them has no ETag or Last-Modified");
+  });
+
+  it("counts a single asset in the singular", () => {
+    const notCached = finding([asset("https://example.com/lib.js?v=1.2.3", "no-store")]);
+    const revalidated = revalidating([asset("https://example.com/main.3f2a9c1b.js", "no-cache")]);
+
+    expect(notCached?.description).toContain("1 versioned asset is served with no-store");
+    expect(revalidated?.description).toContain("1 versioned asset is served with no-cache");
+    expect(revalidated?.description).toContain("whether it changed");
+  });
+});
+
+describe("analyzeCacheForHar — personalized documents", () => {
+  const PRIVATE_MISS = { "cache-control": "private, max-age=0", "x-vercel-cache": "MISS" };
+
+  const document = (overrides: Partial<ReturnType<typeof makeEntry>>) => {
+    const har = makeSyntheticHar([]);
+    const documentEntry = { ...har.documentEntry, ...overrides };
+    return { ...har, entries: [documentEntry], documentEntry };
+  };
+
+  it.each([
+    ["Set-Cookie", { setsCookie: true }, { "cache-control": "no-store" }],
+    ["Authorization", { sendsAuthorization: true }, { "cache-control": "no-store" }],
+    ["Vary: Cookie", {}, { "cache-control": "no-store", vary: "Accept-Encoding, Cookie" }],
+    ["Set-Cookie with private", { setsCookie: true }, PRIVATE_MISS],
+  ] as [string, Pick<HarEntry, "setsCookie" | "sendsAuthorization">, Record<string, string>][])(
+    "accepts no-store or private on a document with %s",
+    (_signal, flags, headers) => {
+      const { recommendations } = analyzeCacheForHar(
+        document({ ...flags, responseHeaders: headers })
+      );
+      const rec = recommendations.find((r) => r.label === "Personalized document not cached");
+
+      expect(rec?.severity).toBe("info");
+      expect(
+        recommendations.filter((r) => r.severity === "critical" || r.severity === "warning")
+      ).toEqual([]);
+    }
+  );
+});
+
+describe("analyzeCacheForHar — document served from the CDN", () => {
+  const document = (headers: Record<string, string>) => {
+    const har = makeSyntheticHar([]);
+    const documentEntry = { ...har.documentEntry, ttfb: 49, responseHeaders: headers };
+    return { ...har, entries: [documentEntry], documentEntry };
+  };
+
+  const REVALIDATE = "public, max-age=0, must-revalidate";
+
+  it.each([
+    ["x-vercel-cache", { "x-vercel-cache": "HIT", age: "468968" }, "x-vercel-cache: HIT"],
+    ["cf-cache-status", { "cf-cache-status": "HIT" }, "cf-cache-status: HIT"],
+    ["x-cache", { "x-cache": "Hit from cloudfront" }, "x-cache: Hit from cloudfront"],
+    ["Age alone", { age: "3600" }, "Age 1 h"],
+  ])("reports the CDN hit from %s instead of a revalidation note", (_name, headers, evidence) => {
+    const { recommendations } = analyzeCacheForHar(
+      document({ "cache-control": REVALIDATE, ...headers })
+    );
+    const rec = recommendations.find((r) => r.label === "Document served from CDN");
+
+    expect(rec?.severity).toBe("good");
+    expect(rec?.description).toContain(evidence);
+    expect(rec?.description).toContain("TTFB 49 ms");
+    expect(recommendations.map((r) => r.label)).not.toContain(
+      "Document revalidates on every request"
+    );
+  });
+
+  it("gives the Age in days for a document cached days ago", () => {
+    const { recommendations } = analyzeCacheForHar(
+      document({ "cache-control": REVALIDATE, "x-vercel-cache": "HIT", age: "468968" })
+    );
+
+    expect(
+      recommendations.find((r) => r.label === "Document served from CDN")?.description
+    ).toContain("Age 5.4 d");
+  });
+
+  it("keeps the revalidation note when no CDN reports a hit", () => {
+    const { recommendations } = analyzeCacheForHar(document({ "cache-control": REVALIDATE }));
+
+    expect(
+      recommendations.find((r) => r.label === "Document revalidates on every request")?.severity
+    ).toBe("info");
+  });
+});
+
+describe("analyzeCacheForHar — no browser cache hits", () => {
+  const label = "No browser cache hits";
+  const labels = (har: ReturnType<typeof makeSyntheticHar>) =>
+    analyzeCacheForHar(har).recommendations.map((r) => r.label);
+
+  it("stays quiet on a first view", () => {
+    expect(labels(makeSyntheticHar([makeEntry()]))).not.toContain(label);
+  });
+
+  it("warns on a WebPageTest repeat view that reused nothing", () => {
+    const har = { ...makeSyntheticHar([makeEntry()]), inferredCacheHits: [] };
+    const rec = analyzeCacheForHar(har).recommendations.find((r) => r.label === label);
+
+    expect(rec?.severity).toBe("warning");
+  });
+
+  it("warns when the browser revalidated resources but reused none", () => {
+    expect(labels(makeSyntheticHar([makeEntry({ status: 304 })]))).toContain(label);
   });
 });

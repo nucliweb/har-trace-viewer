@@ -419,3 +419,48 @@ describe("defaultPageName", () => {
     expect(defaultPageName(page, 2)).toBe("Page 3");
   });
 });
+
+describe("parseHar — personalization signals", () => {
+  const harWithDocument = (overrides: Record<string, unknown>) => {
+    const har = firefoxHar();
+    har.log.entries[0] = firefoxEntry("https://example.com/", "text/html", overrides);
+    return har;
+  };
+
+  it("flags a response that sets a cookie without keeping the cookie", () => {
+    const { documentEntry } = parseHar(
+      harWithDocument({
+        response: {
+          status: 200,
+          headers: [{ name: "Set-Cookie", value: "session=secret; HttpOnly" }],
+          content: { mimeType: "text/html", size: 100 },
+        },
+      })
+    );
+
+    expect(documentEntry.setsCookie).toBe(true);
+    expect(JSON.stringify(documentEntry)).not.toContain("secret");
+  });
+
+  it("flags a request sent with Authorization without keeping the credential", () => {
+    const { documentEntry } = parseHar(
+      harWithDocument({
+        request: {
+          url: "https://example.com/",
+          method: "GET",
+          headers: [{ name: "authorization", value: "Bearer secret" }],
+        },
+      })
+    );
+
+    expect(documentEntry.sendsAuthorization).toBe(true);
+    expect(JSON.stringify(documentEntry)).not.toContain("secret");
+  });
+
+  it("leaves the flags out when neither header is present", () => {
+    const { documentEntry } = parseHar(firefoxHar());
+
+    expect(documentEntry).not.toHaveProperty("setsCookie");
+    expect(documentEntry).not.toHaveProperty("sendsAuthorization");
+  });
+});

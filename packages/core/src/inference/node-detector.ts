@@ -68,28 +68,42 @@ export function detectCdnPopCity(
   return null;
 }
 
-const GFW_DNS_THRESHOLD_MS = 80;
-const GFW_CONNECT_THRESHOLD_MS = 300;
+const GFW_DNS_THRESHOLD_MS = 300;
+const GFW_CONNECT_THRESHOLD_MS = 500;
 
-// Suggests the "cn" client region when the latencies are compatible with
-// China / GFW-mediated routing:
-// 1. High DNS on the document (not cached): > 80ms
-// 2. High TCP connect on any entry: > 300ms (cross-continental from China)
-// Slow or mobile networks produce the same signals, so the result is only a
-// hint for the user; it never switches the topology on its own.
+// Signs that the page was loaded from China, whatever its latencies: a document host
+// under .cn, or a CDN that served it from a PoP in mainland China.
+function chinaSignals(har: ParsedHar): string[] {
+  const signals: string[] = [];
+  if ((getHostname(har.documentEntry.url) ?? "").endsWith(".cn")) {
+    signals.push("document host under .cn");
+  }
+  const pop = har.entries.map((e) => detectPop(e.responseHeaders)).find((p) => p?.country === "CN");
+  if (pop) signals.push(`CDN PoP in ${pop.city} (CN)`);
+  return signals;
+}
+
+// Suggests the "cn" client region when the page looks loaded through China / GFW-mediated
+// routing: a slow uncached DNS lookup of the document (≥ 300ms) together with a slow TCP
+// connect (≥ 500ms, cross-border from China), or one of them with a sign of China (see
+// chinaSignals). A slow or mobile network (WebPageTest 3G profiles) slows down one or both
+// moderately, so the latencies alone take thresholds above those profiles. The result is
+// only a hint for the user; it never switches the topology on its own.
 export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | null {
   const documentDnsMs = har.documentEntry.timing.dns;
   const maxConnectMs = Math.max(0, ...har.entries.map((e) => e.timing.connect));
 
-  const signals: string[] = [];
-  if (documentDnsMs > GFW_DNS_THRESHOLD_MS) {
-    signals.push(`document DNS ${Math.round(documentDnsMs)}ms > ${GFW_DNS_THRESHOLD_MS}ms`);
+  const latencies: string[] = [];
+  if (documentDnsMs >= GFW_DNS_THRESHOLD_MS) {
+    latencies.push(`document DNS ${Math.round(documentDnsMs)}ms ≥ ${GFW_DNS_THRESHOLD_MS}ms`);
   }
-  if (maxConnectMs > GFW_CONNECT_THRESHOLD_MS) {
-    signals.push(`max TCP connect ${Math.round(maxConnectMs)}ms > ${GFW_CONNECT_THRESHOLD_MS}ms`);
+  if (maxConnectMs >= GFW_CONNECT_THRESHOLD_MS) {
+    latencies.push(`max TCP connect ${Math.round(maxConnectMs)}ms ≥ ${GFW_CONNECT_THRESHOLD_MS}ms`);
   }
+  if (latencies.length === 0) return null;
 
-  return signals.length > 0 ? { region: "cn", reason: signals.join(", ") } : null;
+  const signals = [...latencies, ...chinaSignals(har)];
+  return signals.length >= 2 ? { region: "cn", reason: signals.join(", ") } : null;
 }
 
 // Infers origin server region from response headers.

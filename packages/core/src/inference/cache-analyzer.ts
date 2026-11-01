@@ -1,5 +1,7 @@
+import { WPT_REPEAT_VIEW_ID } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { isOwnNetworkResource, isOwnResource } from "../analysis/network-requests.js";
+import { formatMs } from "../utils/format.js";
 import type {
   CacheReport,
   CacheRecommendation,
@@ -83,30 +85,44 @@ const SIMPLE_STATUS: Record<string, CdnCacheStatus> = {
   dynamic: "bypass",
 };
 
+interface CdnCacheEvidence {
+  status: CdnCacheStatus;
+  header: string | null; // the header that decided the status, as "name: value"
+}
+
 // Header precedence: the platform-specific status headers first (x-vercel-cache,
 // cf-cache-status, cdn-cache), then the standard Cache-Status, then the x-cache
 // family. x-cache-remote reports the parent tier, so it is the last resort.
-export function detectCdnCacheStatus(headers: Record<string, string>): CdnCacheStatus {
+function detectCdnCacheEvidence(headers: Record<string, string>): CdnCacheEvidence {
+  const found = (status: CdnCacheStatus, name: string) => ({
+    status,
+    header: `${name}: ${headers[name]}`,
+  });
+
   for (const name of ["x-vercel-cache", "cf-cache-status", "cdn-cache"]) {
     const status = SIMPLE_STATUS[headers[name]?.trim().toLowerCase() ?? ""];
-    if (status) return status;
+    if (status) return found(status, name);
   }
 
   const cacheStatus = headers["cache-status"];
   if (cacheStatus) {
     const status = parseCacheStatus(cacheStatus);
-    if (status !== "unknown") return status;
+    if (status !== "unknown") return found(status, "cache-status");
   }
 
   for (const name of ["x-cache", "x-cache-status", "x-cache-remote"]) {
     const value = headers[name];
     if (value) {
       const status = parseXCache(value);
-      if (status !== "unknown") return status;
+      if (status !== "unknown") return found(status, name);
     }
   }
 
-  return "unknown";
+  return { status: "unknown", header: null };
+}
+
+export function detectCdnCacheStatus(headers: Record<string, string>): CdnCacheStatus {
+  return detectCdnCacheEvidence(headers).status;
 }
 
 export function profileResourceCache(headers: Record<string, string>): ResourceCacheProfile {
@@ -125,93 +141,255 @@ export function profileResourceCache(headers: Record<string, string>): ResourceC
   };
 }
 
-// A file name that carries a content hash: main.3f2a9c1b.js, chunk-47TTPNLV.js, index-BkD3x9_a.js.
-// The hash is the last "." or "-" separated part, 8+ characters mixing letters and digits, so
-// versions (jquery-3.6.1.min.js), words (nuance-c2c-button.css) and dates (build-20260101.js)
-// do not count.
-const HASHED_FILE =
-  /[.-]([A-Za-z0-9_]{8,})\.(?:m?js|css|woff2?|ttf|otf|png|jpe?g|gif|webp|avif|svg)$/i;
+const STATIC_EXTENSION = /\.(?:m?js|css|woff2?|ttf|otf|png|jpe?g|gif|webp|avif|svg)$/i;
 
-function isContentHashed(url: string): boolean {
-  let pathname: string;
+// Query parameters that version a URL: lib.js?v=1.2.3, theme.css?ver=6.4.2, app.js?hash=9f8e7d6c.
+const VERSION_PARAMS = ["v", "ver", "hash"];
+
+// Runs of letters and digits that look like a hash but name something else.
+const NOT_A_HASH = [
+  /^\d+x\d+$/i, // dimensions: hero-1920x1080.jpg
+  /^[a-z]*20\d{6}(?:t?\d{2,6})?$/i, // dates and builds: widget-v20240115.js, build-20260101.js
+  /^v?\d+$/i, // version and build numbers: v12345678
+  /^[a-z]{3,}\d{1,4}$/i, // a word and a number: fontawesome5, polyfills2020
+];
+
+// A content hash: a hex or base36 run of 8+ characters mixing letters and digits.
+function isHashToken(token: string): boolean {
+  return (
+    /^[a-z0-9]{8,}$/i.test(token) &&
+    /\d/.test(token) &&
+    /[a-z]/i.test(token) &&
+    !NOT_A_HASH.some((pattern) => pattern.test(token))
+  );
+}
+
+// Vite and Rollup hashes are 8 base64url characters, mixed case, and may carry an "_".
+function isBase64UrlHash(token: string): boolean {
+  return (
+    /^[A-Za-z0-9_]{8,12}$/.test(token) &&
+    /\d/.test(token) &&
+    /[a-z]/.test(token) &&
+    /[A-Z]/.test(token)
+  );
+}
+
+// A static asset whose URL changes with its content: a content hash in the file name
+// (main.3f2a9c1b.js, chunk-47TTPNLV.js, index-BkD3x9_a.js, logo_a1b2c3d4e5.png) or a
+// version query parameter. The hash is a run delimited by ".", "-" or "_", so versions
+// (jquery-3.6.1.min.js), words (nuance-c2c-button.css), dimensions (hero-1920x1080.jpg)
+// and dates (widget-v20240115.js) do not count.
+function isVersionedAsset(url: string): boolean {
+  let parsed: URL;
   try {
-    pathname = new URL(url).pathname;
+    parsed = new URL(url);
   } catch {
     return false;
   }
-  const hash = HASHED_FILE.exec(pathname)?.[1];
-  return hash !== undefined && /\d/.test(hash) && /[a-z]/i.test(hash);
+  const name = parsed.pathname.slice(parsed.pathname.lastIndexOf("/") + 1);
+  if (!STATIC_EXTENSION.test(name)) return false;
+  if (VERSION_PARAMS.some((param) => parsed.searchParams.get(param))) return true;
+  return name
+    .replace(STATIC_EXTENSION, "")
+    .split(/[.-]/)
+    .some((segment) => isBase64UrlHash(segment) || segment.split("_").some(isHashToken));
 }
 
-// Cache-Control that makes the browser download or revalidate the response on every use.
-function preventsReuse(cacheControl: string): boolean {
-  return /\b(no-store|no-cache)\b|\bmax-age=0\b/i.test(cacheControl);
+// How Cache-Control lets the browser reuse a response: never (no-store), only after asking
+// the server whether it changed (no-cache, max-age=0), or freely while it is fresh.
+type Reuse = "never" | "after-revalidation" | "while-fresh";
+
+function reuseOf(cacheControl: string): Reuse {
+  if (/\bno-store\b/i.test(cacheControl)) return "never";
+  if (/\bno-cache\b|\bmax-age=0\b/i.test(cacheControl)) return "after-revalidation";
+  return "while-fresh";
 }
 
-/** Content-hashed assets fetched over the network that the browser may not reuse, biggest first. */
-function uncachedVersionedAssets(entries: HarEntry[]): RecommendationResource[] {
-  return entries
-    .filter(
-      (e) =>
-        !e.isDocument &&
-        e.fromCache === false &&
-        (e.status === 200 || e.status === 304) &&
-        isContentHashed(e.url) &&
-        preventsReuse(e.responseHeaders["cache-control"] ?? "")
-    )
-    .map((e) => ({
-      url: e.url,
-      transferSize: e.transferSize,
-      cacheControl: e.responseHeaders["cache-control"] ?? "",
-    }))
-    .sort((a, b) => b.transferSize - a.transferSize);
+interface VersionedAssetFindings {
+  notCached: RecommendationResource[]; // no-store: downloaded again on every visit
+  revalidating: RecommendationResource[]; // no-cache or max-age=0: a round trip before each use
+  revalidatingWithoutValidators: number; // of those, the ones without ETag or Last-Modified
 }
 
-function buildRecommendations(
-  doc: ResourceCacheProfile,
-  own: CacheReport["ownResources"],
-  browser: CacheReport["browser"],
-  uncachedVersioned: RecommendationResource[]
-): CacheRecommendation[] {
+/** Versioned assets fetched over the network that the browser may not reuse freely, biggest first. */
+function versionedAssetFindings(entries: HarEntry[]): VersionedAssetFindings {
+  const fetched = entries.filter(
+    (e) =>
+      !e.isDocument &&
+      e.fromCache === false &&
+      (e.status === 200 || e.status === 304) &&
+      isVersionedAsset(e.url)
+  );
+  const withReuse = (reuse: Reuse) =>
+    fetched.filter((e) => reuseOf(e.responseHeaders["cache-control"] ?? "") === reuse);
+  const asResources = (list: HarEntry[]): RecommendationResource[] =>
+    list
+      .map((e) => ({
+        url: e.url,
+        transferSize: e.transferSize,
+        cacheControl: e.responseHeaders["cache-control"] ?? "",
+      }))
+      .sort((a, b) => b.transferSize - a.transferSize);
+
+  const revalidating = withReuse("after-revalidation");
+  return {
+    notCached: asResources(withReuse("never")),
+    revalidating: asResources(revalidating),
+    revalidatingWithoutValidators: revalidating.filter(
+      (e) => !e.responseHeaders["etag"] && !e.responseHeaders["last-modified"]
+    ).length,
+  };
+}
+
+// The words that agree with a count of assets: "1 versioned asset is", "2 versioned assets are".
+function agreement(count: number) {
+  const one = count === 1;
+  return {
+    assets: `${count} versioned ${one ? "asset is" : "assets are"}`,
+    has: one ? "has" : "have",
+    it: one ? "it" : "them",
+    its: one ? "Its" : "Their",
+    they: one ? "it" : "they",
+  };
+}
+
+function versionedAssetRecommendations(findings: VersionedAssetFindings): CacheRecommendation[] {
   const recs: CacheRecommendation[] = [];
-
-  // Document-level
-  if (doc.noStore) {
+  const { notCached, revalidating, revalidatingWithoutValidators: unvalidated } = findings;
+  if (notCached.length > 0) {
+    const w = agreement(notCached.length);
     recs.push({
+      label: "Versioned assets are not cached",
+      description: `${w.assets} served with no-store, so the browser downloads ${w.it} again on every visit. ${w.its} URL changes whenever ${w.its.toLowerCase()} content does: serve ${w.it} with public, max-age=31536000, immutable.`,
+      severity: "critical",
+      resources: notCached,
+    });
+  }
+  if (revalidating.length > 0) {
+    const w = agreement(revalidating.length);
+    const u = agreement(unvalidated);
+    const withoutValidators =
+      unvalidated > 0
+        ? ` ${unvalidated} of them ${u.has} no ETag or Last-Modified, so the browser cannot revalidate ${u.it} and downloads ${u.it} again.`
+        : "";
+    recs.push({
+      label: "Versioned assets revalidate on every use",
+      description: `${w.assets} served with no-cache or max-age=0: the browser asks the server whether ${w.they} changed before each use, a round trip that ends in a 304 when ${w.they} did not.${withoutValidators} ${w.its} URL changes whenever ${w.its.toLowerCase()} content does: serve ${w.it} with public, max-age=31536000, immutable to skip the check.`,
+      severity: "warning",
+      resources: revalidating,
+    });
+  }
+  return recs;
+}
+
+// "5.4 d", "3 h", "12 min", "40 s".
+function formatAge(seconds: number): string {
+  const units: [number, string][] = [
+    [86400, "d"],
+    [3600, "h"],
+    [60, "min"],
+  ];
+  for (const [size, unit] of units) {
+    if (seconds >= size) {
+      const value = seconds / size;
+      return `${value < 10 ? Number(value.toFixed(1)) : Math.round(value)} ${unit}`;
+    }
+  }
+  return `${seconds} s`;
+}
+
+// What shows that the CDN served the document from its cache: the status header that says
+// so, else an Age the CDN added. Null when nothing does.
+function cdnHitEvidence(entry: HarEntry, doc: ResourceCacheProfile): string | null {
+  const { status, header } = detectCdnCacheEvidence(entry.responseHeaders);
+  const age = doc.age ?? 0;
+  if (status !== "hit" && !(status === "unknown" && age > 0)) return null;
+  return [header, age > 0 ? `Age ${formatAge(age)}` : null, `TTFB ${formatMs(entry.ttfb)}`]
+    .filter(Boolean)
+    .join(", ");
+}
+
+// Signs that the document was built for the user who asked for it.
+function personalizationSignals(entry: HarEntry): string[] {
+  const signals: string[] = [];
+  if (entry.setsCookie) signals.push("sets a cookie");
+  if (/\bcookie\b/i.test(entry.responseHeaders["vary"] ?? "")) signals.push("varies on Cookie");
+  if (entry.sendsAuthorization) signals.push("was requested with an Authorization header");
+  return signals;
+}
+
+function documentRecommendation(
+  entry: HarEntry,
+  doc: ResourceCacheProfile
+): CacheRecommendation | null {
+  const isPrivate = /\bprivate\b/i.test(entry.responseHeaders["cache-control"] ?? "");
+  const signals = personalizationSignals(entry);
+
+  // no-store and private are right for a personalized page: shared caches must not keep it.
+  if ((doc.noStore || isPrivate) && signals.length > 0) {
+    return {
+      label: "Personalized document not cached",
+      description: `The document ${signals.join(", ")}, so it looks personalized: ${doc.noStore ? "no-store" : "private"} is right, it keeps shared caches from serving it to other users. Cache its static assets instead.`,
+      severity: "info",
+    };
+  }
+  if (doc.noStore) {
+    return {
       label: "Document not cached",
       description:
-        "The document uses no-store, preventing any caching. Consider public, max-age=0, must-revalidate so CDNs can serve it.",
-      severity: "critical",
-    });
-  } else if (doc.cdnStatus === "miss") {
-    recs.push({
+        "The document uses no-store and shows no sign of being personalized (no Set-Cookie, Vary: Cookie or Authorization). If it is the same for every visitor, let the CDN cache it and keep the browser copy short-lived, e.g. Cache-Control: public, max-age=60, s-maxage=3600, stale-while-revalidate=86400. HAR exports can strip cookies: keep no-store if the page is personalized.",
+      severity: "warning",
+    };
+  }
+  if (doc.cdnStatus === "miss") {
+    return {
       label: "CDN miss on document",
       description:
         "The HTML document was not served from CDN cache. Ensure the CDN is configured to cache HTML responses.",
       severity: "warning",
-    });
-  } else if (doc.cdnStatus === "bypass") {
-    recs.push({
+    };
+  }
+  if (doc.cdnStatus === "bypass") {
+    return {
       label: "CDN bypassed for document",
       description:
         "The CDN is bypassing the cache for the HTML document. Review Vary headers and CDN cache rules.",
       severity: "warning",
-    });
-  } else if (doc.cdnStatus === "hit" && doc.maxAge === 0 && doc.mustRevalidate) {
-    recs.push({
+    };
+  }
+  const revalidates = doc.maxAge === 0 && doc.mustRevalidate;
+  const evidence = cdnHitEvidence(entry, doc);
+  if (evidence) {
+    return {
+      label: "Document served from CDN",
+      description: `The HTML document came from the CDN cache (${evidence}), so it skipped the trip to the origin.${revalidates ? " Its max-age=0, must-revalidate makes the browser check it on every navigation, and the CDN answers that check from its cache." : ""}`,
+      severity: "good",
+    };
+  }
+  if (revalidates) {
+    return {
       label: "Document revalidates on every request",
       description:
         "The document uses max-age=0, must-revalidate — the browser cannot cache it between navigations. Consider adding stale-while-revalidate for faster perceived navigation.",
       severity: "info",
-    });
-  } else if (doc.cdnStatus === "hit") {
-    recs.push({
-      label: "Document served from CDN",
-      description:
-        "The HTML document is cached at the CDN edge, reducing origin load and improving latency.",
-      severity: "good",
-    });
+    };
   }
+  return null;
+}
+
+function buildRecommendations(
+  documentEntry: HarEntry,
+  doc: ResourceCacheProfile,
+  own: CacheReport["ownResources"],
+  browser: CacheReport["browser"],
+  versionedAssets: VersionedAssetFindings,
+  repeatView: boolean
+): CacheRecommendation[] {
+  const recs: CacheRecommendation[] = [];
+
+  // Document-level
+  const documentRec = documentRecommendation(documentEntry, doc);
+  if (documentRec) recs.push(documentRec);
 
   // Static assets
   if (own.total > 0) {
@@ -245,14 +423,7 @@ function buildRecommendations(
     }
   }
 
-  if (uncachedVersioned.length > 0) {
-    recs.push({
-      label: "Versioned assets are not cached",
-      description: `${uncachedVersioned.length} content-hashed assets are served with Cache-Control that forbids reusing them, so every visit fetches them again. Their file name changes whenever their content does: serve them with public, max-age=31536000, immutable.`,
-      severity: "critical",
-      resources: uncachedVersioned,
-    });
-  }
+  recs.push(...versionedAssetRecommendations(versionedAssets));
 
   // Browser cache
   const inferred = browser.inferred ?? 0;
@@ -280,12 +451,15 @@ function buildRecommendations(
         severity: "good",
       });
     } else if (browser.hitRatio === 0) {
-      recs.push({
-        label: "No browser cache hits",
-        description:
-          "No resources were served from the browser cache. This may be a first visit or cache was disabled during recording.",
-        severity: "info",
-      });
+      // A first view has nothing to reuse: only a repeat view without hits says something.
+      if (repeatView) {
+        recs.push({
+          label: "No browser cache hits",
+          description:
+            "The page was loaded again with the browser cache in place, yet no resource came from it. Give static assets a freshness lifetime (max-age) so that repeat visits reuse them.",
+          severity: "warning",
+        });
+      }
     } else if (browser.hitRatio < 0.4) {
       recs.push({
         label: "Low browser cache hit ratio",
@@ -296,6 +470,16 @@ function buildRecommendations(
   }
 
   return recs;
+}
+
+// A repeat view: a WebPageTest repeat view, or a load that found resources in the browser
+// cache (hits, or cached copies it had to revalidate).
+function isRepeatView(har: ParsedHar, browser: CacheReport["browser"]): boolean {
+  return (
+    har.inferredCacheHits !== undefined ||
+    har.pages.some((page) => WPT_REPEAT_VIEW_ID.test(page.id)) ||
+    browser.fromDisk + browser.fromMemory + (browser.revalidated ?? 0) > 0
+  );
 }
 
 export function analyzeCacheForHar(har: ParsedHar): CacheReport {
@@ -347,10 +531,12 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
     ownResources,
     browser,
     recommendations: buildRecommendations(
+      doc,
       documentProfile,
       ownResources,
       browser,
-      uncachedVersionedAssets(har.entries)
+      versionedAssetFindings(har.entries),
+      isRepeatView(har, browser)
     ),
   };
 }

@@ -140,7 +140,7 @@ describe("TuiApp — a flow", () => {
     expect(lastFrame()).toContain("Document");
     await press(stdin, ...Array(60).fill(KEYS.down));
     expect(lastFrame()).not.toContain("Document");
-    expect(lastFrame()).toContain("No browser cache hits");
+    expect(lastFrame()).toContain("chunk-47TTPNLV.js");
   });
 });
 

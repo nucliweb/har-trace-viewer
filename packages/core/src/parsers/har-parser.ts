@@ -27,7 +27,7 @@ interface RawHarEntry {
   _priority?: string;
   _fromCache?: string;
   cache?: { beforeRequest?: Record<string, unknown> | null };
-  request: { url: string; method: string };
+  request: { url: string; method: string; headers?: { name: string; value: string }[] };
   _transferSize?: number;
   // WebPageTest omits or nulls parts of the response (content: null, no headers).
   response?: {
@@ -145,6 +145,18 @@ export function pickResponseHeaders(headers: Record<string, string>): Record<str
     if (isAllowedHeader(key)) result[key] = value;
   }
   return result;
+}
+
+function hasHeader(headers: { name: string; value: string }[] | undefined, name: string): boolean {
+  return (headers ?? []).some((h) => h.name.toLowerCase() === name);
+}
+
+// Flags for the headers that mark a response as user-specific; their values never leave the HAR.
+function personalizationFlags(e: RawHarEntry): Pick<HarEntry, "setsCookie" | "sendsAuthorization"> {
+  return {
+    ...(hasHeader(e.response?.headers, "set-cookie") && { setsCookie: true }),
+    ...(hasHeader(e.request.headers, "authorization") && { sendsAuthorization: true }),
+  };
 }
 
 // Repeated headers are joined with ", ", which means the same as listing them apart
@@ -440,6 +452,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       bodySize: Math.max(0, response.content?.size ?? 0),
       isDocument: isHtmlMime(mimeType),
       fromCache: parseFromCache(e._fromCache, e.cache),
+      ...personalizationFlags(e),
     };
   });
 
@@ -494,7 +507,7 @@ function freshnessLifetime(headers: Record<string, string>): number | null {
 }
 
 // WebPageTest names its pages page_<run>_<view>_<step>, view 0 the first view and 1 the repeat.
-const WPT_REPEAT_VIEW_ID = /^page_(\d+)_1_(\d+)$/;
+export const WPT_REPEAT_VIEW_ID = /^page_(\d+)_1_(\d+)$/;
 
 const isWebPageTest = (raw: RawHar): boolean => /webpagetest/i.test(raw.log.creator?.name ?? "");
 

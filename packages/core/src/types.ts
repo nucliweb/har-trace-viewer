@@ -30,6 +30,11 @@ export interface HarEntry {
   bodySize: number; // decompressed body bytes (response.content.size)
   isDocument: boolean;
   fromCache: "disk" | "memory" | false;
+  // Signs that the response is specific to the user, kept as flags so that no cookie or
+  // credential reaches the report: the response sets a cookie, the request carried an
+  // Authorization header. Omitted when absent.
+  setsCookie?: true;
+  sendsAuthorization?: true;
 }
 
 export interface HarPage {

@@ -339,10 +339,12 @@ describe("embedded flow size (built CLI)", () => {
 });
 
 describe("client region (built CLI)", () => {
-  // Same HAR with a 350 ms document connection: latency compatible with GFW routing.
+  // Same HAR with a 320 ms DNS lookup and a 650 ms connection for the document: latencies
+  // compatible with GFW routing.
   function writeSlowHar(dir: string): string {
     const har = JSON.parse(readFileSync(HAR, "utf-8"));
-    har.log.entries[0].timings.connect = 350;
+    har.log.entries[0].timings.dns = 320;
+    har.log.entries[0].timings.connect = 650;
     const harPath = join(dir, "slow.har");
     writeFileSync(harPath, JSON.stringify(har));
     return harPath;
@@ -362,7 +364,7 @@ describe("client region (built CLI)", () => {
     const res = runCli(["--har", writeSlowHar(dir), "--output", out]);
     expect(res.status, res.stderr).toBe(0);
     expect(res.stderr).toContain(
-      "Note: latencies look compatible with China/GFW routing (max TCP connect 350ms > 300ms). Re-run with --region cn to show the GFW topology."
+      "Note: latencies look compatible with China/GFW routing (document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms). Re-run with --region cn to show the GFW topology."
     );
 
     const flow = extractFlow(

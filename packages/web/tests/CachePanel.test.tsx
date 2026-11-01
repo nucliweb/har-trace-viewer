@@ -70,7 +70,7 @@ describe("CachePanel", () => {
         makeEntry({
           url: "https://example.com/app/styles-VC4FUF6G.css",
           transferSize: 30_000,
-          responseHeaders: { "cache-control": "no-cache" },
+          responseHeaders: { "cache-control": "no-cache, no-store" },
         }),
       ])
     );
@@ -79,7 +79,7 @@ describe("CachePanel", () => {
     await user.click(toggle);
     const items = within(toggle.closest("details")!).getAllByRole("listitem");
     expect(items.map((li) => li.textContent)).toEqual([
-      "styles-VC4FUF6G.css30 KBno-cache",
+      "styles-VC4FUF6G.css30 KBno-cache, no-store",
       "chunk-47TTPNLV.js20 KBno-store",
     ]);
     expect(within(items[0]).getByText("styles-VC4FUF6G.css")).toHaveAttribute(

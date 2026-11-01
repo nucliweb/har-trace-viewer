@@ -180,28 +180,58 @@ function latencyHar(documentDnsMs: number, connectMs: number[]): ParsedHar {
 }
 
 describe("suggestClientRegion", () => {
-  it("suggests cn on high document DNS (> 80ms) and explains why", () => {
-    const suggestion = suggestClientRegion(latencyHar(169, [0]));
+  // The same HAR with its document at `url`, carrying `headers`.
+  const withDocument = (har: ParsedHar, url: string, headers: Record<string, string> = {}) => {
+    const documentEntry = { ...har.documentEntry, url, responseHeaders: headers };
+    return { ...har, entries: [documentEntry, ...har.entries.slice(1)], documentEntry };
+  };
+
+  it("suggests cn when slow DNS and a slow TCP connect come together, and explains why", () => {
+    const suggestion = suggestClientRegion(latencyHar(350, [0, 620]));
 
     expect(suggestion?.region).toBe("cn");
-    expect(suggestion?.reason).toContain("DNS");
-    expect(suggestion?.reason).toContain("169ms");
+    expect(suggestion?.reason).toBe("document DNS 350ms ≥ 300ms, max TCP connect 620ms ≥ 500ms");
   });
 
-  it("suggests cn on high max TCP connect (> 300ms) even with cached DNS", () => {
-    const suggestion = suggestClientRegion(latencyHar(0, [0, 419]));
+  it("does not suggest anything for a WebPageTest 3G Fast run (DNS 169ms, connect 419ms)", () => {
+    expect(suggestClientRegion(latencyHar(169, [0, 419]))).toBeNull();
+  });
+
+  it("does not suggest anything for a slow 3G run (DNS 400ms, connect 400ms)", () => {
+    expect(suggestClientRegion(latencyHar(400, [400, 400]))).toBeNull();
+  });
+
+  it("needs both latencies: slow DNS alone or a slow connect alone is not enough", () => {
+    expect(suggestClientRegion(latencyHar(450, [0]))).toBeNull();
+    expect(suggestClientRegion(latencyHar(0, [0, 800]))).toBeNull();
+  });
+
+  it("takes a .cn document with one slow latency as compatible with China routing", () => {
+    const suggestion = suggestClientRegion(
+      withDocument(latencyHar(0, [0, 650]), "https://www.example.com.cn/")
+    );
 
     expect(suggestion?.region).toBe("cn");
-    expect(suggestion?.reason).toContain("TCP connect");
-    expect(suggestion?.reason).toContain("419ms");
+    expect(suggestion?.reason).toBe("max TCP connect 650ms ≥ 500ms, document host under .cn");
+  });
+
+  it("takes a CDN PoP in mainland China with one slow latency as compatible with China routing", () => {
+    const suggestion = suggestClientRegion(
+      withDocument(latencyHar(320, [0]), "https://example.com/", { "cf-ray": "8f1a2b3c4d5e-PVG" })
+    );
+
+    expect(suggestion?.region).toBe("cn");
+    expect(suggestion?.reason).toBe("document DNS 320ms ≥ 300ms, CDN PoP in Shanghai (CN)");
+  });
+
+  it("does not suggest anything for a .cn document on a fast connection", () => {
+    expect(
+      suggestClientRegion(withDocument(latencyHar(20, [0, 40]), "https://www.example.cn/"))
+    ).toBeNull();
   });
 
   it("does not suggest anything for cached local connections", () => {
     expect(suggestClientRegion(latencyHar(0, [0]))).toBeNull();
-  });
-
-  it("does not suggest anything for moderate cross-continent latency (< 300ms)", () => {
-    expect(suggestClientRegion(latencyHar(0, [150]))).toBeNull();
   });
 
   it("ignores the -1 'not applicable' timings of reused connections", () => {

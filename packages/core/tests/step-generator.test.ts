@@ -638,14 +638,15 @@ describe("generateFlow — client region", () => {
     };
   }
 
-  // A HAR whose document connection took 350 ms: slow, but not proof of China routing.
+  // A HAR whose document took 320 ms to resolve and 650 ms to connect: GFW-shaped latencies,
+  // but not proof of China routing.
   function slowHar(docHeaders: Record<string, string> = {}): ParsedHar {
     const docEntry = makeEntry({
       url: "https://example.com/",
       mimeType: "text/html",
       isDocument: true,
       resourceType: "document",
-      timing: { dns: 10, connect: 350, ssl: 0, send: 1, wait: 50, receive: 5, blocked: 0 },
+      timing: { dns: 320, connect: 650, ssl: 0, send: 1, wait: 50, receive: 5, blocked: 0 },
       ttfb: 50,
       responseHeaders: docHeaders,
     });
@@ -683,7 +684,9 @@ describe("generateFlow — client region", () => {
     expect(flow.paths.map((p) => p.id)).toContain("browser-edge");
     expect(flow.steps.flatMap((s) => s.activeNodes)).not.toContain("gfw");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
-    expect(flow.hints.suggestedClientRegion?.reason).toContain("350ms");
+    expect(flow.hints.suggestedClientRegion?.reason).toBe(
+      "document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms"
+    );
   });
 
   it("slow HAR with clientRegion cn and a CDN: GFW node between browser and edge", () => {

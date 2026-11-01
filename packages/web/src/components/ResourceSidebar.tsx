@@ -1,5 +1,6 @@
 import { formatBytes, formatMs, getRootDomain, shortUrl } from "@htv/core";
-import type { HarEntry, PreconnectSource, ResourceType } from "@htv/core";
+import type { HarEntry, PreconnectSource } from "@htv/core";
+import { preconnectCandidates } from "../lib/preconnect-candidates.js";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./ResourceSidebar.module.css";
 import {
@@ -13,7 +14,6 @@ import {
 
 interface DomainInfo {
   hostname: string;
-  resourceTypes: Set<ResourceType>;
   preconnect: PreconnectSource | null;
   requests: number;
   bytes: number;
@@ -34,46 +34,16 @@ function extractDomains(
     if (!map.has(hostname)) {
       map.set(hostname, {
         hostname,
-        resourceTypes: new Set(),
         preconnect: preconnectHints[hostname] ?? null,
         requests: 0,
         bytes: 0,
       });
     }
     const info = map.get(hostname)!;
-    info.resourceTypes.add(entry.resourceType);
     info.requests += 1;
     info.bytes += entry.transferSize;
   }
   return [...map.values()];
-}
-
-const CRITICAL_TYPES: ResourceType[] = ["stylesheet", "font", "image", "script"];
-
-const FCP_LCP_PRIORITY: Partial<Record<ResourceType, number>> = {
-  font: 0,
-  stylesheet: 1,
-  script: 2,
-  image: 3,
-};
-
-function criticalityScore(info: DomainInfo): number {
-  let best = Infinity;
-  for (const type of info.resourceTypes) {
-    const score = FCP_LCP_PRIORITY[type] ?? 99;
-    if (score < best) best = score;
-  }
-  return best;
-}
-
-function isCriticalDomain(info: DomainInfo): boolean {
-  return CRITICAL_TYPES.some((t) => info.resourceTypes.has(t));
-}
-
-function domainTipCandidates(domains: DomainInfo[], documentHostname: string): DomainInfo[] {
-  return domains
-    .filter((d) => d.hostname !== documentHostname && !d.preconnect && isCriticalDomain(d))
-    .sort((a, b) => criticalityScore(a) - criticalityScore(b));
 }
 
 interface Props {
@@ -82,6 +52,8 @@ interface Props {
   onClose: () => void;
   preconnectHints?: Record<string, PreconnectSource>;
   documentHostname?: string;
+  /** When the page rendered (LCP, else FCP) on the HAR time base; null or absent without a trace. */
+  renderDeadline?: number | null;
   /** Page overview: domains are split first-party vs third-party, with request counts and bytes. */
   overview?: boolean;
 }
@@ -103,13 +75,11 @@ function PreconnectBadge({ source }: { source: PreconnectSource }) {
 
 function DomainsSection({
   domains,
-  documentHostname,
+  tipCandidates,
 }: {
   domains: DomainInfo[];
-  documentHostname: string | undefined;
+  tipCandidates: string[];
 }) {
-  const tipCandidates = documentHostname ? domainTipCandidates(domains, documentHostname) : [];
-
   return (
     <SidebarGroup>
       <SidebarGroupHeader label="Domains" count={domains.length} />
@@ -127,35 +97,15 @@ function DomainsSection({
         <div className={styles.preconnectTip}>
           <span className={styles.tipIcon}>💡</span>
           <span className={styles.tipText}>
-            {tipCandidates.length === 1 ? (
-              <>
-                Consider preconnecting <strong>{tipCandidates[0].hostname}</strong> to reduce
-                connection overhead.
-              </>
-            ) : tipCandidates.length <= 4 ? (
-              <>
-                Consider preconnecting:{" "}
-                {tipCandidates.map((d, i) => (
-                  <span key={d.hostname}>
-                    {i > 0 && ", "}
-                    <strong>{d.hostname}</strong>
-                  </span>
-                ))}{" "}
-                to reduce connection overhead.
-              </>
-            ) : (
-              <>
-                Preconnecting all {tipCandidates.length} cross-origin domains is counterproductive —
-                too many competing connections hurt FCP/LCP. Focus on the most critical:{" "}
-                {tipCandidates.slice(0, 3).map((d, i) => (
-                  <span key={d.hostname}>
-                    {i > 0 && ", "}
-                    <strong>{d.hostname}</strong>
-                  </span>
-                ))}
-                .
-              </>
-            )}
+            Consider preconnecting{" "}
+            {tipCandidates.map((hostname, i) => (
+              <span key={hostname}>
+                {i > 0 && ", "}
+                <strong>{hostname}</strong>
+              </span>
+            ))}
+            : {tipCandidates.length === 1 ? "it serves" : "they serve"} resources the first render
+            waits for.
           </span>
         </div>
       )}
@@ -221,10 +171,14 @@ export function ResourceSidebar({
   onClose,
   preconnectHints = {},
   documentHostname,
+  renderDeadline = null,
   overview = false,
 }: Props) {
   const grouped = groupByType(resources);
   const domains = extractDomains(resources, preconnectHints);
+  const tipCandidates = documentHostname
+    ? preconnectCandidates(resources, { documentHostname, preconnectHints, renderDeadline })
+    : [];
 
   return (
     <Sidebar
@@ -237,7 +191,7 @@ export function ResourceSidebar({
       {overview ? (
         <OverviewDomainsSection domains={domains} documentHostname={documentHostname} />
       ) : (
-        <DomainsSection domains={domains} documentHostname={documentHostname} />
+        <DomainsSection domains={domains} tipCandidates={tipCandidates} />
       )}
 
       {[...grouped.entries()].map(([type, entries]) => (
