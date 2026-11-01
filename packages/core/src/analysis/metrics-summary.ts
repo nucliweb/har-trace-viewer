@@ -36,7 +36,7 @@ export interface PageMetricsSummary {
 export type RatedMetric = "ttfb" | "fcp" | "lcp" | "cls" | "inp" | (string & {});
 
 // [good upper bound, poor lower bound] (ms; CLS is unitless), per web.dev Core Web Vitals.
-const THRESHOLDS: Record<string, readonly [number, number]> = {
+export const METRIC_THRESHOLDS: Record<string, readonly [number, number]> = {
   ttfb: [800, 1800],
   fcp: [1800, 3000],
   lcp: [2500, 4000],
@@ -46,7 +46,7 @@ const THRESHOLDS: Record<string, readonly [number, number]> = {
 
 /** Rates a metric value. Metrics without official thresholds (onLoad, DCL) and missing values rate "none". */
 export function rateMetric(metric: RatedMetric, value: number | null | undefined): MetricRating {
-  const limits = THRESHOLDS[metric];
+  const limits = METRIC_THRESHOLDS[metric];
   if (!limits || value === null || value === undefined) return "none";
   if (value <= limits[0]) return "good";
   if (value <= limits[1]) return "needs-improvement";

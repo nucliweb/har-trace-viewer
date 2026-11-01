@@ -18,6 +18,7 @@ import {
   parsePageSelection,
   generateFlow,
   isClientRegion,
+  findingsDocument,
   CLIENT_REGIONS,
 } from "@htv/core";
 import type { ClientRegion, Flow, PageFlow } from "@htv/core";
@@ -43,10 +44,10 @@ export interface CompareArg {
   select?: string;
 }
 
-/** Where the report goes: the terminal, an HTML report or JSON. */
-export type OutputFormat = "tui" | "html" | "json";
+/** Where the report goes: the terminal, an HTML report, JSON, or the findings as JSON. */
+export type OutputFormat = "tui" | "html" | "json" | "findings";
 
-const OUTPUT_FORMATS: readonly OutputFormat[] = ["tui", "html", "json"];
+const OUTPUT_FORMATS: readonly OutputFormat[] = ["tui", "html", "json", "findings"];
 
 export interface Args {
   pages: PageArg[];
@@ -274,6 +275,8 @@ export type OutputTarget =
   | { kind: "html"; path: string; singleFile: boolean; bundle: boolean }
   // Without a path, the JSON goes to stdout.
   | { kind: "json"; path?: string }
+  // The findings document; without a path, it goes to stdout.
+  | { kind: "findings"; path?: string }
   // No report: only the result of --budget and --fail-on, on stdout.
   | { kind: "check" };
 
@@ -306,8 +309,13 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
   if (format === "html" && (!output || isJsonPath(output))) {
     throw new Error("--format html needs -o <dir|file.html>");
   }
-  if (format === "json" && output && !isJsonPath(output)) {
-    throw new Error("--format json needs a .json --output path, or no --output to print to stdout");
+  if ((format === "json" || format === "findings") && output && !isJsonPath(output)) {
+    throw new Error(
+      `--format ${format} needs a .json --output path, or no --output to print to stdout`
+    );
+  }
+  if (format === "findings") {
+    return output ? { kind: "findings", path: output } : { kind: "findings" };
   }
   if (format === "json" || isJsonPath(output))
     return output ? { kind: "json", path: output } : { kind: "json" };
@@ -324,7 +332,7 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
   return { kind: "tui" };
 }
 
-export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]
+export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [options]
        htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]`;
 
 export const HELP = `${USAGE}
@@ -333,13 +341,17 @@ Analyzes HAR and Chrome trace files: browses the report in the terminal, writes 
 self-contained HTML report to share, or writes JSON for other tools and AI agents.
 
 Output (where the report goes):
-  (no --output)       Browse the report in the terminal: metrics, steps, hosts and
-                      cache & network, one tab each. Needs an interactive terminal.
+  (no --output)       Browse the report in the terminal: findings, metrics, steps,
+                      hosts and cache & network, one tab each. Needs an interactive
+                      terminal.
   -o, --output <path> file.html: a single self-contained HTML file that opens offline.
                       file.json: the full analysis as JSON.
                       Any other path: a directory with index.html and its assets.
-  --format <format>   tui | html | json. --format json without --output prints
-                      the JSON to stdout, e.g. to pipe it into an agent.
+  --format <format>   tui | html | json | findings. --format json without --output
+                      prints the JSON to stdout, e.g. to pipe it into an agent.
+                      --format findings writes only the findings of each page (rule
+                      id, severity, metric, summary, recommendation, evidence) and its
+                      metrics as compact JSON, to stdout or a .json --output.
   --bundle            For a directory --output: inline every asset into index.html.
 
 Input:
@@ -380,8 +392,10 @@ the report, or to stdout without --output instead of the terminal report):
   --budget-strict     Fail a budget whose metric the page lacks (LCP without a
                       trace); by default it passes as n/a.
   --fail-on <severity>
-                      critical | warning: fail when a recommendation of that
-                      severity or worse exists.
+                      critical | warning: fail when a finding of that severity or
+                      worse exists: a recommendation of the cache, network or
+                      other reports, or a Core Web Vital or TTFB rated poor
+                      (critical) or needing improvement (warning).
   Exit codes: 0 every check passed, 2 a check failed (the report is still
   written), 1 usage or input errors.
 
@@ -395,6 +409,7 @@ Examples:
   htv page.har                                # browse in the terminal
   htv page.har trace.json.gz -o report.html   # share one HTML file, with a trace
   htv page.har --format json | my-agent       # JSON for an AI agent
+  htv page.har trace.json.gz --format findings # what to fix, as compact JSON
 
   # Two pages, with a trace for the first one:
   htv --page "Home" --har home.har --trace home.json.gz \
@@ -524,6 +539,33 @@ export function reportJson({ flow, compare }: Report, htvVersion: string): strin
     ? { htvVersion, kind: "comparison", a: flow, b: compare }
     : { htvVersion, kind: "flow", flow };
   return JSON.stringify(body, null, 2);
+}
+
+/** Where the JSON schema of the findings document is published: inside this version's package. */
+export const findingsSchemaUrl = (htvVersion: string) =>
+  `https://unpkg.com/har-trace-viewer@${htvVersion}/dist/findings.schema.json`;
+
+/**
+ * The findings of the report as JSON: per page (both sides of a comparison), its metrics
+ * summary and its findings, with the htv version and the schema that describes the document.
+ */
+export function reportFindings(
+  { flow, compare }: Report,
+  htvVersion: string,
+  generatedAt = new Date().toISOString()
+): string {
+  const flows = compare
+    ? [
+        { flow, side: "a" as const },
+        { flow: compare, side: "b" as const },
+      ]
+    : [{ flow }];
+  const doc = findingsDocument(flows, {
+    htvVersion,
+    generatedAt,
+    schema: findingsSchemaUrl(htvVersion),
+  });
+  return JSON.stringify(doc, null, 2);
 }
 
 /** Writes the HTML report and returns the path of its page. */

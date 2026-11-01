@@ -125,6 +125,19 @@ describe("CompareView", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens the findings of each side inside its own diagram", async () => {
+    const user = userEvent.setup();
+    render(<CompareView a={a} b={b} />);
+
+    await user.click(within(pane("A")).getByRole("button", { name: /^Toggle findings/ }));
+    const details = within(pane("A")).getByRole("region", { name: "Findings details" });
+    expect(within(pane("A")).getByText("A · First view")).toBeInTheDocument();
+    expect(details).toBeInTheDocument();
+    expect(
+      within(pane("B")).queryByRole("region", { name: "Findings details" })
+    ).not.toBeInTheDocument();
+  });
+
   describe("Deltas panel", () => {
     async function openDeltas() {
       const user = userEvent.setup();

@@ -177,9 +177,10 @@ describe("parseArgs", () => {
 
   it("parses --format and rejects an unknown one listing the valid values", () => {
     expect(parseArgs(["--format", "json"]).format).toBe("json");
+    expect(parseArgs(["--format", "findings"]).format).toBe("findings");
     expect(parseArgs([]).format).toBeUndefined();
     expect(() => parseArgs(["--format", "xml"])).toThrow(
-      'Invalid --format "xml". Valid values: tui, html, json.'
+      'Invalid --format "xml". Valid values: tui, html, json, findings.'
     );
   });
 
@@ -201,6 +202,8 @@ describe("--help, --version and --output (built CLI)", () => {
     expect(res.stdout).toContain("Usage");
     expect(res.stdout).toContain("--bundle");
     expect(res.stdout).toContain("Example");
+    expect(res.stdout).toContain("tui | html | json | findings");
+    expect(res.stdout).toContain("findings, metrics, steps");
   });
 
   it("prints the package.json version and exits 0 with --version", () => {
@@ -622,6 +625,17 @@ describe("outputTarget", () => {
     expect(outputTarget({ ...base, format: "json" }, false)).toEqual({ kind: "json" });
   });
 
+  it("writes the findings to stdout, or to a .json --output, with --format findings", () => {
+    expect(outputTarget({ ...base, format: "findings" }, false)).toEqual({ kind: "findings" });
+    expect(outputTarget({ ...base, format: "findings", output: "f.json" }, true)).toEqual({
+      kind: "findings",
+      path: "f.json",
+    });
+    expect(() => outputTarget({ ...base, format: "findings", output: "r.html" }, true)).toThrow(
+      "--format findings needs a .json --output path, or no --output to print to stdout"
+    );
+  });
+
   it("rejects a --format that contradicts --output", () => {
     expect(() => outputTarget({ ...base, format: "html" }, true)).toThrow(
       "--format html needs -o <dir|file.html>"
@@ -703,6 +717,73 @@ describe("JSON output (built CLI)", () => {
     const res = runCli(["--har", HAR]);
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("The terminal report needs an interactive terminal");
+  });
+});
+
+describe("findings output (built CLI)", () => {
+  const pkgVersion = JSON.parse(readFileSync(join(CLI_ROOT, "package.json"), "utf-8")).version;
+
+  it("prints the findings and the metrics of each page as JSON with --format findings", () => {
+    const res = runCli(["--har", HAR, "--trace", TRACE, "--format", "findings"]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const doc = JSON.parse(res.stdout);
+    expect(doc).toMatchObject({ htvVersion: pkgVersion });
+    expect(doc.schema).toBe(
+      `https://unpkg.com/har-trace-viewer@${pkgVersion}/dist/findings.schema.json`
+    );
+    expect(Number.isNaN(Date.parse(doc.generatedAt))).toBe(false);
+    expect(doc.pages).toHaveLength(1);
+    expect(typeof doc.pages[0].metrics.lcp).toBe("number");
+    expect(doc.pages[0].findings.length).toBeGreaterThan(0);
+    for (const finding of doc.pages[0].findings) {
+      expect(finding.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(finding.page).toMatchObject({ index: 0 });
+    }
+    // Pretty-printed, like --format json.
+    expect(res.stdout).toContain('\n  "pages": [');
+  });
+
+  it("writes the findings to a .json --output", () => {
+    const target = join(makeTempDir(), "findings.json");
+    const res = runCli(["--har", HAR, "--format", "findings", "-o", target]);
+
+    expect(res.status, res.stderr).toBe(0);
+    expect(res.stdout).toContain(`Findings written: ${target}`);
+    expect(JSON.parse(readFileSync(target, "utf-8")).pages[0].findings).toBeInstanceOf(Array);
+  });
+
+  it("lists both sides of a comparison, each finding naming its side", () => {
+    const dir = makeTempDir();
+    const harPath = join(dir, "wpt.har");
+    writeFileSync(harPath, JSON.stringify(wptHar()));
+    const res = runCli([
+      "--har",
+      harPath,
+      "--select",
+      "page_1_0_1,page_1_1_1",
+      "--compare",
+      "--format",
+      "findings",
+    ]);
+
+    expect(res.status, res.stderr).toBe(0);
+    const doc = JSON.parse(res.stdout);
+    expect(doc.pages.map((p: { side: string; name: string }) => [p.side, p.name])).toEqual([
+      ["a", "Run 1 · First view"],
+      ["b", "Run 1 · Repeat view"],
+    ]);
+    for (const page of doc.pages) {
+      for (const finding of page.findings) expect(finding.page.side).toBe(page.side);
+    }
+  });
+
+  it("ships the JSON schema the document points to", () => {
+    const shipped = join(CLI_ROOT, "dist", "findings.schema.json");
+    expect(existsSync(shipped)).toBe(true);
+    expect(JSON.parse(readFileSync(shipped, "utf-8")).$schema).toBe(
+      "https://json-schema.org/draft/2020-12/schema"
+    );
   });
 });
 
@@ -942,7 +1023,7 @@ describe("budgets and --fail-on (built CLI)", () => {
 
     const critical = runCli([harPath, "--fail-on", "critical"]);
     expect(critical.status, critical.stderr).toBe(0);
-    expect(critical.stdout).toContain("no critical recommendations");
+    expect(critical.stdout).toContain("no critical findings");
   });
 
   it("checks both sides of a comparison", () => {

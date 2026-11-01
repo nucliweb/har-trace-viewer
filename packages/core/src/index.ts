@@ -16,5 +16,6 @@ export * from "./analysis/connections.js";
 export * from "./analysis/lcp.js";
 export * from "./analysis/critical-path.js";
 export * from "./analysis/render-report.js";
+export * from "./analysis/findings.js";
 export * from "./analysis/compare.js";
 export * from "./utils/format.js";

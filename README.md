@@ -13,8 +13,8 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 ## Usage
 
 ```bash
-htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json] [options]
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [options]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
 ```
 
 A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
@@ -23,17 +23,71 @@ A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`h
 
 The destination picks the format:
 
-| Command                      | Output                                                                                                              |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `htv page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
-| `htv page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                                 |
-| `htv page.har -o r.json`     | The full analysis as JSON                                                                                           |
-| `htv page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                                   |
-| `htv page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                              |
+| Command                          | Output                                                                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `htv page.har`                   | Browses the report in the terminal: Findings, Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
+| `htv page.har -o r.html`         | A single self-contained HTML file with the interactive diagram, which opens offline                                           |
+| `htv page.har -o r.json`         | The full analysis as JSON                                                                                                     |
+| `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                             |
+| `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                |
+| `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                        |
 
-In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
+In the terminal, `1`–`5` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings or cache a comparison shows, and `q` quits.
 
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
+
+### Findings
+
+htv turns its analyses into a list of findings per page, ordered by severity (critical, warning, info, good) and, within a severity, by the time and bytes at stake. Each finding has:
+
+| Field            | Content                                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`             | A stable kebab-case rule id, such as `document-redirects`, `duplicate-requests`, `cdn-miss-document`, `versioned-assets-not-cached` or `slow-lcp`                         |
+| `title`          | The finding in a few words, with its count: `2 requests failed (4xx)`, `LCP is poor: 4.6 s`                                                                               |
+| `severity`       | `critical`, `warning`, `info` or `good`                                                                                                                                   |
+| `metric`         | What it affects: `ttfb`, `fcp`, `lcp`, `cls`, `inp`, `transfer`, `requests` or `none`                                                                                     |
+| `summary`        | What was found, in one sentence with its numbers                                                                                                                          |
+| `recommendation` | What to do about it                                                                                                                                                       |
+| `confidence`     | `high` when read from the recording itself (status codes, headers, measured metrics), `medium` when inferred (CDN headers, ratios), `low` when the recording may cause it |
+| `evidence`       | The resources that show it: `url`, and `bytes`, `ms` and `detail` when known                                                                                              |
+| `page`           | The page `index` and `name`, and the `side` (`a` or `b`) in a comparison                                                                                                  |
+| `source`         | The analysis it comes from: `cache`, `network`, any other report of the page, or `metrics`                                                                                |
+
+The findings come from the recommendations of every report of a page (cache, network, and the others the analysis adds) and from the metrics themselves: TTFB, FCP, LCP, CLS and INP rated against the web.dev thresholds are a `critical` finding when poor and a `warning` when they need improvement, and a single `good` finding says so when every measured one is good (it needs a trace for the LCP).
+
+`--format findings` writes them as JSON, with the metrics summary of each page as numbers (times in ms, sizes in bytes, ratios from 0 to 1, `null` when the recording cannot provide the value). The document names the [JSON schema](packages/core/schema/findings.schema.json) (draft 2020-12) that describes it, which ships with the package as `dist/findings.schema.json`. A comparison lists the pages of side `a`, then those of side `b`.
+
+```bash
+$ htv page.har trace.json.gz --format findings
+{
+  "schema": "https://unpkg.com/har-trace-viewer@0.1.1/dist/findings.schema.json",
+  "htvVersion": "0.1.1",
+  "generatedAt": "2026-11-01T13:42:15.887Z",
+  "pages": [
+    {
+      "name": "Page 1",
+      "metrics": { "ttfb": 50.6, "serverWait": 48.7, "fcp": 181.5, "lcp": 181.5, "cls": null, "inp": null, "requests": 34, "transferBytes": 799947, ... },
+      "findings": [
+        {
+          "id": "duplicate-requests",
+          "title": "9 resources downloaded more than once",
+          "severity": "info",
+          "metric": "transfer",
+          "summary": "The page fetched these URLs over the network more than once, downloading 153 KB again.",
+          "recommendation": "A <link rel=preload> or prefetch whose as, crossorigin or credentials does not match the request that uses it is fetched twice, ...",
+          "confidence": "low",
+          "evidence": [{ "url": "https://example.com/_next/static/chunks/169-7c4f23f868dd8b78.js", "detail": "fetched 2×", "bytes": 55658 }, ...],
+          "page": { "index": 0, "name": "Page 1" },
+          "source": "network"
+        },
+        ...
+      ]
+    }
+  ]
+}
+```
+
+The same findings open the terminal report, on the Findings tab (`1`), grouped by severity with the metric, the summary, what to do and up to three evidence rows each; and in the HTML report and the web app, the Findings button opens them for the current page, with the number of critical and warning findings on the button. In a comparison, `a`/`b` pick the side on the Findings tab, and each diagram has its own Findings button.
 
 ### Options
 
@@ -50,12 +104,12 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 | `--compare-trace <file>`   | Chrome trace for the `--compare-with` HAR                                                                                                                                   |
 | `--compare-select <value>` | Page of a multi-page `--compare-with` HAR, as `--select`                                                                                                                    |
 | `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                  |
-| `--format <format>`        | `tui`, `html` or `json`; `--format json` without `--output` prints the JSON to stdout                                                                                       |
+| `--format <format>`        | `tui`, `html`, `json` or `findings`; `--format json` and `--format findings` without `--output` print the JSON to stdout                                                    |
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
 | `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
 | `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |
 | `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                     |
-| `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a recommendation of that severity or worse exists                                                                               |
+| `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                         |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                    |
 | `-v, --version`            | Print the version and exit                                                                                                                                                  |
 
@@ -71,7 +125,7 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 | `transfer`                                                  | Maximum bytes on the wire: `500000`, `500kb`, `1.5mb` (1 kb = 1000 bytes, as the report shows them) |
 | `cdn-hit-ratio`, `cache-hit-ratio`                          | Minimum ratio: `0.9` or `90%`                                                                       |
 
-After the report is written, htv prints one line per budget per page (`pass` or `FAIL`, the actual value and the limit) and one line per recommendation that reaches `--fail-on`. The lines go to stderr, so `--format json` keeps stdout pure JSON; without `--output` no terminal report opens, and the result is printed to stdout instead, so the command runs without a TTY. A metric the page cannot provide (LCP without a trace, INP without interactions) shows `n/a` and passes, unless `--budget-strict` is given.
+After the report is written, htv prints one line per budget per page (`pass` or `FAIL`, the actual value and the limit) and one line per [finding](#findings) that reaches `--fail-on`: a recommendation of the cache, network or another report, or a Core Web Vital or TTFB rated poor (`critical`) or in need of improvement (`warning`). The lines go to stderr, so `--format json` keeps stdout pure JSON; without `--output` no terminal report opens, and the result is printed to stdout instead, so the command runs without a TTY. A metric the page cannot provide (LCP without a trace, INP without interactions) shows `n/a` and passes, unless `--budget-strict` is given.
 
 Exit codes: `0` every check passed, `2` a budget or `--fail-on` failed (the report is still written), `1` usage or input errors.
 
@@ -81,8 +135,8 @@ Budgets:
   pass  Page 1  lcp            181 ms  <= 2500 ms
   FAIL  Page 1  transfer       800 KB  <= 500 KB
   pass  Page 1  cdn-hit-ratio  100.0%  >= 95.0%
-Recommendations at warning or worse:
-  pass  no warning or critical recommendations
+Findings at warning or worse:
+  pass  no warning or critical findings
 Checks failed: 1 of 3 budgets failed.
 $ echo $?
 2
@@ -132,7 +186,7 @@ Portable single-file report:
 htv --page "Home" --har home.har --output report.html
 ```
 
-CI check that still publishes the report: exits 2 when the LCP goes over 2.5 s, the CDN serves less than 90% of the own resources or a critical recommendation shows up:
+CI check that still publishes the report: exits 2 when the LCP goes over 2.5 s, the CDN serves less than 90% of the own resources or a critical finding shows up:
 
 ```bash
 htv page.har trace.json.gz -o report.html --budget lcp=2.5s,cdn-hit-ratio=90% --fail-on critical

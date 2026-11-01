@@ -11,6 +11,7 @@ const output = resolve(import.meta.dirname, ".output");
 const bundleUrl = pathToFileURL(resolve(output, "bundle/index.html")).href;
 const plainUrl = pathToFileURL(resolve(output, "plain/index.html")).href;
 const cachedUrl = pathToFileURL(resolve(output, "cached/index.html")).href;
+const problemsUrl = pathToFileURL(resolve(output, "problems/index.html")).href;
 
 const MIME: Record<string, string> = {
   ".html": "text/html",
@@ -329,6 +330,44 @@ for (const scheme of ["light", "dark"] as const) {
     const table = page.getByRole("table", { name: "Hops per host" });
     await expect(table).toBeVisible();
     expect(await table.getByRole("row").count()).toBeGreaterThanOrEqual(2);
+    await page.waitForTimeout(500);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(
+      results.violations.map((v) => ({
+        id: v.id,
+        impact: v.impact,
+        nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 5),
+      }))
+    ).toEqual([]);
+    await context.close();
+  });
+}
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`findings panel lists what to fix and has no axe violations: ${scheme} theme`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ colorScheme: scheme });
+    const page = await context.newPage();
+    await open(page, problemsUrl);
+    // First in the toolbar, with the number of critical and warning findings.
+    const button = page.getByRole("button", { name: /^Toggle findings/ });
+    // The fixture's responses carry no Content-Encoding, so the compression report adds a critical.
+    await expect(button).toHaveText("Findings 7");
+    await expect(button).toHaveAccessibleName("Toggle findings 7");
+    await expect(button).toHaveAttribute("title", "Findings: 3 critical, 4 warnings");
+    await button.click();
+    const details = page.getByRole("region", { name: "Findings details" });
+    await expect(details).toBeVisible();
+    await expect(details.getByRole("heading", { level: 3 })).toHaveText([
+      "Critical3",
+      "Warnings4",
+      "Info3",
+      "Good1",
+    ]);
+    await expect(details.getByText("The document is behind 2 redirects")).toBeVisible();
     await page.waitForTimeout(500);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

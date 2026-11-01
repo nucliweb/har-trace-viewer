@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
-import { compareFlows, stepAtPair } from "@htv/core";
+import { collectFindings, compareFlows, stepAtPair } from "@htv/core";
 import type { Flow } from "@htv/core";
+import { findingsRegion } from "./findings-view.js";
 import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
 import type { Line } from "./lines.js";
 import {
@@ -25,7 +26,7 @@ interface Props {
   columns?: number;
 }
 
-const TABS = ["Overview", "Steps", "Hosts", "Cache & network"] as const;
+const TABS = ["Findings", "Overview", "Steps", "Hosts", "Cache & network"] as const;
 type Side = "a" | "b";
 
 // The header block and the status bar around the scrolling region.
@@ -110,9 +111,9 @@ function LineView({ line }: { line: Line }) {
 }
 
 /**
- * The report in the terminal: an overview of the metrics, the diagram's steps, the hosts and
- * the cache analysis, one tab each, drawn as framed panels. A comparison shows both flows with
- * their B − A deltas.
+ * The report in the terminal: the findings, an overview of the metrics, the diagram's steps,
+ * the hosts and the cache analysis, one tab each, drawn as framed panels. A comparison shows
+ * both flows with their B − A deltas.
  */
 export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const { exit } = useApp();
@@ -128,6 +129,12 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
     [flow, compare]
   );
+  const findings = useMemo(
+    () => ({ a: collectFindings(flow), b: compare ? collectFindings(compare) : [] }),
+    [flow, compare]
+  );
+  // The tabs that show one side of a comparison at a time, picked with a/b.
+  const sided = (tabName: string) => tabName === "Findings" || tabName === "Cache & network";
   const stepCount = comparison ? comparison.pairs.length : flow.steps.length;
   const pageCount = flow.pages.length;
   const width = Math.max(MIN_COLUMNS, size.columns);
@@ -136,6 +143,10 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
 
   const region = useMemo((): Line[] => {
     switch (current) {
+      case "Findings": {
+        const list = compare ? findings[side] : findings.a.filter((f) => f.page.index === page);
+        return findingsRegion(list, width);
+      }
       case "Overview":
         return comparison
           ? compareOverviewRegion(comparison, width)
@@ -160,7 +171,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         return cacheRegion(cacheReport, width, networkReport);
       }
     }
-  }, [current, step, page, side, width, viewport, flow, compare, comparison, names]);
+  }, [current, step, page, side, width, viewport, flow, compare, comparison, names, findings]);
 
   const maxScroll = Math.max(0, region.length - viewport);
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
@@ -202,8 +213,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   });
 
   const context = compare
-    ? current === "Cache & network"
-      ? `Cache · ${side.toUpperCase()} ${names[side]}`
+    ? sided(current)
+      ? `${current === "Findings" ? "Findings" : "Cache"} · ${side.toUpperCase()} ${names[side]}`
       : `A ${names.a} · B ${names.b}`
     : pageLabel(flow, page);
   const pages =
@@ -212,10 +223,10 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const visible = region.slice(scroll, scroll + viewport);
 
   const help = [
-    "1-4/Tab tabs",
+    `1-${TABS.length}/Tab tabs`,
     current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
     maxScroll > 0 ? "↑/↓ PgUp/PgDn scroll" : null,
-    compare && current === "Cache & network" ? "a/b side" : null,
+    compare && sided(current) ? "a/b side" : null,
     "q quit",
   ]
     .filter(Boolean)

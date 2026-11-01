@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/har-trace-viewer/dist/findings.schema.json",
+  "title": "htv findings",
+  "description": "The findings of a HAR (and Chrome trace) analysis, written by `htv --format findings`: per page, its metrics summary and its findings, ordered by severity and impact.",
+  "type": "object",
+  "required": ["schema", "htvVersion", "generatedAt", "pages"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "description": "Where this schema lives."
+    },
+    "htvVersion": {
+      "type": "string",
+      "description": "The version of htv that wrote the document."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the document was written (ISO 8601)."
+    },
+    "pages": {
+      "type": "array",
+      "description": "One entry per page of the flow; a comparison lists side a, then side b.",
+      "items": { "$ref": "#/$defs/page" }
+    }
+  },
+  "$defs": {
+    "severity": {
+      "enum": ["critical", "warning", "info", "good"]
+    },
+    "side": {
+      "enum": ["a", "b"],
+      "description": "The side of a comparison: a is the first recording, b the second."
+    },
+    "nullableNumber": {
+      "type": ["number", "null"]
+    },
+    "page": {
+      "type": "object",
+      "required": ["name", "metrics", "findings"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "side": { "$ref": "#/$defs/side" },
+        "metrics": { "$ref": "#/$defs/metrics" },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/finding" }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "The page's metrics summary. Times in ms, sizes in bytes, ratios from 0 to 1; null when the recording cannot provide the value (paints and vitals without a trace, events that never fired).",
+      "required": [
+        "ttfb",
+        "serverWait",
+        "fcp",
+        "lcp",
+        "cls",
+        "inp",
+        "dcl",
+        "onLoad",
+        "requests",
+        "cacheHits",
+        "transferBytes",
+        "cdnHitRatio",
+        "browserCacheHitRatio"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ttfb": {
+          "type": "number",
+          "description": "From the navigation start to the document's first byte."
+        },
+        "serverWait": {
+          "type": "number",
+          "description": "The document's server wait (HAR timings.wait)."
+        },
+        "fcp": { "$ref": "#/$defs/nullableNumber" },
+        "lcp": { "$ref": "#/$defs/nullableNumber" },
+        "cls": { "$ref": "#/$defs/nullableNumber" },
+        "inp": { "$ref": "#/$defs/nullableNumber" },
+        "dcl": { "$ref": "#/$defs/nullableNumber" },
+        "onLoad": { "$ref": "#/$defs/nullableNumber" },
+        "requests": {
+          "type": "integer",
+          "description": "Requests that reached the network."
+        },
+        "cacheHits": {
+          "type": "integer",
+          "description": "Resources the browser cache served."
+        },
+        "transferBytes": { "type": "number" },
+        "cdnHitRatio": {
+          "type": ["number", "null"],
+          "description": "CDN cache hits over the own resources that reached the network; null when none did."
+        },
+        "browserCacheHitRatio": { "type": "number" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "severity",
+        "metric",
+        "summary",
+        "recommendation",
+        "confidence",
+        "evidence",
+        "page",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Stable kebab-case rule id, e.g. document-redirects, duplicate-requests, slow-lcp."
+        },
+        "title": { "type": "string" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "metric": {
+          "enum": ["ttfb", "fcp", "lcp", "cls", "inp", "transfer", "requests", "none"],
+          "description": "The Core Web Vital or metric the finding affects."
+        },
+        "summary": {
+          "type": "string",
+          "description": "What was found, in one sentence with its numbers."
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "What to do about it; empty when the analysis gives no advice."
+        },
+        "confidence": {
+          "enum": ["high", "medium", "low"],
+          "description": "high: read from the recording itself (status codes, headers, measured metrics); medium: inferred from vendor headers, ratios or a single lab run; low: possibly an artifact of how the page was recorded."
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "type": "string" },
+              "detail": { "type": "string" },
+              "bytes": { "type": "number", "minimum": 0 },
+              "ms": { "type": "number" }
+            }
+          }
+        },
+        "page": {
+          "type": "object",
+          "required": ["index", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "index": { "type": "integer", "minimum": 0 },
+            "name": { "type": "string" },
+            "side": { "$ref": "#/$defs/side" }
+          }
+        },
+        "source": {
+          "type": "string",
+          "description": "The report the finding comes from: cache, network, render, compression, connections, or metrics for the Core Web Vitals and TTFB.",
+          "examples": ["cache", "network", "render", "compression", "connections", "metrics"]
+        }
+      }
+    }
+  }
+}

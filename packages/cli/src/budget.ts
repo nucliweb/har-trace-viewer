@@ -1,5 +1,5 @@
-import { formatBytes, summarizeFlowMetrics } from "@htv/core";
-import type { CacheRecommendation, Flow, PageAnalysis } from "@htv/core";
+import { collectFindings, formatBytes, summarizeFlowMetrics } from "@htv/core";
+import type { Finding, Flow, FindingSeverity } from "@htv/core";
 
 /** The metrics a --budget can limit. */
 export const BUDGET_METRICS = [
@@ -113,7 +113,7 @@ export function parseBudgets(value: string): Budget[] {
   });
 }
 
-export type Severity = CacheRecommendation["severity"];
+export type Severity = FindingSeverity;
 export type FailOnSeverity = Extract<Severity, "critical" | "warning">;
 
 const FAIL_ON: readonly FailOnSeverity[] = ["critical", "warning"];
@@ -182,43 +182,26 @@ export function evaluateBudgets(
   );
 }
 
-export interface PageRecommendation {
-  /** The report the recommendation comes from: "cache" for the cache report, and so on. */
-  source: string;
-  label: string;
-  severity: Severity;
-}
-
-/**
- * The recommendations of every report on a page analysis (the cache report, and any other
- * report that carries a `recommendations` list), skipping reports the analysis lacks.
- */
-export function pageRecommendations(analysis: PageAnalysis | undefined): PageRecommendation[] {
-  if (!analysis) return [];
-  return Object.entries(analysis).flatMap(([key, report]) => {
-    const list = (report as { recommendations?: unknown } | null)?.recommendations;
-    if (!Array.isArray(list)) return [];
-    const source = key.replace(/Report$/, "");
-    return (list as CacheRecommendation[])
-      .filter((r) => r.severity in SEVERITY_RANK)
-      .map(({ label, severity }) => ({ source, label, severity }));
-  });
-}
-
-export interface FailingRecommendation extends PageRecommendation {
+/** A finding at the --fail-on severity or worse, and the page it belongs to. */
+export interface FailingFinding extends Pick<Finding, "id" | "title" | "severity" | "source"> {
   page: string;
 }
 
-/** The recommendations of every page at the --fail-on severity or worse. */
-export function failingRecommendations(
-  flow: Flow,
-  failOn: FailOnSeverity
-): FailingRecommendation[] {
-  return flow.pages.flatMap((page, i) =>
-    pageRecommendations(flow.pageAnalyses[i])
-      .filter((r) => SEVERITY_RANK[r.severity] >= SEVERITY_RANK[failOn])
-      .map((r) => ({ page: page.name, ...r }))
-  );
+/**
+ * The findings of every page at the --fail-on severity or worse: the recommendations of every
+ * report on the page analyses, and the Core Web Vitals rated poor (critical) or in need of
+ * improvement (warning).
+ */
+export function failingFindings(flow: Flow, failOn: FailOnSeverity): FailingFinding[] {
+  return collectFindings(flow)
+    .filter((f) => SEVERITY_RANK[f.severity] >= SEVERITY_RANK[failOn])
+    .map(({ page, source, id, title, severity }) => ({
+      page: page.name,
+      source,
+      id,
+      title,
+      severity,
+    }));
 }
 
 export interface CheckOptions {
@@ -230,7 +213,7 @@ export interface CheckOptions {
 export interface CheckResult {
   budgets: BudgetResult[];
   failOn?: FailOnSeverity;
-  recommendations: FailingRecommendation[];
+  findings: FailingFinding[];
   passed: boolean;
 }
 
@@ -246,24 +229,21 @@ export function runChecks(
       ]
     : [["", flow]];
   const budgets: BudgetResult[] = [];
-  const recommendations: FailingRecommendation[] = [];
+  const findings: FailingFinding[] = [];
   for (const [prefix, side] of sides) {
     const pages = budgetValues(side).map((p) => ({ ...p, page: prefix + p.page }));
     budgets.push(...evaluateBudgets(pages, options.budgets, options));
     if (options.failOn) {
-      recommendations.push(
-        ...failingRecommendations(side, options.failOn).map((r) => ({
-          ...r,
-          page: prefix + r.page,
-        }))
+      findings.push(
+        ...failingFindings(side, options.failOn).map((f) => ({ ...f, page: prefix + f.page }))
       );
     }
   }
   return {
     budgets,
     ...(options.failOn ? { failOn: options.failOn } : {}),
-    recommendations,
-    passed: budgets.every((b) => b.passed) && recommendations.length === 0,
+    findings,
+    passed: budgets.every((b) => b.passed) && findings.length === 0,
   };
 }
 
@@ -295,7 +275,7 @@ function columns(rows: string[][]): string[] {
 
 const status = (passed: boolean) => (passed ? "pass" : "FAIL");
 
-/** The check result as a short table: one line per budget per page and per failing recommendation. */
+/** The check result as a short table: one line per budget per page and per failing finding. */
 export function formatChecks(result: CheckResult): string {
   const lines: string[] = [];
   if (result.budgets.length > 0) {
@@ -316,30 +296,23 @@ export function formatChecks(result: CheckResult): string {
     );
   }
   if (result.failOn) {
+    lines.push(`Findings at ${result.failOn}${result.failOn === "critical" ? "" : " or worse"}:`);
     lines.push(
-      `Recommendations at ${result.failOn}${result.failOn === "critical" ? "" : " or worse"}:`
-    );
-    lines.push(
-      ...(result.recommendations.length === 0
+      ...(result.findings.length === 0
         ? [
-            `  pass  no ${result.failOn === "critical" ? "critical" : `${result.failOn} or critical`} recommendations`,
+            `  pass  no ${result.failOn === "critical" ? "critical" : `${result.failOn} or critical`} findings`,
           ]
         : columns(
-            result.recommendations.map((r) => [
-              "FAIL",
-              r.page,
-              r.severity,
-              `${r.source}: ${r.label}`,
-            ])
+            result.findings.map((f) => ["FAIL", f.page, f.severity, `${f.source}: ${f.title}`])
           ))
     );
   }
   const failedBudgets = result.budgets.filter((b) => !b.passed).length;
   const failures = [
     ...(failedBudgets > 0 ? [`${failedBudgets} of ${result.budgets.length} budgets failed`] : []),
-    ...(result.recommendations.length > 0
+    ...(result.findings.length > 0
       ? [
-          `${result.recommendations.length} recommendation${result.recommendations.length === 1 ? "" : "s"} at ${result.failOn} or worse`,
+          `${result.findings.length} finding${result.findings.length === 1 ? "" : "s"} at ${result.failOn} or worse`,
         ]
       : []),
   ];

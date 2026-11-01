@@ -10,6 +10,7 @@ import {
   outputTarget,
   buildReport,
   reportJson,
+  reportFindings,
   writeHtmlReport,
   checkOptions,
 } from "./cli";
@@ -51,8 +52,12 @@ async function main() {
   const target = outputTarget(args, process.stdout.isTTY === true);
   const report = await buildReport(args);
   switch (target.kind) {
-    case "json": {
-      const json = reportJson(report, __HTV_VERSION__);
+    case "json":
+    case "findings": {
+      const findings = target.kind === "findings";
+      const json = findings
+        ? reportFindings(report, __HTV_VERSION__)
+        : reportJson(report, __HTV_VERSION__);
       if (!target.path) {
         process.stdout.write(`${json}\n`);
         break;
@@ -60,7 +65,7 @@ async function main() {
       const path = resolve(target.path);
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, `${json}\n`);
-      console.log(`Report generated: ${path}`);
+      console.log(`${findings ? "Findings written" : "Report generated"}: ${path}`);
       break;
     }
     case "html":

@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { generateFlow, parseHarJson, parseTraceJson, summarizeFlowMetrics } from "@htv/core";
-import type { PageAnalysis } from "@htv/core";
+import {
+  collectFindings,
+  generateFlow,
+  parseHarJson,
+  parseTraceJson,
+  summarizeFlowMetrics,
+} from "@htv/core";
 import {
   BUDGET_METRICS,
   budgetValues,
   evaluateBudgets,
-  failingRecommendations,
+  failingFindings,
   formatChecks,
-  pageRecommendations,
   parseBudgets,
   parseFailOn,
   runChecks,
@@ -188,25 +192,7 @@ const rec = (severity: "good" | "info" | "warning" | "critical", label: string) 
   severity,
 });
 
-describe("pageRecommendations", () => {
-  it("collects the recommendations of every report on a page analysis", () => {
-    const analysis = {
-      cacheReport: { recommendations: [rec("critical", "Cache A")] },
-      networkReport: { recommendations: [rec("warning", "Duplicates")] },
-      nodes: [],
-    } as unknown as PageAnalysis;
-    expect(pageRecommendations(analysis)).toEqual([
-      { source: "cache", label: "Cache A", severity: "critical" },
-      { source: "network", label: "Duplicates", severity: "warning" },
-    ]);
-  });
-
-  it("skips reports that are missing", () => {
-    expect(pageRecommendations({ nodes: [] } as unknown as PageAnalysis)).toEqual([]);
-  });
-});
-
-describe("failingRecommendations", () => {
+describe("failingFindings", () => {
   const flow = (recommendations: ReturnType<typeof rec>[]) => {
     const real = generateFlow([{ name: "Home", har: har() }]);
     return {
@@ -217,15 +203,51 @@ describe("failingRecommendations", () => {
     };
   };
 
-  it("fails on recommendations of the threshold severity or worse", () => {
+  it("fails on findings of the threshold severity or worse", () => {
     const f = flow([rec("critical", "C"), rec("warning", "W"), rec("info", "I"), rec("good", "G")]);
-    expect(failingRecommendations(f, "warning").map((r) => r.label)).toEqual(["C", "W"]);
-    expect(failingRecommendations(f, "critical").map((r) => r.label)).toEqual(["C"]);
+    expect(failingFindings(f, "warning").map((r) => r.title)).toEqual(["C", "W"]);
+    expect(failingFindings(f, "critical").map((r) => r.title)).toEqual(["C"]);
   });
 
-  it("names the page of each failing recommendation", () => {
-    const [failing] = failingRecommendations(flow([rec("critical", "C")]), "critical");
-    expect(failing.page).toBe("Home");
+  it("names the page, the report and the rule of each failing finding", () => {
+    const [failing] = failingFindings(flow([rec("critical", "CDN miss on document")]), "critical");
+    expect(failing).toMatchObject({
+      page: "Home",
+      source: "cache",
+      id: "cdn-miss-document",
+      severity: "critical",
+    });
+  });
+
+  it("reads the findings of every report, the network report included", () => {
+    const real = generateFlow([{ name: "Home", har: har() }]);
+    const withNetwork = {
+      ...real,
+      pageAnalyses: [
+        {
+          ...real.pageAnalyses[0],
+          cacheReport: { ...real.cacheReport, recommendations: [] },
+          networkReport: {
+            ...real.pageAnalyses[0].networkReport!,
+            recommendations: [rec("warning", "Duplicates")],
+          },
+        },
+      ],
+    };
+    expect(failingFindings(withNetwork, "warning").map((r) => r.source)).toContain("network");
+  });
+
+  it("fails on a Core Web Vital rated poor at critical", () => {
+    const slow = generateFlow([
+      {
+        name: "Slow",
+        har: har(),
+        trace: { ...trace(), lcp: 6_000 },
+      },
+    ]);
+    expect(failingFindings(slow, "critical")).toContainEqual(
+      expect.objectContaining({ source: "metrics", id: "slow-lcp" })
+    );
   });
 });
 
@@ -252,9 +274,9 @@ describe("runChecks", () => {
     expect(result.passed).toBe(false);
   });
 
-  it("fails when a recommendation reaches --fail-on, and passes without one", () => {
+  it("fails when a finding reaches --fail-on, and passes without one", () => {
     const { flow } = report();
-    const worst = pageRecommendations(flow.pageAnalyses[0]).some((r) => r.severity === "critical");
+    const worst = collectFindings(flow).some((f) => f.severity === "critical");
     const result = runChecks({ flow }, { budgets: [], failOn: "critical", strict: false });
     expect(result.passed).toBe(!worst);
   });
@@ -269,7 +291,7 @@ describe("formatChecks", () => {
         { page: "Home", metric: "cdn-hit-ratio", limit: 0.9, actual: 0.875, passed: false },
         { page: "Home", metric: "cls", limit: 0.1, actual: 0.0123, passed: true },
       ],
-      recommendations: [],
+      findings: [],
       passed: false,
     });
     const lines = text.split("\n");
@@ -289,33 +311,40 @@ describe("formatChecks", () => {
   it("marks a metric the page cannot provide as n/a with a note", () => {
     const text = formatChecks({
       budgets: [{ page: "Home", metric: "lcp", limit: 2500, actual: null, passed: true }],
-      recommendations: [],
+      findings: [],
       passed: true,
     });
     expect(text).toMatch(/pass\s+Home\s+lcp\s+n\/a\s+<= 2500 ms\s+not in this recording/);
     expect(text).toContain("All checks passed");
   });
 
-  it("prints one line per failing recommendation", () => {
+  it("prints one line per failing finding", () => {
     const text = formatChecks({
       budgets: [],
       failOn: "warning",
-      recommendations: [
-        { page: "Home", source: "cache", severity: "critical", label: "No CDN caching" },
+      findings: [
+        {
+          page: "Home",
+          source: "cache",
+          id: "no-cdn-caching",
+          severity: "critical",
+          title: "No CDN caching",
+        },
       ],
       passed: false,
     });
-    expect(text).toMatch(/Recommendations at warning or worse/);
+    expect(text).toMatch(/Findings at warning or worse/);
     expect(text).toMatch(/FAIL\s+Home\s+critical\s+cache: No CDN caching/);
+    expect(text).toContain("1 finding at warning or worse");
   });
 
-  it("says so when no recommendation reaches --fail-on", () => {
+  it("says so when no finding reaches --fail-on", () => {
     const text = formatChecks({
       budgets: [],
       failOn: "critical",
-      recommendations: [],
+      findings: [],
       passed: true,
     });
-    expect(text).toMatch(/pass\s+no critical recommendations/);
+    expect(text).toMatch(/pass\s+no critical findings/);
   });
 });

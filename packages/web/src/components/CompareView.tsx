@@ -1,11 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import { compareFlows, compareStepMetrics, formatDelta, stepAtPair } from "@htv/core";
+import {
+  collectFindings,
+  compareFlows,
+  compareStepMetrics,
+  formatDelta,
+  stepAtPair,
+} from "@htv/core";
 import type { DiagramStep, Flow, FlowComparison, MetricDelta, StepPair } from "@htv/core";
 import { useStepNavigation } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { CachePanel } from "./CachePanel.js";
+import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
 import { DELTA_CLASS, DeltaCell, DeltasPanel } from "./DeltasPanel.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
@@ -39,6 +46,8 @@ interface SideView {
 function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const { flow, name, stepIndex, current } = view;
   const [showCachePanel, setShowCachePanel] = useState(false);
+  const [showFindings, setShowFindings] = useState(false);
+  const findings = useMemo(() => collectFindings(flow, { side }), [flow, side]);
   const step = flow.steps[stepIndex];
   const analysis = flow.pageAnalyses[step.pageIndex];
   const historicalPaths = useMemo(
@@ -60,9 +69,22 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           {name}
         </h2>
         {!current && <span className={styles.paneNote}>Holds step: {step.title}</span>}
+        <FindingsButton
+          findings={findings}
+          active={showFindings}
+          className={`${diagramStyles.findingsBtn} ${styles.paneCacheBtn}`}
+          activeClassName={diagramStyles.cacheBtnActive}
+          onClick={() => {
+            setShowFindings((v) => !v);
+            setShowCachePanel(false);
+          }}
+        />
         <button
-          className={`${diagramStyles.cacheBtn} ${styles.paneCacheBtn} ${showCachePanel ? diagramStyles.cacheBtnActive : ""}`}
-          onClick={() => setShowCachePanel((v) => !v)}
+          className={`${diagramStyles.cacheBtn} ${showCachePanel ? diagramStyles.cacheBtnActive : ""}`}
+          onClick={() => {
+            setShowCachePanel((v) => !v);
+            setShowFindings(false);
+          }}
           aria-label="Toggle cache analysis"
           aria-expanded={showCachePanel}
           title="Cache Analysis"
@@ -93,6 +115,13 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
             network={analysis.networkReport}
             pageLabel={`${TAG[side]} · ${name}`}
             onClose={() => setShowCachePanel(false)}
+          />
+        )}
+        {showFindings && (
+          <FindingsPanel
+            findings={findings}
+            pageLabel={`${TAG[side]} · ${name}`}
+            onClose={() => setShowFindings(false)}
           />
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { analyzeHops, getStepCacheResources, getStepResources } from "@htv/core";
+import { analyzeHops, collectFindings, getStepCacheResources, getStepResources } from "@htv/core";
 import type { Flow, HarEntry } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
@@ -11,6 +11,7 @@ import { CacheSidebar } from "./CacheSidebar.js";
 import { CachePanel } from "./CachePanel.js";
 import { MetricsSummary } from "./MetricsSummary.js";
 import { HopsPanel } from "./HopsPanel.js";
+import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
 import styles from "./DiagramView.module.css";
@@ -39,7 +40,13 @@ export function DiagramView({ flow }: Props) {
   const [showCachePanel, setShowCachePanel] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showHops, setShowHops] = useState(false);
+  const [showFindings, setShowFindings] = useState(false);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
+  const allFindings = useMemo(() => collectFindings(flow), [flow]);
+  const findings = useMemo(
+    () => allFindings.filter((f) => f.page.index === pageIndex),
+    [allFindings, pageIndex]
+  );
 
   const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
   const closeSidebar = () => setSidebarResources(null);
@@ -60,12 +67,25 @@ export function DiagramView({ flow }: Props) {
     <div ref={viewRef} className={styles.view} role="region" aria-label="Diagram" tabIndex={0}>
       {/* A band of its own above the diagram, so it never covers the zone captions. */}
       <div className={styles.toolbar}>
+        <FindingsButton
+          findings={findings}
+          active={showFindings}
+          className={styles.findingsBtn}
+          activeClassName={styles.cacheBtnActive}
+          onClick={() => {
+            setShowFindings((v) => !v);
+            setShowHops(false);
+            setShowMetrics(false);
+            setShowCachePanel(false);
+          }}
+        />
         <button
           className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
           onClick={() => {
             setShowHops((v) => !v);
             setShowMetrics(false);
             setShowCachePanel(false);
+            setShowFindings(false);
           }}
           aria-label="Toggle hops"
           aria-expanded={showHops}
@@ -80,6 +100,7 @@ export function DiagramView({ flow }: Props) {
             setShowMetrics((v) => !v);
             setShowCachePanel(false);
             setShowHops(false);
+            setShowFindings(false);
           }}
           aria-label="Toggle metrics summary"
           aria-expanded={showMetrics}
@@ -93,6 +114,7 @@ export function DiagramView({ flow }: Props) {
             setShowCachePanel((v) => !v);
             setShowMetrics(false);
             setShowHops(false);
+            setShowFindings(false);
           }}
           aria-label="Toggle cache analysis"
           title="Cache Analysis"
@@ -139,6 +161,13 @@ export function DiagramView({ flow }: Props) {
           />
         )}
         {showMetrics && <MetricsSummary flow={flow} onClose={() => setShowMetrics(false)} />}
+        {showFindings && (
+          <FindingsPanel
+            findings={findings}
+            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            onClose={() => setShowFindings(false)}
+          />
+        )}
         {showHops && (
           <HopsPanel
             hops={hops}

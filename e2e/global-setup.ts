@@ -19,6 +19,14 @@ const HOME_PAGE = [
   resolve(fixtures, "webperf-snippets.trace.fixture.json"),
 ];
 
+// Redirects, failed requests, mixed content and a duplicate: findings that need fixing.
+const PROBLEMS_PAGE = [
+  "--page",
+  "Problems",
+  "--har",
+  resolve(fixtures, "network-problems.har.fixture.json"),
+];
+
 // A repeat visit recorded with the browser cache enabled: its steps list cache hits.
 const CACHED_PAGE = [
   "--page",
@@ -58,5 +66,6 @@ export default function globalSetup() {
   generate(resolve(OUTPUT, "bundle"), ["--bundle"]);
   generate(resolve(OUTPUT, "plain"), []);
   generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
+  generate(resolve(OUTPUT, "problems"), ["--bundle"], PROBLEMS_PAGE);
   generate(resolve(OUTPUT, "compare"), ["--compare", "--bundle"], COMPARE_PAGES);
 }

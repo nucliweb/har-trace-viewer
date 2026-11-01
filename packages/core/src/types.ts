@@ -734,3 +734,46 @@ export interface NodeDetectionResult {
   name: string;
   cdnProvider: CdnProvider;
 }
+
+// ── Findings ──────────────────────────────────────────────────────────────────
+
+export type FindingSeverity = Recommendation["severity"];
+
+// The Core Web Vital or metric a finding affects.
+export type FindingMetric =
+  "ttfb" | "fcp" | "lcp" | "cls" | "inp" | "transfer" | "requests" | "none";
+
+export type FindingConfidence = "high" | "medium" | "low";
+
+// The report a finding comes from: a page analysis report named `<source>Report`, or
+// "metrics" for the findings rated from the metrics summary.
+export type FindingSource =
+  "cache" | "network" | "render" | "compression" | "connections" | "metrics" | (string & {});
+
+export interface FindingEvidence {
+  url: string;
+  detail?: string;
+  bytes?: number;
+  ms?: number;
+}
+
+export interface FindingPage {
+  index: number; // into Flow.pages
+  name: string;
+  side?: "a" | "b"; // the side of a comparison
+}
+
+/** One problem (or strength) of a page, with what to do about it and what shows it. */
+export interface Finding {
+  // Stable kebab-case rule id: "document-redirects", "duplicate-requests", "slow-lcp".
+  id: string;
+  title: string;
+  severity: FindingSeverity;
+  metric: FindingMetric;
+  summary: string; // one sentence, with the numbers
+  recommendation: string; // what to do
+  confidence: FindingConfidence;
+  evidence: FindingEvidence[];
+  page: FindingPage;
+  source: FindingSource;
+}

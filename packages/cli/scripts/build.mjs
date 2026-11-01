@@ -50,3 +50,6 @@ for (const file of readdirSync(join(webBuild, "assets"))) {
 let html = readFileSync(join(webBuild, "index.html"), "utf8");
 for (const tag of SITE_ONLY_TAGS) html = html.replace(tag, "");
 writeFileSync(join(webOut, "index.html"), html);
+
+// The schema of `--format findings`, which the document links to inside the published package.
+cpSync(resolve(cliDir, "../core/schema/findings.schema.json"), join(dist, "findings.schema.json"));

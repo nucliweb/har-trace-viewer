@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import { collectFindings } from "@htv/core";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
@@ -62,6 +63,33 @@ describe("DiagramView", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle cache analysis" }));
     expect(screen.queryByText(label)).not.toBeInTheDocument();
+  });
+
+  it("puts the findings first in the toolbar, with a count of what needs fixing", () => {
+    render(<DiagramView flow={flow} />);
+    const toolbar = document.querySelector<HTMLElement>("[class*=toolbar]")!;
+    const [first] = within(toolbar).getAllByRole("button");
+    const findings = collectFindings(flow).filter((f) => f.page.index === 0);
+    const urgent = findings.filter((f) => f.severity === "critical" || f.severity === "warning");
+
+    const count = urgent.length > 0 ? ` ${urgent.length}` : "";
+    expect(first).toHaveAccessibleName(`Toggle findings${count}`);
+    expect(first).toHaveTextContent(`Findings${count}`);
+  });
+
+  it("opens and closes the findings panel of the page", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+
+    await user.click(screen.getByRole("button", { name: /^Toggle findings/ }));
+    expect(screen.getByRole("region", { name: "Findings details" })).toBeInTheDocument();
+    expect(screen.getByText(`Page 1 · ${flow.pages[0].name}`)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Toggle cache analysis" }));
+    expect(screen.queryByRole("region", { name: "Findings details" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Toggle findings/ }));
+    await user.click(screen.getByRole("button", { name: "Close findings" }));
+    expect(screen.queryByRole("region", { name: "Findings details" })).not.toBeInTheDocument();
   });
 
   it("shows the page's network report in the cache panel", async () => {
