@@ -2,6 +2,12 @@
 
 [![CI](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/nucliweb/har-trace-viewer/actions/workflows/ci.yml)
 
+Offline HAR + Chrome trace analyzer that shows how a page load travels through CDN, origin and third parties, with cache recommendations and first-vs-repeat comparison.
+
+![HTV report in light mode: the page load diagram with the browser, a Vercel CDN edge, the origin and third parties, and the TTFB, FCP, LCP and onLoad metrics](docs/screenshot-light.png)
+
+Try it in the browser at [har-trace-viewer-web.vercel.app](https://har-trace-viewer-web.vercel.app) with your own HAR and trace files or the built-in demo flow.
+
 Analyzes HAR and Chrome trace files and shows the page load step by step, with its network requests, hosts, CDN and cache behavior and performance metrics: in the terminal, as a self-contained HTML report to share, or as JSON for other tools and AI agents.
 
 ## Usage
@@ -95,6 +101,22 @@ htv --page "Home" --har home.har --output report.html
 ```
 
 A directory report (`--output report/`) without `--bundle` loads its scripts as ES modules from `assets/`, which browsers block over `file://`; serve the folder over HTTP (for example `npx serve report/`), add `--bundle`, or write a `.html` file, which opens by double-click.
+
+## Why htv
+
+- **Hop-by-hop diagram from the HAR alone.** The page load is drawn step by step across browser, CDN edge (with its PoP location), origin and third parties, using only the headers and timings already in the capture.
+- **Cache analysis that includes the CDN.** Browser cache headers and CDN hit/miss are read together, flagging immutable candidates and hashed assets served with `no-store`.
+- **First vs repeat comparison.** Two captures of the same page are compared with per-request and per-metric deltas.
+- **One core, three outputs.** The terminal report, the self-contained HTML report and the JSON output come from the same analysis, so scripts and AI agents see what people see.
+- **Offline and MIT.** Nothing is uploaded; HAR files, which often contain cookies and tokens, stay on your machine.
+
+| Tool                         | What it does better                           | What htv adds                                               |
+| ---------------------------- | --------------------------------------------- | ----------------------------------------------------------- |
+| Google HAR Analyzer          | Request filters and HAR sanitizing            | CDN and origin hops, cache analysis, first-vs-repeat deltas |
+| HAR Viewer (Jan Odvarko)     | Classic, familiar waterfall                   | Step-by-step diagram by network node, CDN and cache context |
+| wiretrail                    | CI failure thresholds, fast Rust binary       | Interactive HTML report, CDN diagram, comparison            |
+| waterfall-tools (Pat Meenan) | Many input formats                            | CDN/PoP hop diagram and cache recommendations               |
+| WebPageTest                  | Live tests from many locations, CDN detection | Works offline on captures you already have                  |
 
 ## Packages
 

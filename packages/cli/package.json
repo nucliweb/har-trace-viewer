@@ -1,7 +1,7 @@
 {
   "name": "har-trace-viewer",
   "version": "0.1.1",
-  "description": "Generate a self-contained HTML performance report from HAR and Chrome trace files",
+  "description": "HAR analyzer and viewer that shows how a page load travels through CDN, origin and third parties, with cache analysis and Core Web Vitals, as terminal, HTML or JSON output",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,7 +22,15 @@
     "diagram",
     "chrome-devtools",
     "report",
-    "cli"
+    "cli",
+    "har-viewer",
+    "har-analyzer",
+    "web-performance",
+    "cache",
+    "core-web-vitals",
+    "webpagetest",
+    "chrome-trace",
+    "ai-agents"
   ],
   "type": "module",
   "bin": {
