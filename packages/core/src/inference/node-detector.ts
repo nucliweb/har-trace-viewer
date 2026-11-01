@@ -1,5 +1,5 @@
 import { getHostname, getRootDomain } from "../utils/domain.js";
-import { detectPop } from "./pops.js";
+import { detectPop, detectVercelFunctionRegion } from "./pops.js";
 import type {
   CdnProvider,
   ClientRegionSuggestion,
@@ -94,10 +94,12 @@ export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | nu
 
 // Infers origin server region from response headers.
 // Checks for hosting-platform markers (Vercel, Fly.io, AWS) before falling back.
+// Vercel's origin is where the function ran, not the edge that x-vercel-id names first;
+// without a function region it is Vercel's default function region, iad1.
 export function detectOriginRegion(headers: Record<string, string>): NetworkRegion {
   const vercelId = headers["x-vercel-id"];
   if (vercelId) {
-    return detectPop({ "x-vercel-id": vercelId })?.region ?? "united-states";
+    return detectVercelFunctionRegion(vercelId)?.region ?? "united-states";
   }
 
   const flyId = headers["fly-request-id"];

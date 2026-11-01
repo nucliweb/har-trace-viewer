@@ -165,10 +165,29 @@ function fromServedBy(value: string): PopDetection | null {
   return popFrom(suffix ?? named, "fastly");
 }
 
-// "cdg1::pt4z5-..." or "fra1::iad1::..."; the first segment is the edge region.
+// x-vercel-id lists the regions a request crossed and ends with a request id:
+// "cdg1::pt4z5-1779186962459-6cff682e889a" (served by the edge) or
+// "cdg1::iad1::w8x2k-..." (edge cdg1, function run in iad1). Region segments are an
+// airport code and a number; anything else (the request id) is not a region.
+function vercelRegions(value: string): string[] {
+  return value
+    .split("::")
+    .map((segment) => /^([a-z]{3})\d{1,2}$/i.exec(segment.trim())?.[1])
+    .filter((code): code is string => code !== undefined);
+}
+
+// The edge is the first region.
 function fromVercelId(value: string): PopDetection | null {
-  const edge = value.split("::")[0].replace(/\d+$/, "");
-  return popFrom(edge, "vercel");
+  return popFrom(vercelRegions(value)[0], "vercel");
+}
+
+/**
+ * Where a Vercel function ran: the last region of x-vercel-id after the edge. Null when
+ * the edge served the request alone or the region is unknown.
+ */
+export function detectVercelFunctionRegion(value: string): PopDetection | null {
+  const regions = vercelRegions(value);
+  return regions.length > 1 ? popFrom(regions[regions.length - 1], "vercel") : null;
 }
 
 // "<ulid>-<region>"

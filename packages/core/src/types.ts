@@ -52,6 +52,9 @@ export interface ParsedHar {
   pages: HarPage[];
   entries: HarEntry[];
   documentEntry: HarEntry;
+  // The redirects the navigation followed before documentEntry, in order (also in
+  // `entries`). Absent from flows embedded before it existed.
+  documentRedirects?: HarEntry[];
   preconnectHints: Record<string, PreconnectSource>;
   // Only on WebPageTest repeat views, inferred from the first view of the same run.
   inferredCacheHits?: InferredCacheHit[];

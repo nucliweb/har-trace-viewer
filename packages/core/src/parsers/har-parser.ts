@@ -34,6 +34,7 @@ interface RawHarEntry {
     status?: number;
     headers?: { name: string; value: string }[];
     content?: { mimeType?: string; size?: number } | null;
+    redirectURL?: string;
     bodySize?: number;
     headersSize?: number;
   };
@@ -144,10 +145,16 @@ export function pickResponseHeaders(headers: Record<string, string>): Record<str
   return result;
 }
 
+// Repeated headers are joined with ", ", which means the same as listing them apart
+// (RFC 9110 §5.3). Set-Cookie is the exception: its values may contain commas, so only
+// the first one is kept.
 function headersToRecord(headers: { name: string; value: string }[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const h of headers) {
-    result[h.name.toLowerCase()] = h.value;
+    const name = h.name.toLowerCase();
+    const previous = result[name];
+    if (previous === undefined) result[name] = h.value;
+    else if (name !== "set-cookie") result[name] = `${previous}, ${h.value}`;
   }
   return result;
 }
@@ -263,12 +270,36 @@ function parseFromCache(
   return false;
 }
 
+// Splits a Link header into its links: on the commas outside the <URL> and outside
+// quoted parameter values.
+function splitLinks(linkHeader: string): string[] {
+  const links: string[] = [];
+  let current = "";
+  let inUrl = false;
+  let inQuotes = false;
+  for (const char of linkHeader) {
+    if (char === "<" && !inQuotes) inUrl = true;
+    else if (char === ">" && !inQuotes) inUrl = false;
+    else if (char === '"' && !inUrl) inQuotes = !inQuotes;
+    else if (char === "," && !inUrl && !inQuotes) {
+      links.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  links.push(current);
+  return links;
+}
+
 function preconnectHostnames(linkHeader: string): string[] {
   const result: string[] = [];
-  for (const part of linkHeader.split(",")) {
+  for (const part of splitLinks(linkHeader)) {
     const urlMatch = part.match(/<([^>]+)>/);
-    const relMatch = part.match(/\brel=["']?([^"';,\s]+)["']?/i);
-    if (urlMatch && relMatch && relMatch[1].toLowerCase() === "preconnect") {
+    // rel may list several relations: rel="dns-prefetch preconnect".
+    const relMatch = part.match(/;\s*rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^;\s]+))/i);
+    const rels = (relMatch?.[1] ?? relMatch?.[2] ?? relMatch?.[3] ?? "").toLowerCase().split(/\s+/);
+    if (urlMatch && rels.includes("preconnect")) {
       try {
         result.push(new URL(urlMatch[1]).hostname);
       } catch {
@@ -295,6 +326,73 @@ function parsePreconnectHints(
     }
   }
   return hints;
+}
+
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+// Informational (1xx) responses and redirects are not the document the page rendered;
+// a 304 is: the browser renders its cached copy. Unknown statuses (0) count as final.
+function isFinalStatus(status: number): boolean {
+  return !REDIRECT_STATUSES.has(status) && (status < 100 || status >= 200);
+}
+
+// Where a redirect points, from the HAR's redirectURL or the Location header, resolved
+// against the request URL; null when the entry is not a redirect.
+function redirectTarget(raw: RawHarEntry): string | null {
+  const response = raw.response ?? {};
+  if (!REDIRECT_STATUSES.has(response.status ?? 0)) return null;
+  const location =
+    response.redirectURL ||
+    response.headers?.find((h) => h.name.toLowerCase() === "location")?.value;
+  if (!location) return null;
+  try {
+    return new URL(location, raw.request.url).href;
+  } catch {
+    return null;
+  }
+}
+
+// The redirects the navigation followed from the page's first request, in order, and the
+// response they led to; no redirects when the first request is not one or the HAR did not
+// record where the chain ends.
+function followRedirects(
+  raw: RawHarEntry[],
+  entries: HarEntry[]
+): { redirects: HarEntry[]; final: HarEntry | null } {
+  const redirects: HarEntry[] = [];
+  let index = 0;
+  let target = redirectTarget(raw[0]);
+  while (target !== null) {
+    redirects.push(entries[index]);
+    const url = target;
+    const next = entries.findIndex((e, i) => i > index && e.url === url);
+    if (next === -1) return { redirects: [], final: null };
+    index = next;
+    target = redirectTarget(raw[index]);
+  }
+  return redirects.length > 0 ? { redirects, final: entries[index] } : { redirects, final: null };
+}
+
+/**
+ * The page's main document: the response its first request's redirect chain ends at, else
+ * the first final HTML response, preferring the one whose URL is the page title (Chrome
+ * titles pages with their URL) so iframes and earlier HTML responses do not take its place.
+ * Falls back to the first HTML response, and null without one.
+ */
+function findDocument(
+  raw: RawHarEntry[],
+  entries: HarEntry[],
+  pageTitle: string
+): { documentEntry: HarEntry; documentRedirects: HarEntry[] } | null {
+  const { redirects, final } = followRedirects(raw, entries);
+  if (final?.isDocument && isFinalStatus(final.status)) {
+    return { documentEntry: final, documentRedirects: redirects };
+  }
+  const candidates = entries.filter((e) => e.isDocument && isFinalStatus(e.status));
+  const title = pageTitle.trim();
+  const documentEntry =
+    candidates.find((e) => e.url === title) ?? candidates[0] ?? entries.find((e) => e.isDocument);
+  return documentEntry ? { documentEntry, documentRedirects: [] } : null;
 }
 
 function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedHar | null {
@@ -340,13 +438,15 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     };
   });
 
-  const documentEntry = parsedEntries.find((e) => e.isDocument);
-  if (!documentEntry) return null;
+  const document = findDocument(entries, parsedEntries, rawPages[0].title ?? "");
+  if (!document) return null;
+  const { documentEntry, documentRedirects } = document;
 
   return {
     pages: parsedPages,
     entries: parsedEntries,
     documentEntry,
+    documentRedirects,
     preconnectHints: parsePreconnectHints(parsedEntries, documentEntry.responseHeaders),
   };
 }

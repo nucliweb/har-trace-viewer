@@ -1,0 +1,346 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": { "name": "WebInspector", "version": "537.36" },
+    "pages": [
+      {
+        "startedDateTime": "2026-05-19T10:36:02.000Z",
+        "id": "page_1",
+        "title": "https://webperf-snippets.nucliweb.net/",
+        "pageTimings": { "onContentLoad": 612.4, "onLoad": 905.7 }
+      }
+    ],
+    "entries": [
+      {
+        "_initiator": { "type": "other" },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://nucliweb.net/webperf-snippets",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 301,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "cache-control", "value": "max-age=3600" },
+            { "name": "cf-cache-status", "value": "DYNAMIC" },
+            { "name": "cf-ray", "value": "9a1b2c3d4e5f6789-MAD" },
+            { "name": "content-type", "value": "text/html" },
+            { "name": "date", "value": "Tue, 19 May 2026 10:36:02 GMT" },
+            { "name": "location", "value": "https://webperf-snippets.nucliweb.net/" },
+            { "name": "server", "value": "cloudflare" }
+          ],
+          "cookies": [],
+          "content": { "size": 167, "mimeType": "text/html" },
+          "redirectURL": "https://webperf-snippets.nucliweb.net/",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 412,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "104.21.32.1",
+        "startedDateTime": "2026-05-19T10:36:02.001Z",
+        "time": 98.6,
+        "timings": {
+          "blocked": 1.2,
+          "dns": 14.3,
+          "ssl": 18.9,
+          "connect": 41.5,
+          "send": 0.1,
+          "wait": 39.8,
+          "receive": 1.7,
+          "_blocked_queueing": 0.8
+        },
+        "_connectionId": "1001",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": { "type": "other" },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://webperf-snippets.nucliweb.net/",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "age", "value": "0" },
+            { "name": "cache-control", "value": "public, max-age=0, must-revalidate" },
+            { "name": "content-encoding", "value": "br" },
+            { "name": "content-type", "value": "text/html; charset=utf-8" },
+            { "name": "date", "value": "Tue, 19 May 2026 10:36:02 GMT" },
+            {
+              "name": "link",
+              "value": "<https://fonts.gstatic.com>; rel=preconnect; crossorigin"
+            },
+            {
+              "name": "link",
+              "value": "<https://fonts.googleapis.com/css2?family=Inter:wght@400,700&display=swap>; rel=preload; as=style"
+            },
+            {
+              "name": "link",
+              "value": "<https://www.googletagmanager.com>; rel=\"dns-prefetch preconnect\""
+            },
+            { "name": "server", "value": "Vercel" },
+            { "name": "set-cookie", "value": "session=abc; Path=/; Secure; HttpOnly" },
+            { "name": "set-cookie", "value": "theme=dark; Path=/" },
+            { "name": "x-matched-path", "value": "/" },
+            { "name": "x-vercel-cache", "value": "MISS" },
+            { "name": "x-vercel-id", "value": "cdg1::iad1::w8x2k-1779186962459-6cff682e889a" }
+          ],
+          "cookies": [],
+          "content": { "size": 112507, "mimeType": "text/html" },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 15663,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "76.76.21.21",
+        "startedDateTime": "2026-05-19T10:36:02.101Z",
+        "time": 247.3,
+        "timings": {
+          "blocked": 1.8,
+          "dns": 11.2,
+          "ssl": 16.4,
+          "connect": 33.9,
+          "send": 0.1,
+          "wait": 196.4,
+          "receive": 15.1,
+          "_blocked_queueing": 0.9
+        },
+        "_connectionId": "1002",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": { "type": "parser", "url": "https://webperf-snippets.nucliweb.net/" },
+        "_priority": "VeryHigh",
+        "_resourceType": "stylesheet",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "age", "value": "468968" },
+            { "name": "cache-control", "value": "public, max-age=31536000, immutable" },
+            { "name": "content-type", "value": "text/css; charset=utf-8" },
+            { "name": "server", "value": "Vercel" },
+            { "name": "x-vercel-cache", "value": "HIT" },
+            { "name": "x-vercel-id", "value": "cdg1::whzr5-1779186962522-f99fb3dee46a" }
+          ],
+          "cookies": [],
+          "content": { "size": 30211, "mimeType": "text/css" },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 6012,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "76.76.21.21",
+        "startedDateTime": "2026-05-19T10:36:02.362Z",
+        "time": 31.2,
+        "timings": {
+          "blocked": 1.1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 24.6,
+          "receive": 5.4
+        },
+        "_connectionId": "1002",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": { "type": "parser", "url": "https://webperf-snippets.nucliweb.net/" },
+        "_priority": "Low",
+        "_resourceType": "script",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "age", "value": "468968" },
+            { "name": "cache-control", "value": "public, max-age=31536000, immutable" },
+            { "name": "content-type", "value": "application/javascript; charset=utf-8" },
+            { "name": "server", "value": "Vercel" },
+            { "name": "x-vercel-cache", "value": "HIT" },
+            { "name": "x-vercel-id", "value": "cdg1::cqqgp-1779186962522-d4d069cbf556" }
+          ],
+          "cookies": [],
+          "content": { "size": 3412, "mimeType": "application/javascript" },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 1902,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "76.76.21.21",
+        "startedDateTime": "2026-05-19T10:36:02.364Z",
+        "time": 28.4,
+        "timings": {
+          "blocked": 1.3,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 23.9,
+          "receive": 3.1
+        },
+        "_connectionId": "1002",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": { "type": "parser", "url": "https://webperf-snippets.nucliweb.net/" },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://webperf-snippets.nucliweb.net/embed/demo",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "age", "value": "1203" },
+            { "name": "cache-control", "value": "public, max-age=0, must-revalidate" },
+            { "name": "content-type", "value": "text/html; charset=utf-8" },
+            { "name": "server", "value": "Vercel" },
+            { "name": "x-vercel-cache", "value": "HIT" },
+            { "name": "x-vercel-id", "value": "cdg1::t7mq2-1779186962701-0a1b2c3d4e5f" }
+          ],
+          "cookies": [],
+          "content": { "size": 8420, "mimeType": "text/html" },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 2788,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "76.76.21.21",
+        "startedDateTime": "2026-05-19T10:36:02.540Z",
+        "time": 36.8,
+        "timings": {
+          "blocked": 1.4,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 31.2,
+          "receive": 4.1
+        },
+        "_connectionId": "1002",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": { "type": "parser", "url": "https://webperf-snippets.nucliweb.net/" },
+        "_priority": "VeryHigh",
+        "_resourceType": "font",
+        "cache": {},
+        "connection": "443",
+        "request": {
+          "method": "GET",
+          "url": "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            { "name": "age", "value": "201833" },
+            { "name": "cache-control", "value": "public, max-age=31536000" },
+            { "name": "content-type", "value": "font/woff2" },
+            { "name": "server", "value": "sffe" }
+          ],
+          "cookies": [],
+          "content": { "size": 48256, "mimeType": "font/woff2" },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 48610,
+          "_error": null,
+          "_fetchedViaServiceWorker": false
+        },
+        "serverIPAddress": "142.250.184.3",
+        "startedDateTime": "2026-05-19T10:36:02.410Z",
+        "time": 44.2,
+        "timings": {
+          "blocked": 0.9,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 18.7,
+          "receive": 24.5
+        },
+        "_connectionId": "1003",
+        "pageref": "page_1"
+      }
+    ]
+  }
+}
