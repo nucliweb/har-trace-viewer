@@ -20,10 +20,10 @@ execFileSync("npm", ["run", "build"], {
   env: { ...process.env, NODE_ENV: "production" },
 });
 
-// Ink loads its React DevTools bridge only when DEV=true, and it needs the optional
-// `react-devtools-core`, which the package does not ship. Bundled as is, the bridge would patch
-// globals before failing; this stand-in fails the way the missing package does, so Ink prints its
-// usual "not installed" warning and the report runs without DevTools.
+// Ink imports its React DevTools bridge only when DEV=true and the optional `react-devtools-core`
+// resolves, which the package does not ship. Bundled as is, the bridge would pull in a window
+// polyfill and an import that cannot be bundled; this empty stand-in keeps both out, so the
+// report runs without DevTools, as it does when the package is missing.
 const inkDevtoolsStub = {
   name: "ink-devtools-stub",
   setup(build) {
@@ -33,10 +33,7 @@ const inkDevtoolsStub = {
         : undefined
     );
     build.onLoad({ filter: /.*/, namespace: "ink-devtools-stub" }, () => ({
-      contents:
-        "const error = new Error(\"Cannot find package 'react-devtools-core'\");\n" +
-        'error.code = "ERR_MODULE_NOT_FOUND";\n' +
-        "throw error;\n",
+      contents: "",
       loader: "js",
     }));
   },

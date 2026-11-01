@@ -482,7 +482,8 @@ describe("--bundle end to end (built CLI)", () => {
     expect(html).not.toContain('<link rel="stylesheet"');
     expect(html).not.toContain("fonts.googleapis");
     expect(html).not.toContain("./assets/");
-    expect(html).not.toContain('rel="preload"');
+    // React DOM's resource hoisting queries `link[rel="preload"]`, so look for the tag.
+    expect(html).not.toMatch(/<link[^>]*rel="preload"/);
     expect(html).toContain("@font-face");
     expect(html).toContain("data:font/woff2;base64");
     expect(existsSync(join(out, "assets"))).toBe(false);

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Box, Text, useApp, useInput, useStdout } from "ink";
+import { useMemo, useState } from "react";
+import { Box, Text, useApp, useInput, useWindowSize } from "ink";
 import type { Key } from "ink";
 import {
   buildWaterfall,
@@ -29,7 +29,7 @@ interface Props {
   /** The second flow of a comparison (B); `flow` is A. */
   compare?: Flow;
   version: string;
-  /** Terminal size; read from stdout when omitted. */
+  /** Terminal size; the window size of stdout when omitted. */
   rows?: number;
   columns?: number;
 }
@@ -45,23 +45,11 @@ const nextParty = (party: WaterfallParty | null) =>
 const HEADER_LINES = 3;
 const STATUS_LINES = 1;
 const MIN_COLUMNS = 60;
-const DEFAULT_SIZE = { rows: 24, columns: 100 };
 
+/** The terminal size, which re-renders on resize; `rows` and `columns` override it. */
 function useTerminalSize(rows?: number, columns?: number) {
-  const { stdout } = useStdout();
-  const read = () => ({
-    rows: rows ?? (stdout.rows || DEFAULT_SIZE.rows),
-    columns: columns ?? (stdout.columns || DEFAULT_SIZE.columns),
-  });
-  const [size, setSize] = useState(read);
-  useEffect(() => {
-    const onResize = () => setSize(read());
-    stdout.on("resize", onResize);
-    return () => {
-      stdout.off("resize", onResize);
-    };
-  });
-  return size;
+  const size = useWindowSize();
+  return { rows: rows ?? size.rows, columns: columns ?? size.columns };
 }
 
 /** The framed header: the version and the context in the top edge, the tabs and the pages inside. */
