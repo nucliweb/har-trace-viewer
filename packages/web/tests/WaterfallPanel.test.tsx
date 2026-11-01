@@ -208,13 +208,15 @@ describe("WaterfallPanel", () => {
 
   it("renders at most 300 rows at once, with a button for the next ones", async () => {
     const user = userEvent.setup();
-    const many = Array.from({ length: 10_000 }, (_, i) =>
+    // 800 entries plus the document: enough to need three pages, small enough to stay fast
+    // under coverage instrumentation.
+    const many = Array.from({ length: 800 }, (_, i) =>
       makeEntry({ url: `https://example.com/asset-${i}.js`, startTime: 100 + i / 10 })
     );
     renderPanel({ har: makeHar(many), trace: undefined });
 
     expect(rows()).toHaveLength(300);
-    await user.click(screen.getByRole("button", { name: "Show 300 more (9701 left)" }));
+    await user.click(screen.getByRole("button", { name: "Show 300 more (501 left)" }));
     expect(rows()).toHaveLength(600);
   });
 
