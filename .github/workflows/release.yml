@@ -37,4 +37,5 @@ jobs:
       # Trusted publishing: npm exchanges the OIDC token of this run for a short-lived one and
       # adds the provenance of the package
       - name: Publish to npm
-        run: npm publish -w har-trace-viewer
+        working-directory: packages/cli
+        run: npm publish --loglevel verbose
