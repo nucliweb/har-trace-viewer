@@ -14,6 +14,8 @@ import {
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { analyzeNetwork } from "../analysis/network-report.js";
+import { analyzeCompression } from "../analysis/compression.js";
+import { analyzeConnections } from "../analysis/connections.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
 import {
   clusterNode,
@@ -829,6 +831,8 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     cacheReport: analyzeCacheForHar(har),
     thirdPartyClusters,
     networkReport: analyzeNetwork(har),
+    compressionReport: analyzeCompression(har),
+    connectionsReport: analyzeConnections(har),
   };
 }
 

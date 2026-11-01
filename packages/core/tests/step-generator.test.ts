@@ -565,6 +565,19 @@ describe("generateFlow — per-page analysis", () => {
     ]);
   });
 
+  it("reports compression and connection reuse per page", () => {
+    const uncompressed = makeEntry({ contentEncoding: "none", bodySize: 5_000 });
+    const h1 = makeEntry({ url: "https://old.example.org/a.js", httpVersion: "h1" });
+    const [page] = generateFlow([
+      { name: "Home", har: makeHar([uncompressed, h1], {}) },
+    ]).pageAnalyses;
+
+    expect(page.compressionReport?.uncompressed.map((r) => r.url)).toContain(uncompressed.url);
+    expect(page.connectionsReport?.hosts.find((h) => h.host === "old.example.org")?.protocol).toBe(
+      "h1"
+    );
+  });
+
   it("tags every step with its page; the transition step belongs to the page it leads to", () => {
     const flow = cdnThenOriginFlow();
     const transitionIdx = flow.steps.findIndex((s) => s.title.startsWith("→"));

@@ -1,4 +1,4 @@
-import { formatBytes, formatMs, summarizeHops } from "@htv/core";
+import { formatBytes, formatMs, protocolLabel, summarizeHops } from "@htv/core";
 import type { HostHop } from "@htv/core";
 import { useMemo } from "react";
 import { regionLabel } from "../lib/region-label.js";
@@ -70,6 +70,12 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
               <th scope="col" title="First new connection; n/a for a phase that did not happen">
                 DNS / TCP / TLS
               </th>
+              <th
+                scope="col"
+                title="HTTP version of the requests that reached the host, and the connections they used"
+              >
+                Protocol
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -94,6 +100,7 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
                   <td className={styles.num}>{formatMs(hop.medianTtfbMs)}</td>
                   <td className={styles.num}>{formatMs(hop.afterLoadMedianTtfbMs)}</td>
                   <td className={styles.num}>{formatConnection(hop)}</td>
+                  <td>{protocolLabel(hop)}</td>
                 </tr>
               );
             })}

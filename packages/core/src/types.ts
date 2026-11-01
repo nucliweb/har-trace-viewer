@@ -51,6 +51,32 @@ export interface HarEntry {
   // The request asked to bypass the browser cache (Cache-Control or Pragma: no-cache), as
   // DevTools' "Disable cache" and a hard reload do. Absent otherwise.
   bypassesCache?: true;
+  // How the response crossed the network: the protocol, the connection it used (Chrome's
+  // _connectionId), its Content-Encoding, its parsed Server-Timing, whether its Alt-Svc
+  // advertises HTTP/3, and the size of the Cookie the request sent (never its value).
+  // Absent in flows parsed before they were kept; connectionId, serverTiming,
+  // advertisesHttp3 and requestCookieBytes are also absent when the HAR has none.
+  httpVersion?: HttpVersion;
+  connectionId?: string;
+  contentEncoding?: ContentEncoding;
+  serverTiming?: ServerTimingMetric[];
+  advertisesHttp3?: true;
+  requestCookieBytes?: number;
+}
+
+// The HTTP version a response came over; "unknown" when the HAR does not say.
+export type HttpVersion = "h1" | "h2" | "h3" | "unknown";
+
+// The response's Content-Encoding: "none" without the header, "identity" for one that
+// names no known compression. Shared-dictionary Brotli (dcb) and Zstandard (dcz) read as
+// br and zstd.
+export type ContentEncoding = "br" | "gzip" | "zstd" | "deflate" | "identity" | "none";
+
+// One metric of a Server-Timing header: `db;dur=53;desc="Database"`.
+export interface ServerTimingMetric {
+  name: string;
+  dur?: number; // milliseconds
+  desc?: string;
 }
 
 export interface HarPage {
@@ -266,6 +292,10 @@ export interface PageAnalysis {
   // Duplicate requests, redirects, failed responses and mixed content. Absent in flows
   // generated before it existed.
   networkReport?: NetworkReport;
+  // Compression of text responses and image formats. Absent in flows generated before it existed.
+  compressionReport?: CompressionReport;
+  // Protocol and connection reuse per host. Absent in flows generated before it existed.
+  connectionsReport?: ConnectionsReport;
 }
 
 export interface Flow {
@@ -386,6 +416,111 @@ export interface NetworkReport {
   resourceRedirects: { hops: RedirectHop[]; totalMs: number };
   errors: FailedRequest[]; // 4xx and 5xx network responses, in request order
   mixedContent: MixedContentRequest[]; // in request order, one per URL
+  recommendations: Recommendation[];
+}
+
+// ── Compression report ────────────────────────────────────────────────────────
+
+// Response types worth compressing; fonts are left out (WOFF2 is compressed already).
+export type CompressibleType = "html" | "css" | "js" | "json" | "svg" | "text";
+
+export interface CompressionByType {
+  type: CompressibleType;
+  requests: number;
+  uncompressedBytes: number; // decoded bodies
+  wireBytes: number; // transfer sizes
+  encodings: Partial<Record<ContentEncoding, number>>; // requests per encoding
+}
+
+// A compressible response sent without compression.
+export interface UncompressedResponse {
+  url: string;
+  type: CompressibleType;
+  bytes: number; // decoded body
+  wireBytes: number;
+  potentialSavings: number; // estimate: 70% of the body
+}
+
+// A compressible response sent with gzip or deflate, which Brotli would shrink further.
+export interface GzipResponse {
+  url: string;
+  type: CompressibleType;
+  encoding: "gzip" | "deflate";
+  bytes: number; // decoded body
+  wireBytes: number;
+  potentialSavings: number; // estimate: 15% of the wire bytes
+}
+
+export type ImageFormat = "jpeg" | "png" | "gif" | "webp" | "avif" | "svg" | "other";
+
+export interface ImageFormatUsage {
+  format: ImageFormat;
+  requests: number;
+  bytes: number; // transfer sizes
+}
+
+// A JPEG or PNG that a modern format would shrink.
+export interface LegacyImage {
+  url: string;
+  format: "jpeg" | "png";
+  bytes: number; // transfer size
+  webpSavings: number; // estimate: 30%
+  avifSavings: number; // estimate: 50%
+}
+
+// A raster image sent with a Content-Encoding, which does not shrink it.
+export interface EncodedImage {
+  url: string;
+  format: ImageFormat;
+  encoding: ContentEncoding;
+  bytes: number; // transfer size
+}
+
+export interface CompressionReport {
+  byType: CompressionByType[]; // most wire bytes first
+  uncompressed: UncompressedResponse[]; // biggest first
+  gzipOnly: GzipResponse[]; // biggest first
+  images: {
+    byFormat: ImageFormatUsage[]; // most bytes first
+    legacy: LegacyImage[]; // biggest first
+    encoded: EncodedImage[]; // biggest first
+  };
+  // Bytes the page could stop sending: uncompressed text, gzip over Brotli and the WebP
+  // estimate for legacy images.
+  potentialSavings: number;
+  recommendations: Recommendation[];
+}
+
+// ── Connections report ────────────────────────────────────────────────────────
+
+// The HTTP versions a host's network requests used; "mixed" for several, "unknown" when the
+// HAR does not say.
+export type HostProtocol = "h1" | "h2" | "h3" | "mixed" | "unknown";
+
+export interface HostConnections {
+  host: string;
+  protocol: HostProtocol;
+  requests: number; // network requests, browser-cache hits aside
+  // Distinct connections the requests used; null when the HAR has no connection ids.
+  connections: number | null;
+  requestsPerConnection: number | null;
+  // Requests that paid each phase of a new connection: more than one means the host was
+  // looked up, connected to or negotiated with again.
+  dnsLookups: number;
+  tcpHandshakes: number;
+  tlsHandshakes: number;
+  // A response advertised HTTP/3 in Alt-Svc.
+  advertisesHttp3: boolean;
+  // Every request was for a stylesheet, script, image or font.
+  staticOnly: boolean;
+  cookieBytes: number; // Cookie request header bytes, summed over the requests
+  maxCookieBytes: number; // the biggest Cookie a single request sent
+}
+
+export interface ConnectionsReport {
+  hosts: HostConnections[]; // busiest first
+  // The document's Server-Timing metrics, in header order.
+  serverTiming: ServerTimingMetric[];
   recommendations: Recommendation[];
 }
 

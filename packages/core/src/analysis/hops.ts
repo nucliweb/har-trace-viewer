@@ -1,12 +1,13 @@
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectNode } from "../inference/node-detector.js";
 import { detectPop } from "../inference/pops.js";
-import type { CdnProvider, HarEntry, NetworkRegion, ParsedHar } from "../types.js";
+import type { CdnProvider, HarEntry, HostProtocol, NetworkRegion, ParsedHar } from "../types.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { tcpConnectMs } from "../utils/timing.js";
 import { isBrowserCacheHit } from "./network-requests.js";
 import { phaseMs } from "../utils/timing.js";
 import { medianTtfbByLoad } from "./host-ttfb.js";
+import { connectionCount, hostProtocol } from "./connections.js";
 
 export interface HostHop {
   host: string;
@@ -37,6 +38,10 @@ export interface HostHop {
    */
   connection: { dns: number | null; connect: number | null; ssl: number | null } | null;
   fromBrowserCache: boolean;
+  /** HTTP version of the requests that reached the host: "mixed" for several, "unknown" when the HAR does not say. */
+  protocol: HostProtocol;
+  /** Distinct connections those requests used; null when the HAR has no connection ids. */
+  connections: number | null;
 }
 
 export interface HopsSummary {
@@ -114,6 +119,8 @@ function buildHop(
         }
       : null,
     fromBrowserCache: network.length < entries.length,
+    protocol: hostProtocol(network),
+    connections: connectionCount(network),
   };
 }
 
@@ -132,6 +139,16 @@ export function analyzeHops(har: ParsedHar, documentUrl: string): HostHop[] {
   return [...byHost]
     .map(([host, entries]) => buildHop(host, entries, documentRoot, onLoad))
     .sort((a, b) => b.requests - a.requests || b.browserCacheHits - a.browserCacheHits);
+}
+
+/** "h2 · 1 conn", "h3 · 2 conns", the protocol alone without connection ids, "n/a" when unknown. */
+export function protocolLabel({
+  protocol,
+  connections,
+}: Pick<HostHop, "protocol" | "connections">) {
+  if (protocol === "unknown") return "n/a";
+  if (connections === null) return protocol;
+  return `${protocol} · ${connections} ${connections === 1 ? "conn" : "conns"}`;
 }
 
 export function summarizeHops(hops: HostHop[]): HopsSummary {

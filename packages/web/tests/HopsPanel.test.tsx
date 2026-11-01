@@ -151,6 +151,33 @@ describe("HopsPanel", () => {
     );
   });
 
+  it("shows the protocol and the connections of each host", () => {
+    const transport: ParsedHar = {
+      ...har,
+      entries: [
+        { ...doc, httpVersion: "h2", connectionId: "1" },
+        entry("https://static.example.com/a.js", { httpVersion: "h3", connectionId: "2" }),
+        entry("https://static.example.com/b.js", { httpVersion: "h3", connectionId: "3" }),
+        entry("https://cdn.thirdparty.net/lib.js", { httpVersion: "h1", connectionId: "4" }),
+        entry("https://old.example.org/a.js"),
+      ],
+    };
+    render(<HopsPanel hops={analyzeHops(transport, doc.url)} pageLabel="Page 1" onClose={noop} />);
+    const table = screen.getByRole("table", { name: "Hops per host" });
+    const columns = within(table)
+      .getAllByRole("columnheader")
+      .map((th) => th.textContent);
+    const cell = (host: string) =>
+      within(within(table).getByRole("row", { name: new RegExp(`^${host}`) })).getAllByRole("cell")[
+        columns.indexOf("Protocol") - 1
+      ].textContent;
+
+    expect(cell("www\\.example\\.com")).toBe("h2 · 1 conn");
+    expect(cell("static\\.example\\.com")).toBe("h3 · 2 conns");
+    expect(cell("cdn\\.thirdparty\\.net")).toBe("h1 · 1 conn");
+    expect(cell("old\\.example\\.org")).toBe("n/a");
+  });
+
   it("shows the page label and the summary line", () => {
     panel();
     expect(screen.getByRole("heading", { name: "Page 1 · Home" })).toBeInTheDocument();

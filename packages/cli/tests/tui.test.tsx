@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { fileURLToPath } from "url";
 import { render } from "ink-testing-library";
-import { generateFlow } from "@htv/core";
+import { generateFlow, parseHarJson } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { TuiApp } from "../src/tui/App";
+import { lineText } from "../src/tui/lines";
+import { hostsRegion } from "../src/tui/views";
 import {
   criticalCss,
   makeEntry,
@@ -12,6 +17,7 @@ import {
   thirdPartyScript,
 } from "../../core/tests/helpers/synthetic-har";
 
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ESC = "\u001B";
 const KEYS = { right: `${ESC}[C`, left: `${ESC}[D`, down: `${ESC}[B`, tab: "\t" };
 
@@ -142,6 +148,27 @@ describe("TuiApp — a flow", () => {
 
     await press(stdin, "3");
     expect(lastFrame()).toMatch(/cdn\.third\.com.*reused/);
+  });
+
+  it("shows the protocol and connections per host, within 170 columns on a real recording", () => {
+    const har = parseHarJson(
+      readFileSync(
+        join(
+          __dirname,
+          "../../../fixtures/webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"
+        ),
+        "utf8"
+      )
+    );
+    const flow = generateFlow([{ name: "Cold", har }]);
+    // The test terminal is 100 columns wide: render the hosts panel at 170 directly.
+    const rows = hostsRegion(flow, 0, 170).map(lineText);
+
+    expect(rows.join("\n")).toMatch(/DNS \/ TCP \/ TLS\s+Protocol/);
+    expect(rows.join("\n")).toMatch(/webperf-snippets\.nucliweb\.net\s.*reused\s+h2 · 1 conn\s/);
+    expect(rows.join("\n")).toMatch(/www\.googletagmanager\.com\s.*h3 · 1 conn\s/);
+    // No row of the hosts table is cut short.
+    expect(rows.every((row) => row.length <= 170 && !row.includes("…"))).toBe(true);
   });
 
   it("captions the third parties with their median TTFB", () => {

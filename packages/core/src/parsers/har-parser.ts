@@ -1,13 +1,16 @@
 import type {
+  ContentEncoding,
   HarEntry,
   HarPage,
   InferredCacheHit,
   HarTiming,
+  HttpVersion,
   OptionalTimingPhase,
   ParsedHar,
   PreconnectSource,
   ResourcePriority,
   ResourceType,
+  ServerTimingMetric,
 } from "../types.js";
 
 interface RawHarTiming {
@@ -27,14 +30,22 @@ interface RawHarEntry {
   _resourceType?: string;
   _priority?: string;
   _fromCache?: string;
+  // Chrome: the id of the connection the request used ("" for a browser-cache hit).
+  _connectionId?: string | number;
   cache?: { beforeRequest?: Record<string, unknown> | null };
-  request: { url: string; method: string; headers?: { name: string; value: string }[] };
+  request: {
+    url: string;
+    method: string;
+    headers?: { name: string; value: string }[];
+    cookies?: { name: string; value: string }[];
+  };
   _transferSize?: number;
   // WebPageTest omits or nulls parts of the response (content: null, no headers).
   response?: {
     // Where Chrome DevTools exports the bytes on the wire.
     _transferSize?: number;
     status?: number;
+    httpVersion?: string;
     headers?: { name: string; value: string }[];
     content?: { mimeType?: string; size?: number } | null;
     redirectURL?: string;
@@ -100,6 +111,9 @@ export const RESPONSE_HEADER_ALLOW_LIST: readonly string[] = [
   "expires",
   "last-modified",
   "vary",
+  // Protocol and server timings
+  "alt-svc",
+  "server-timing",
   // Server, proxies and resource hints
   "link",
   "server",
@@ -185,6 +199,133 @@ function headersToRecord(headers: { name: string; value: string }[]): Record<str
     else if (name !== "set-cookie") result[name] = `${previous}, ${h.value}`;
   }
   return result;
+}
+
+// ── Transport: protocol, connection, encoding, Server-Timing, cookies ────────
+
+function parseHttpVersion(raw: string | undefined): HttpVersion {
+  const version = (raw ?? "").trim().toLowerCase();
+  // Older Chrome exports gQUIC as "http/2+quic/43".
+  if (/^(h3|http\/3)/.test(version) || version.includes("quic")) return "h3";
+  if (/^(h2|http\/2)/.test(version)) return "h2";
+  if (/^http\/1/.test(version)) return "h1";
+  return "unknown";
+}
+
+const CONTENT_CODINGS: Record<string, ContentEncoding> = {
+  br: "br",
+  dcb: "br",
+  gzip: "gzip",
+  "x-gzip": "gzip",
+  zstd: "zstd",
+  dcz: "zstd",
+  deflate: "deflate",
+};
+
+/**
+ * The compression a Content-Encoding value applies: the last coding listed, the one applied
+ * last; "none" without one, "identity" when it names no compression the analyzers know.
+ */
+export function parseContentEncoding(value: string | undefined): ContentEncoding {
+  const last = (value ?? "")
+    .split(",")
+    .map((coding) => coding.trim().toLowerCase())
+    .filter(Boolean)
+    .at(-1);
+  if (last === undefined) return "none";
+  return CONTENT_CODINGS[last] ?? "identity";
+}
+
+// Splits on a separator outside double-quoted strings.
+function splitUnquoted(value: string, separator: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (char === "\\" && inQuotes) {
+      current += char + (value[i + 1] ?? "");
+      i++;
+      continue;
+    }
+    if (char === '"') inQuotes = !inQuotes;
+    if (char === separator && !inQuotes) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+}
+
+const unquote = (value: string) =>
+  value.startsWith('"') && value.endsWith('"') && value.length >= 2
+    ? value.slice(1, -1).replace(/\\(.)/g, "$1")
+    : value;
+
+/** The metrics of a Server-Timing header, each with its duration and description when given. */
+export function parseServerTiming(header: string): ServerTimingMetric[] {
+  const metrics: ServerTimingMetric[] = [];
+  for (const part of splitUnquoted(header, ",")) {
+    const [rawName, ...params] = splitUnquoted(part, ";");
+    const name = rawName.trim();
+    if (!name) continue;
+    const metric: ServerTimingMetric = { name };
+    for (const param of params) {
+      const eq = param.indexOf("=");
+      const key = (eq === -1 ? param : param.slice(0, eq)).trim().toLowerCase();
+      const value = eq === -1 ? "" : unquote(param.slice(eq + 1).trim());
+      if (key === "dur" && metric.dur === undefined) {
+        const dur = parseFloat(value);
+        if (Number.isFinite(dur)) metric.dur = dur;
+      } else if (key === "desc" && metric.desc === undefined) {
+        metric.desc = value;
+      }
+    }
+    metrics.push(metric);
+  }
+  return metrics;
+}
+
+// Alt-Svc lists alternatives as protocol-id="authority"; h3 and its drafts (h3-29) are HTTP/3.
+const advertisesHttp3 = (altSvc: string) => /(^|,)\s*h3(-\w+)?\s*=/i.test(altSvc);
+
+// The size of the Cookie the request sent, as one header would carry it (HTTP/2 may split it
+// into several); from the request's cookie list when the headers leave it out. 0 without one.
+function requestCookieBytes(request: RawHarEntry["request"]): number {
+  const headerValues = (request.headers ?? [])
+    .filter((h) => h.name.toLowerCase() === "cookie")
+    .map((h) => h.value);
+  if (headerValues.length > 0) return headerValues.join("; ").length;
+  return (request.cookies ?? []).map((c) => `${c.name}=${c.value}`).join("; ").length;
+}
+
+// How the response crossed the network. Only the Cookie's size leaves the HAR, never its value.
+function transportFields(
+  e: RawHarEntry,
+  headers: Record<string, string>
+): Pick<
+  HarEntry,
+  | "httpVersion"
+  | "connectionId"
+  | "contentEncoding"
+  | "serverTiming"
+  | "advertisesHttp3"
+  | "requestCookieBytes"
+> {
+  const connectionId = e._connectionId === undefined ? "" : String(e._connectionId);
+  const serverTiming = headers["server-timing"];
+  const cookieBytes = requestCookieBytes(e.request);
+  return {
+    httpVersion: parseHttpVersion(e.response?.httpVersion),
+    ...(connectionId !== "" && { connectionId }),
+    contentEncoding: parseContentEncoding(headers["content-encoding"]),
+    ...(serverTiming !== undefined && { serverTiming: parseServerTiming(serverTiming) }),
+    ...(advertisesHttp3(headers["alt-svc"] ?? "") && { advertisesHttp3: true as const }),
+    ...(cookieBytes > 0 && { requestCookieBytes: cookieBytes }),
+  };
 }
 
 const URL_EXTENSION_TYPES: Record<string, ResourceType> = {
@@ -448,7 +589,8 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     const ttfb = normalizeMs(rawTimings.wait);
     const startTime = new Date(e.startedDateTime).getTime() - pageOrigin;
     const response = e.response ?? {};
-    const responseHeaders = pickResponseHeaders(headersToRecord(response.headers ?? []));
+    const allResponseHeaders = headersToRecord(response.headers ?? []);
+    const responseHeaders = pickResponseHeaders(allResponseHeaders);
     const mimeType = response.content?.mimeType ?? "";
     const redirectURL = redirectTarget(e);
 
@@ -472,6 +614,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       ...personalizationFlags(e),
       ...(redirectURL !== null ? { redirectURL } : {}),
       ...bypassFlag(e),
+      ...transportFields(e, allResponseHeaders),
     };
   });
 

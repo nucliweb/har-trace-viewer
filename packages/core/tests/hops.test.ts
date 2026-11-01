@@ -309,6 +309,28 @@ describe("analyzeHops", () => {
     });
     expect(hops.map((h) => h.host)).toEqual(["a.net", "c.net"]);
   });
+
+  it("gives each host the protocol and the connections of its network requests", () => {
+    const hops = analyzeHops(
+      har([
+        entry(DOC, { isDocument: true, httpVersion: "h2", connectionId: "1" }),
+        entry("https://www.example.com/a.js", { httpVersion: "h2", connectionId: "1" }),
+        entry("https://upgrade.net/1", { httpVersion: "h2", connectionId: "2" }),
+        entry("https://upgrade.net/2", { httpVersion: "h3", connectionId: "3" }),
+        // A browser-cache hit replays a response stored from another load.
+        entry("https://upgrade.net/3", { httpVersion: "h1", fromCache: "disk" }),
+        entry("https://old-har.net/1"),
+      ]),
+      DOC
+    );
+    const by = Object.fromEntries(hops.map((h) => [h.host, [h.protocol, h.connections]]));
+
+    expect(by).toEqual({
+      "www.example.com": ["h2", 1],
+      "upgrade.net": ["mixed", 2],
+      "old-har.net": ["unknown", null],
+    });
+  });
 });
 
 describe("summarizeHops", () => {
