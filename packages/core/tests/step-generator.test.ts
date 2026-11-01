@@ -13,6 +13,7 @@ import {
   stepKindFromTitle,
 } from "../src/steps/step-generator.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
+import { formatMetricValue } from "../src/utils/format.js";
 import { firefoxHar } from "./helpers/firefox-har.js";
 import {
   criticalCss,
@@ -61,8 +62,8 @@ describe("generateFlow — single page without trace", () => {
     expect(ttfbStep.badge?.type).toBe("ttfb");
     // blocked 1.8 + send 0.1 + wait 48.7: the reused connection adds nothing.
     expect(ttfbStep.metrics).toEqual([
-      { label: "TTFB (from navigation)", value: "51ms" },
-      { label: "Server wait", value: "49ms" },
+      { label: "TTFB (from navigation)", value: "51 ms", raw: expect.closeTo(50.6, 1), unit: "ms" },
+      { label: "Server wait", value: "49 ms", raw: expect.closeTo(48.7, 1), unit: "ms" },
     ]);
   });
 
@@ -72,7 +73,7 @@ describe("generateFlow — single page without trace", () => {
 
     expect(last.title).toContain("loaded");
     expect(last.badge?.type).toBe("onload");
-    expect(last.metrics.find((m) => m.label === "onLoad")?.value).toBe("480ms");
+    expect(last.metrics.find((m) => m.label === "onLoad")?.value).toBe("480 ms");
   });
 
   it("3rd-party step lists domains and request count", () => {
@@ -89,16 +90,16 @@ describe("generateFlow — single page without trace", () => {
   it("topology: Vercel edge — browser-edge-origin paths, edge named after the provider and PoP", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    const edge = flow.nodes.find((n) => n.id === "edge")!;
+    const edge = flow.pageAnalyses[0].nodes.find((n) => n.id === "edge")!;
     expect(edge.present).toBe(true);
     expect(edge.label).toBe("Vercel Edge");
     expect(edge.subLabel).toBe("Paris");
     expect(edge.region).toBe("europe");
 
-    const origin = flow.nodes.find((n) => n.id === "origin")!;
+    const origin = flow.pageAnalyses[0].nodes.find((n) => n.id === "origin")!;
     expect(origin.present).toBe(true);
 
-    const paths = flow.paths.map((p) => p.id);
+    const paths = flow.pageAnalyses[0].paths.map((p) => p.id);
     expect(paths).toContain("browser-edge");
     expect(paths).toContain("edge-origin");
     expect(paths).not.toContain("browser-origin");
@@ -109,8 +110,8 @@ describe("generateFlow — single page without trace", () => {
     har.documentEntry.responseHeaders = { server: "nginx" };
     const flow = generateFlow([{ name: "Home", har }]);
 
-    expect(flow.nodes.find((n) => n.id === "edge")!.present).toBe(false);
-    const paths = flow.paths.map((p) => p.id);
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "edge")!.present).toBe(false);
+    const paths = flow.pageAnalyses[0].paths.map((p) => p.id);
     expect(paths).toContain("browser-origin");
     expect(paths).not.toContain("browser-edge");
   });
@@ -146,7 +147,7 @@ describe("generateFlow — single page with trace", () => {
     )!;
 
     expect(fcpStep).toBeDefined();
-    expect(fcpStep.badge?.value).toBe("181ms");
+    expect(fcpStep.badge?.value).toBe("181 ms");
   });
 
   it("LCP step has badge and correct value", () => {
@@ -154,7 +155,7 @@ describe("generateFlow — single page with trace", () => {
     const lcpStep = flow.steps.find((s) => s.badge?.type === "lcp")!;
 
     expect(lcpStep).toBeDefined();
-    expect(lcpStep.badge?.value).toBe("181ms");
+    expect(lcpStep.badge?.value).toBe("181 ms");
   });
 
   it("FCP and LCP steps appear after every resource group and before Page loaded", () => {
@@ -310,7 +311,9 @@ describe("generateFlow — third-party counts", () => {
     expect(metric("Requests")).toBe("3");
     // Three hostnames under one root domain (third.com).
     expect(metric("Domains")).toBe("3");
-    expect(flow.nodes.find((n) => n.id === "third-parties")?.resourceStats?.count).toBe(3);
+    expect(
+      flow.pageAnalyses[0].nodes.find((n) => n.id === "third-parties")?.resourceStats?.count
+    ).toBe(3);
     expect(flow.steps.at(-1)!.resourceRefs).toHaveLength(3);
   });
 });
@@ -359,17 +362,21 @@ describe("generateFlow — node resourceStats", () => {
     const network = makeEntry({ url: "https://example.com/b.css", fromCache: false });
     const flow = generateFlow([{ name: "Page", har: makeHar([cached, network]) }]);
 
-    const cache = flow.nodes.find((n) => n.id === "cache")!;
+    const cache = flow.pageAnalyses[0].nodes.find((n) => n.id === "cache")!;
     expect(cache.resourceStats).toEqual({ count: 1, label: "from cache" });
-    expect(flow.nodes.find((n) => n.id === "browser")!.resourceStats).toBeUndefined();
+    expect(
+      flow.pageAnalyses[0].nodes.find((n) => n.id === "browser")!.resourceStats
+    ).toBeUndefined();
   });
 
   it("cache node has no resourceStats when no cache hits", () => {
     const network = makeEntry({ fromCache: false });
     const flow = generateFlow([{ name: "Page", har: makeHar([network]) }]);
 
-    expect(flow.nodes.find((n) => n.id === "cache")!.resourceStats).toBeUndefined();
-    expect(flow.nodes.find((n) => n.id === "browser")!.resourceStats).toBeUndefined();
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "cache")!.resourceStats).toBeUndefined();
+    expect(
+      flow.pageAnalyses[0].nodes.find((n) => n.id === "browser")!.resourceStats
+    ).toBeUndefined();
   });
 
   it("edge node gets CDN hit stats when CDN is present", () => {
@@ -388,7 +395,7 @@ describe("generateFlow — node resourceStats", () => {
     const cfDocHeaders = { "cf-ray": "abc123-LHR" };
     const flow = generateFlow([{ name: "Page", har: makeHar([cdnHit, cdnMiss], cfDocHeaders) }]);
 
-    const edge = flow.nodes.find((n) => n.id === "edge")!;
+    const edge = flow.pageAnalyses[0].nodes.find((n) => n.id === "edge")!;
     expect(edge.present).toBe(true);
     expect(edge.resourceStats?.count).toBe(1);
     expect(edge.resourceStats?.avgMs).toBe(40);
@@ -405,7 +412,7 @@ describe("generateFlow — node resourceStats", () => {
     const cfDocHeaders = { "cf-ray": "abc123-LHR" };
     const flow = generateFlow([{ name: "Page", har: makeHar([cdnMiss], cfDocHeaders) }]);
 
-    const origin = flow.nodes.find((n) => n.id === "origin")!;
+    const origin = flow.pageAnalyses[0].nodes.find((n) => n.id === "origin")!;
     expect(origin.resourceStats?.count).toBe(1);
     expect(origin.resourceStats?.avgMs).toBe(200);
     expect(origin.resourceStats?.label).toBe("CDN miss");
@@ -416,7 +423,7 @@ describe("generateFlow — node resourceStats", () => {
     const req2 = makeEntry({ url: "https://example.com/b.js", duration: 200, fromCache: false });
     const flow = generateFlow([{ name: "Page", har: makeHar([req1, req2]) }]);
 
-    const origin = flow.nodes.find((n) => n.id === "origin")!;
+    const origin = flow.pageAnalyses[0].nodes.find((n) => n.id === "origin")!;
     expect(origin.resourceStats?.count).toBe(2);
     expect(origin.resourceStats?.avgMs).toBe(150);
     expect(origin.resourceStats?.label).toBeUndefined();
@@ -431,7 +438,7 @@ describe("generateFlow — node resourceStats", () => {
     });
     const flow = generateFlow([{ name: "Page", har: makeHar([ownEntry, thirdParty]) }]);
 
-    const thirdParties = flow.nodes.find((n) => n.id === "third-parties")!;
+    const thirdParties = flow.pageAnalyses[0].nodes.find((n) => n.id === "third-parties")!;
     expect(thirdParties.resourceStats).toEqual({
       count: 1,
       avgMs: 120,
@@ -463,6 +470,19 @@ describe("generateFlow — two pages", () => {
     ]);
 
     expect(flow.steps).toHaveLength(15);
+  });
+
+  it("keeps the topology and cache report of each page only in its analysis", () => {
+    const har = loadHar();
+    const flow = generateFlow([
+      { name: "Home", har },
+      { name: "Login", har },
+    ]);
+
+    expect(flow.pageAnalyses).toHaveLength(2);
+    expect(flow).not.toHaveProperty("nodes");
+    expect(flow).not.toHaveProperty("paths");
+    expect(flow).not.toHaveProperty("cacheReport");
   });
 });
 
@@ -600,14 +620,6 @@ describe("generateFlow — per-page analysis", () => {
     }
   });
 
-  it("keeps the top-level topology and cache report as the first page's", () => {
-    const flow = cdnThenOriginFlow();
-
-    expect(flow.nodes).toEqual(flow.pageAnalyses[0].nodes);
-    expect(flow.paths).toEqual(flow.pageAnalyses[0].paths);
-    expect(flow.cacheReport).toEqual(flow.pageAnalyses[0].cacheReport);
-  });
-
   it("counts third parties per page", () => {
     const withThirdParty = makeHar([makeEntry({ url: "https://cdn.analytics.com/t.js" })], {});
     const withoutThirdParty = makeHar([makeEntry()], {});
@@ -621,6 +633,57 @@ describe("generateFlow — per-page analysis", () => {
     );
     expect(thirdParties.map((n) => n.present)).toEqual([false, true]);
     expect(thirdParties[1].resourceStats?.count).toBe(1);
+  });
+});
+
+describe("generateFlow — metric values", () => {
+  // A new TLS connection, a browser-cache hit and a third party.
+  function newConnectionHar(): ParsedHar {
+    const har = makeHar([
+      criticalCss(100),
+      { ...secondaryImage(200), fromCache: "disk" as const },
+      thirdPartyScript(300),
+    ]);
+    har.documentEntry.timing = { ...har.documentEntry.timing, connect: 35, ssl: 15 };
+    return har;
+  }
+
+  // Every kind of metric a page shows: a reused connection and paints (fixture with trace), a
+  // new connection and cache hits, and no load event (Firefox).
+  const flows = () => [
+    generateFlow([{ name: "Home", har: loadHar(), trace: loadTrace() }]),
+    generateFlow([{ name: "Home", har: newConnectionHar() }]),
+    generateFlow([{ name: "Home", har: parseHar(firefoxHar()) }]),
+  ];
+
+  it("gives every metric its raw value and unit, its value being their display", () => {
+    const metrics = flows().flatMap((flow) => flow.steps.flatMap((s) => s.metrics));
+    const labels = new Set(metrics.map((m) => m.label));
+    for (const label of ["DNS", "TCP connect", "TLS", "FCP", "LCP", "CLS", "INP", "From cache"])
+      expect(labels).toContain(label);
+    expect(metrics.some((m) => m.value === "n/a")).toBe(true);
+
+    for (const metric of metrics) {
+      // The one metric that is not a quantity.
+      if (metric.label === "Connection") {
+        expect(metric).toEqual({ label: "Connection", value: "reused" });
+        continue;
+      }
+      expect(metric.unit, metric.label).toBeDefined();
+      expect(metric.value, metric.label).toBe(formatMetricValue(metric.raw ?? null, metric.unit!));
+      expect(metric.raw === undefined, metric.label).toBe(metric.value === "n/a");
+    }
+  });
+
+  it("formats durations as the rest of the report does", () => {
+    const har = makeHar([], { onContentLoad: 640.4, onLoad: 1834.6 });
+
+    const last = generateFlow([{ name: "Home", har }]).steps.at(-1)!;
+
+    expect(last.metrics.slice(0, 2)).toEqual([
+      { label: "onLoad", value: "1.8 s", raw: 1834.6, unit: "ms" },
+      { label: "DCL", value: "640 ms", raw: 640.4, unit: "ms" },
+    ]);
   });
 });
 
@@ -648,9 +711,9 @@ describe("generateFlow — Firefox-style HAR (no priority, onLoad not fired)", (
     const last = firefoxFlow().steps.at(-1)!;
 
     expect(last.metrics.find((m) => m.label === "onLoad")?.value).toBe("n/a");
-    expect(last.metrics.find((m) => m.label === "DCL")?.value).toBe("120ms");
+    expect(last.metrics.find((m) => m.label === "DCL")?.value).toBe("120 ms");
     expect(last.badge).toBeUndefined();
-    expect(JSON.stringify(last)).not.toContain("-1ms");
+    expect(JSON.stringify(last)).not.toMatch(/-1 ?ms/);
   });
 });
 
@@ -716,9 +779,9 @@ describe("generateFlow — client region", () => {
     const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }]);
 
     expect(flow.clientRegion).toBe("default");
-    expect(flow.nodes.map((n) => n.id)).not.toContain("gfw");
-    expect(flow.nodes.find((n) => n.id === "browser")?.region).toBe("client");
-    expect(flow.paths.map((p) => p.id)).toContain("browser-edge");
+    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("gfw");
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "browser")?.region).toBe("client");
+    expect(flow.pageAnalyses[0].paths.map((p) => p.id)).toContain("browser-edge");
     expect(flow.steps.flatMap((s) => s.activeNodes)).not.toContain("gfw");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
     expect(flow.hints.suggestedClientRegion?.reason).toBe(
@@ -732,9 +795,9 @@ describe("generateFlow — client region", () => {
     });
 
     expect(flow.clientRegion).toBe("cn");
-    expect(flow.nodes.find((n) => n.id === "gfw")?.present).toBe(true);
-    expect(flow.nodes.find((n) => n.id === "browser")?.region).toBe("china");
-    const paths = flow.paths.map((p) => p.id);
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "gfw")?.present).toBe(true);
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "browser")?.region).toBe("china");
+    const paths = flow.pageAnalyses[0].paths.map((p) => p.id);
     expect(paths).toEqual(expect.arrayContaining(["browser-gfw", "gfw-edge", "edge-origin"]));
     expect(paths).not.toContain("browser-edge");
     expect(flow.steps[1].activePaths).toEqual(["browser-gfw", "gfw-edge", "edge-origin"]);
@@ -743,7 +806,7 @@ describe("generateFlow — client region", () => {
   it("clientRegion cn without a CDN routes browser → GFW → origin", () => {
     const flow = generateFlow([{ name: "Home", har: slowHar() }], { clientRegion: "cn" });
 
-    const paths = flow.paths.map((p) => p.id);
+    const paths = flow.pageAnalyses[0].paths.map((p) => p.id);
     expect(paths).toEqual(expect.arrayContaining(["browser-gfw", "gfw-origin"]));
     expect(paths).not.toContain("browser-origin");
     expect(flow.steps[1].activeNodes).toEqual(["browser", "gfw", "origin"]);
@@ -758,12 +821,12 @@ describe("generateFlow — client region", () => {
     const cn = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }], {
       clientRegion: "cn",
     });
-    const edge = cn.nodes.find((n) => n.id === "edge")!;
+    const edge = cn.pageAnalyses[0].nodes.find((n) => n.id === "edge")!;
     expect(edge.subLabel).toBe("Hong Kong");
     expect(edge.region).toBe("asia-pacific");
 
     const byDefault = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }]);
-    const defaultEdge = byDefault.nodes.find((n) => n.id === "edge")!;
+    const defaultEdge = byDefault.pageAnalyses[0].nodes.find((n) => n.id === "edge")!;
     expect(defaultEdge.subLabel).toBeUndefined();
     expect(defaultEdge.region).toBe("edge");
   });
@@ -786,8 +849,9 @@ describe("generateFlow — client region", () => {
 describe("normalizeFlow", () => {
   it("treats a flow without version as version 0 in the default region with no hints", () => {
     const current = generateFlow([{ name: "Home", har: loadHar() }]);
-    // Shape of a flow embedded before versioning existed.
-    const legacy: Partial<Flow> = { ...current };
+    // Shape of a flow embedded before versioning existed: one top-level topology.
+    const { nodes, paths, cacheReport } = current.pageAnalyses[0];
+    const legacy: Partial<Flow> = { ...current, nodes, paths, cacheReport };
     delete legacy.version;
     delete legacy.clientRegion;
     delete legacy.hints;
@@ -798,7 +862,7 @@ describe("normalizeFlow", () => {
     expect(normalized.version).toBe(0);
     expect(normalized.clientRegion).toBe("default");
     expect(normalized.hints).toEqual({});
-    expect(normalized.nodes).toBe(current.nodes);
+    expect(normalized.pageAnalyses[0].nodes).toBe(nodes);
   });
 
   // Shape of a version-1 flow: one shared topology, steps without pageIndex.
@@ -812,6 +876,9 @@ describe("normalizeFlow", () => {
     const legacy: Partial<Flow> = {
       ...current,
       version: 1,
+      nodes: current.pageAnalyses[0].nodes,
+      paths: current.pageAnalyses[0].paths,
+      cacheReport: current.pageAnalyses[0].cacheReport,
       steps: current.steps.map((step) => {
         const legacyStep: Partial<DiagramStep> = { ...step };
         delete legacyStep.pageIndex;
@@ -1119,8 +1186,8 @@ describe("generateFlow — chronological steps", () => {
     ]);
     const metrics = flow.steps[indexOf(flow, "Page loaded")].metrics;
 
-    expect(metrics).toContainEqual({ label: "CLS", value: "0.170" });
-    expect(metrics).toContainEqual({ label: "INP", value: "250ms" });
+    expect(metrics).toContainEqual({ label: "CLS", value: "0.170", raw: 0.17, unit: "score" });
+    expect(metrics).toContainEqual({ label: "INP", value: "250 ms", raw: 250, unit: "ms" });
   });
 
   it("shows n/a for CLS and INP when the trace has none or there is no trace", () => {
@@ -1128,8 +1195,8 @@ describe("generateFlow — chronological steps", () => {
     for (const trace of [makeTrace(90, 400), undefined]) {
       const flow = generateFlow([{ name: "Home", har, trace }]);
       const metrics = flow.steps[indexOf(flow, "Page loaded")].metrics;
-      expect(metrics).toContainEqual({ label: "CLS", value: "n/a" });
-      expect(metrics).toContainEqual({ label: "INP", value: "n/a" });
+      expect(metrics).toContainEqual({ label: "CLS", value: "n/a", unit: "score" });
+      expect(metrics).toContainEqual({ label: "INP", value: "n/a", unit: "ms" });
     }
   });
 
@@ -1170,9 +1237,9 @@ describe("generateFlow — chronological steps", () => {
     expect(step("First request").timestamp).toBeCloseTo(76.6, 5);
     expect(step("TTFB").timestamp).toBeCloseTo(122.1, 5);
     expect(step("DNS").metrics).toEqual([
-      { label: "DNS", value: "14ms" },
-      { label: "TCP connect", value: "14ms" },
-      { label: "TLS", value: "47ms" },
+      { label: "DNS", value: "14 ms", raw: expect.closeTo(14.3, 5), unit: "ms" },
+      { label: "TCP connect", value: "14 ms", raw: expect.closeTo(14.3, 5), unit: "ms" },
+      { label: "TLS", value: "47 ms", raw: expect.closeTo(47.4, 5), unit: "ms" },
     ]);
     expect(Object.values(step("First request").pathTimings ?? {})).toEqual([
       "DNS 14ms · TCP 14ms · TLS 47ms",
@@ -1243,7 +1310,12 @@ describe("generateFlow — a document sent over a reused connection", () => {
     const [connection, request] = generateFlow([{ name: "Home", har: makeHar([]) }]).steps;
 
     expect(connection.title).toBe("DNS + initial connection");
-    expect(connection.metrics).toContainEqual({ label: "DNS", value: "10ms" });
+    expect(connection.metrics).toContainEqual({
+      label: "DNS",
+      value: "10 ms",
+      raw: 10,
+      unit: "ms",
+    });
     expect(request.pathTimings).toEqual({ "browser-origin": "DNS 10ms · TCP 20ms" });
   });
 });
@@ -1255,10 +1327,10 @@ describe("generateFlow — TTFB from the navigation start", () => {
     const ttfb = flow.steps.find((s) => s.kind === "ttfb")!;
 
     expect(ttfb.metrics).toEqual([
-      { label: "TTFB (from navigation)", value: "81ms" },
-      { label: "Server wait", value: "50ms" },
+      { label: "TTFB (from navigation)", value: "81 ms", raw: 81, unit: "ms" },
+      { label: "Server wait", value: "50 ms", raw: 50, unit: "ms" },
     ]);
-    expect(ttfb.badge).toEqual({ type: "ttfb", value: "81ms", node: "browser" });
+    expect(ttfb.badge).toEqual({ type: "ttfb", value: "81 ms", node: "browser" });
     expect(ttfb.pathTimings).toEqual({ "browser-origin": "Server wait 50ms" });
   });
 });
@@ -1864,7 +1936,7 @@ describe("generateFlow — document served by the CDN cache", () => {
     har.documentEntry.responseHeaders = documentHeaders;
     const flow = generateFlow([{ name: "Page", har }], options);
     const step = (kind: DiagramStep["kind"]) => flow.steps.find((s) => s.kind === kind)!;
-    return { flow, step, origin: flow.nodes.find((n) => n.id === "origin")! };
+    return { flow, step, origin: flow.pageAnalyses[0].nodes.find((n) => n.id === "origin")! };
   }
 
   it("stops the request and the first byte at the edge on a Vercel HIT", () => {

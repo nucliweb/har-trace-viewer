@@ -67,10 +67,14 @@ function hasFlowPages(p: PageEntry): boolean {
 
 const isEntryParsing = (p: PageEntry) => p.harProgress !== null || p.traceProgress !== null;
 
+// The parsers' messages are written for the user: they are shown as they are.
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 /** Parses a dropped HAR in the worker, reporting progress and the result through `apply`. */
 function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
-  if (!file.name.endsWith(".har")) {
-    apply({ harError: "Only .har files are supported." });
+  if (!/\.har(\.gz)?$/i.test(file.name)) {
+    apply({ harError: "Only .har and .har.gz files are supported." });
     return;
   }
   apply({ harProgress: { phase: "reading", loaded: 0, total: file.size }, harError: null });
@@ -85,7 +89,7 @@ function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
         harProgress: null,
       })
     )
-    .catch(() => apply({ harError: "Could not parse HAR file.", harProgress: null }));
+    .catch((error: unknown) => apply({ harError: errorMessage(error), harProgress: null }));
 }
 
 /** Parses a dropped Chrome trace in the worker, reporting progress and the result through `apply`. */
@@ -98,8 +102,8 @@ async function loadTraceFile(file: File, apply: (patch: EntryPatch) => void) {
   try {
     const trace = await parseInWorker("trace", file, (traceProgress) => apply({ traceProgress }));
     apply({ trace, traceFileName: file.name, traceError: null, traceProgress: null });
-  } catch {
-    apply({ traceError: "Could not parse trace file.", traceProgress: null });
+  } catch (error) {
+    apply({ traceError: errorMessage(error), traceProgress: null });
   }
 }
 
@@ -137,7 +141,7 @@ function FileZones({
         <input
           ref={harInputRef}
           type="file"
-          accept=".har"
+          accept=".har,.gz"
           className={styles.hiddenInput}
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -152,7 +156,11 @@ function FileZones({
           className={`${styles.harBtn} ${entry.har ? styles.harLoaded : ""} ${entry.harError ? styles.harError : ""}`}
           onClick={() => harInputRef.current?.click()}
           disabled={entry.harProgress !== null}
-          title={entry.har ? entry.harFileName : "Click or drop a .har file"}
+          title={
+            entry.har
+              ? entry.harFileName
+              : (entry.harError ?? "Click or drop a .har or .har.gz file")
+          }
         >
           {entry.harProgress ? (
             <span className={styles.progressText} role="status">
@@ -201,7 +209,11 @@ function FileZones({
             {describeProgress(entry.traceProgress)}
           </span>
         )}
-        {entry.traceError && <span className={styles.traceErrorText}>{entry.traceError}</span>}
+        {entry.traceError && (
+          <span className={styles.traceErrorText} title={entry.traceError}>
+            {entry.traceError}
+          </span>
+        )}
       </div>
     </>
   );

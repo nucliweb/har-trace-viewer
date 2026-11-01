@@ -287,7 +287,7 @@ describe("end to end without --bundle (built CLI)", () => {
 
     const html = readFileSync(join(out, "index.html"), "utf-8");
     const flow = extractFlow(html) as { pages: { name: string }[] };
-    for (const key of ["pages", "steps", "nodes", "paths", "cacheReport"]) {
+    for (const key of ["pages", "steps", "pageAnalyses"]) {
       expect(flow).toHaveProperty(key);
     }
     expect(flow.pages[0].name).toBe("My Page");
@@ -358,7 +358,7 @@ describe("client region (built CLI)", () => {
     version: number;
     clientRegion: string;
     hints: { suggestedClientRegion?: { region: string; reason: string } };
-    nodes: { id: string }[];
+    pageAnalyses: { nodes: { id: string }[] }[];
   }
 
   it("keeps the default topology and prints a note when latencies suggest China", () => {
@@ -377,7 +377,7 @@ describe("client region (built CLI)", () => {
     expect(flow.version).toBe(FLOW_VERSION);
     expect(flow.clientRegion).toBe("default");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
-    expect(flow.nodes.map((n) => n.id)).not.toContain("gfw");
+    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("gfw");
   });
 
   it("builds the GFW topology with --region cn and prints no note", () => {
@@ -392,7 +392,7 @@ describe("client region (built CLI)", () => {
       readFileSync(join(out, "index.html"), "utf-8")
     ) as unknown as EmbeddedFlow;
     expect(flow.clientRegion).toBe("cn");
-    expect(flow.nodes.map((n) => n.id)).toContain("gfw");
+    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
   });
 
   it("prints no note when --region default is explicit", () => {

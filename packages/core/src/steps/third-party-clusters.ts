@@ -2,6 +2,7 @@ import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectThirdPartyHop, providerRegion } from "../inference/node-detector.js";
 import { getHostname } from "../utils/domain.js";
+import { formatCaptionMs } from "../utils/format.js";
 import type {
   DiagramNode,
   DiagramPath,
@@ -45,7 +46,7 @@ export const thirdPartyPathId = (clusterId: string): ThirdPartyClusterPathId =>
 
 // A diagram caption for a cluster's median TTFB: "TTFB 26ms". Path labels have room for
 // "avg 1234ms", not for "median TTFB 1234ms"; the node's avgMsKind says it is a median.
-export const ttfbCaption = (ms: number): string => `TTFB ${Math.round(ms)}ms`;
+export const ttfbCaption = (ms: number): string => `TTFB ${formatCaptionMs(ms)}`;
 
 // PoPs by the number of entries they served, busiest first (first seen on a tie).
 function popsByRequests(pops: (PopDetection | null)[]): PopDetection[] {

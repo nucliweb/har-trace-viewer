@@ -1,7 +1,10 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { gzipSync } from "node:zlib";
+import { File as NodeFile } from "node:buffer";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FlowBuilder } from "../src/components/FlowBuilder.js";
+import { GZIP_UNSUPPORTED, UNRECOGNIZED_JSON } from "../src/lib/parse-recording.js";
 import { wptHar } from "../../core/tests/helpers/wpt-har";
 import { harJson, makeFile, traceJson } from "./fixtures.js";
 
@@ -11,7 +14,7 @@ const fileInputs = () =>
 
 async function loadHar(user: ReturnType<typeof userEvent.setup>, index = 0, content = harJson) {
   await user.upload(
-    fileInputs().filter((i) => i.accept === ".har")[index],
+    fileInputs().filter((i) => i.accept === ".har,.gz")[index],
     makeFile(content, "site.har")
   );
 }
@@ -51,7 +54,7 @@ describe("FlowBuilder", () => {
     const user = userEvent.setup();
     render(<FlowBuilder onGenerate={vi.fn()} />);
     await loadHar(user, 0, "{ not json");
-    expect(await screen.findByText("Could not parse HAR file.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Not valid JSON: /)).toBeInTheDocument();
     expect(generate()).toBeDisabled();
   });
 
@@ -59,7 +62,67 @@ describe("FlowBuilder", () => {
     const user = userEvent.setup({ applyAccept: false });
     render(<FlowBuilder onGenerate={vi.fn()} />);
     await user.upload(fileInputs()[0], makeFile("x", "notes.txt"));
-    expect(await screen.findByText("Only .har files are supported.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Only .har and .har.gz files are supported.")
+    ).toBeInTheDocument();
+  });
+
+  describe("file errors and formats", () => {
+    const traceInput = () => fileInputs().find((i) => i.accept === ".json,.gz")!;
+    const gzFile = (content: string, name: string) =>
+      new NodeFile([gzipSync(content)], name) as unknown as File;
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("shows the message of the core parser for a HAR it cannot read", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user, 0, '{"log":{"pages":[],"entries":[]}}');
+      expect(await screen.findByText("HAR contains no pages")).toBeInTheDocument();
+      expect(generate()).toBeDisabled();
+    });
+
+    it("says a JSON file is neither a HAR nor a trace, on either button", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user, 0, '{"foo":1}');
+      expect(await screen.findByText(UNRECOGNIZED_JSON)).toBeInTheDocument();
+
+      await loadHar(user);
+      await screen.findByText("site.har");
+      await user.upload(traceInput(), makeFile('{"foo":1}', "trace.json"));
+      expect(await screen.findByText(UNRECOGNIZED_JSON)).toBeInTheDocument();
+    });
+
+    it("loads a trace given as a bare array of events", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user);
+      await screen.findByText("site.har");
+      const events = JSON.stringify(
+        (JSON.parse(traceJson) as { traceEvents: unknown[] }).traceEvents
+      );
+      await user.upload(traceInput(), makeFile(events, "trace.json"));
+      expect(await screen.findByRole("button", { name: "Trace ✓" })).toBeInTheDocument();
+    });
+
+    it("loads a gzipped HAR", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await user.upload(fileInputs()[0], gzFile(harJson, "site.har.gz"));
+      expect(await screen.findByText("site.har.gz")).toBeInTheDocument();
+      expect(generate()).toBeEnabled();
+    });
+
+    it("explains that a .gz file needs a browser that can decompress it", async () => {
+      vi.stubGlobal("DecompressionStream", undefined);
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await user.upload(fileInputs()[0], gzFile(harJson, "site.har.gz"));
+      expect(await screen.findByText(GZIP_UNSUPPORTED)).toBeInTheDocument();
+    });
   });
 
   it("adds, reorders and removes pages", async () => {

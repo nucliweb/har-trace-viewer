@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { extname, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 
 // Serves the built web app (packages/web/dist), as Vercel does, to test the public entry page.
 const root = resolve(import.meta.dirname, "../packages/web/dist");
@@ -87,6 +88,51 @@ test("one click on the demo button shows the diagram", async ({ page }) => {
   await expect(page.locator("#diagram-svg")).toBeVisible();
   await page.getByRole("button", { name: "Next →" }).click();
   await expect(page.getByText(/^Step 2 \/ \d+$/)).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("dropping a JSON file that is not a HAR shows why it cannot be read", async ({ page }) => {
+  const errors = collectErrors(page);
+  const requested: string[] = [];
+  page.on("request", (req) => requested.push(req.url()));
+  await page.goto(baseUrl);
+
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['{"hello":"world"}'], "notes.har", { type: "application/json" }));
+    return transfer;
+  });
+  const row = page.getByLabel("Page 1 name").locator("xpath=..");
+  await row.dispatchEvent("drop", { dataTransfer });
+
+  await expect(
+    page.getByText(
+      "This JSON is neither a HAR (log.entries) nor a Chrome trace (traceEvents or an event array)."
+    )
+  ).toBeVisible();
+  // The message came back from the parse worker.
+  expect(requested.some((url) => /parse\.worker/.test(url))).toBe(true);
+  await expect(page.getByRole("button", { name: /Generate diagram/ })).toBeDisabled();
+  expect(errors).toEqual([]);
+});
+
+test("a gzipped HAR loads like a plain one", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(baseUrl);
+  const har = await readFile(
+    resolve(
+      import.meta.dirname,
+      "../packages/core/tests/fixtures/webperf-snippets.har.fixture.json"
+    )
+  );
+
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({ name: "site.har.gz", mimeType: "application/gzip", buffer: gzipSync(har) });
+
+  await expect(page.getByText("site.har.gz")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Generate diagram/ })).toBeEnabled();
   expect(errors).toEqual([]);
 });
 

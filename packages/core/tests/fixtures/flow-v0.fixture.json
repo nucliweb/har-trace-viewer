@@ -1,0 +1,1328 @@
+{
+  "pages": [
+    {
+      "name": "Disable cache",
+      "har": {
+        "pages": [
+          {
+            "id": "page_1",
+            "title": "https://webperf-snippets.nucliweb.net/",
+            "onContentLoad": 263.75699997879565,
+            "onLoad": 479.8810000065714
+          }
+        ],
+        "entries": [
+          {
+            "url": "https://webperf-snippets.nucliweb.net/",
+            "startTime": 0,
+            "duration": 52.28399997577071,
+            "timing": {
+              "blocked": 1.821000001810491,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.09900000000000009,
+              "wait": 48.713999982900916,
+              "receive": 1.6499999910593033
+            },
+            "ttfb": 48.713999982900916,
+            "status": 200,
+            "mimeType": "text/html",
+            "resourceType": "document",
+            "priority": "VeryHigh",
+            "responseHeaders": {
+              "age": "468968",
+              "cache-control": "public, max-age=0, must-revalidate",
+              "content-encoding": "br",
+              "content-type": "text/html; charset=utf-8",
+              "server": "Vercel",
+              "x-vercel-cache": "HIT",
+              "x-vercel-id": "cdg1::pt4z5-1779186962459-6cff682e889a"
+            },
+            "transferSize": 112507,
+            "isDocument": true,
+            "fromCache": false
+          },
+          {
+            "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+            "startTime": 55,
+            "duration": 58.264999999664724,
+            "timing": {
+              "blocked": 10.024999894373119,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.532,
+              "wait": 47.36500005465746,
+              "receive": 0.34300005063414574
+            },
+            "ttfb": 47.36500005465746,
+            "status": 200,
+            "mimeType": "text/css",
+            "resourceType": "stylesheet",
+            "priority": "VeryHigh",
+            "responseHeaders": {
+              "age": "476119",
+              "cache-control": "public,max-age=31536000,immutable",
+              "content-encoding": "br",
+              "content-type": "text/css; charset=utf-8",
+              "server": "Vercel",
+              "x-vercel-cache": "HIT",
+              "x-vercel-id": "cdg1::whzr5-1779186962522-f99fb3dee46a"
+            },
+            "transferSize": 1720,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+            "startTime": 55,
+            "duration": 64.05499996617436,
+            "timing": {
+              "blocked": 22.321000063918532,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.32299999999999995,
+              "wait": 40.74899998373538,
+              "receive": 0.6619999185204506
+            },
+            "ttfb": 40.74899998373538,
+            "status": 200,
+            "mimeType": "application/javascript",
+            "resourceType": "script",
+            "priority": "Low",
+            "responseHeaders": {
+              "age": "476119",
+              "cache-control": "public,max-age=31536000,immutable",
+              "content-encoding": "br",
+              "content-type": "application/javascript; charset=utf-8",
+              "server": "Vercel",
+              "x-vercel-cache": "HIT",
+              "x-vercel-id": "cdg1::cqqgp-1779186962535-1664337d20dd"
+            },
+            "transferSize": 6062,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png",
+            "startTime": 56,
+            "duration": 62.80499999411404,
+            "timing": {
+              "blocked": 10.34999997664243,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.20899999999999963,
+              "wait": 24.426000058151782,
+              "receive": 27.81999995931983
+            },
+            "ttfb": 24.426000058151782,
+            "status": 200,
+            "mimeType": "image/avif",
+            "resourceType": "image",
+            "priority": "High",
+            "responseHeaders": {
+              "cache-control": "private, no-transform, immutable, max-age=2592000",
+              "content-type": "image/avif",
+              "server": "Cloudinary"
+            },
+            "transferSize": 68218,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://cdn.debugbear.com/BK73p0yToVVP.js",
+            "startTime": 288,
+            "duration": 54.71000005491078,
+            "timing": {
+              "blocked": 2.287999972373247,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.2350000000000001,
+              "wait": 26.29600002682954,
+              "receive": 25.89100005570799
+            },
+            "ttfb": 26.29600002682954,
+            "status": 200,
+            "mimeType": "application/javascript",
+            "resourceType": "script",
+            "priority": "Low",
+            "responseHeaders": {
+              "age": "3170",
+              "cache-control": "public, max-age=14400",
+              "cf-cache-status": "HIT",
+              "cf-ray": "9fe275551a882177-MAD",
+              "content-encoding": "br",
+              "content-type": "application/javascript",
+              "server": "cloudflare",
+              "via": "1.1 google"
+            },
+            "transferSize": 34992,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://region1.google-analytics.com/g/collect?v=2&tid=G-NNX9SYKEV2&gtm=45je65f1v9164996844za200zd9164996844&_p=1779186962711&gcd=13l3l3l2l1l1&npa=1&dma_cps=a&dma=1&_eu=AAAAAAQ&are=1&cid=1403848601.1770921786&frm=0&pscdl=noapi&rcb=6&sr=1470x956&uaa=arm&uab=64&uafvl=Google%2520Chrome%3B147.0.7727.138%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.138&uam=&uamb=0&uap=macOS&uapv=26.3.1&uaw=0&ul=en-us&_s=1&tag_exp=0~115616986~115938466~115938468&sid=1779186946&sct=95&seg=1&dl=https%3A%2F%2Fwebperf-snippets.nucliweb.net%2F&dt=WebPerf%20Snippets%20%7C%20WebPerf%20Snippets&en=page_view&_ee=1&tfd=5410",
+            "startTime": 5408,
+            "duration": 123.23200004175305,
+            "timing": {
+              "blocked": 0.7650000296756625,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.171,
+              "wait": 121.63099995429813,
+              "receive": 0.6650000577792525
+            },
+            "ttfb": 121.63099995429813,
+            "status": 204,
+            "mimeType": "text/plain",
+            "resourceType": "fetch",
+            "priority": "High",
+            "responseHeaders": {
+              "cache-control": "no-cache, no-store, must-revalidate",
+              "content-type": "text/plain",
+              "server": "Golfe2"
+            },
+            "transferSize": 0,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://data.debugbear.com/",
+            "startTime": 8353,
+            "duration": 999.1650000447407,
+            "timing": {
+              "blocked": 1.163000032581389,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 2.877,
+              "wait": 993.9810000323281,
+              "receive": 1.1439999798312783
+            },
+            "ttfb": 993.9810000323281,
+            "status": 200,
+            "mimeType": "application/json",
+            "resourceType": "fetch",
+            "priority": "High",
+            "responseHeaders": {
+              "cf-cache-status": "DYNAMIC",
+              "cf-ray": "9fe275878f5a0311-MAD",
+              "content-type": "application/json; charset=utf-8",
+              "server": "cloudflare",
+              "via": "1.1 google"
+            },
+            "transferSize": 2,
+            "isDocument": false,
+            "fromCache": false
+          }
+        ],
+        "documentEntry": {
+          "url": "https://webperf-snippets.nucliweb.net/",
+          "startTime": 0,
+          "duration": 52.28399997577071,
+          "timing": {
+            "blocked": 1.821000001810491,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.09900000000000009,
+            "wait": 48.713999982900916,
+            "receive": 1.6499999910593033
+          },
+          "ttfb": 48.713999982900916,
+          "status": 200,
+          "mimeType": "text/html",
+          "resourceType": "document",
+          "priority": "VeryHigh",
+          "responseHeaders": {
+            "age": "468968",
+            "cache-control": "public, max-age=0, must-revalidate",
+            "content-encoding": "br",
+            "content-type": "text/html; charset=utf-8",
+            "server": "Vercel",
+            "x-vercel-cache": "HIT",
+            "x-vercel-id": "cdg1::pt4z5-1779186962459-6cff682e889a"
+          },
+          "transferSize": 112507,
+          "isDocument": true,
+          "fromCache": false
+        },
+        "preconnectHints": {}
+      },
+      "trace": {
+        "navigationStart": 600415766385,
+        "fcp": 181.529,
+        "lcp": 181.529
+      }
+    },
+    {
+      "name": "Cache",
+      "har": {
+        "pages": [
+          {
+            "id": "page_2",
+            "title": "https://webperf-snippets.nucliweb.net/",
+            "onContentLoad": 176.90600000787526,
+            "onLoad": 314.14400006178766
+          }
+        ],
+        "entries": [
+          {
+            "url": "https://webperf-snippets.nucliweb.net/",
+            "startTime": 0,
+            "duration": 54.91099995560944,
+            "timing": {
+              "blocked": 2.834999960049987,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0.34399999999999986,
+              "wait": 49.70600005183369,
+              "receive": 2.0259999437257648
+            },
+            "ttfb": 49.70600005183369,
+            "status": 304,
+            "mimeType": "text/html",
+            "resourceType": "document",
+            "priority": "VeryHigh",
+            "responseHeaders": {
+              "cache-control": "public, max-age=0, must-revalidate",
+              "server": "Vercel",
+              "x-vercel-cache": "HIT",
+              "x-vercel-id": "cdg1::pscrp-1779187066659-0a4f1b2d4daa"
+            },
+            "transferSize": 112507,
+            "isDocument": true,
+            "fromCache": false
+          },
+          {
+            "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+            "startTime": 66,
+            "duration": 20.35999996587634,
+            "timing": {
+              "blocked": 14.70299994637817,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0,
+              "wait": 2.4330000340044498,
+              "receive": 3.2239999854937196
+            },
+            "ttfb": 2.4330000340044498,
+            "status": 200,
+            "mimeType": "text/css",
+            "resourceType": "stylesheet",
+            "priority": "VeryHigh",
+            "responseHeaders": {
+              "content-encoding": "br",
+              "age": "476119",
+              "content-type": "text/css; charset=utf-8",
+              "cache-control": "public,max-age=31536000,immutable",
+              "x-vercel-cache": "HIT",
+              "server": "Vercel",
+              "x-vercel-id": "cdg1::whzr5-1779186962522-f99fb3dee46a"
+            },
+            "transferSize": 1720,
+            "isDocument": false,
+            "fromCache": "disk"
+          },
+          {
+            "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+            "startTime": 66,
+            "duration": 37.33800002373755,
+            "timing": {
+              "blocked": 35.715000058084726,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0,
+              "wait": 0.2690000165924431,
+              "receive": 1.3539999490603805
+            },
+            "ttfb": 0.2690000165924431,
+            "status": 200,
+            "mimeType": "application/javascript",
+            "resourceType": "script",
+            "priority": "Low",
+            "responseHeaders": {
+              "content-encoding": "br",
+              "age": "476119",
+              "content-type": "application/javascript; charset=utf-8",
+              "cache-control": "public,max-age=31536000,immutable",
+              "x-vercel-cache": "HIT",
+              "server": "Vercel",
+              "x-vercel-id": "cdg1::cqqgp-1779186962535-1664337d20dd"
+            },
+            "transferSize": 6062,
+            "isDocument": false,
+            "fromCache": "disk"
+          },
+          {
+            "url": "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png",
+            "startTime": 66,
+            "duration": 25.110000045970082,
+            "timing": {
+              "blocked": 14.389999995596707,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0,
+              "wait": 2.4270000004842878,
+              "receive": 8.293000049889088
+            },
+            "ttfb": 2.4270000004842878,
+            "status": 200,
+            "mimeType": "image/avif",
+            "resourceType": "image",
+            "priority": "High",
+            "responseHeaders": {
+              "cache-control": "private, no-transform, immutable, max-age=2592000",
+              "content-type": "image/avif",
+              "server": "Cloudinary"
+            },
+            "transferSize": 68218,
+            "isDocument": false,
+            "fromCache": "disk"
+          },
+          {
+            "url": "https://cdn.debugbear.com/BK73p0yToVVP.js",
+            "startTime": 200,
+            "duration": 4.001000081188977,
+            "timing": {
+              "blocked": 2.6960000774115325,
+              "dns": 0,
+              "connect": 0,
+              "ssl": 0,
+              "send": 0,
+              "wait": 0.6159999960809946,
+              "receive": 0.6890000076964498
+            },
+            "ttfb": 0.6159999960809946,
+            "status": 200,
+            "mimeType": "application/javascript",
+            "resourceType": "script",
+            "priority": "Low",
+            "responseHeaders": {
+              "content-encoding": "br",
+              "age": "3170",
+              "cf-cache-status": "HIT",
+              "content-type": "application/javascript",
+              "cache-control": "public, max-age=14400",
+              "via": "1.1 google",
+              "cf-ray": "9fe275551a882177-MAD",
+              "server": "cloudflare"
+            },
+            "transferSize": 34992,
+            "isDocument": false,
+            "fromCache": "disk"
+          },
+          {
+            "url": "https://region1.google-analytics.com/g/collect?v=2&tid=G-NNX9SYKEV2&gtm=45je65f1v9164996844za200zd9164996844&_p=1779187066821&gcd=13l3l3l2l1l1&npa=1&dma_cps=a&dma=1&_eu=AAAAAAQ&are=1&cid=1403848601.1770921786&frm=0&pscdl=noapi&rcb=15&sr=1470x956&uaa=arm&uab=64&uafvl=Google%2520Chrome%3B147.0.7727.138%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.138&uam=&uamb=0&uap=macOS&uapv=26.3.1&uaw=0&ul=en-us&_s=1&tag_exp=0~115616985~115938466~115938468&sid=1779186946&sct=95&seg=1&dl=https%3A%2F%2Fwebperf-snippets.nucliweb.net%2F&dt=WebPerf%20Snippets%20%7C%20WebPerf%20Snippets&en=page_view&_ee=1&tfd=5275",
+            "startTime": 5275,
+            "duration": 122.90299991513788,
+            "timing": {
+              "blocked": 0.6269999264478683,
+              "dns": 14.273,
+              "connect": 61.731,
+              "ssl": 47.353,
+              "send": 0.2530000000000001,
+              "wait": 45.20000003884733,
+              "receive": 0.8189999498426914
+            },
+            "ttfb": 45.20000003884733,
+            "status": 204,
+            "mimeType": "text/plain",
+            "resourceType": "fetch",
+            "priority": "High",
+            "responseHeaders": {
+              "cache-control": "no-cache, no-store, must-revalidate",
+              "content-type": "text/plain",
+              "server": "Golfe2"
+            },
+            "transferSize": 0,
+            "isDocument": false,
+            "fromCache": false
+          },
+          {
+            "url": "https://data.debugbear.com/",
+            "startTime": 8253,
+            "duration": 1101.4080000247657,
+            "timing": {
+              "blocked": 1.1869999901130797,
+              "dns": 0.04099999999999998,
+              "connect": 25.62,
+              "ssl": 25.075000000000003,
+              "send": 0.4109999999999978,
+              "wait": 1073.3299999683945,
+              "receive": 0.8190000662580132
+            },
+            "ttfb": 1073.3299999683945,
+            "status": 200,
+            "mimeType": "application/json",
+            "resourceType": "fetch",
+            "priority": "High",
+            "responseHeaders": {
+              "cf-cache-status": "DYNAMIC",
+              "cf-ray": "9fe278125caa4b08-MAD",
+              "content-type": "application/json; charset=utf-8",
+              "server": "cloudflare",
+              "via": "1.1 google"
+            },
+            "transferSize": 2,
+            "isDocument": false,
+            "fromCache": false
+          }
+        ],
+        "documentEntry": {
+          "url": "https://webperf-snippets.nucliweb.net/",
+          "startTime": 0,
+          "duration": 54.91099995560944,
+          "timing": {
+            "blocked": 2.834999960049987,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.34399999999999986,
+            "wait": 49.70600005183369,
+            "receive": 2.0259999437257648
+          },
+          "ttfb": 49.70600005183369,
+          "status": 304,
+          "mimeType": "text/html",
+          "resourceType": "document",
+          "priority": "VeryHigh",
+          "responseHeaders": {
+            "cache-control": "public, max-age=0, must-revalidate",
+            "server": "Vercel",
+            "x-vercel-cache": "HIT",
+            "x-vercel-id": "cdg1::pscrp-1779187066659-0a4f1b2d4daa"
+          },
+          "transferSize": 112507,
+          "isDocument": true,
+          "fromCache": false
+        },
+        "preconnectHints": {}
+      }
+    }
+  ],
+  "steps": [
+    {
+      "title": "DNS + initial connection",
+      "description": "Browser resolves the domain and establishes a TCP connection to Origin.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "DNS",
+          "value": "0ms"
+        },
+        {
+          "label": "TCP connect",
+          "value": "0ms"
+        }
+      ]
+    },
+    {
+      "title": "First request in flight",
+      "description": "Browser sends the HTTP request for the HTML document.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [],
+      "pathTimings": {
+        "browser-origin": "DNS 0ms · TCP 0ms"
+      },
+      "pathDirections": {
+        "browser-origin": "request"
+      }
+    },
+    {
+      "title": "TTFB — First byte received",
+      "description": "Origin responds with the first byte of the HTML document.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "TTFB",
+          "value": "49ms"
+        }
+      ],
+      "pathTimings": {
+        "browser-origin": "TTFB 49ms"
+      },
+      "pathDirections": {
+        "browser-origin": "response"
+      },
+      "badge": {
+        "type": "ttfb",
+        "value": "49ms",
+        "node": "browser"
+      }
+    },
+    {
+      "title": "Critical resources loading",
+      "description": "Browser parses the HTML and fetches render-blocking CSS and scripts.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "CSS files",
+          "value": "1"
+        }
+      ],
+      "pathTimings": {
+        "browser-origin": "1 files · avg 58ms"
+      },
+      "resources": [
+        {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+          "startTime": 55,
+          "duration": 58.264999999664724,
+          "timing": {
+            "blocked": 10.024999894373119,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.532,
+            "wait": 47.36500005465746,
+            "receive": 0.34300005063414574
+          },
+          "ttfb": 47.36500005465746,
+          "status": 200,
+          "mimeType": "text/css",
+          "resourceType": "stylesheet",
+          "priority": "VeryHigh",
+          "responseHeaders": {
+            "age": "476119",
+            "cache-control": "public,max-age=31536000,immutable",
+            "content-encoding": "br",
+            "content-type": "text/css; charset=utf-8",
+            "server": "Vercel",
+            "x-vercel-cache": "HIT",
+            "x-vercel-id": "cdg1::whzr5-1779186962522-f99fb3dee46a"
+          },
+          "transferSize": 1720,
+          "isDocument": false,
+          "fromCache": false
+        }
+      ]
+    },
+    {
+      "title": "First Contentful Paint",
+      "description": "The browser renders the first visible content on screen.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "FCP",
+          "value": "182ms"
+        }
+      ],
+      "badge": {
+        "type": "fcp",
+        "value": "182ms",
+        "node": "browser"
+      }
+    },
+    {
+      "title": "Secondary resources",
+      "description": "Async scripts, images, and fonts load in the background.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "Resources",
+          "value": "1"
+        }
+      ],
+      "pathTimings": {
+        "browser-origin": "1 resources · avg 64ms"
+      },
+      "resources": [
+        {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+          "startTime": 55,
+          "duration": 64.05499996617436,
+          "timing": {
+            "blocked": 22.321000063918532,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.32299999999999995,
+            "wait": 40.74899998373538,
+            "receive": 0.6619999185204506
+          },
+          "ttfb": 40.74899998373538,
+          "status": 200,
+          "mimeType": "application/javascript",
+          "resourceType": "script",
+          "priority": "Low",
+          "responseHeaders": {
+            "age": "476119",
+            "cache-control": "public,max-age=31536000,immutable",
+            "content-encoding": "br",
+            "content-type": "application/javascript; charset=utf-8",
+            "server": "Vercel",
+            "x-vercel-cache": "HIT",
+            "x-vercel-id": "cdg1::cqqgp-1779186962535-1664337d20dd"
+          },
+          "transferSize": 6062,
+          "isDocument": false,
+          "fromCache": false
+        }
+      ]
+    },
+    {
+      "title": "Largest Contentful Paint",
+      "description": "The largest visible element in the viewport has finished rendering.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "LCP",
+          "value": "182ms"
+        }
+      ],
+      "badge": {
+        "type": "lcp",
+        "value": "182ms",
+        "node": "browser"
+      }
+    },
+    {
+      "title": "Third-party requests",
+      "description": "Browser fetches resources from external domains.",
+      "activeNodes": [
+        "browser",
+        "third-parties"
+      ],
+      "activePaths": [
+        "browser-third-parties"
+      ],
+      "metrics": [
+        {
+          "label": "Domains",
+          "value": "3"
+        },
+        {
+          "label": "Requests",
+          "value": "4"
+        }
+      ],
+      "pathTimings": {
+        "browser-third-parties": "4 req · avg 310ms"
+      },
+      "resources": [
+        {
+          "url": "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png",
+          "startTime": 56,
+          "duration": 62.80499999411404,
+          "timing": {
+            "blocked": 10.34999997664243,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.20899999999999963,
+            "wait": 24.426000058151782,
+            "receive": 27.81999995931983
+          },
+          "ttfb": 24.426000058151782,
+          "status": 200,
+          "mimeType": "image/avif",
+          "resourceType": "image",
+          "priority": "High",
+          "responseHeaders": {
+            "cache-control": "private, no-transform, immutable, max-age=2592000",
+            "content-type": "image/avif",
+            "server": "Cloudinary"
+          },
+          "transferSize": 68218,
+          "isDocument": false,
+          "fromCache": false
+        },
+        {
+          "url": "https://cdn.debugbear.com/BK73p0yToVVP.js",
+          "startTime": 288,
+          "duration": 54.71000005491078,
+          "timing": {
+            "blocked": 2.287999972373247,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.2350000000000001,
+            "wait": 26.29600002682954,
+            "receive": 25.89100005570799
+          },
+          "ttfb": 26.29600002682954,
+          "status": 200,
+          "mimeType": "application/javascript",
+          "resourceType": "script",
+          "priority": "Low",
+          "responseHeaders": {
+            "age": "3170",
+            "cache-control": "public, max-age=14400",
+            "cf-cache-status": "HIT",
+            "cf-ray": "9fe275551a882177-MAD",
+            "content-encoding": "br",
+            "content-type": "application/javascript",
+            "server": "cloudflare",
+            "via": "1.1 google"
+          },
+          "transferSize": 34992,
+          "isDocument": false,
+          "fromCache": false
+        },
+        {
+          "url": "https://region1.google-analytics.com/g/collect?v=2&tid=G-NNX9SYKEV2&gtm=45je65f1v9164996844za200zd9164996844&_p=1779186962711&gcd=13l3l3l2l1l1&npa=1&dma_cps=a&dma=1&_eu=AAAAAAQ&are=1&cid=1403848601.1770921786&frm=0&pscdl=noapi&rcb=6&sr=1470x956&uaa=arm&uab=64&uafvl=Google%2520Chrome%3B147.0.7727.138%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.138&uam=&uamb=0&uap=macOS&uapv=26.3.1&uaw=0&ul=en-us&_s=1&tag_exp=0~115616986~115938466~115938468&sid=1779186946&sct=95&seg=1&dl=https%3A%2F%2Fwebperf-snippets.nucliweb.net%2F&dt=WebPerf%20Snippets%20%7C%20WebPerf%20Snippets&en=page_view&_ee=1&tfd=5410",
+          "startTime": 5408,
+          "duration": 123.23200004175305,
+          "timing": {
+            "blocked": 0.7650000296756625,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0.171,
+            "wait": 121.63099995429813,
+            "receive": 0.6650000577792525
+          },
+          "ttfb": 121.63099995429813,
+          "status": 204,
+          "mimeType": "text/plain",
+          "resourceType": "fetch",
+          "priority": "High",
+          "responseHeaders": {
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "content-type": "text/plain",
+            "server": "Golfe2"
+          },
+          "transferSize": 0,
+          "isDocument": false,
+          "fromCache": false
+        },
+        {
+          "url": "https://data.debugbear.com/",
+          "startTime": 8353,
+          "duration": 999.1650000447407,
+          "timing": {
+            "blocked": 1.163000032581389,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 2.877,
+            "wait": 993.9810000323281,
+            "receive": 1.1439999798312783
+          },
+          "ttfb": 993.9810000323281,
+          "status": 200,
+          "mimeType": "application/json",
+          "resourceType": "fetch",
+          "priority": "High",
+          "responseHeaders": {
+            "cf-cache-status": "DYNAMIC",
+            "cf-ray": "9fe275878f5a0311-MAD",
+            "content-type": "application/json; charset=utf-8",
+            "server": "cloudflare",
+            "via": "1.1 google"
+          },
+          "transferSize": 2,
+          "isDocument": false,
+          "fromCache": false
+        }
+      ]
+    },
+    {
+      "title": "Page loaded",
+      "description": "The load event fires — all resources have been downloaded.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "onLoad",
+          "value": "480ms"
+        },
+        {
+          "label": "DCL",
+          "value": "264ms"
+        }
+      ],
+      "badge": {
+        "type": "onload",
+        "value": "480ms",
+        "node": "browser"
+      }
+    },
+    {
+      "title": "→ User navigates to Cache",
+      "description": "The user leaves Disable cache and navigates to Cache.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": []
+    },
+    {
+      "title": "DNS + initial connection",
+      "description": "Browser resolves the domain and establishes a TCP connection to Origin.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "DNS",
+          "value": "0ms"
+        },
+        {
+          "label": "TCP connect",
+          "value": "0ms"
+        }
+      ]
+    },
+    {
+      "title": "First request in flight",
+      "description": "Browser sends the HTTP request for the HTML document.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [],
+      "pathTimings": {
+        "browser-origin": "DNS 0ms · TCP 0ms"
+      },
+      "pathDirections": {
+        "browser-origin": "request"
+      }
+    },
+    {
+      "title": "TTFB — First byte received",
+      "description": "Origin responds with the first byte of the HTML document.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "TTFB",
+          "value": "50ms"
+        }
+      ],
+      "pathTimings": {
+        "browser-origin": "TTFB 50ms"
+      },
+      "pathDirections": {
+        "browser-origin": "response"
+      },
+      "badge": {
+        "type": "ttfb",
+        "value": "50ms",
+        "node": "browser"
+      }
+    },
+    {
+      "title": "Critical resources loading",
+      "description": "Browser parses the HTML and fetches render-blocking CSS and scripts.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "From cache",
+          "value": "1"
+        }
+      ],
+      "pathTimings": {},
+      "cacheResources": [
+        {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/css/4f18b1ac3f22924b.css",
+          "startTime": 66,
+          "duration": 20.35999996587634,
+          "timing": {
+            "blocked": 14.70299994637817,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0,
+            "wait": 2.4330000340044498,
+            "receive": 3.2239999854937196
+          },
+          "ttfb": 2.4330000340044498,
+          "status": 200,
+          "mimeType": "text/css",
+          "resourceType": "stylesheet",
+          "priority": "VeryHigh",
+          "responseHeaders": {
+            "content-encoding": "br",
+            "age": "476119",
+            "content-type": "text/css; charset=utf-8",
+            "cache-control": "public,max-age=31536000,immutable",
+            "x-vercel-cache": "HIT",
+            "server": "Vercel",
+            "x-vercel-id": "cdg1::whzr5-1779186962522-f99fb3dee46a"
+          },
+          "transferSize": 1720,
+          "isDocument": false,
+          "fromCache": "disk"
+        }
+      ]
+    },
+    {
+      "title": "Secondary resources",
+      "description": "Async scripts, images, and fonts load in the background.",
+      "activeNodes": [
+        "browser",
+        "origin"
+      ],
+      "activePaths": [
+        "browser-origin"
+      ],
+      "metrics": [
+        {
+          "label": "Resources",
+          "value": "1"
+        },
+        {
+          "label": "From cache",
+          "value": "1"
+        }
+      ],
+      "pathTimings": {},
+      "cacheResources": [
+        {
+          "url": "https://webperf-snippets.nucliweb.net/_next/static/chunks/webpack-c91b25dd0d525e84.js",
+          "startTime": 66,
+          "duration": 37.33800002373755,
+          "timing": {
+            "blocked": 35.715000058084726,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0,
+            "wait": 0.2690000165924431,
+            "receive": 1.3539999490603805
+          },
+          "ttfb": 0.2690000165924431,
+          "status": 200,
+          "mimeType": "application/javascript",
+          "resourceType": "script",
+          "priority": "Low",
+          "responseHeaders": {
+            "content-encoding": "br",
+            "age": "476119",
+            "content-type": "application/javascript; charset=utf-8",
+            "cache-control": "public,max-age=31536000,immutable",
+            "x-vercel-cache": "HIT",
+            "server": "Vercel",
+            "x-vercel-id": "cdg1::cqqgp-1779186962535-1664337d20dd"
+          },
+          "transferSize": 6062,
+          "isDocument": false,
+          "fromCache": "disk"
+        }
+      ]
+    },
+    {
+      "title": "Third-party requests",
+      "description": "Browser fetches resources from external domains.",
+      "activeNodes": [
+        "browser",
+        "third-parties"
+      ],
+      "activePaths": [
+        "browser-third-parties"
+      ],
+      "metrics": [
+        {
+          "label": "Domains",
+          "value": "2"
+        },
+        {
+          "label": "Requests",
+          "value": "2"
+        },
+        {
+          "label": "From cache",
+          "value": "2"
+        }
+      ],
+      "pathTimings": {
+        "browser-third-parties": "2 req · avg 612ms"
+      },
+      "resources": [
+        {
+          "url": "https://region1.google-analytics.com/g/collect?v=2&tid=G-NNX9SYKEV2&gtm=45je65f1v9164996844za200zd9164996844&_p=1779187066821&gcd=13l3l3l2l1l1&npa=1&dma_cps=a&dma=1&_eu=AAAAAAQ&are=1&cid=1403848601.1770921786&frm=0&pscdl=noapi&rcb=15&sr=1470x956&uaa=arm&uab=64&uafvl=Google%2520Chrome%3B147.0.7727.138%7CNot.A%252FBrand%3B8.0.0.0%7CChromium%3B147.0.7727.138&uam=&uamb=0&uap=macOS&uapv=26.3.1&uaw=0&ul=en-us&_s=1&tag_exp=0~115616985~115938466~115938468&sid=1779186946&sct=95&seg=1&dl=https%3A%2F%2Fwebperf-snippets.nucliweb.net%2F&dt=WebPerf%20Snippets%20%7C%20WebPerf%20Snippets&en=page_view&_ee=1&tfd=5275",
+          "startTime": 5275,
+          "duration": 122.90299991513788,
+          "timing": {
+            "blocked": 0.6269999264478683,
+            "dns": 14.273,
+            "connect": 61.731,
+            "ssl": 47.353,
+            "send": 0.2530000000000001,
+            "wait": 45.20000003884733,
+            "receive": 0.8189999498426914
+          },
+          "ttfb": 45.20000003884733,
+          "status": 204,
+          "mimeType": "text/plain",
+          "resourceType": "fetch",
+          "priority": "High",
+          "responseHeaders": {
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "content-type": "text/plain",
+            "server": "Golfe2"
+          },
+          "transferSize": 0,
+          "isDocument": false,
+          "fromCache": false
+        },
+        {
+          "url": "https://data.debugbear.com/",
+          "startTime": 8253,
+          "duration": 1101.4080000247657,
+          "timing": {
+            "blocked": 1.1869999901130797,
+            "dns": 0.04099999999999998,
+            "connect": 25.62,
+            "ssl": 25.075000000000003,
+            "send": 0.4109999999999978,
+            "wait": 1073.3299999683945,
+            "receive": 0.8190000662580132
+          },
+          "ttfb": 1073.3299999683945,
+          "status": 200,
+          "mimeType": "application/json",
+          "resourceType": "fetch",
+          "priority": "High",
+          "responseHeaders": {
+            "cf-cache-status": "DYNAMIC",
+            "cf-ray": "9fe278125caa4b08-MAD",
+            "content-type": "application/json; charset=utf-8",
+            "server": "cloudflare",
+            "via": "1.1 google"
+          },
+          "transferSize": 2,
+          "isDocument": false,
+          "fromCache": false
+        }
+      ],
+      "cacheResources": [
+        {
+          "url": "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png",
+          "startTime": 66,
+          "duration": 25.110000045970082,
+          "timing": {
+            "blocked": 14.389999995596707,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0,
+            "wait": 2.4270000004842878,
+            "receive": 8.293000049889088
+          },
+          "ttfb": 2.4270000004842878,
+          "status": 200,
+          "mimeType": "image/avif",
+          "resourceType": "image",
+          "priority": "High",
+          "responseHeaders": {
+            "cache-control": "private, no-transform, immutable, max-age=2592000",
+            "content-type": "image/avif",
+            "server": "Cloudinary"
+          },
+          "transferSize": 68218,
+          "isDocument": false,
+          "fromCache": "disk"
+        },
+        {
+          "url": "https://cdn.debugbear.com/BK73p0yToVVP.js",
+          "startTime": 200,
+          "duration": 4.001000081188977,
+          "timing": {
+            "blocked": 2.6960000774115325,
+            "dns": 0,
+            "connect": 0,
+            "ssl": 0,
+            "send": 0,
+            "wait": 0.6159999960809946,
+            "receive": 0.6890000076964498
+          },
+          "ttfb": 0.6159999960809946,
+          "status": 200,
+          "mimeType": "application/javascript",
+          "resourceType": "script",
+          "priority": "Low",
+          "responseHeaders": {
+            "content-encoding": "br",
+            "age": "3170",
+            "cf-cache-status": "HIT",
+            "content-type": "application/javascript",
+            "cache-control": "public, max-age=14400",
+            "via": "1.1 google",
+            "cf-ray": "9fe275551a882177-MAD",
+            "server": "cloudflare"
+          },
+          "transferSize": 34992,
+          "isDocument": false,
+          "fromCache": "disk"
+        }
+      ]
+    },
+    {
+      "title": "Page loaded",
+      "description": "The load event fires — all resources have been downloaded.",
+      "activeNodes": [
+        "browser"
+      ],
+      "activePaths": [],
+      "metrics": [
+        {
+          "label": "onLoad",
+          "value": "314ms"
+        },
+        {
+          "label": "DCL",
+          "value": "177ms"
+        }
+      ],
+      "badge": {
+        "type": "onload",
+        "value": "314ms",
+        "node": "browser"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "browser",
+      "label": "Browser",
+      "present": true,
+      "region": "client"
+    },
+    {
+      "id": "edge",
+      "label": "Origin Server",
+      "present": false,
+      "region": "edge"
+    },
+    {
+      "id": "origin",
+      "label": "Origin Server",
+      "subLabel": "Vercel",
+      "present": true,
+      "region": "europe",
+      "resourceStats": {
+        "count": 2,
+        "avgMs": 61.159999982919544
+      }
+    },
+    {
+      "id": "third-parties",
+      "label": "3rd Parties",
+      "present": true,
+      "region": "europe",
+      "resourceStats": {
+        "count": 6,
+        "avgMs": 410.70383334590366
+      }
+    }
+  ],
+  "paths": [
+    {
+      "id": "browser-origin",
+      "from": "browser",
+      "to": "origin"
+    },
+    {
+      "id": "browser-third-parties",
+      "from": "browser",
+      "to": "third-parties"
+    }
+  ],
+  "cacheReport": {
+    "document": {
+      "cdnStatus": "hit",
+      "maxAge": 0,
+      "age": 468968,
+      "immutable": false,
+      "mustRevalidate": true,
+      "noStore": false
+    },
+    "ownResources": {
+      "total": 2,
+      "cdnHits": 2,
+      "cdnHitRatio": 1,
+      "immutableCount": 2,
+      "immutableRatio": 1
+    },
+    "browser": {
+      "total": 6,
+      "fromDisk": 0,
+      "fromMemory": 0,
+      "hitRatio": 0
+    },
+    "recommendations": [
+      {
+        "label": "Document revalidates on every request",
+        "description": "The document uses max-age=0, must-revalidate — the browser cannot cache it between navigations. Consider adding stale-while-revalidate for faster perceived navigation.",
+        "severity": "info"
+      },
+      {
+        "label": "Static assets use long-term caching",
+        "description": "100% of own resources use immutable long-term caching — ideal for content-hashed assets.",
+        "severity": "good"
+      },
+      {
+        "label": "CDN cache effective for static assets",
+        "description": "100% of own resources served from CDN cache.",
+        "severity": "good"
+      },
+      {
+        "label": "No browser cache hits",
+        "description": "No resources were served from the browser cache. This may be a first visit or cache was disabled during recording.",
+        "severity": "info"
+      }
+    ]
+  }
+}

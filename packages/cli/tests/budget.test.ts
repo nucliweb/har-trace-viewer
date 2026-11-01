@@ -198,7 +198,10 @@ describe("failingFindings", () => {
     return {
       ...real,
       pageAnalyses: [
-        { ...real.pageAnalyses[0], cacheReport: { ...real.cacheReport, recommendations } },
+        {
+          ...real.pageAnalyses[0],
+          cacheReport: { ...real.pageAnalyses[0].cacheReport, recommendations },
+        },
       ],
     };
   };
@@ -226,7 +229,7 @@ describe("failingFindings", () => {
       pageAnalyses: [
         {
           ...real.pageAnalyses[0],
-          cacheReport: { ...real.cacheReport, recommendations: [] },
+          cacheReport: { ...real.pageAnalyses[0].cacheReport, recommendations: [] },
           networkReport: {
             ...real.pageAnalyses[0].networkReport!,
             recommendations: [rec("warning", "Duplicates")],

@@ -1,4 +1,4 @@
-import type { DiagramStep, Flow, StepKind } from "../types.js";
+import type { DiagramStep, Flow, Metric, StepKind } from "../types.js";
 import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
 import type { DeltaUnit } from "../utils/format.js";
@@ -82,7 +82,8 @@ export interface StepMetricDelta {
   a?: string;
   b?: string;
   delta: number | null;
-  unit: "ms" | "";
+  // The unit of the delta; "" for a plain number read from a stored flow without units.
+  unit: DeltaUnit | "";
   rating: DeltaRating;
 }
 
@@ -337,11 +338,36 @@ export function compareFlows(a: Flow, b: Flow): FlowComparison {
   };
 }
 
+// Flows generated before metrics carried raw values only show them: "48ms", "3", "0.012".
 const NUMERIC_VALUE = /^(-?\d+(?:\.\d+)?)(ms)?$/;
 
 function parseMetric(value: string | undefined): { value: number; unit: "ms" | "" } | null {
   const match = value === undefined ? null : NUMERIC_VALUE.exec(value);
   return match ? { value: Number(match[1]), unit: match[2] === "ms" ? "ms" : "" } : null;
+}
+
+// B − A of two metrics with the same label, from their raw values when every metric present
+// has a unit, else from the numbers their values show.
+function metricDelta(
+  metricA: Metric | undefined,
+  metricB: Metric | undefined
+): { delta: number | null; unit: DeltaUnit | "" } {
+  const present = [metricA, metricB].filter((m) => m !== undefined);
+  if (present.every((m) => m.unit !== undefined)) {
+    const comparable =
+      metricA?.raw !== undefined && metricB?.raw !== undefined && metricA.unit === metricB.unit;
+    return {
+      delta: comparable ? metricB.raw! - metricA.raw! : null,
+      unit: present[0]?.unit ?? "",
+    };
+  }
+  const parsedA = parseMetric(metricA?.value);
+  const parsedB = parseMetric(metricB?.value);
+  return {
+    delta:
+      parsedA && parsedB && parsedA.unit === parsedB.unit ? parsedB.value - parsedA.value : null,
+    unit: (parsedA ?? parsedB)?.unit ?? "",
+  };
 }
 
 // Every step metric is better lower (time, files, requests) but the browser-cache hits.
@@ -351,18 +377,15 @@ const HIGHER_IS_BETTER = new Set(["From cache"]);
 export function compareStepMetrics(a?: DiagramStep, b?: DiagramStep): StepMetricDelta[] {
   const labels = [...new Set([...(a?.metrics ?? []), ...(b?.metrics ?? [])].map((m) => m.label))];
   return labels.map((label) => {
-    const valueA = a?.metrics.find((m) => m.label === label)?.value;
-    const valueB = b?.metrics.find((m) => m.label === label)?.value;
-    const parsedA = parseMetric(valueA);
-    const parsedB = parseMetric(valueB);
-    const delta =
-      parsedA && parsedB && parsedA.unit === parsedB.unit ? parsedB.value - parsedA.value : null;
+    const metricA = a?.metrics.find((m) => m.label === label);
+    const metricB = b?.metrics.find((m) => m.label === label);
+    const { delta, unit } = metricDelta(metricA, metricB);
     return {
       label,
-      ...(valueA !== undefined ? { a: valueA } : {}),
-      ...(valueB !== undefined ? { b: valueB } : {}),
+      ...(metricA !== undefined ? { a: metricA.value } : {}),
+      ...(metricB !== undefined ? { b: metricB.value } : {}),
       delta,
-      unit: (parsedA ?? parsedB)?.unit ?? "",
+      unit,
       rating: rateDelta(delta, HIGHER_IS_BETTER.has(label)),
     };
   });

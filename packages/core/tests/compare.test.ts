@@ -4,7 +4,7 @@ import { join } from "path";
 import { fileURLToPath } from "url";
 import { parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
-import { generateFlow } from "../src/steps/step-generator.js";
+import { generateFlow, normalizeFlow } from "../src/steps/step-generator.js";
 import {
   COMPARED_METRICS,
   compareFlows,
@@ -460,6 +460,59 @@ describe("COMPARED_METRICS", () => {
       ["bytes", "bytes"],
       ["cdnHitRatio", "ratio"],
       ["browserCacheHitRatio", "ratio"],
+    ]);
+  });
+});
+
+describe("compareStepMetrics — raw values", () => {
+  const step = (metrics: DiagramStep["metrics"]) => ({ metrics }) as DiagramStep;
+
+  it("computes the delta from the raw values in their unit, whatever the display", () => {
+    const rows = compareStepMetrics(
+      step([
+        { label: "onLoad", value: "1.8 s", raw: 1834.5, unit: "ms" },
+        { label: "Resources", value: "12", raw: 12, unit: "count" },
+        { label: "CLS", value: "0.120", raw: 0.12, unit: "score" },
+      ]),
+      step([
+        { label: "onLoad", value: "480 ms", raw: 480, unit: "ms" },
+        { label: "Resources", value: "4", raw: 4, unit: "count" },
+        { label: "CLS", value: "0.200", raw: 0.2, unit: "score" },
+      ])
+    );
+
+    expect(rows).toEqual([
+      { label: "onLoad", a: "1.8 s", b: "480 ms", delta: -1354.5, unit: "ms", rating: "better" },
+      { label: "Resources", a: "12", b: "4", delta: -8, unit: "count", rating: "better" },
+      {
+        label: "CLS",
+        a: "0.120",
+        b: "0.200",
+        delta: expect.closeTo(0.08, 10),
+        unit: "score",
+        rating: "worse",
+      },
+    ]);
+  });
+
+  it("has no delta when one side has no value, and keeps the unit", () => {
+    const rows = compareStepMetrics(
+      step([{ label: "INP", value: "n/a", unit: "ms" }]),
+      step([{ label: "INP", value: "250 ms", raw: 250, unit: "ms" }])
+    );
+
+    expect(rows).toEqual([
+      { label: "INP", a: "n/a", b: "250 ms", delta: null, unit: "ms", rating: "none" },
+    ]);
+  });
+
+  it("reads the display values of a stored flow without raw values", () => {
+    const stored = JSON.parse(readFileSync(join(dir, "flow-v2.fixture.json"), "utf8")) as Flow;
+    const flow = normalizeFlow(stored);
+    const [ttfbA, ttfbB] = flow.steps.filter((s) => s.kind === "ttfb");
+
+    expect(compareStepMetrics(ttfbA, ttfbB)).toEqual([
+      { label: "TTFB", a: "49ms", b: "50ms", delta: 1, unit: "ms", rating: "worse" },
     ]);
   });
 });

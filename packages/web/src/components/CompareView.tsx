@@ -198,7 +198,7 @@ function PairInfo({
                       ? ""
                       : formatDelta(
                           row.delta,
-                          row.unit === "ms" ? "ms" : Number.isInteger(row.delta) ? "count" : "score"
+                          row.unit || (Number.isInteger(row.delta) ? "count" : "score")
                         )
                   }
                   rating={row.rating}

@@ -315,7 +315,7 @@ export function pairStepsRegion(
               ? ""
               : formatDelta(
                   row.delta,
-                  row.unit === "ms" ? "ms" : Number.isInteger(row.delta) ? "count" : "score"
+                  row.unit || (Number.isInteger(row.delta) ? "count" : "score")
                 ),
             { color: DELTA_COLOR[row.rating] }
           ),

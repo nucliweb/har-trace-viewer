@@ -249,9 +249,17 @@ export interface DiagramPath {
   to: NodeId;
 }
 
+// What a number measures: milliseconds, bytes, a count, a 0–1 ratio or a unitless score (CLS).
+export type MetricUnit = "ms" | "bytes" | "count" | "ratio" | "score";
+
 export interface Metric {
   label: string;
+  // What the step shows: "480 ms", "1.8 s", "3", "0.012", "n/a".
   value: string;
+  // The number behind the value, absent when there is none ("n/a"). Flows generated before
+  // it existed carry neither raw nor unit: readers fall back to parsing the value.
+  raw?: number;
+  unit?: MetricUnit;
 }
 
 // What a step shows, whatever its title: comparisons pair the steps of two flows by kind.
@@ -373,10 +381,12 @@ export interface Flow {
   // One entry per page, in the same order as `pages`.
   pageAnalyses: PageAnalysis[];
   steps: DiagramStep[];
-  // First page's topology and cache report, kept for readers of version-1 flows.
-  nodes: DiagramNode[];
-  paths: DiagramPath[];
-  cacheReport: CacheReport;
+  // The single topology and cache report of flows without pageAnalyses (version ≤ 1), which
+  // normalizeFlow copies to every page. Flows that carry pageAnalyses may still have the
+  // first page's copy here; nothing reads it.
+  nodes?: DiagramNode[];
+  paths?: DiagramPath[];
+  cacheReport?: CacheReport;
 }
 
 // ── Cache analysis ────────────────────────────────────────────────────────────

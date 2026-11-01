@@ -1,5 +1,4 @@
-import { parseHarPagesJson, parseTraceJson } from "@htv/core";
-import { readFileText } from "../lib/read-file-text.js";
+import { readRecordingFile } from "../lib/parse-recording.js";
 import type { ParseProgress, ParseRequest, ParseResponse } from "../lib/parse-protocol.js";
 
 const PROGRESS_INTERVAL_MS = 100;
@@ -17,11 +16,10 @@ self.onmessage = async (event: MessageEvent<ParseRequest>) => {
     post({ id, progress });
   };
   try {
-    const text = await readFileText(file, file.name.toLowerCase().endsWith(".gz"), report);
-    report({ phase: "parsing", loaded: 0, total: 0 }, true);
-    const result = kind === "har" ? parseHarPagesJson(text) : parseTraceJson(text);
+    const result = await readRecordingFile(kind, file, report);
     post({ id, ok: true, result });
   } catch (error) {
+    // An Error does not cross postMessage as such: its message does.
     post({ id, ok: false, error: error instanceof Error ? error.message : String(error) });
   }
 };

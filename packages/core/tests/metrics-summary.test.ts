@@ -6,6 +6,7 @@ import { parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
 import { rateMetric, summarizeFlowMetrics } from "../src/analysis/metrics-summary.js";
+import { formatMs } from "../src/utils/format.js";
 import { firefoxEntry, firefoxHar } from "./helpers/firefox-har.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
 import type { Flow } from "../src/types.js";
@@ -25,7 +26,7 @@ function twoPageFlow(): Flow {
 
 const badgeValue = (flow: Flow, pageIndex: number, type: string) =>
   flow.steps.find((s) => s.pageIndex === pageIndex && s.badge?.type === type)?.badge?.value;
-const asBadge = (ms: number | null) => (ms === null ? undefined : `${Math.round(ms)}ms`);
+const asBadge = (ms: number | null) => (ms === null ? undefined : formatMs(ms));
 
 describe("summarizeFlowMetrics", () => {
   it("returns one summary per page, in order", () => {

@@ -1,5 +1,4 @@
-import { parseHarPagesJson, parseTraceJson } from "@htv/core";
-import { readFileText } from "./read-file-text.js";
+import { readRecordingFile } from "./parse-recording.js";
 import type { ParsedHar, ParsedTrace } from "@htv/core";
 import type {
   ParseKind,
@@ -57,8 +56,7 @@ async function parseOnMainThread(
   onProgress?.({ phase: "parsing", loaded: 0, total: 0 });
   // Let the "Parsing…" state paint before the synchronous parse blocks the thread.
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const text = await readFileText(file, file.name.toLowerCase().endsWith(".gz"));
-  return kind === "har" ? parseHarPagesJson(text) : parseTraceJson(text);
+  return readRecordingFile(kind, file);
 }
 
 function fallBackToMainThread(): void {

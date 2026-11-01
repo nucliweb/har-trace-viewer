@@ -1,3 +1,5 @@
+import type { MetricUnit } from "../types.js";
+
 /**
  * Formats a byte count with decimal units (1 KB = 1000 B).
  * Whole bytes below 1 KB, then KB and MB with one decimal under 10 and none from 10 up.
@@ -26,7 +28,15 @@ export function formatMs(ms: number | null | undefined): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
-export type DeltaUnit = "ms" | "bytes" | "count" | "ratio" | "score";
+/**
+ * Formats a duration for a diagram caption, where room is short: whole milliseconds with no
+ * space, whatever the size ("26ms", "1234ms").
+ */
+export function formatCaptionMs(ms: number): string {
+  return `${Math.round(ms)}ms`;
+}
+
+export type DeltaUnit = MetricUnit;
 
 const MINUS = "\u2212";
 const sign = (value: number) => (value > 0 ? "+" : value < 0 ? MINUS : "");
