@@ -164,6 +164,15 @@ function personalizationFlags(e: RawHarEntry): Pick<HarEntry, "setsCookie" | "se
   };
 }
 
+// DevTools' "Disable cache" and a hard reload send Cache-Control: no-cache and Pragma: no-cache.
+function bypassFlag(e: RawHarEntry): Pick<HarEntry, "bypassesCache"> {
+  const bypasses = (e.request.headers ?? []).some(
+    (h) =>
+      ["cache-control", "pragma"].includes(h.name.toLowerCase()) && /\bno-cache\b/i.test(h.value)
+  );
+  return bypasses ? { bypassesCache: true } : {};
+}
+
 // Repeated headers are joined with ", ", which means the same as listing them apart
 // (RFC 9110 §5.3). Set-Cookie is the exception: its values may contain commas, so only
 // the first one is kept.
@@ -441,6 +450,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     const response = e.response ?? {};
     const responseHeaders = pickResponseHeaders(headersToRecord(response.headers ?? []));
     const mimeType = response.content?.mimeType ?? "";
+    const redirectURL = redirectTarget(e);
 
     return {
       url: e.request.url,
@@ -460,6 +470,8 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       isDocument: isHtmlMime(mimeType),
       fromCache: parseFromCache(e._fromCache, e.cache),
       ...personalizationFlags(e),
+      ...(redirectURL !== null ? { redirectURL } : {}),
+      ...bypassFlag(e),
     };
   });
 

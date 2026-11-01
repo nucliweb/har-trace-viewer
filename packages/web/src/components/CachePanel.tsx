@@ -1,9 +1,18 @@
+import { useId } from "react";
 import { formatBytes } from "@htv/core";
-import type { CacheReport, CdnCacheStatus, RecommendationResource } from "@htv/core";
+import type {
+  CacheReport,
+  CdnCacheStatus,
+  NetworkReport,
+  Recommendation,
+  RecommendationResource,
+} from "@htv/core";
 import styles from "./CachePanel.module.css";
 
 interface Props {
   report: CacheReport;
+  // Absent in flows generated before the network report existed: its section is left out.
+  network?: NetworkReport;
   pageLabel: string;
   onClose: () => void;
 }
@@ -96,7 +105,7 @@ function RecResources({ resources }: { resources: RecommendationResource[] }) {
               {fileName(r.url)}
             </span>
             <span className={styles.recResourceSize}>{formatBytes(r.transferSize)}</span>
-            <span className={styles.recResourceCc}>{r.cacheControl}</span>
+            <span className={styles.recResourceCc}>{r.detail ?? r.cacheControl}</span>
           </li>
         ))}
       </ul>
@@ -104,7 +113,27 @@ function RecResources({ resources }: { resources: RecommendationResource[] }) {
   );
 }
 
-export function CachePanel({ report, pageLabel, onClose }: Props) {
+function RecommendationList({ recommendations }: { recommendations: Recommendation[] }) {
+  return (
+    <div className={styles.recs}>
+      {recommendations.map((rec, i) => (
+        <div key={i} className={`${styles.rec} ${styles[`rec_${rec.severity}`]}`}>
+          <SeverityIcon severity={rec.severity} />
+          <div className={styles.recContent}>
+            <div className={styles.recLabel}>{rec.label}</div>
+            <div className={styles.recDesc}>{rec.description}</div>
+            {rec.resources && rec.resources.length > 0 && (
+              <RecResources resources={rec.resources} />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function CachePanel({ report, network, pageLabel, onClose }: Props) {
+  const networkTitleId = useId();
   const { document: doc, ownResources, browser, recommendations } = report;
   // Browser-cache hits never reach the CDN: the ratio covers the own network requests.
   const cdnJudged = ownResources.network ?? ownResources.total;
@@ -124,7 +153,7 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <span className={styles.headerTitle}>Cache Analysis</span>
+          <span className={styles.headerTitle}>Cache & Network</span>
           <h2 className={styles.pageLabel}>{pageLabel}</h2>
         </div>
         <button className={styles.closeBtn} onClick={onClose} aria-label="Close cache analysis">
@@ -243,20 +272,23 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
         {recommendations.length > 0 && (
           <section className={styles.section}>
             <div className={styles.sectionTitle}>Recommendations</div>
-            <div className={styles.recs}>
-              {recommendations.map((rec, i) => (
-                <div key={i} className={`${styles.rec} ${styles[`rec_${rec.severity}`]}`}>
-                  <SeverityIcon severity={rec.severity} />
-                  <div className={styles.recContent}>
-                    <div className={styles.recLabel}>{rec.label}</div>
-                    <div className={styles.recDesc}>{rec.description}</div>
-                    {rec.resources && rec.resources.length > 0 && (
-                      <RecResources resources={rec.resources} />
-                    )}
-                  </div>
-                </div>
-              ))}
+            <RecommendationList recommendations={recommendations} />
+          </section>
+        )}
+
+        {/* Network: duplicate requests, redirects, failed responses, mixed content */}
+        {network && (
+          <section className={styles.section} aria-labelledby={networkTitleId}>
+            <div className={styles.sectionTitle} id={networkTitleId}>
+              Network
             </div>
+            {network.recommendations.length > 0 ? (
+              <RecommendationList recommendations={network.recommendations} />
+            ) : (
+              <p className={styles.recDesc}>
+                No duplicate requests, redirects, errors or mixed content.
+              </p>
+            )}
           </section>
         )}
       </div>

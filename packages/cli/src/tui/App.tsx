@@ -25,7 +25,7 @@ interface Props {
   columns?: number;
 }
 
-const TABS = ["Overview", "Steps", "Hosts", "Cache"] as const;
+const TABS = ["Overview", "Steps", "Hosts", "Cache & network"] as const;
 type Side = "a" | "b";
 
 // The header block and the status bar around the scrolling region.
@@ -153,10 +153,11 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         return comparison
           ? hostDeltaRegion(comparison, names, width)
           : hostsRegion(flow, page, width);
-      case "Cache": {
+      case "Cache & network": {
         const shown = compare ? (side === "a" ? flow : compare) : flow;
         const pageIndex = compare ? 0 : page;
-        return cacheRegion(shown.pageAnalyses[pageIndex].cacheReport, width);
+        const { cacheReport, networkReport } = shown.pageAnalyses[pageIndex];
+        return cacheRegion(cacheReport, width, networkReport);
       }
     }
   }, [current, step, page, side, width, viewport, flow, compare, comparison, names]);
@@ -201,7 +202,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   });
 
   const context = compare
-    ? current === "Cache"
+    ? current === "Cache & network"
       ? `Cache · ${side.toUpperCase()} ${names[side]}`
       : `A ${names.a} · B ${names.b}`
     : pageLabel(flow, page);
@@ -214,7 +215,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     "1-4/Tab tabs",
     current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
     maxScroll > 0 ? "↑/↓ PgUp/PgDn scroll" : null,
-    compare && current === "Cache" ? "a/b side" : null,
+    compare && current === "Cache & network" ? "a/b side" : null,
     "q quit",
   ]
     .filter(Boolean)

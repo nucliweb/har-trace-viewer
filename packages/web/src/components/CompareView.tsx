@@ -90,6 +90,7 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
         {showCachePanel && (
           <CachePanel
             report={analysis.cacheReport}
+            network={analysis.networkReport}
             pageLabel={`${TAG[side]} · ${name}`}
             onClose={() => setShowCachePanel(false)}
           />

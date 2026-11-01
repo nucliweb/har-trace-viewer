@@ -133,6 +133,7 @@ export function DiagramView({ flow }: Props) {
         {showCachePanel && (
           <CachePanel
             report={analysis.cacheReport}
+            network={analysis.networkReport}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
             onClose={() => setShowCachePanel(false)}
           />

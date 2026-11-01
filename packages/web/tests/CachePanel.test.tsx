@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { analyzeCacheForHar } from "@htv/core";
+import { analyzeCacheForHar, analyzeNetwork } from "@htv/core";
 import { CachePanel } from "../src/components/CachePanel.js";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
 
@@ -86,5 +86,53 @@ describe("CachePanel", () => {
       "title",
       "https://example.com/app/styles-VC4FUF6G.css"
     );
+  });
+});
+
+describe("CachePanel — network", () => {
+  const renderWithNetwork = (har: ReturnType<typeof makeHar>) =>
+    render(
+      <CachePanel
+        report={analyzeCacheForHar(har)}
+        network={analyzeNetwork(har)}
+        pageLabel="Page"
+        onClose={() => undefined}
+      />
+    );
+
+  it("lists the network findings with the resources they name and what went wrong", async () => {
+    const user = userEvent.setup();
+    renderWithNetwork(
+      makeHar([
+        makeEntry({ url: "https://example.com/api/cart", status: 500, transferSize: 380 }),
+        makeEntry({ url: "https://example.com/app.js", startTime: 120, transferSize: 9_000 }),
+        makeEntry({ url: "https://example.com/app.js", startTime: 240, transferSize: 9_000 }),
+      ])
+    );
+
+    const section = screen.getByRole("region", { name: "Network" });
+    expect(within(section).getByText("1 server error (5xx)")).toBeInTheDocument();
+    expect(within(section).getByText("1 resource downloaded more than once")).toBeInTheDocument();
+
+    const toggle = within(section).getByText("1 resource · 380 B");
+    await user.click(toggle);
+    const items = within(toggle.closest("details")!).getAllByRole("listitem");
+    expect(items.map((li) => li.textContent)).toEqual(["cart380 B500"]);
+  });
+
+  it("says when the network report found nothing", () => {
+    renderWithNetwork(makeHar([makeEntry()]));
+
+    expect(
+      within(screen.getByRole("region", { name: "Network" })).getByText(
+        "No duplicate requests, redirects, errors or mixed content."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("leaves the network section out of a flow generated without a network report", () => {
+    renderPanel(makeHar([makeEntry()]));
+
+    expect(screen.queryByRole("region", { name: "Network" })).not.toBeInTheDocument();
   });
 });

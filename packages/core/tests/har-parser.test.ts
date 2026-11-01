@@ -526,3 +526,56 @@ describe("parseHar — personalization signals", () => {
     expect(documentEntry).not.toHaveProperty("sendsAuthorization");
   });
 });
+
+describe("parseHar — redirects and cache bypass", () => {
+  const harWith = (entries: unknown[]) =>
+    ({ log: { ...firefoxHar().log, entries } }) as Parameters<typeof parseHar>[0];
+  const redirect = (status: number, location: string, redirectURL = "") => ({
+    status,
+    headers: [{ name: "Location", value: location }],
+    content: { mimeType: "", size: 0 },
+    redirectURL,
+  });
+
+  it("keeps where a redirect points, resolved against the request URL", () => {
+    const { entries } = parseHar(
+      harWith([
+        firefoxEntry("https://example.com/", "text/html"),
+        firefoxEntry("https://example.com/img/logo.png", "", {
+          response: redirect(302, "/img/logo-v2.png"),
+        }),
+        firefoxEntry("https://example.com/img/logo-v2.png", "image/png"),
+      ])
+    );
+
+    expect(entries[1].redirectURL).toBe("https://example.com/img/logo-v2.png");
+    expect(entries[2]).not.toHaveProperty("redirectURL");
+  });
+
+  it("flags a request that asked to bypass the browser cache", () => {
+    const { entries } = parseHar(
+      harWith([
+        firefoxEntry("https://example.com/", "text/html", {
+          request: {
+            url: "https://example.com/",
+            method: "GET",
+            headers: [
+              { name: "Cache-Control", value: "no-cache" },
+              { name: "Pragma", value: "no-cache" },
+            ],
+          },
+        }),
+        firefoxEntry("https://example.com/app.js", "application/javascript", {
+          request: {
+            url: "https://example.com/app.js",
+            method: "GET",
+            headers: [{ name: "cache-control", value: "max-age=0" }],
+          },
+        }),
+      ])
+    );
+
+    expect(entries[0].bypassesCache).toBe(true);
+    expect(entries[1]).not.toHaveProperty("bypassesCache");
+  });
+});

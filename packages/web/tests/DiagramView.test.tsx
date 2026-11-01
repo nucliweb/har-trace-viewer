@@ -64,6 +64,13 @@ describe("DiagramView", () => {
     expect(screen.queryByText(label)).not.toBeInTheDocument();
   });
 
+  it("shows the page's network report in the cache panel", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+    await user.click(screen.getByRole("button", { name: "Toggle cache analysis" }));
+    expect(screen.getByRole("region", { name: "Network" })).toBeInTheDocument();
+  });
+
   describe("resource sidebar", () => {
     const lastIndex = flow.steps.length - 1;
 

@@ -16,12 +16,13 @@ import {
 } from "@htv/core";
 import type {
   CacheReport,
-  CacheRecommendation,
   DiagramStep,
   Flow,
   FlowComparison,
   HarEntry,
   HostHop,
+  NetworkReport,
+  Recommendation,
   StepPair,
 } from "@htv/core";
 import {
@@ -441,7 +442,7 @@ export function hostDeltaRegion(
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
-const SEVERITY: Record<CacheRecommendation["severity"], { icon: string; color: string }> = {
+const SEVERITY: Record<Recommendation["severity"], { icon: string; color: string }> = {
   good: { icon: "✓", color: "green" },
   info: { icon: "i", color: "cyan" },
   warning: { icon: "!", color: "yellow" },
@@ -461,7 +462,9 @@ const kv = (label: string, value: string): Line => [
   seg(value),
 ];
 
-function recommendationRows(recommendations: CacheRecommendation[], width: number): Line[] {
+const resourceCount = (count: number) => `${count} ${count === 1 ? "resource" : "resources"}`;
+
+function recommendationRows(recommendations: Recommendation[], width: number): Line[] {
   const rows: Line[] = [];
   recommendations.forEach((rec, i) => {
     const { icon, color } = SEVERITY[rec.severity];
@@ -471,13 +474,13 @@ function recommendationRows(recommendations: CacheRecommendation[], width: numbe
     if (rec.resources && rec.resources.length > 0) {
       const total = rec.resources.reduce((sum, r) => sum + r.transferSize, 0);
       rows.push(
-        [seg(`  ${rec.resources.length} resources · ${formatBytes(total)}`, { dim: true })],
+        [seg(`  ${resourceCount(rec.resources.length)} · ${formatBytes(total)}`, { dim: true })],
         ...table(
-          ["  Resource", "Size", "Cache-Control"],
+          ["  Resource", "Size", "Detail"],
           rec.resources.map((r) => [
             `  ${fileName(r.url)}`,
             formatBytes(r.transferSize),
-            r.cacheControl,
+            r.detail ?? r.cacheControl ?? "",
           ]),
           ["left", "right", "left"]
         ).slice(1)
@@ -493,8 +496,13 @@ function cdnHits(own: CacheReport["ownResources"]): string {
   return judged > 0 ? `${own.cdnHits}/${judged} ${pct(own.cdnHitRatio)}` : "—";
 }
 
-/** The cache report of a page: document, static assets and browser cache, then the recommendations. */
-export function cacheRegion(report: CacheReport, width: number): Line[] {
+const NO_NETWORK_FINDINGS = "No duplicate requests, redirects, errors or mixed content";
+
+/**
+ * The cache report of a page: document, static assets and browser cache, then the
+ * recommendations, and the network report's findings below them.
+ */
+export function cacheRegion(report: CacheReport, width: number, network?: NetworkReport): Line[] {
   const { document: doc, ownResources: own, browser, recommendations } = report;
   const inferred = browser.inferred ?? 0;
   const revalidated = browser.revalidated ?? 0;
@@ -552,6 +560,14 @@ export function cacheRegion(report: CacheReport, width: number): Line[] {
   }
   if (recommendations.length > 0) {
     lines.push(...panel("Recommendations", recommendationRows(recommendations, width - 4), width));
+  }
+  // Flows generated before the network report existed have none: the panel is left out.
+  if (network) {
+    const body =
+      network.recommendations.length > 0
+        ? recommendationRows(network.recommendations, width - 4)
+        : [[seg(NO_NETWORK_FINDINGS, { dim: true })]];
+    lines.push(...panel("Network", body, width));
   }
   return lines;
 }

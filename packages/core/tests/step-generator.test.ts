@@ -551,6 +551,20 @@ describe("generateFlow — per-page analysis", () => {
     expect(checkout.cacheReport.ownResources.total).toBe(1);
   });
 
+  it("reports the network problems per page", () => {
+    const clean = makeHar([makeEntry()], {});
+    const broken = makeHar([makeEntry({ url: "https://example.com/missing.js", status: 404 })], {});
+    const [home, checkout] = generateFlow([
+      { name: "Home", har: clean },
+      { name: "Checkout", har: broken },
+    ]).pageAnalyses;
+
+    expect(home.networkReport?.errors).toEqual([]);
+    expect(checkout.networkReport?.errors.map((e) => e.url)).toEqual([
+      "https://example.com/missing.js",
+    ]);
+  });
+
   it("tags every step with its page; the transition step belongs to the page it leads to", () => {
     const flow = cdnThenOriginFlow();
     const transitionIdx = flow.steps.findIndex((s) => s.title.startsWith("→"));

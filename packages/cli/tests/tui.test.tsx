@@ -167,6 +167,37 @@ describe("TuiApp — a flow", () => {
     expect(frame).toMatch(/chunk-47TTPNLV\.js\s+20 KB\s+no-cache, no-store/);
   });
 
+  it("lists the network findings next to the cache report, with what went wrong", async () => {
+    const har = makeHar([
+      makeEntry({ url: "https://example.com/missing.js", status: 404, transferSize: 450 }),
+      makeEntry({ url: "https://example.com/app.js", startTime: 120, transferSize: 9_000 }),
+      makeEntry({ url: "https://example.com/app.js", startTime: 240, transferSize: 9_000 }),
+    ]);
+    const flow = generateFlow([{ name: "Broken", har }]);
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={flow} version="1.0.0" rows={80} columns={120} />
+    );
+
+    await press(stdin, "4");
+    const frame = lastFrame()!;
+    expect(frame).toMatch(/4 Cache & network/);
+    expect(frame).toContain("Network");
+    expect(frame).toContain("1 request failed (4xx)");
+    expect(frame).toContain("1 resource · 450 B");
+    expect(frame).toMatch(/missing\.js\s+450 B\s+404/);
+    expect(frame).toContain("1 resource downloaded more than once");
+    expect(frame).toMatch(/app\.js\s+9\.0 KB\s+fetched 2×/);
+  });
+
+  it("says when the network report found nothing", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={repeatView()} version="1.0.0" rows={80} columns={120} />
+    );
+
+    await press(stdin, "4");
+    expect(lastFrame()).toContain("No duplicate requests, redirects, errors or mixed content");
+  });
+
   it("cycles the tabs with Tab", async () => {
     const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 

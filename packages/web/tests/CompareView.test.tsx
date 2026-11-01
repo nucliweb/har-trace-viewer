@@ -114,6 +114,7 @@ describe("CompareView", () => {
     expect(
       within(pane("B")).getByRole("region", { name: "Cache analysis details" })
     ).toHaveTextContent("Hit ratio100% (2/2)");
+    expect(within(pane("B")).getByRole("region", { name: "Network" })).toBeInTheDocument();
     expect(
       within(pane("A")).queryByRole("region", { name: "Cache analysis details" })
     ).not.toBeInTheDocument();

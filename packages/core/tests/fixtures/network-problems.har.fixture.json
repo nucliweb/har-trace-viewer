@@ -1,0 +1,749 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "WebInspector",
+      "version": "537.36"
+    },
+    "pages": [
+      {
+        "startedDateTime": "2026-05-19T10:00:00.000Z",
+        "id": "page_1",
+        "title": "https://www.example.com/",
+        "pageTimings": {
+          "onContentLoad": 1100,
+          "onLoad": 1250
+        }
+      }
+    ],
+    "entries": [
+      {
+        "_initiator": {
+          "type": "other"
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "http://example.com/",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 301,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "location",
+              "value": "https://example.com/"
+            },
+            {
+              "name": "server",
+              "value": "nginx"
+            }
+          ],
+          "content": {
+            "size": 0,
+            "mimeType": "text/html"
+          },
+          "redirectURL": "https://example.com/",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 180,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.000Z",
+        "time": 80,
+        "timings": {
+          "blocked": 0.5,
+          "dns": 12,
+          "ssl": 15,
+          "connect": 30,
+          "send": 0.1,
+          "wait": 48,
+          "receive": -10.600000000000001
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "other"
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://example.com/",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 301,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "location",
+              "value": "https://www.example.com/"
+            },
+            {
+              "name": "server",
+              "value": "nginx"
+            }
+          ],
+          "content": {
+            "size": 0,
+            "mimeType": "text/html"
+          },
+          "redirectURL": "https://www.example.com/",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 210,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.120Z",
+        "time": 150,
+        "timings": {
+          "blocked": 0.5,
+          "dns": 12,
+          "ssl": 15,
+          "connect": 30,
+          "send": 0.1,
+          "wait": 90,
+          "receive": 17.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "other"
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=0, must-revalidate"
+            },
+            {
+              "name": "content-type",
+              "value": "text/html; charset=utf-8"
+            },
+            {
+              "name": "server",
+              "value": "nginx"
+            }
+          ],
+          "content": {
+            "size": 64000,
+            "mimeType": "text/html"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 18000,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.420Z",
+        "time": 300,
+        "timings": {
+          "blocked": 0.5,
+          "dns": 12,
+          "ssl": 15,
+          "connect": 30,
+          "send": 0.1,
+          "wait": 200,
+          "receive": 57.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "stylesheet",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/css/app.css",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 36000,
+            "mimeType": "text/css"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 9000,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.740Z",
+        "time": 40,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 24,
+          "receive": 15.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "High",
+        "_resourceType": "script",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/js/app.js",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 150000,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 42000,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.745Z",
+        "time": 60,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 36,
+          "receive": 23.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/img/logo.png",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 301,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "location",
+              "value": "/img/logo-v2.png"
+            }
+          ],
+          "content": {
+            "size": 0,
+            "mimeType": "text/html"
+          },
+          "redirectURL": "https://www.example.com/img/logo-v2.png",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 160,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.760Z",
+        "time": 40,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 24,
+          "receive": 15.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "High",
+        "_resourceType": "image",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/img/hero.webp",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 51000,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 51000,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.770Z",
+        "time": 90,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 54,
+          "receive": 35.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/img/logo-v2.png",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 5000,
+            "mimeType": "image/png"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 5200,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.805Z",
+        "time": 35,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 21,
+          "receive": 13.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "Low",
+        "_resourceType": "script",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/js/app.js",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 150000,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 42000,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.900Z",
+        "time": 55,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 33,
+          "receive": 21.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "script"
+        },
+        "_priority": "High",
+        "_resourceType": "fetch",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/api/recommendations.json",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 404,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            }
+          ],
+          "content": {
+            "size": 30,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 450,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.950Z",
+        "time": 45,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 27,
+          "receive": 17.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "script"
+        },
+        "_priority": "High",
+        "_resourceType": "fetch",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/api/cart",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 500,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            }
+          ],
+          "content": {
+            "size": 60,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 380,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.960Z",
+        "time": 380,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 360,
+          "receive": 19.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "http://img.example-cdn.net/banner.jpg",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "max-age=86400"
+            }
+          ],
+          "content": {
+            "size": 64000,
+            "mimeType": "image/jpeg"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 64300,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:00.980Z",
+        "time": 140,
+        "timings": {
+          "blocked": 0.5,
+          "dns": 12,
+          "ssl": 15,
+          "connect": 30,
+          "send": 0.1,
+          "wait": 84,
+          "receive": 13.399999999999999
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser"
+        },
+        "_priority": "High",
+        "_resourceType": "image",
+        "_fromCache": "memory",
+        "cache": {},
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.com/img/hero.webp",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ],
+          "content": {
+            "size": 51000,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 0,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:01.200Z",
+        "time": 0,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 0,
+          "receive": -0.6
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "script"
+        },
+        "_priority": "VeryLow",
+        "_resourceType": "ping",
+        "cache": {},
+        "request": {
+          "method": "POST",
+          "url": "https://www.example.com/collect",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 204,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "content": {
+            "size": 0,
+            "mimeType": ""
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 120,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:01.300Z",
+        "time": 30,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 18,
+          "receive": 11.4
+        },
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "script"
+        },
+        "_priority": "VeryLow",
+        "_resourceType": "ping",
+        "cache": {},
+        "request": {
+          "method": "POST",
+          "url": "https://www.example.com/collect",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 204,
+          "statusText": "",
+          "httpVersion": "http/2.0",
+          "headers": [],
+          "content": {
+            "size": 0,
+            "mimeType": ""
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 120,
+          "_error": null
+        },
+        "startedDateTime": "2026-05-19T10:00:01.400Z",
+        "time": 30,
+        "timings": {
+          "blocked": 0.5,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0.1,
+          "wait": 18,
+          "receive": 11.4
+        },
+        "pageref": "page_1"
+      }
+    ]
+  }
+}

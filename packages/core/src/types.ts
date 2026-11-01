@@ -45,6 +45,12 @@ export interface HarEntry {
   // Authorization header. Omitted when absent.
   setsCookie?: true;
   sendsAuthorization?: true;
+  // Where a 3xx redirect points (redirectURL or Location, resolved against the request URL).
+  // Absent on other responses, and in flows parsed before it was kept.
+  redirectURL?: string;
+  // The request asked to bypass the browser cache (Cache-Control or Pragma: no-cache), as
+  // DevTools' "Disable cache" and a hard reload do. Absent otherwise.
+  bypassesCache?: true;
 }
 
 export interface HarPage {
@@ -257,6 +263,9 @@ export interface PageAnalysis {
   // Biggest first, at most four. Empty without third-party network requests, and for
   // flows older than version 4, whose topology keeps a single third-parties node.
   thirdPartyClusters: ThirdPartyCluster[];
+  // Duplicate requests, redirects, failed responses and mixed content. Absent in flows
+  // generated before it existed.
+  networkReport?: NetworkReport;
 }
 
 export interface Flow {
@@ -291,16 +300,24 @@ export interface ResourceCacheProfile {
 export interface RecommendationResource {
   url: string;
   transferSize: number;
-  cacheControl: string;
+  // The response's Cache-Control, on cache recommendations.
+  cacheControl?: string;
+  // What went wrong with the resource, on network recommendations: "404", "fetched 2×",
+  // "301 → https://example.com/ · 120 ms".
+  detail?: string;
 }
 
-export interface CacheRecommendation {
+export interface Recommendation {
   label: string;
   description: string;
   severity: "good" | "info" | "warning" | "critical";
-  // The resources the recommendation is about, biggest first, when it names them.
+  // The resources the recommendation is about, when it names them: biggest first, or in
+  // request order for redirects and failed requests.
   resources?: RecommendationResource[];
 }
+
+// The cache report's recommendations; the network report gives the same shape.
+export type CacheRecommendation = Recommendation;
 
 export interface CacheReport {
   document: ResourceCacheProfile;
@@ -325,6 +342,51 @@ export interface CacheReport {
     hitRatio: number;
   };
   recommendations: CacheRecommendation[];
+}
+
+// ── Network report ────────────────────────────────────────────────────────────
+
+// A URL the page fetched over the network more than once (304 revalidations, redirects and
+// requests without a response aside; browser-cache hits are not network requests).
+export interface DuplicateRequest {
+  url: string; // without the fragment, which never reaches the network
+  fetches: number;
+  wastedBytes: number; // transfer of every fetch after the first
+  // Every fetch after the first asked to bypass the browser cache (DevTools' "Disable cache"
+  // or a hard reload): with the cache on, the browser may have reused the first response.
+  cacheBypassed: boolean;
+}
+
+export interface RedirectHop {
+  url: string;
+  status: number;
+  target: string; // where the redirect points
+  costMs: number; // from this request's start to the start of the request it led to
+}
+
+export interface FailedRequest {
+  url: string;
+  status: number; // 4xx or 5xx
+  resourceType: ResourceType;
+  transferSize: number;
+}
+
+// An http:// resource of an https:// page.
+export interface MixedContentRequest {
+  url: string;
+  resourceType: ResourceType;
+  transferSize: number;
+}
+
+export interface NetworkReport {
+  duplicates: DuplicateRequest[]; // most bytes wasted first
+  // The redirects the navigation followed, and how long they delayed the document request.
+  documentRedirects: { hops: RedirectHop[]; delayMs: number };
+  // Redirects of other resources whose target the page then requested, in request order.
+  resourceRedirects: { hops: RedirectHop[]; totalMs: number };
+  errors: FailedRequest[]; // 4xx and 5xx network responses, in request order
+  mixedContent: MixedContentRequest[]; // in request order, one per URL
+  recommendations: Recommendation[];
 }
 
 // ── Node detection ────────────────────────────────────────────────────────────

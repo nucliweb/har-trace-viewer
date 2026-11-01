@@ -13,6 +13,7 @@ import {
   suggestClientRegion,
 } from "../inference/node-detector.js";
 import { analyzeCacheForHar, detectCdnCacheStatus } from "../inference/cache-analyzer.js";
+import { analyzeNetwork } from "../analysis/network-report.js";
 import { inlineResourcesToRefs } from "./step-resources.js";
 import {
   clusterNode,
@@ -822,7 +823,13 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     }
   }
 
-  return { nodes, paths, cacheReport: analyzeCacheForHar(har), thirdPartyClusters };
+  return {
+    nodes,
+    paths,
+    cacheReport: analyzeCacheForHar(har),
+    thirdPartyClusters,
+    networkReport: analyzeNetwork(har),
+  };
 }
 
 export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow {

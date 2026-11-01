@@ -23,13 +23,13 @@ A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`h
 
 The destination picks the format:
 
-| Command                      | Output                                                                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `htv page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache tabs (needs an interactive terminal) |
-| `htv page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                       |
-| `htv page.har -o r.json`     | The full analysis as JSON                                                                                 |
-| `htv page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                         |
-| `htv page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                    |
+| Command                      | Output                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `htv page.har`               | Browses the report in the terminal: Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
+| `htv page.har -o r.html`     | A single self-contained HTML file with the interactive diagram, which opens offline                                 |
+| `htv page.har -o r.json`     | The full analysis as JSON                                                                                           |
+| `htv page.har --format json` | The same JSON on stdout, to pipe into another tool or an AI agent                                                   |
+| `htv page.har -o report/`    | A directory with `index.html` and its assets (`--bundle` inlines them)                                              |
 
 In the terminal, `1`–`4` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose cache a comparison shows, and `q` quits.
 

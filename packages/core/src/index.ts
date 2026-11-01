@@ -10,5 +10,6 @@ export * from "./steps/expand-page-flows.js";
 export * from "./analysis/metrics-summary.js";
 export * from "./analysis/hops.js";
 export * from "./analysis/network-requests.js";
+export * from "./analysis/network-report.js";
 export * from "./analysis/compare.js";
 export * from "./utils/format.js";
