@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    name: ci
-    runs-on: ubuntu-latest
+  checks:
+    name: checks
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -28,11 +28,29 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
-      - run: npm run typecheck
+      # The web package is type-checked by its build (tsc --noEmit && vite build), which the CLI
+      # build runs, so it is left out here
+      - run: npm run typecheck -w @htv/core -w har-trace-viewer
       - run: npm run build
-      - run: npm test
+      # Core and web tests with coverage, then the CLI tests (they run the built bundle)
       - run: npm run test:coverage
-      - run: npm audit --audit-level=high
+      - run: npm test -w har-trace-viewer
+      - run: npm run smoke
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -47,3 +65,14 @@ jobs:
         run: npx playwright install-deps chromium
         if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: npm run e2e
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore

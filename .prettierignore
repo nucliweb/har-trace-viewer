@@ -8,3 +8,4 @@ e2e/.output/
 playwright-report/
 test-results/
 packages/web/src/demo/demo-flow.json
+.claude/

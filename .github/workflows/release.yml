@@ -34,6 +34,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # Installs the packed tarball into a fresh project and runs the installed htv
+      - run: npm run smoke
       # Trusted publishing: npm exchanges the OIDC token of this run for a short-lived one and
       # adds the provenance of the package
       - name: Publish to npm

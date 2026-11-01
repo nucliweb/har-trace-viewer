@@ -14,6 +14,7 @@ export default tseslint.config(
       "playwright-report/**",
       "test-results/**",
       "packages/core/tests/fixtures/**",
+      ".claude/**",
     ],
   },
   js.configs.recommended,

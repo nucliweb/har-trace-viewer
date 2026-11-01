@@ -10,6 +10,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "smoke": "npm run smoke -w har-trace-viewer",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
