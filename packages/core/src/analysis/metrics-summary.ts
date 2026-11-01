@@ -14,7 +14,10 @@ export interface PageMetricsSummary {
   ttfb: number;
   /** Ms the document's server took to answer once the request was sent (HAR `wait`). */
   serverWait: number;
-  /** Milliseconds from the trace; null without a trace or when never painted. */
+  /**
+   * Milliseconds from the trace, else the paint times the HAR's recorder measured
+   * (WebPageTest); null without either or when never painted.
+   */
   fcp: number | null;
   lcp: number | null;
   /** DOMContentLoaded and load event times in ms; null when the event never fired. */
@@ -69,8 +72,8 @@ export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
       // Flows older than step timestamps only carry the server wait.
       ttfb: ttfbStep?.timestamp ?? har.documentEntry.ttfb,
       serverWait: har.documentEntry.ttfb,
-      fcp: trace?.fcp ?? null,
-      lcp: trace?.lcp ?? null,
+      fcp: trace?.fcp ?? har.pages[0]?.fcp ?? null,
+      lcp: trace?.lcp ?? har.pages[0]?.lcp ?? null,
       cls: trace?.cls ?? null,
       inp: trace?.inp ?? null,
       dcl: har.pages[0]?.onContentLoad ?? null,

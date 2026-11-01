@@ -96,6 +96,10 @@ export interface HarPage {
   title: string;
   onContentLoad: number | null; // ms relative to page startedDateTime; null when the event never fired
   onLoad: number | null; // ms relative to page startedDateTime; null when the event never fired
+  // Paint times in ms the recorder measured itself (WebPageTest's page extras); absent
+  // otherwise. A trace's own paint times take precedence.
+  fcp?: number;
+  lcp?: number;
 }
 
 // A first-view resource that a WebPageTest repeat view never requested: WebPageTest leaves
@@ -369,7 +373,41 @@ export interface PageAnalysis {
   // LCP attribution, render-blocking resources and critical request chains. Absent in flows
   // generated before it existed.
   renderReport?: RenderReport;
+  // How the metrics varied over the runs this page is the median of (a WebPageTest test of
+  // several runs). Absent for a page that stands for itself alone.
+  runSpread?: RunSpread;
 }
+
+// ── Runs ──────────────────────────────────────────────────────────────────────
+
+// The metrics of a page's summary that vary from run to run.
+export type RunMetric =
+  | "ttfb"
+  | "serverWait"
+  | "fcp"
+  | "lcp"
+  | "cls"
+  | "inp"
+  | "dcl"
+  | "onLoad"
+  | "requests"
+  | "cacheHits"
+  | "transferBytes"
+  | "cdnHitRatio"
+  | "browserCacheHitRatio";
+
+// One metric over the runs that measured it. The median and p75 are nearest-rank values,
+// so each is the value of one of the runs (the lower middle for an even count).
+export interface MetricSpread {
+  min: number;
+  median: number;
+  max: number;
+  p75: number;
+  runs: number;
+}
+
+// Per metric; a metric no run measured is left out.
+export type RunSpread = Partial<Record<RunMetric, MetricSpread>>;
 
 export interface Flow {
   // Data-model version. Flows embedded before versioning existed have none and

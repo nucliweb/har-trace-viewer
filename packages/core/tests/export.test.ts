@@ -137,6 +137,29 @@ describe("markdownReport", () => {
     expect(out.indexOf("## A: Cold")).toBeLessThan(out.indexOf("## B: Warm"));
   });
 
+  it("shows the page's value and the min–max of each metric for the median of several runs", () => {
+    const flow = flowNamed("Run 2 · First view (median of 3 runs)");
+    const runSpread = {
+      lcp: { min: 2_100, median: 2_600, max: 5_200, p75: 5_200, runs: 3 },
+      transferBytes: { min: 300_000, median: 320_000, max: 410_000, p75: 410_000, runs: 3 },
+      browserCacheHitRatio: { min: 0, median: 0, max: 0, p75: 0, runs: 3 },
+    };
+    const analysis = { ...flow.pageAnalyses[0], runSpread };
+    const out = markdownReport({ ...flow, pageAnalyses: [analysis] }).split("\n");
+    const i = out.indexOf("### Metrics");
+    expect(out[i + 2]).toBe("| Metric | Value (min–max of 3 runs) | Rating |");
+    // The page's own value, rated, not the median of the metric over the runs.
+    expect(out).toContain("| LCP | 5.0 s (2.1 s–5.2 s) | poor |");
+    expect(out.find((l) => l.startsWith("| Transfer |"))).toMatch(
+      /^\| Transfer \| .+ \(300 KB–410 KB\) \| {2}\|$/
+    );
+    expect(out.find((l) => l.startsWith("| Browser cache hit ratio |"))).toMatch(
+      /^\| Browser cache hit ratio \| .+ \(0%–0%\) \| {2}\|$/
+    );
+    // A metric without a spread keeps the page's own value.
+    expect(out).toContain("| CLS | 0.300 | poor |");
+  });
+
   it("is deterministic", () => {
     expect(markdownReport(flowNamed("Home"))).toBe(markdownReport(flowNamed("Home")));
   });

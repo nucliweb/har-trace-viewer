@@ -20,7 +20,16 @@ import {
   SERVER_WAIT_LABEL,
 } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
-import type { Finding, FindingEvidence, FindingSeverity, Flow, HarEntry } from "../types.js";
+import type {
+  Finding,
+  FindingEvidence,
+  FindingSeverity,
+  Flow,
+  HarEntry,
+  MetricSpread,
+  RunMetric,
+  RunSpread,
+} from "../types.js";
 
 // Every export takes the flow to report and, for a comparison, the second flow (B).
 
@@ -160,15 +169,31 @@ const table = (header: string[], rows: string[][]): string[] => [
   ...rows.map((row) => `| ${row.map(cell).join(" | ")} |`),
 ];
 
-function metricsTable(m: PageMetricsSummary): string[] {
+// The summary metric a row reads, where its key differs.
+const SPREAD_KEYS: Partial<Record<ComparedMetric, RunMetric>> = { bytes: "transferBytes" };
+const spreadOf = (spread: RunSpread | undefined, key: ComparedMetric): MetricSpread | undefined => {
+  const s = spread?.[SPREAD_KEYS[key] ?? (key as RunMetric)];
+  return s && s.runs > 1 ? s : undefined;
+};
+
+/**
+ * The page's metrics. For the median run of several, each value is the page's own (the same the
+ * findings and the comparison use) followed by the min–max over the runs.
+ */
+function metricsTable(m: PageMetricsSummary, spread?: RunSpread): string[] {
+  const runs = Math.max(0, ...METRIC_ROWS.map((r) => spreadOf(spread, r.key)?.runs ?? 0));
   return table(
-    ["Metric", "Value", "Rating"],
+    ["Metric", runs > 1 ? `Value (min–max of ${runs} runs)` : "Value", "Rating"],
     METRIC_ROWS.map((r) => {
+      const s = spreadOf(spread, r.key);
       const value = r.value(m) ?? null;
       const rating = rateMetric(r.key, value);
+      const shown = formatMetricValue(value, r.unit);
       return [
         r.label,
-        formatMetricValue(value, r.unit),
+        s
+          ? `${shown} (${formatMetricValue(s.min, r.unit)}–${formatMetricValue(s.max, r.unit)})`
+          : shown,
         rating === "none" ? "" : rating.replace("-", " "),
       ];
     })
@@ -245,7 +270,7 @@ function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSu
     "",
     "### Metrics",
     "",
-    ...metricsTable(summary),
+    ...metricsTable(summary, flow.pageAnalyses[index]?.runSpread),
     "",
     "### Findings",
     "",

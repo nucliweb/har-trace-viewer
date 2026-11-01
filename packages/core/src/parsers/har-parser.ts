@@ -60,6 +60,27 @@ interface RawHarPage {
   title: string;
   startedDateTime: string;
   pageTimings?: { onContentLoad?: number; onLoad?: number };
+  // WebPageTest copies its result data into each page, every key prefixed with "_".
+  [extra: `_${string}`]: unknown;
+}
+
+// The WebPageTest page extras that hold its own paint times, in order of preference.
+const WPT_FCP_KEYS = ["_firstContentfulPaint", "_chromeUserTiming.firstContentfulPaint"] as const;
+const WPT_LCP_KEYS = ["_chromeUserTiming.LargestContentfulPaint"] as const;
+
+/** The first of the page's extras that holds a positive time in ms. */
+function pageExtraMs(page: RawHarPage, keys: readonly `_${string}`[]): number | undefined {
+  for (const key of keys) {
+    const value = page[key];
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  }
+  return undefined;
+}
+
+function recordedPaints(page: RawHarPage): { fcp?: number; lcp?: number } {
+  const fcp = pageExtraMs(page, WPT_FCP_KEYS);
+  const lcp = pageExtraMs(page, WPT_LCP_KEYS);
+  return { ...(fcp !== undefined ? { fcp } : {}), ...(lcp !== undefined ? { lcp } : {}) };
 }
 
 interface RawHar {
@@ -614,6 +635,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
     title: p.title,
     onContentLoad: parsePageTime(p.pageTimings?.onContentLoad),
     onLoad: parsePageTime(p.pageTimings?.onLoad),
+    ...recordedPaints(p),
   }));
 
   const parsedEntries: HarEntry[] = entries.map((e) => {

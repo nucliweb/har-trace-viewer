@@ -7,7 +7,7 @@ import { parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
 import { collectFindings, findingsDocument } from "../src/analysis/findings.js";
-import type { Finding, Flow, PageAnalysis, Recommendation } from "../src/types.js";
+import type { Finding, Flow, PageAnalysis, Recommendation, RunSpread } from "../src/types.js";
 import { makeEntry, makeHar, makeTrace } from "./helpers/synthetic-har.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -315,6 +315,81 @@ describe("collectFindings — metrics", () => {
     const slow = collectFindings(flowWith(makeTrace(900, 3_000)));
     expect(byId(slow, "core-web-vitals-good")).toBeUndefined();
     expect(byId(collectFindings(flowWith(undefined)), "core-web-vitals-good")).toBeUndefined();
+  });
+});
+
+describe("collectFindings — run-to-run variance", () => {
+  const spreadOf = (min: number, median: number, max: number) => ({
+    min,
+    median,
+    max,
+    p75: max,
+    runs: 3,
+  });
+  const flowWithSpread = (runSpread: RunSpread) => {
+    const flow = generateFlow([{ name: "Median", har: makeHar([]), trace: goodTrace() }]);
+    return { ...flow, pageAnalyses: [{ ...flow.pageAnalyses[0], runSpread }] };
+  };
+
+  it("warns when a vital varies over the runs by more than its good threshold", () => {
+    const flow = flowWithSpread({
+      lcp: spreadOf(2_100, 2_600, 5_200),
+      ttfb: spreadOf(400, 420, 450),
+    });
+    const variance = byId(collectFindings(flow), "run-to-run-variance");
+    expect(variance).toMatchObject({
+      severity: "warning",
+      metric: "lcp",
+      title: "Run-to-run variance in LCP",
+      source: "metrics",
+      page: { index: 0, name: "Median" },
+    });
+    expect(variance!.summary).toContain("3 runs");
+    expect(variance!.evidence).toEqual([
+      { url: "https://example.com/", detail: "LCP min 2.1 s · median 2.6 s · max 5.2 s · 3 runs" },
+    ]);
+  });
+
+  it("notes a spread over 30 % of the median as info", () => {
+    const flow = flowWithSpread({
+      fcp: spreadOf(800, 1_000, 1_400),
+      cls: spreadOf(0.01, 0.01, 0.012),
+    });
+    const variance = byId(collectFindings(flow), "run-to-run-variance");
+    expect(variance).toMatchObject({ severity: "info", metric: "fcp" });
+    expect(variance!.evidence.map((e) => e.detail)).toEqual([
+      "FCP min 800 ms · median 1.0 s · max 1.4 s · 3 runs",
+    ]);
+  });
+
+  it("lists every vital that varies, the widest against its threshold first", () => {
+    const flow = flowWithSpread({
+      fcp: spreadOf(800, 1_000, 1_400),
+      lcp: spreadOf(2_100, 2_600, 5_200),
+    });
+    const variance = byId(collectFindings(flow), "run-to-run-variance");
+    expect(variance).toMatchObject({ title: "Run-to-run variance in LCP and FCP", metric: "lcp" });
+    expect(variance!.evidence).toHaveLength(2);
+  });
+
+  it("adds no finding for stable runs, a single run or a page without runs", () => {
+    const stable = flowWithSpread({ lcp: spreadOf(2_500, 2_600, 2_700) });
+    expect(byId(collectFindings(stable), "run-to-run-variance")).toBeUndefined();
+    const single = flowWithSpread({ lcp: { ...spreadOf(1_000, 1_000, 1_000), runs: 1 } });
+    expect(byId(collectFindings(single), "run-to-run-variance")).toBeUndefined();
+    const flow = generateFlow([{ name: "One", har: makeHar([]), trace: goodTrace() }]);
+    expect(byId(collectFindings(flow), "run-to-run-variance")).toBeUndefined();
+  });
+
+  it("validates against the findings schema", () => {
+    const meta = { htvVersion: "9.9.9", generatedAt: "2026-11-01T00:00:00.000Z", schema: "s.json" };
+    const validate = new Ajv2020({ allErrors: true })
+      .addFormat("date-time", () => true)
+      .compile(schema);
+    const flow = flowWithSpread({ lcp: spreadOf(2_100, 2_600, 5_200) });
+    expect(validate(findingsDocument([{ flow }], meta)), JSON.stringify(validate.errors)).toBe(
+      true
+    );
   });
 });
 

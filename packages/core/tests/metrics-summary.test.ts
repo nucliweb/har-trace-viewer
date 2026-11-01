@@ -55,6 +55,18 @@ describe("summarizeFlowMetrics", () => {
     expect(firefox.dcl).toBe(120);
   });
 
+  it("takes FCP and LCP from the HAR's own paint times without a trace, and from the trace with one", () => {
+    const wpt = parseHarJson(JSON.stringify(firefoxHar()));
+    wpt.pages[0] = { ...wpt.pages[0], fcp: 1_100, lcp: 2_200 };
+    const [fromHar] = summarizeFlowMetrics(generateFlow([{ name: "WPT", har: wpt }]));
+    expect(fromHar).toMatchObject({ fcp: 1_100, lcp: 2_200 });
+
+    const withTrace = generateFlow([{ name: "WPT", har: wpt, trace: trace() }]);
+    const [fromTrace] = summarizeFlowMetrics(withTrace);
+    expect(fromTrace.fcp).toBe(trace().fcp);
+    expect(fromTrace.lcp).toBe(trace().lcp);
+  });
+
   it("fills CLS and INP from the trace and leaves them null otherwise", () => {
     const flow = generateFlow([
       { name: "Vitals", har: har(), trace: { ...trace(), cls: 0.17, inp: 250 } },

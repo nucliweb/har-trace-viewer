@@ -23,8 +23,15 @@ import {
   mermaidReport,
   requestsCsv,
   CLIENT_REGIONS,
+  groupRuns,
+  parseRunId,
+  parseRunMetric,
+  pickMedianRun,
+  runSpread,
+  summarizeFlowMetrics,
+  RUN_METRIC_CHOICES,
 } from "@htv/core";
-import type { ClientRegion, Flow, PageFlow } from "@htv/core";
+import type { ClientRegion, Flow, PageFlow, RunMetric, RunSpread } from "@htv/core";
 import { parseTraceFile, readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
@@ -38,7 +45,16 @@ export interface PageArg {
   trace?: string;
   /** Page id(s) or text selecting which pages of a multi-page HAR to expand. */
   select?: string;
+  /** Which runs of a WebPageTest HAR of several runs to keep. */
+  runs?: RunsChoice;
 }
+
+/**
+ * The runs of a WebPageTest HAR to keep: the median run of each view and step (ranked by
+ * `metric`, LCP by default), every run, or one run.
+ */
+export type RunsChoice =
+  { mode: "median"; metric?: RunMetric } | { mode: "all" } | { mode: "run"; run: number };
 
 /** The recording a comparison report puts below the main flow (B). */
 export interface CompareArg {
@@ -101,6 +117,18 @@ function parseFormat(value: string | undefined): OutputFormat {
   throw new Error(`Invalid --format "${value ?? ""}". Valid values: ${OUTPUT_FORMATS.join(", ")}.`);
 }
 
+function parseRuns(value: string | undefined): RunsChoice {
+  const text = (value ?? "").trim().toLowerCase();
+  if (text === "all") return { mode: "all" };
+  if (text === "median") return { mode: "median" };
+  if (/^[1-9]\d*$/.test(text)) return { mode: "run", run: Number(text) };
+  const metric = text.startsWith("median:") ? parseRunMetric(text.slice("median:".length)) : null;
+  if (metric) return { mode: "median", metric };
+  throw new Error(
+    `Invalid --runs "${value ?? ""}". Valid values: median, median:<metric>, all or a run number. Metrics: ${RUN_METRIC_CHOICES.join(", ")}.`
+  );
+}
+
 function parseRegion(value: string | undefined): ClientRegion {
   if (isClientRegion(value)) return value;
   throw new Error(`Invalid --region "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
@@ -114,6 +142,7 @@ export function parseArgs(argv: string[]): Args {
       har: { type: "string", multiple: true },
       trace: { type: "string", multiple: true },
       select: { type: "string", multiple: true },
+      runs: { type: "string", multiple: true },
       "list-pages": { type: "boolean" },
       compare: { type: "boolean" },
       "compare-with": { type: "string" },
@@ -182,6 +211,9 @@ export function parseArgs(argv: string[]): Args {
         break;
       case "select":
         lastPage().select = value;
+        break;
+      case "runs":
+        lastPage().runs = parseRuns(value);
         break;
       case "list-pages":
         listPages = true;
@@ -416,7 +448,17 @@ Input:
   --select <value>    For the preceding --har with several pages (e.g. WebPageTest
                       runs): keep only the matching pages. A page id, a comma-
                       separated list of ids, or text/regex matched against id,
-                      title and URL ("Run 1, First"). Default: all pages.
+                      title and URL ("Run 1, First"). Default: all pages, but
+                      only the median run of a WebPageTest HAR (see --runs).
+  --runs <median|all|N>
+                      For the preceding --har with several WebPageTest runs:
+                      median keeps the median run of each view (first, repeat)
+                      and step, ranked by LCP (else onLoad, else DCL), named
+                      "median of N runs", with the min, median and max of every
+                      metric over the runs. median:<metric> ranks by another
+                      metric (ttfb, fcp, lcp, dcl, onload, ...). all keeps every
+                      run, N keeps run N. Default: median without --select, all
+                      with it; with both, the median of the selected pages.
   --list-pages        Print the pages (id, title, entries) of each --har and exit.
 
 Comparison:
@@ -514,22 +556,114 @@ export async function listPagesReport(args: Args): Promise<string> {
  * Without a page name, a single-page HAR is named after its file and the pages of a multi-page
  * HAR after their titles.
  */
-async function readPageFlows(p: PageArg | CompareArg): Promise<PageFlow[]> {
+async function readPageFlows(
+  p: PageArg | CompareArg,
+  spreads?: Map<PageFlow, RunSpread>
+): Promise<PageFlow[]> {
   const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
   const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
   const fileName = basename(p.har).replace(/\.har(\.gz)?$/i, "");
-  const expanded = expandPageFlows({
+  const pages = expandPageFlows({
     name: "name" in p ? p.name : har.length === 1 ? fileName : undefined,
     har,
     select,
     trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
   });
+  // --runs belongs to a --har: the --compare-with HAR keeps the pages --compare-select picks.
+  const runs: RunsChoice =
+    ("runs" in p ? p.runs : undefined) ??
+    ("name" in p && select === undefined ? { mode: "median" } : { mode: "all" });
+  const { pages: expanded, notes } = keepRuns(pages, runs, p.har, spreads);
   if (har.length > 1) {
     console.error(
       `Note: ${p.har} contains ${har.length} pages; expanded into ${expanded.length} flow page${expanded.length === 1 ? "" : "s"}.`
     );
   }
+  for (const note of notes) console.error(`Note: ${note}`);
   return expanded;
+}
+
+const RUN_METRIC_LABELS: Record<RunMetric, string> = {
+  ttfb: "TTFB",
+  serverWait: "server wait",
+  fcp: "FCP",
+  lcp: "LCP",
+  cls: "CLS",
+  inp: "INP",
+  dcl: "DCL",
+  onLoad: "onLoad",
+  requests: "requests",
+  cacheHits: "cache hits",
+  transferBytes: "transfer",
+  cdnHitRatio: "CDN hit ratio",
+  browserCacheHitRatio: "browser cache hit ratio",
+};
+
+const pageId = (page: PageFlow) => page.har.pages[0].id;
+
+/**
+ * Keeps the runs of a WebPageTest HAR that --runs asks for. A median page is named after the
+ * runs it stands for, and `spreads` gets how its metrics varied over them. Pages that are not
+ * WebPageTest runs stay. The notes say which runs were kept.
+ */
+function keepRuns(
+  pages: PageFlow[],
+  choice: RunsChoice,
+  file: string,
+  spreads?: Map<PageFlow, RunSpread>
+): { pages: PageFlow[]; notes: string[] } {
+  if (choice.mode === "all") return { pages, notes: [] };
+  if (choice.mode === "run") {
+    const runOf = pages.map((page) => parseRunId(pageId(page))?.run);
+    const kept = pages.filter((_, i) => runOf[i] === choice.run);
+    if (kept.length > 0) return { pages: kept, notes: [] };
+    const runs = [...new Set(runOf.filter((run) => run !== undefined))].sort((a, b) => a - b);
+    throw new Error(
+      runs.length > 0
+        ? `--runs ${choice.run}: the HAR has runs ${runs.join(", ")}.`
+        : `--runs ${choice.run}: ${file} has no WebPageTest runs (page ids page_<run>_<view>_<step>).`
+    );
+  }
+
+  const summaries = summarizeFlowMetrics(generateFlow(pages));
+  const groups = groupRuns(
+    pages.map((flow, i) => ({ id: pageId(flow), metrics: summaries[i], flow }))
+  ).filter((group) => group.runs.length > 1);
+  if (groups.length === 0) return { pages, notes: [] };
+
+  const grouped = new Set(groups.flatMap((group) => group.runs.map((r) => r.page.flow)));
+  const medians = new Map<PageFlow, PageFlow>();
+  const kept = groups.map((group) => {
+    const median = pickMedianRun(group, choice.metric);
+    const { flow } = median.page;
+    const page = { ...flow, name: `${flow.name} (median of ${group.runs.length} runs)` };
+    medians.set(flow, page);
+    spreads?.set(page, runSpread(group));
+    const by = median.metric ? RUN_METRIC_LABELS[median.metric] : "run number";
+    const step = group.step > 1 ? `, step ${group.step}` : "";
+    return {
+      how: `the median of ${group.runs.length} runs by ${by}`,
+      what: `${pageId(flow)} (${group.view} view${step})`,
+    };
+  });
+  const hows = [...new Set(kept.map((k) => k.how))];
+  const list =
+    hows.length === 1
+      ? `${hows[0]}: ${kept.map((k) => k.what).join(", ")}`
+      : kept.map((k) => `${k.how}: ${k.what}`).join("; ");
+  const notes = [`kept ${list}. Pass --runs all to keep every run.`];
+
+  const lostTrace = pages.find((page) => page.trace && grouped.has(page) && !medians.has(page));
+  const lostRun = lostTrace && parseRunId(pageId(lostTrace))?.run;
+  if (lostTrace && lostRun) {
+    notes.push(
+      `the trace goes with ${pageId(lostTrace)}, which is not the median run; pass --runs ${lostRun} to keep it.`
+    );
+  }
+  return {
+    pages: pages.flatMap((page) => medians.get(page) ?? (grouped.has(page) ? [] : [page])),
+    notes,
+  };
 }
 
 /** The two single-page sides of a comparison, or null without --compare/--compare-with. */
@@ -564,12 +698,19 @@ export interface Report {
 
 export async function buildReport(args: Args): Promise<Report> {
   const pageFlows: PageFlow[] = [];
-  for (const p of args.pages) pageFlows.push(...(await readPageFlows(p)));
+  const spreads = new Map<PageFlow, RunSpread>();
+  for (const p of args.pages) pageFlows.push(...(await readPageFlows(p, spreads)));
 
   const options = { clientRegion: args.region ?? "default" } as const;
   const sides = await comparisonSides(pageFlows, args);
   const flow = generateFlow(sides ? [sides[0]] : pageFlows, options);
   const compare = sides ? generateFlow([sides[1]], options) : undefined;
+  for (const f of compare ? [flow, compare] : [flow]) {
+    f.pages.forEach((page, i) => {
+      const spread = spreads.get(page);
+      if (spread) f.pageAnalyses[i].runSpread = spread;
+    });
+  }
 
   const suggestion = flow.hints.suggestedClientRegion;
   if (suggestion && args.region === undefined) {

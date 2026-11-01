@@ -14,7 +14,7 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 
 ```bash
 htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
 ```
 
 A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
@@ -117,6 +117,7 @@ In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled t
 | `--har <file>`             | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                                                                                   |
 | `--trace <file>`           | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                                                                                        |
 | `--select <value>`         | For the preceding `--har` with several pages (WebPageTest runs and views): keep only the matching pages, by page id, comma-separated ids or text/regex on id, title and URL |
+| `--runs <value>`           | For the preceding `--har` with several WebPageTest runs: `median` (default without `--select`), `median:<metric>`, `all` or a run number. See [Several runs](#several-runs) |
 | `--list-pages`             | Print the pages (id, entries, title) of each `--har` and exit without generating                                                                                            |
 | `--compare`                | Compare the two pages of the flow instead of chaining them: the first is A (top), the second B (bottom); the flow must have exactly two pages                               |
 | `--compare-with <file>`    | Compare the flow (A, one page) with another HAR (B)                                                                                                                         |
@@ -131,6 +132,22 @@ In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled t
 | `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                         |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                    |
 | `-v, --version`            | Print the version and exit                                                                                                                                                  |
+
+### Several runs
+
+A WebPageTest test of several runs exports one HAR page per run and view, with ids shaped `page_<run>_<view>_<step>` (view `0` is the first view, `1` the repeat view); `--list-pages` prints them. One run alone can mislead, so without `--select` or `--runs` htv keeps the median run of each view and step: the run whose LCP is the median (the lower middle for an even count), else onLoad, else DCL when some run lacks the LCP. The LCP and FCP come from the trace, else from the paint times WebPageTest stores in its HAR pages. The page is named after the runs it stands for (`Run 2 · First view (median of 3 runs)`), and a note on stderr says which run was kept for each view.
+
+The median page carries the spread of every metric over the runs (min, median, max and p75). The Markdown export shows each metric as the median page's value followed by its `(min–max)` over the runs, and a "Run-to-run variance" finding (`run-to-run-variance`) lists the Core Web Vitals and TTFB whose spread is wider than their good threshold (`warning`) or than 30% of their median (`info`), with the min, median and max of each as evidence.
+
+```bash
+htv --har wpt.har --format markdown             # the median run of each view, with the spread
+htv --har wpt.har --runs median:fcp -o r.html   # the median run by FCP
+htv --har wpt.har --runs 2 -o run2.html         # run 2 alone, first and repeat view
+htv --har wpt.har --runs all -o runs.html       # every run
+htv --har wpt.har --compare -o compare.html     # median first view (A) vs median repeat view (B)
+```
+
+`--select` keeps every page it matches unless `--runs` is given too, in which case the median is taken over the selected pages (`--select "First View" --runs median`).
 
 ### CI budgets
 

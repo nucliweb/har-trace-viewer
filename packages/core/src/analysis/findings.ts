@@ -12,6 +12,7 @@ import type {
   HarEntry,
   PageAnalysis,
   Recommendation,
+  RunSpread,
 } from "../types.js";
 
 // ── Rules for the reports' recommendations ───────────────────────────────────
@@ -369,6 +370,59 @@ function metricFindings(
   ];
 }
 
+// A vital varies when its spread over the runs (max − min) is wider than its good threshold
+// (a warning: the runs disagree on the rating) or than this share of its median (info).
+const VARIANCE_SHARE = 0.3;
+
+/**
+ * One finding for the vitals that varied over the runs a median page stands for, with the
+ * min, median and max of each as evidence; null when every vital was stable.
+ */
+function varianceFinding(
+  spread: RunSpread | undefined,
+  page: FindingPage,
+  documentUrl: string
+): Finding | null {
+  const varying = VITALS.flatMap(({ key, label }) => {
+    const s = spread?.[key];
+    if (!s || s.runs < 2) return [];
+    const range = s.max - s.min;
+    const good = METRIC_THRESHOLDS[key][0];
+    if (range <= good && range <= VARIANCE_SHARE * s.median) return [];
+    return [{ key, label, s, overGood: range > good, weight: range / good }];
+  }).sort((a, b) => b.weight - a.weight);
+  if (varying.length === 0) return null;
+
+  const runs = Math.max(...varying.map((v) => v.s.runs));
+  const and = (labels: string[]) =>
+    labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+  const ranges = varying.map(
+    (v) =>
+      `${v.label} went from ${formatVital(v.key, v.s.min)} to ${formatVital(v.key, v.s.max)} (median ${formatVital(v.key, v.s.median)})`
+  );
+  const overGood = varying.filter((v) => v.overGood).map((v) => v.label);
+  return {
+    id: "run-to-run-variance",
+    title: `Run-to-run variance in ${and(varying.map((v) => v.label))}`,
+    severity: overGood.length > 0 ? "warning" : "info",
+    metric: varying[0].key,
+    summary: `Over ${runs} runs, ${ranges.join("; ")}. ${
+      overGood.length > 0
+        ? `The spread of ${and(overGood)} is wider than the good threshold, so a single run can rate differently from the median.`
+        : "Each spread is over 30% of the median."
+    }`,
+    recommendation:
+      "Read the median with care: record more runs, look at the slowest one with --runs <N>, and check what changes between runs, such as the server, the CDN cache or third parties.",
+    confidence: "medium",
+    evidence: varying.map((v) => ({
+      url: documentUrl,
+      detail: `${v.label} min ${formatVital(v.key, v.s.min)} · median ${formatVital(v.key, v.s.median)} · max ${formatVital(v.key, v.s.max)} · ${v.s.runs} runs`,
+    })),
+    page,
+    source: "metrics",
+  };
+}
+
 // ── Collecting ───────────────────────────────────────────────────────────────
 
 const RANK: Record<FindingSeverity, number> = { critical: 0, warning: 1, info: 2, good: 3 };
@@ -392,8 +446,8 @@ export interface CollectFindingsOptions {
 /**
  * Every finding of every page of a flow: the recommendations of each report on its page
  * analysis (any key ending in `Report` with a `recommendations` list), with stable rule ids,
- * and the Core Web Vitals and TTFB rated against the web.dev thresholds. Ordered by severity,
- * then by impact.
+ * the Core Web Vitals and TTFB rated against the web.dev thresholds, and their run-to-run
+ * variance on a page that is the median of several runs. Ordered by severity, then by impact.
  */
 export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}): Finding[] {
   const summaries = summarizeFlowMetrics(flow);
@@ -410,6 +464,9 @@ export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}
           list.map((rec) => recommendationFinding(rec, source, page, doc))
         ),
         ...metricFindings(summaries[index], page, doc.url),
+        ...[varianceFinding(flow.pageAnalyses[index]?.runSpread, page, doc.url)].filter(
+          (f): f is Finding => f !== null
+        ),
       ];
     })
     .sort(byImpact);

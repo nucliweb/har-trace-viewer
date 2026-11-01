@@ -1,0 +1,1649 @@
+{
+ "log": {
+  "version": "1.1",
+  "creator": {
+   "name": "WebPagetest",
+   "version": "26.09.01"
+  },
+  "browser": {
+   "name": "Chrome",
+   "version": "141.0"
+  },
+  "pages": [
+   {
+    "startedDateTime": "2026-10-28T10:00:00.000Z",
+    "title": "Run 1, First View for https://shop.example.com/",
+    "id": "page_1_0_1",
+    "pageTimings": {
+     "onContentLoad": 1650,
+     "onLoad": 5600
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 1,
+    "_cached": 0,
+    "_TTFB": 535,
+    "_firstContentfulPaint": 1400,
+    "_chromeUserTiming.LargestContentfulPaint": 5200,
+    "_loadTime": 5600
+   },
+   {
+    "startedDateTime": "2026-10-28T10:01:00.000Z",
+    "title": "Run 1, Repeat View for https://shop.example.com/",
+    "id": "page_1_1_1",
+    "pageTimings": {
+     "onContentLoad": 800,
+     "onLoad": 1500
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 1,
+    "_cached": 1,
+    "_TTFB": 235,
+    "_firstContentfulPaint": 700,
+    "_chromeUserTiming.LargestContentfulPaint": 1100,
+    "_loadTime": 1500
+   },
+   {
+    "startedDateTime": "2026-10-28T10:02:00.000Z",
+    "title": "Run 2, First View for https://shop.example.com/",
+    "id": "page_2_0_1",
+    "pageTimings": {
+     "onContentLoad": 1900,
+     "onLoad": 3100
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 2,
+    "_cached": 0,
+    "_TTFB": 425,
+    "_firstContentfulPaint": 1700,
+    "_chromeUserTiming.LargestContentfulPaint": 2600,
+    "_loadTime": 3100
+   },
+   {
+    "startedDateTime": "2026-10-28T10:03:00.000Z",
+    "title": "Run 2, Repeat View for https://shop.example.com/",
+    "id": "page_2_1_1",
+    "pageTimings": {
+     "onContentLoad": 1000,
+     "onLoad": 1900
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 2,
+    "_cached": 1,
+    "_TTFB": 295,
+    "_firstContentfulPaint": 950,
+    "_chromeUserTiming.LargestContentfulPaint": 1600,
+    "_loadTime": 1900
+   },
+   {
+    "startedDateTime": "2026-10-28T10:04:00.000Z",
+    "title": "Run 3, First View for https://shop.example.com/",
+    "id": "page_3_0_1",
+    "pageTimings": {
+     "onContentLoad": 1400,
+     "onLoad": 2600
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 3,
+    "_cached": 0,
+    "_TTFB": 375,
+    "_firstContentfulPaint": 1200,
+    "_chromeUserTiming.LargestContentfulPaint": 2100,
+    "_loadTime": 2600
+   },
+   {
+    "startedDateTime": "2026-10-28T10:05:00.000Z",
+    "title": "Run 3, Repeat View for https://shop.example.com/",
+    "id": "page_3_1_1",
+    "pageTimings": {
+     "onContentLoad": 900,
+     "onLoad": 1700
+    },
+    "_URL": "https://shop.example.com/",
+    "_run": 3,
+    "_cached": 1,
+    "_TTFB": 265,
+    "_firstContentfulPaint": 800,
+    "_chromeUserTiming.LargestContentfulPaint": 1300,
+    "_loadTime": 1700
+   }
+  ],
+  "entries": [
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:00.000Z",
+    "time": 521,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 420,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:00.526Z",
+    "time": 72,
+    "_resourceType": "stylesheet",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.3f9c1a.css",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/css"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 54000,
+      "mimeType": "text/css"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 18000,
+     "_transferSize": 18200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 60,
+     "receive": 9
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:00.527Z",
+    "time": 124,
+    "_resourceType": "script",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.8b21d0.js",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 276000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 92000,
+     "_transferSize": 92200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 75,
+     "receive": 46
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:00.561Z",
+    "time": 65,
+    "_resourceType": "font",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/inter.woff2",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "font/woff2"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 24000,
+      "mimeType": "font/woff2"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 24000,
+     "_transferSize": 24200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 50,
+     "receive": 12
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:01.121Z",
+    "time": 908,
+    "_resourceType": "image",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/images/hero.jpg",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "image/jpeg"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 210000,
+      "mimeType": "image/jpeg"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 210000,
+     "_transferSize": 210200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 800,
+     "receive": 105
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_0_1",
+    "startedDateTime": "2026-10-28T10:00:01.421Z",
+    "time": 232,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 90,
+     "receive": 48
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_1_1",
+    "startedDateTime": "2026-10-28T10:01:00.000Z",
+    "time": 221,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 120,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_1_1_1",
+    "startedDateTime": "2026-10-28T10:01:00.821Z",
+    "time": 222,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 80,
+     "receive": 48
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:00.000Z",
+    "time": 411,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 310,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:00.416Z",
+    "time": 72,
+    "_resourceType": "stylesheet",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.3f9c1a.css",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/css"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 54000,
+      "mimeType": "text/css"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 18000,
+     "_transferSize": 18200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 60,
+     "receive": 9
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:00.417Z",
+    "time": 124,
+    "_resourceType": "script",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.8b21d0.js",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 276000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 92000,
+     "_transferSize": 92200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 75,
+     "receive": 46
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:00.451Z",
+    "time": 65,
+    "_resourceType": "font",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/inter.woff2",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "font/woff2"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 24000,
+      "mimeType": "font/woff2"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 24000,
+     "_transferSize": 24200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 50,
+     "receive": 12
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:00.711Z",
+    "time": 508,
+    "_resourceType": "image",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/images/hero.jpg",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "image/jpeg"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 210000,
+      "mimeType": "image/jpeg"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 210000,
+     "_transferSize": 210200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 400,
+     "receive": 105
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_0_1",
+    "startedDateTime": "2026-10-28T10:02:01.311Z",
+    "time": 232,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 90,
+     "receive": 48
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_1_1",
+    "startedDateTime": "2026-10-28T10:03:00.000Z",
+    "time": 281,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 180,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_2_1_1",
+    "startedDateTime": "2026-10-28T10:03:00.881Z",
+    "time": 222,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 80,
+     "receive": 48
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:00.000Z",
+    "time": 361,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 260,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:00.366Z",
+    "time": 72,
+    "_resourceType": "stylesheet",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.3f9c1a.css",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/css"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 54000,
+      "mimeType": "text/css"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 18000,
+     "_transferSize": 18200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 60,
+     "receive": 9
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:00.367Z",
+    "time": 124,
+    "_resourceType": "script",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/app.8b21d0.js",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 276000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 92000,
+     "_transferSize": 92200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 75,
+     "receive": 46
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:00.401Z",
+    "time": 65,
+    "_resourceType": "font",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/assets/inter.woff2",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "font/woff2"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 24000,
+      "mimeType": "font/woff2"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 24000,
+     "_transferSize": 24200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 50,
+     "receive": 12
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:00.603Z",
+    "time": 431,
+    "_resourceType": "image",
+    "_priority": "High",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/images/hero.jpg",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "image/jpeg"
+      },
+      {
+       "name": "cache-control",
+       "value": "public, max-age=31536000, immutable"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 210000,
+      "mimeType": "image/jpeg"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 210000,
+     "_transferSize": 210200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": -1,
+     "connect": -1,
+     "ssl": -1,
+     "send": 1,
+     "wait": 323,
+     "receive": 105
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_0_1",
+    "startedDateTime": "2026-10-28T10:04:01.261Z",
+    "time": 232,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 90,
+     "receive": 48
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_1_1",
+    "startedDateTime": "2026-10-28T10:05:00.000Z",
+    "time": 251,
+    "_resourceType": "document",
+    "_priority": "VeryHigh",
+    "request": {
+     "method": "GET",
+     "url": "https://shop.example.com/",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "shop.example.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "text/html; charset=utf-8"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, no-cache"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 42000,
+      "mimeType": "text/html; charset=utf-8"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 14000,
+     "_transferSize": 14200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 150,
+     "receive": 7
+    },
+    "connection": "443"
+   },
+   {
+    "pageref": "page_3_1_1",
+    "startedDateTime": "2026-10-28T10:05:00.851Z",
+    "time": 222,
+    "_resourceType": "script",
+    "_priority": "Low",
+    "request": {
+     "method": "GET",
+     "url": "https://www.googletagmanager.com/gtag/js?id=G-TEST",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": ":authority",
+       "value": "www.googletagmanager.com"
+      }
+     ],
+     "queryString": [],
+     "cookies": [],
+     "headersSize": -1,
+     "bodySize": 0
+    },
+    "response": {
+     "status": 200,
+     "statusText": "OK",
+     "httpVersion": "HTTP/2",
+     "headers": [
+      {
+       "name": "content-type",
+       "value": "application/javascript"
+      },
+      {
+       "name": "cache-control",
+       "value": "private, max-age=900"
+      },
+      {
+       "name": "content-encoding",
+       "value": "br"
+      },
+      {
+       "name": "date",
+       "value": "Wed, 28 Oct 2026 10:00:00 GMT"
+      }
+     ],
+     "cookies": [],
+     "content": {
+      "size": 288000,
+      "mimeType": "application/javascript"
+     },
+     "redirectURL": "",
+     "headersSize": 200,
+     "bodySize": 96000,
+     "_transferSize": 96200
+    },
+    "cache": {},
+    "timings": {
+     "blocked": 2,
+     "dns": 18,
+     "connect": 45,
+     "ssl": 28,
+     "send": 1,
+     "wait": 80,
+     "receive": 48
+    },
+    "connection": "443"
+   }
+  ]
+ }
+}

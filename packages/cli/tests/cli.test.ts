@@ -95,6 +95,22 @@ describe("parseArgs", () => {
     ]);
   });
 
+  it("attaches --runs to the most recent --har", () => {
+    const runs = (value: string) => parseArgs(["--har", "a", "--runs", value]).pages[0].runs;
+    expect(runs("median")).toEqual({ mode: "median" });
+    expect(runs("median:fcp")).toEqual({ mode: "median", metric: "fcp" });
+    expect(runs("Median:onload")).toEqual({ mode: "median", metric: "onLoad" });
+    expect(runs("all")).toEqual({ mode: "all" });
+    expect(runs("2")).toEqual({ mode: "run", run: 2 });
+    expect(parseArgs(["--har", "a"]).pages[0]).not.toHaveProperty("runs");
+  });
+
+  it("rejects a --runs value it cannot read", () => {
+    for (const value of ["best", "0", "median:speed", "1.5"]) {
+      expect(() => parseArgs(["--har", "a", "--runs", value])).toThrow(`Invalid --runs "${value}"`);
+    }
+  });
+
   it("sets listPages with --list-pages", () => {
     expect(parseArgs(["--har", "a", "--list-pages"]).listPages).toBe(true);
     expect(parseArgs(["--har", "a"]).listPages).toBeUndefined();
@@ -205,6 +221,7 @@ describe("--help, --version and --output (built CLI)", () => {
     expect(res.stdout).toContain("Example");
     expect(res.stdout).toContain("tui | html | json | findings");
     expect(res.stdout).toContain("findings, waterfall,");
+    expect(res.stdout).toContain("--runs <median|all|N>");
   });
 
   it("prints the package.json version and exits 0 with --version", () => {
@@ -587,6 +604,88 @@ describe("selecting pages of a multi-page HAR (built CLI)", () => {
   });
 });
 
+describe("runs of a WebPageTest HAR (built CLI)", () => {
+  const WPT_RUNS = join(FIXTURES, "wpt-runs.har.fixture.json");
+
+  interface JsonReport {
+    flow: {
+      pages: { name: string; har: { pages: { id: string }[] } }[];
+      pageAnalyses: { runSpread?: Record<string, { min: number; median: number; max: number }> }[];
+    };
+  }
+
+  function report(args: string[]) {
+    const res = runCli(["--har", WPT_RUNS, ...args, "--format", "json"]);
+    expect(res.status, res.stderr).toBe(0);
+    const { flow } = JSON.parse(res.stdout) as JsonReport;
+    return { res, flow, ids: flow.pages.map((p) => p.har.pages[0].id) };
+  }
+
+  it("keeps the median run of each view by default, named as such, with the spread", () => {
+    const { res, flow, ids } = report([]);
+    expect(ids).toEqual(["page_2_0_1", "page_3_1_1"]);
+    expect(flow.pages.map((p) => p.name)).toEqual([
+      "Run 2 · First view (median of 3 runs)",
+      "Run 3 · Repeat view (median of 3 runs)",
+    ]);
+    expect(flow.pageAnalyses[0].runSpread?.lcp).toMatchObject({
+      min: 2_100,
+      median: 2_600,
+      max: 5_200,
+    });
+    expect(res.stderr).toContain("kept the median of 3 runs by LCP");
+    expect(res.stderr).toContain("--runs all");
+  });
+
+  it("keeps every run with --runs all, and the selected pages with --select alone", () => {
+    expect(report(["--runs", "all"]).ids).toHaveLength(6);
+    const selected = report(["--select", "First View"]);
+    expect(selected.ids).toEqual(["page_1_0_1", "page_2_0_1", "page_3_0_1"]);
+    expect(selected.flow.pageAnalyses.every((a) => a.runSpread === undefined)).toBe(true);
+  });
+
+  it("keeps one run with --runs N", () => {
+    const { flow, ids } = report(["--runs", "2"]);
+    expect(ids).toEqual(["page_2_0_1", "page_2_1_1"]);
+    expect(flow.pages.map((p) => p.name)).toEqual(["Run 2 · First view", "Run 2 · Repeat view"]);
+  });
+
+  it("ranks the runs by the metric --runs median:<metric> names", () => {
+    const { res, ids } = report(["--runs", "median:fcp"]);
+    expect(ids).toEqual(["page_1_0_1", "page_3_1_1"]);
+    expect(res.stderr).toContain("by FCP");
+  });
+
+  it("takes the median of the pages --select keeps", () => {
+    expect(report(["--select", "First View", "--runs", "median"]).ids).toEqual(["page_2_0_1"]);
+  });
+
+  it("exits 1 naming the runs when --runs N is not one of them", () => {
+    const res = runCli(["--har", WPT_RUNS, "--runs", "7", "--format", "json"]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("--runs 7: the HAR has runs 1, 2, 3");
+  });
+
+  it("reports the run-to-run variance as a finding and in the Markdown metrics", () => {
+    const findings = runCli(["--har", WPT_RUNS, "--format", "findings"]);
+    expect(findings.status, findings.stderr).toBe(0);
+    const doc = JSON.parse(findings.stdout) as { pages: { findings: { id: string }[] }[] };
+    expect(doc.pages[0].findings.map((f) => f.id)).toContain("run-to-run-variance");
+
+    const md = runCli(["--har", WPT_RUNS, "--format", "markdown"]);
+    expect(md.stdout).toContain("| Metric | Value (min–max of 3 runs) | Rating |");
+    expect(md.stdout).toContain("| LCP | 2.6 s (2.1 s–5.2 s) | needs improvement |");
+  });
+
+  it("compares the median first view with the median repeat view", () => {
+    const res = runCli(["--har", WPT_RUNS, "--compare", "--format", "json"]);
+    expect(res.status, res.stderr).toBe(0);
+    const { a, b } = JSON.parse(res.stdout) as { a: JsonReport["flow"]; b: JsonReport["flow"] };
+    expect(a.pages[0].har.pages[0].id).toBe("page_2_0_1");
+    expect(b.pages[0].har.pages[0].id).toBe("page_3_1_1");
+  });
+});
+
 describe("outputTarget", () => {
   const base = { pages: [{ name: "Page 1", har: "a.har" }], output: "", bundle: false };
 
@@ -962,7 +1061,7 @@ describe("comparison reports (built CLI)", () => {
     const { dir, harPath } = writeWptHar();
     const out = join(dir, "report");
 
-    const res = runCli(["--har", harPath, "--compare", "--output", out]);
+    const res = runCli(["--har", harPath, "--runs", "all", "--compare", "--output", out]);
 
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("--compare needs exactly two pages; got 3");

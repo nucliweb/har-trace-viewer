@@ -401,6 +401,31 @@ describe("parseHar — WebPageTest-style HAR", () => {
     expect(parsed.pages[0].onLoad).toBeNull();
   });
 
+  it("reads the FCP and LCP WebPageTest measured from its page extras", () => {
+    const raw = firefoxHar();
+    Object.assign(raw.log.pages[0], {
+      _firstContentfulPaint: 1_234,
+      "_chromeUserTiming.LargestContentfulPaint": 2_345,
+    });
+    const page = parseHar(raw).pages[0];
+
+    expect(page.fcp).toBe(1_234);
+    expect(page.lcp).toBe(2_345);
+  });
+
+  it("reads FCP from chromeUserTiming and ignores extras that are not positive numbers", () => {
+    const raw = firefoxHar();
+    Object.assign(raw.log.pages[0], {
+      "_chromeUserTiming.firstContentfulPaint": 900,
+      "_chromeUserTiming.LargestContentfulPaint": -1,
+    });
+    const page = parseHar(raw).pages[0];
+
+    expect(page.fcp).toBe(900);
+    expect(page).not.toHaveProperty("lcp");
+    expect(parseHar(firefoxHar()).pages[0]).not.toHaveProperty("fcp");
+  });
+
   it("keeps long WebPageTest page titles as the default page name", () => {
     const title = "Run 1, First View for https://example.com/some/long/path?x=1";
     const page = { id: "p", title, startedDateTime: "2026-01-01T00:00:00.000Z" };

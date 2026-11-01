@@ -28,9 +28,9 @@ describe("wpt-first-repeat.har.fixture.json (WebPageTest, 2 runs x first + repea
       "page_2_1_1",
     ]);
     expect(pages.map((p) => p.entries.length)).toEqual([10, 5, 10, 5]);
-    expect(pages.every((p) => p.pages[0].onContentLoad !== null && p.pages[0].onLoad !== null)).toBe(
-      true
-    );
+    expect(
+      pages.every((p) => p.pages[0].onContentLoad !== null && p.pages[0].onLoad !== null)
+    ).toBe(true);
   });
 
   it("reads the main document of every view", () => {
@@ -80,9 +80,7 @@ describe("wpt-first-repeat.har.fixture.json (WebPageTest, 2 runs x first + repea
   });
 
   it("builds a flow with one analysis per view and counts the inferred hits", () => {
-    const flow = generateFlow(
-      pages.map((har): PageFlow => ({ name: har.pages[0].id, har }))
-    );
+    const flow = generateFlow(pages.map((har): PageFlow => ({ name: har.pages[0].id, har })));
     expect(flow.pageAnalyses).toHaveLength(4);
     expect(flow.pageAnalyses[1].cacheReport.browser.inferred).toBe(6);
     expect(flow.pageAnalyses[0].cacheReport.browser.inferred).toBe(0);
@@ -245,7 +243,7 @@ describe("large.har.fixture.json.gz (1500 generated entries)", () => {
     expect(flow.pageAnalyses).toHaveLength(1);
     expect(flow.steps.length).toBeGreaterThan(0);
     expect(flow.pageAnalyses[0].cacheReport.browser.total).toBe(1499);
-    expect(flow.pageAnalyses[0].networkReport.errors).toHaveLength(15);
+    expect(flow.pageAnalyses[0].networkReport?.errors).toHaveLength(15);
     expect(elapsed).toBeLessThan(2000);
   });
 });

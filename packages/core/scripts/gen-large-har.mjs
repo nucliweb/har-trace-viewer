@@ -54,13 +54,27 @@ function cdnHeaders(cdn, hit, index) {
   const c = hit ? "HIT" : "MISS";
   switch (cdn) {
     case "cloudflare":
-      return { server: "cloudflare", "cf-ray": `8f${String(index).padStart(14, "0")}-${pick(["FRA", "AMS", "MAD", "LHR"])}`, "cf-cache-status": c };
+      return {
+        server: "cloudflare",
+        "cf-ray": `8f${String(index).padStart(14, "0")}-${pick(["FRA", "AMS", "MAD", "LHR"])}`,
+        "cf-cache-status": c,
+      };
     case "fastly":
-      return { "x-served-by": `cache-${pick(["fra", "ams", "mad"])}${int(1000, 9999)}-${pick(["FRA", "AMS", "MAD"])}`, "x-cache": c };
+      return {
+        "x-served-by": `cache-${pick(["fra", "ams", "mad"])}${int(1000, 9999)}-${pick(["FRA", "AMS", "MAD"])}`,
+        "x-cache": c,
+      };
     case "akamai":
-      return { "x-akamai-transformed": "9 - 0 pmb=mRUM,1", "x-cache": `TCP_${c}`, "server-timing": `cdn-cache; desc=${c}` };
+      return {
+        "x-akamai-transformed": "9 - 0 pmb=mRUM,1",
+        "x-cache": `TCP_${c}`,
+        "server-timing": `cdn-cache; desc=${c}`,
+      };
     case "cloudfront":
-      return { "x-amz-cf-pop": `${pick(["FRA", "AMS", "MAD"])}${int(50, 60)}-C1`, "x-cache": `${hit ? "Hit" : "Miss"} from cloudfront` };
+      return {
+        "x-amz-cf-pop": `${pick(["FRA", "AMS", "MAD"])}${int(50, 60)}-C1`,
+        "x-cache": `${hit ? "Hit" : "Miss"} from cloudfront`,
+      };
     default:
       return { server: "nginx" };
   }
@@ -82,12 +96,23 @@ for (let i = 0; i < count; i++) {
     ? `${ORIGIN}/`
     : `https://${host.name}/${spec.type}/${(i * 7919).toString(36)}.${spec.ext}?v=${int(1, 99)}`;
   entries.push({
-    _initiator: isDoc ? { type: "other" } : { type: "parser", url: `${ORIGIN}/`, lineNumber: int(1, 400) },
+    _initiator: isDoc
+      ? { type: "other" }
+      : { type: "parser", url: `${ORIGIN}/`, lineNumber: int(1, 400) },
     _priority: isDoc ? "VeryHigh" : pick(["High", "Medium", "Low"]),
     _resourceType: spec.type,
     cache: {},
     connection: String(host.name.length * 10 + (i % 3)),
-    request: { method: "GET", url, httpVersion: "h2", headers: [], queryString: [], cookies: [], headersSize: -1, bodySize: 0 },
+    request: {
+      method: "GET",
+      url,
+      httpVersion: "h2",
+      headers: [],
+      queryString: [],
+      cookies: [],
+      headersSize: -1,
+      bodySize: 0,
+    },
     response: {
       status: i % 97 === 0 && !isDoc ? 404 : 200,
       statusText: "",
