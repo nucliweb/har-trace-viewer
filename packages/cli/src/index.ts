@@ -16,10 +16,25 @@ import {
   checkOptions,
 } from "./cli";
 import { formatChecks, runChecks } from "./budget";
+import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
+import type { RedactArgs } from "./redact";
 import { runTui } from "./tui/run.js";
 import type { Args } from "./cli";
 
+async function redactCommand(argv: string[]) {
+  let args: RedactArgs;
+  try {
+    args = parseRedactArgs(argv);
+  } catch (err) {
+    console.error((err as Error).message);
+    console.error(REDACT_USAGE);
+    process.exit(1);
+  }
+  await runRedactCommand(args);
+}
+
 async function main() {
+  if (process.argv[2] === "redact") return redactCommand(process.argv.slice(3));
   let args: Args;
   try {
     args = parseArgs(process.argv.slice(2));
@@ -51,7 +66,12 @@ async function main() {
   }
 
   const target = outputTarget(args, process.stdout.isTTY === true);
-  const report = await buildReport(args);
+  let report = await buildReport(args);
+  if (args.redact) {
+    const redacted = redactReport(report, args.redact);
+    report = redacted.report;
+    console.error(redacted.note);
+  }
   switch (target.kind) {
     case "json":
     case "findings": {

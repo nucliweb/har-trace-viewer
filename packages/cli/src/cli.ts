@@ -31,7 +31,7 @@ import {
   summarizeFlowMetrics,
   RUN_METRIC_CHOICES,
 } from "@htv/core";
-import type { ClientRegion, Flow, PageFlow, RunMetric, RunSpread } from "@htv/core";
+import type { ClientRegion, Flow, PageFlow, RedactOptions, RunMetric, RunSpread } from "@htv/core";
 import { parseTraceFile, readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
@@ -105,6 +105,8 @@ export interface Args {
   failOn?: FailOnSeverity;
   /** Fails a budget whose metric the page cannot provide instead of passing it. */
   budgetStrict?: boolean;
+  /** Redacts the report before it is written or shown. */
+  redact?: RedactOptions;
   help?: boolean;
   version?: boolean;
 }
@@ -134,9 +136,24 @@ function parseRegion(value: string | undefined): ClientRegion {
   throw new Error(`Invalid --region "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
 }
 
+// --redact takes an optional level, which node:util's parser cannot express: "=mask-hosts".
+const REDACT_WITH_LEVEL = "--redact=";
+
+function parseRedact(level: string): RedactOptions {
+  if (level === "mask-hosts") return { hosts: "mask" };
+  throw new Error(
+    `Invalid --redact "${level}". Use --redact, or --redact=mask-hosts to also mask third-party hosts.`
+  );
+}
+
 export function parseArgs(argv: string[]): Args {
+  let redact: RedactOptions | undefined;
   const { tokens } = nodeParseArgs({
-    args: argv,
+    args: argv.filter((arg) => {
+      if (!arg.startsWith(REDACT_WITH_LEVEL)) return true;
+      redact = parseRedact(arg.slice(REDACT_WITH_LEVEL.length));
+      return false;
+    }),
     options: {
       page: { type: "string", multiple: true },
       har: { type: "string", multiple: true },
@@ -155,6 +172,7 @@ export function parseArgs(argv: string[]): Args {
       budget: { type: "string", multiple: true },
       "fail-on": { type: "string" },
       "budget-strict": { type: "boolean" },
+      redact: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -251,6 +269,9 @@ export function parseArgs(argv: string[]): Args {
       case "budget-strict":
         budgetStrict = true;
         break;
+      case "redact":
+        redact ??= { hosts: "keep" };
+        break;
       case "help":
         help = true;
         break;
@@ -272,6 +293,7 @@ export function parseArgs(argv: string[]): Args {
     ...(budgets.length > 0 ? { budgets } : {}),
     ...(failOn ? { failOn } : {}),
     ...(budgetStrict ? { budgetStrict } : {}),
+    ...(redact ? { redact } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
   };
@@ -407,7 +429,8 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
 }
 
 export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
-       htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]`;
+       htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]
+       htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]`;
 
 export const HELP = `${USAGE}
 
@@ -435,6 +458,19 @@ Output (where the report goes):
                       request per page (Browser, CDN edge, origin), to stdout or a
                       .md, .mmd or .mermaid --output.
   --bundle            For a directory --output: inline every asset into index.html.
+  --redact[=mask-hosts]
+                      Redact the report before it is written or shown, in every
+                      format: query values with a sensitive name (token, session,
+                      email...) or that look like a token, credentials in URLs,
+                      emails and JWTs. =mask-hosts also replaces third-party
+                      hostnames with host-N.redacted. Prints the counts on stderr.
+                      Timings, sizes and the analysis stay the same.
+  htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
+                      Write a redacted copy of the HAR itself, still a valid HAR:
+                      bodies dropped (sizes kept), cookie values masked, credential
+                      headers (Authorization, *token*, *session*...) replaced, and
+                      the rules of --redact on URLs, headers and titles. Prints the
+                      HAR to stdout without -o.
 
 Input:
   <file>              A HAR (.har or .har.gz) or a Chrome trace (.json or .json.gz)

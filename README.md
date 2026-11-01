@@ -15,6 +15,7 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 ```bash
 htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
 htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
 ```
 
 A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
@@ -126,6 +127,7 @@ In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled t
 | `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                  |
 | `--format <format>`        | `tui`, `html`, `json`, `findings`, `markdown`, `csv` or `mermaid`; every format but `tui` and `html` prints to stdout without `--output`                                    |
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
+| `--redact[=mask-hosts]`    | Redact the report before it is written or shown, in every format; `=mask-hosts` also masks third-party hostnames. See [Sharing a report safely](#sharing-a-report-safely)   |
 | `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
 | `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |
 | `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                     |
@@ -177,6 +179,30 @@ Checks failed: 1 of 3 budgets failed.
 $ echo $?
 2
 ```
+
+### Sharing a report safely
+
+A HAR holds everything the browser sent and received: cookies, `Authorization` headers, response bodies, tokens in query strings. The report keeps much less (allow-listed response headers only, no bodies, and cookies and credentials only as flags and sizes), but it keeps every URL, and URLs carry session ids, tokens and emails.
+
+`--redact` cleans the report before it is written or shown, in every format (HTML, JSON, findings, Markdown, CSV, Mermaid and the terminal), and prints what it replaced on stderr (`Redacted the report: 20 query values, 11 emails`):
+
+- Query and fragment values whose name is sensitive (`token`, `auth`, `key`, `apikey`, `api_key`, `session`, `sid`, `password`, `pwd`, `secret`, `access_token`, `id_token`, `code`, `state`, `email`, `user`, `uid`, `cid`, `signature`, `sig`, and any name containing `token`, `secret`, `session`, `password`, `signature`, `credential`, `api-key` or `auth`, whatever the case), or whose value looks like a JWT or a hex or base64 token of 32 characters or more, become `[redacted-N]`. The same value always gets the same N, so URLs that were equal stay equal and URLs that differed still differ.
+- Credentials in URLs (`https://user:pass@host`) become `[redacted]@`, emails (raw or as `%40`) `[email]`, and a JWT anywhere else `[redacted]`.
+- `--redact=mask-hosts` also replaces third-party hostnames with `host-1.redacted`, `host-2.redacted`... consistently: every host outside the registrable domain of the page's document and outside well-known shared services (Google, Facebook, Cloudflare, jsDelivr, unpkg, Cloudinary and other analytics, font and CDN hosts). Hosts under per-customer domains (`*.vercel.app`, `*.cloudfront.net`) name their customer, so they are masked.
+
+Timings, sizes, statuses and the analysis stay the same, and both sides of a comparison share the placeholders.
+
+`htv redact` writes a redacted copy of the HAR itself, still a valid HAR that htv and DevTools open:
+
+```bash
+$ htv redact page.har -o page.shared.har --mask-hosts
+Redacted HAR written: /home/me/page.shared.har
+Redacted: 6 cookie values, 6 header values, 20 query values, 3 bodies, 10 emails, 2 hosts masked
+```
+
+On top of the rules of `--redact` over URLs, headers, initiators, redirects and page titles, it drops the response bodies (`content.text`; `content.size` stays), replaces request bodies, form values and WebSocket messages with `[redacted]`, masks cookie values (in the cookie lists, `Cookie` and `Set-Cookie`) with as many characters as they had, keeping their names and attributes, and replaces the values of `Authorization`, `Proxy-Authorization`, `X-Api-Key` and every header whose name contains `token`, `secret`, `session`, `password`, `api-key` or `credential`, keeping their names. The cache and CDN headers (`Cache-Control`, `Age`, `X-Vercel-Id`, `CF-Ray`, `Server-Timing`...) stay, so the redacted HAR gives the same metrics and findings as the original. Without `-o` the HAR goes to stdout and the counts to stderr; an output ending in `.gz` is gzipped. Redacting a redacted HAR changes nothing.
+
+Redaction follows rules: a secret in a path segment (`/reset/abc123`), in a header whose name does not say so, or in a URL encoded inside a query value can get through. Read the output before you share it.
 
 ### Examples
 
