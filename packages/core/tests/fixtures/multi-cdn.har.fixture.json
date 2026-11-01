@@ -1,0 +1,1133 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "WebInspector",
+      "version": "537.36"
+    },
+    "pages": [
+      {
+        "startedDateTime": "2026-05-19T12:00:00.000Z",
+        "id": "page_1",
+        "title": "https://www.shopexample.com/",
+        "pageTimings": {
+          "onContentLoad": 410,
+          "onLoad": 1090
+        }
+      }
+    ],
+    "entries": [
+      {
+        "_initiator": {
+          "type": "other"
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "document",
+        "cache": {},
+        "connection": "100",
+        "request": {
+          "method": "GET",
+          "url": "https://www.shopexample.com/",
+          "httpVersion": "h3",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h3",
+          "headers": [
+            {
+              "name": "server",
+              "value": "cloudflare"
+            },
+            {
+              "name": "cf-ray",
+              "value": "8f1c2b3a4d5e6f70-FRA"
+            },
+            {
+              "name": "cf-cache-status",
+              "value": "DYNAMIC"
+            },
+            {
+              "name": "cache-control",
+              "value": "private, max-age=0"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "alt-svc",
+              "value": "h3=\":443\"; ma=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 41000,
+            "mimeType": "text/html"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 9580
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.000Z",
+        "time": 173,
+        "timings": {
+          "blocked": 3,
+          "dns": 24,
+          "ssl": 44,
+          "connect": 38,
+          "send": 1,
+          "wait": 96,
+          "receive": 11
+        },
+        "_connectionId": "100",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "stylesheet",
+        "cache": {},
+        "connection": "101",
+        "request": {
+          "method": "GET",
+          "url": "https://static.shopexample.com/css/main.css",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "via",
+              "value": "1.1 varnish, 1.1 varnish"
+            },
+            {
+              "name": "x-served-by",
+              "value": "cache-fra-eddf8230045-FRA, cache-mad2210-MAD"
+            },
+            {
+              "name": "x-cache",
+              "value": "HIT, HIT"
+            },
+            {
+              "name": "x-cache-hits",
+              "value": "2, 14"
+            },
+            {
+              "name": "age",
+              "value": "5231"
+            },
+            {
+              "name": "x-fastly-request-id",
+              "value": "6c4b1d0e2f8a9b3c5d7e1f2a3b4c5d6e7f8a9b0c"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 52000,
+            "mimeType": "text/css"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 7780
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.190Z",
+        "time": 83,
+        "timings": {
+          "blocked": 2,
+          "dns": 20,
+          "ssl": 37,
+          "connect": 31,
+          "send": 0,
+          "wait": 22,
+          "receive": 8
+        },
+        "_connectionId": "101",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "script",
+        "cache": {},
+        "connection": "101",
+        "request": {
+          "method": "GET",
+          "url": "https://static.shopexample.com/js/runtime.js",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "via",
+              "value": "1.1 varnish, 1.1 varnish"
+            },
+            {
+              "name": "x-served-by",
+              "value": "cache-fra-eddf8230045-FRA, cache-mad2210-MAD"
+            },
+            {
+              "name": "x-cache",
+              "value": "HIT, HIT"
+            },
+            {
+              "name": "x-cache-hits",
+              "value": "2, 14"
+            },
+            {
+              "name": "age",
+              "value": "5231"
+            },
+            {
+              "name": "x-fastly-request-id",
+              "value": "6c4b1d0e2f8a9b3c5d7e1f2a3b4c5d6e7f8a9b0c"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 3900,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 2180
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.195Z",
+        "time": 23,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 19,
+          "receive": 3
+        },
+        "_connectionId": "101",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "script",
+        "cache": {},
+        "connection": "101",
+        "request": {
+          "method": "GET",
+          "url": "https://static.shopexample.com/js/vendor.js",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "via",
+              "value": "1.1 varnish, 1.1 varnish"
+            },
+            {
+              "name": "x-served-by",
+              "value": "cache-fra-eddf8230045-FRA, cache-mad2210-MAD"
+            },
+            {
+              "name": "x-cache",
+              "value": "HIT, HIT"
+            },
+            {
+              "name": "x-cache-hits",
+              "value": "2, 14"
+            },
+            {
+              "name": "age",
+              "value": "5231"
+            },
+            {
+              "name": "x-fastly-request-id",
+              "value": "6c4b1d0e2f8a9b3c5d7e1f2a3b4c5d6e7f8a9b0c"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 121000,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 38580
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.196Z",
+        "time": 51,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 21,
+          "receive": 29
+        },
+        "_connectionId": "101",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "script",
+        "cache": {},
+        "connection": "101",
+        "request": {
+          "method": "GET",
+          "url": "https://static.shopexample.com/js/app.js",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "via",
+              "value": "1.1 varnish, 1.1 varnish"
+            },
+            {
+              "name": "x-served-by",
+              "value": "cache-fra-eddf8230045-FRA, cache-mad2210-MAD"
+            },
+            {
+              "name": "x-cache",
+              "value": "HIT, HIT"
+            },
+            {
+              "name": "x-cache-hits",
+              "value": "2, 14"
+            },
+            {
+              "name": "age",
+              "value": "5231"
+            },
+            {
+              "name": "x-fastly-request-id",
+              "value": "6c4b1d0e2f8a9b3c5d7e1f2a3b4c5d6e7f8a9b0c"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 45600,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 14480
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.197Z",
+        "time": 35,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 20,
+          "receive": 14
+        },
+        "_connectionId": "101",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "VeryHigh",
+        "_resourceType": "stylesheet",
+        "cache": {},
+        "connection": "102",
+        "request": {
+          "method": "GET",
+          "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap",
+          "httpVersion": "h3",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h3",
+          "headers": [
+            {
+              "name": "server",
+              "value": "sffe"
+            },
+            {
+              "name": "via",
+              "value": "1.1 google"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "cache-control",
+              "value": "private, max-age=86400"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 2300,
+            "mimeType": "text/css"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 1480
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.200Z",
+        "time": 70,
+        "timings": {
+          "blocked": 1,
+          "dns": 14,
+          "ssl": 28,
+          "connect": 22,
+          "send": 0,
+          "wait": 31,
+          "receive": 2
+        },
+        "_connectionId": "102",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "font",
+        "cache": {},
+        "connection": "103",
+        "request": {
+          "method": "GET",
+          "url": "https://fonts.gstatic.com/s/inter/v13/inter-regular.woff2",
+          "httpVersion": "h3",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h3",
+          "headers": [
+            {
+              "name": "server",
+              "value": "sffe"
+            },
+            {
+              "name": "via",
+              "value": "1.1 google"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 23400,
+            "mimeType": "font/woff2"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 23780
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.330Z",
+        "time": 84,
+        "timings": {
+          "blocked": 1,
+          "dns": 16,
+          "ssl": 30,
+          "connect": 25,
+          "send": 0,
+          "wait": 24,
+          "receive": 18
+        },
+        "_connectionId": "103",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "font",
+        "cache": {},
+        "connection": "103",
+        "request": {
+          "method": "GET",
+          "url": "https://fonts.gstatic.com/s/inter/v13/inter-bold.woff2",
+          "httpVersion": "h3",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h3",
+          "headers": [
+            {
+              "name": "server",
+              "value": "sffe"
+            },
+            {
+              "name": "via",
+              "value": "1.1 google"
+            },
+            {
+              "name": "x-content-type-options",
+              "value": "nosniff"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000"
+            },
+            {
+              "name": "access-control-allow-origin",
+              "value": "*"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 24100,
+            "mimeType": "font/woff2"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 24480
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.332Z",
+        "time": 42,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 22,
+          "receive": 19
+        },
+        "_connectionId": "103",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "image",
+        "cache": {},
+        "connection": "104",
+        "request": {
+          "method": "GET",
+          "url": "https://images.shopexample.com/products/hero.webp",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "AkamaiGHost"
+            },
+            {
+              "name": "x-akamai-transformed",
+              "value": "9 - 0 pmb=mRUM,1"
+            },
+            {
+              "name": "x-cache",
+              "value": "TCP_HIT from a23-62-109-41.deploy.akamaitechnologies.com (AkamaiGHost/11.2.3-123) (-)"
+            },
+            {
+              "name": "server-timing",
+              "value": "cdn-cache; desc=HIT, edge; dur=2, origin; dur=0"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 64200,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 64580
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.360Z",
+        "time": 135,
+        "timings": {
+          "blocked": 2,
+          "dns": 21,
+          "ssl": 39,
+          "connect": 33,
+          "send": 0,
+          "wait": 41,
+          "receive": 38
+        },
+        "_connectionId": "104",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "connection": "104",
+        "request": {
+          "method": "GET",
+          "url": "https://images.shopexample.com/products/shoe-1.webp",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "AkamaiGHost"
+            },
+            {
+              "name": "x-akamai-transformed",
+              "value": "9 - 0 pmb=mRUM,1"
+            },
+            {
+              "name": "x-cache",
+              "value": "TCP_HIT from a23-62-109-41.deploy.akamaitechnologies.com (AkamaiGHost/11.2.3-123) (-)"
+            },
+            {
+              "name": "server-timing",
+              "value": "cdn-cache; desc=HIT, edge; dur=2, origin; dur=0"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 28400,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 28780
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.520Z",
+        "time": 58,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 36,
+          "receive": 21
+        },
+        "_connectionId": "104",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "connection": "104",
+        "request": {
+          "method": "GET",
+          "url": "https://images.shopexample.com/products/shoe-2.webp",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "AkamaiGHost"
+            },
+            {
+              "name": "x-akamai-transformed",
+              "value": "9 - 0 pmb=mRUM,1"
+            },
+            {
+              "name": "x-cache",
+              "value": "TCP_MISS from a23-62-109-41.deploy.akamaitechnologies.com (AkamaiGHost/11.2.3-123) (-)"
+            },
+            {
+              "name": "server-timing",
+              "value": "cdn-cache; desc=MISS, edge; dur=48, origin; dur=121"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 30100,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 30480
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.522Z",
+        "time": 141,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 118,
+          "receive": 22
+        },
+        "_connectionId": "104",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "Low",
+        "_resourceType": "image",
+        "cache": {},
+        "connection": "104",
+        "request": {
+          "method": "GET",
+          "url": "https://images.shopexample.com/products/shoe-3.webp",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "AkamaiGHost"
+            },
+            {
+              "name": "x-akamai-transformed",
+              "value": "9 - 0 pmb=mRUM,1"
+            },
+            {
+              "name": "x-cache",
+              "value": "TCP_HIT from a23-62-109-41.deploy.akamaitechnologies.com (AkamaiGHost/11.2.3-123) (-)"
+            },
+            {
+              "name": "server-timing",
+              "value": "cdn-cache; desc=HIT, edge; dur=2, origin; dur=0"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 27800,
+            "mimeType": "image/webp"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 28180
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.524Z",
+        "time": 54,
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 33,
+          "receive": 20
+        },
+        "_connectionId": "104",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "Low",
+        "_resourceType": "script",
+        "cache": {},
+        "connection": "105",
+        "request": {
+          "method": "GET",
+          "url": "https://widgets.reviewly.io/embed.js",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=3600"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 40100,
+            "mimeType": "application/javascript"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 12980
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.700Z",
+        "time": 150,
+        "timings": {
+          "blocked": 1,
+          "dns": 19,
+          "ssl": 36,
+          "connect": 30,
+          "send": 0,
+          "wait": 88,
+          "receive": 12
+        },
+        "_connectionId": "105",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "fetch",
+        "cache": {},
+        "connection": "105",
+        "request": {
+          "method": "GET",
+          "url": "https://widgets.reviewly.io/api/summary.json",
+          "httpVersion": "h2",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h2",
+          "headers": [
+            {
+              "name": "server",
+              "value": "nginx"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 1900,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 1020
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.940Z",
+        "time": 106,
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 104,
+          "receive": 2
+        },
+        "_connectionId": "105",
+        "pageref": "page_1"
+      },
+      {
+        "_initiator": {
+          "type": "parser",
+          "url": "https://www.shopexample.com/",
+          "lineNumber": 12
+        },
+        "_priority": "High",
+        "_resourceType": "fetch",
+        "cache": {},
+        "connection": "100",
+        "request": {
+          "method": "GET",
+          "url": "https://www.shopexample.com/api/session",
+          "httpVersion": "h3",
+          "headers": [],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": -1,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "",
+          "httpVersion": "h3",
+          "headers": [
+            {
+              "name": "server",
+              "value": "cloudflare"
+            },
+            {
+              "name": "cf-ray",
+              "value": "8f1c2b3a4d5e6f70-FRA"
+            },
+            {
+              "name": "cf-cache-status",
+              "value": "DYNAMIC"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 760,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": -1,
+          "bodySize": -1,
+          "_transferSize": 760
+        },
+        "serverIPAddress": "198.51.100.1",
+        "startedDateTime": "2026-05-19T12:00:00.980Z",
+        "time": 72,
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "ssl": -1,
+          "connect": -1,
+          "send": 0,
+          "wait": 71,
+          "receive": 1
+        },
+        "_connectionId": "100",
+        "pageref": "page_1"
+      }
+    ]
+  }
+}

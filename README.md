@@ -263,6 +263,10 @@ Build:
 npm run build
 ```
 
+### Fixtures
+
+Real recordings live in `fixtures/` (see its README for what each one is); small hand-built HARs and traces live in `packages/core/tests/fixtures/`. Strip response bodies from a recording before adding it with `node packages/core/scripts/trim-har.mjs in.har out.har`. `node packages/core/scripts/gen-large-har.mjs` regenerates the 1,500-entry `large.har.fixture.json.gz` deterministically.
+
 ### Demo flow
 
 The web app's empty state offers a "Load demo flow" button. The flow it loads is pre-generated from the core test fixtures (`webperf-snippets.har.fixture.json` and `webperf-snippets.trace.fixture.json`) and stored in `packages/web/src/demo/demo-flow.json`. It is a separate chunk fetched on click, so it does not weigh on the main bundle, and it is not offered inside generated reports. Regenerate it after changing the flow format or the fixtures with `npm run demo:build -w @htv/web`.

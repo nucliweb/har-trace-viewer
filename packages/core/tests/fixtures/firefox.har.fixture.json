@@ -1,0 +1,808 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "Firefox",
+      "version": "127.0"
+    },
+    "browser": {
+      "name": "Firefox",
+      "version": "127.0"
+    },
+    "pages": [
+      {
+        "startedDateTime": "2026-05-19T11:00:00.000Z",
+        "id": "page_1",
+        "title": "Example Net",
+        "pageTimings": {
+          "onContentLoad": 640,
+          "onLoad": 1710
+        }
+      }
+    ],
+    "entries": [
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.000Z",
+        "time": 235,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/html; charset=utf-8"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "text/html; charset=utf-8",
+            "size": 18800
+          },
+          "redirectURL": "",
+          "headersSize": 410,
+          "bodySize": 5400
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 4,
+          "dns": 22,
+          "connect": 31,
+          "ssl": 40,
+          "send": 0,
+          "wait": 120,
+          "receive": 18
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.210Z",
+        "time": 57,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/css/site.css",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/css"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "text/css",
+            "size": 24100
+          },
+          "redirectURL": "",
+          "headersSize": 330,
+          "bodySize": 5200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 45,
+          "receive": 11
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.215Z",
+        "time": 75,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/js/app.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/javascript"
+            },
+            {
+              "name": "content-encoding",
+              "value": "br"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "text/javascript",
+            "size": 61300
+          },
+          "redirectURL": "",
+          "headersSize": 340,
+          "bodySize": 17800
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 48,
+          "receive": 26
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.230Z",
+        "time": 118,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/img/hero.webp",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/webp"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "image/webp",
+            "size": 88000
+          },
+          "redirectURL": "",
+          "headersSize": 300,
+          "bodySize": 88000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 2,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 52,
+          "receive": 64
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.232Z",
+        "time": 42,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/img/team.png",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 304,
+          "statusText": "Not Modified",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/png"
+            },
+            {
+              "name": "etag",
+              "value": "\"team-1\""
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "image/png",
+            "size": 0
+          },
+          "redirectURL": "",
+          "headersSize": 260,
+          "bodySize": 0
+        },
+        "cache": {
+          "afterRequest": {
+            "expires": "2026-05-20T11:00:00.000Z",
+            "lastAccess": "2026-05-19T11:00:00.000Z",
+            "eTag": "\"team-1\"",
+            "fetchCount": 3
+          }
+        },
+        "timings": {
+          "blocked": 2,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 40,
+          "receive": 0
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.460Z",
+        "time": 60,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/fonts/body.woff2",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "",
+            "size": 21000
+          },
+          "redirectURL": "",
+          "headersSize": 280,
+          "bodySize": 21000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 38,
+          "receive": 22
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.470Z",
+        "time": 50,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/img/sprite",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/octet-stream"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "application/octet-stream",
+            "size": 9100
+          },
+          "redirectURL": "",
+          "headersSize": 270,
+          "bodySize": 3200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 41,
+          "receive": 9
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.700Z",
+        "time": 142,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/api/user.json",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "application/json",
+            "size": 1240
+          },
+          "redirectURL": "",
+          "headersSize": 360,
+          "bodySize": 520
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 140,
+          "receive": 2
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.720Z",
+        "time": 156,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://cdn.widgets-example.com/loader.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "cdn.widgets-example.com"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=3600"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 15400
+          },
+          "redirectURL": "",
+          "headersSize": 390,
+          "bodySize": 5100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": 18,
+          "connect": 26,
+          "ssl": 33,
+          "send": 0,
+          "wait": 70,
+          "receive": 9
+        },
+        "serverIPAddress": "203.0.113.40",
+        "connection": "443:2"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:00.760Z",
+        "time": 0,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/img/banner.jpg",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/jpeg"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "image/jpeg",
+            "size": 52000
+          },
+          "redirectURL": "",
+          "headersSize": 0,
+          "bodySize": 0
+        },
+        "cache": {
+          "beforeRequest": {
+            "expires": "2026-05-20T11:00:00.000Z",
+            "lastAccess": "2026-05-19T10:30:00.000Z",
+            "eTag": "\"banner-4\"",
+            "fetchCount": 7
+          }
+        },
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 0,
+          "receive": 0
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:01.500Z",
+        "time": 61,
+        "request": {
+          "bodySize": 0,
+          "method": "POST",
+          "url": "https://www.example.net/beacon",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 204,
+          "statusText": "No Content",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/plain"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "text/plain",
+            "size": 0
+          },
+          "redirectURL": "",
+          "headersSize": 250,
+          "bodySize": 0
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 1,
+          "wait": 60,
+          "receive": 0
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      },
+      {
+        "pageref": "page_1",
+        "startedDateTime": "2026-05-19T11:00:01.620Z",
+        "time": 50,
+        "request": {
+          "bodySize": 0,
+          "method": "GET",
+          "url": "https://www.example.net/js/lazy.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "Host",
+              "value": "www.example.net"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ],
+          "cookies": [],
+          "queryString": [],
+          "headersSize": 410
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "content-encoding",
+              "value": "gzip"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "mimeType": "application/javascript",
+            "size": 7400
+          },
+          "redirectURL": "",
+          "headersSize": 330,
+          "bodySize": 2600
+        },
+        "cache": {},
+        "timings": {
+          "blocked": 0,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 44,
+          "receive": 6
+        },
+        "serverIPAddress": "198.51.100.30",
+        "connection": "443"
+      }
+    ]
+  }
+}

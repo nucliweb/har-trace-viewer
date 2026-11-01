@@ -1,0 +1,2281 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "WebPagetest",
+      "version": "26.05"
+    },
+    "browser": {
+      "name": "Chrome",
+      "version": "126.0.6478.71"
+    },
+    "pages": [
+      {
+        "id": "page_1_0_1",
+        "title": "Run 1, First View for https://www.example.org/",
+        "startedDateTime": "2026-05-19T09:00:00.000Z",
+        "pageTimings": {
+          "onContentLoad": 1180,
+          "onLoad": 1950,
+          "_firstPaint": 900,
+          "_docTime": 1180
+        },
+        "_TTFB": 180,
+        "_bytesIn": 239663,
+        "_requests": 10,
+        "_cached": 0
+      },
+      {
+        "id": "page_1_1_1",
+        "title": "Run 1, Repeat View for https://www.example.org/",
+        "startedDateTime": "2026-05-19T09:00:25.000Z",
+        "pageTimings": {
+          "onContentLoad": 540,
+          "onLoad": 760,
+          "_firstPaint": 380,
+          "_docTime": 1180
+        },
+        "_TTFB": 180,
+        "_bytesIn": 7713,
+        "_requests": 5,
+        "_cached": 1
+      },
+      {
+        "id": "page_2_0_1",
+        "title": "Run 2, First View for https://www.example.org/",
+        "startedDateTime": "2026-05-19T10:00:00.000Z",
+        "pageTimings": {
+          "onContentLoad": 1357,
+          "onLoad": 2243,
+          "_firstPaint": 1035,
+          "_docTime": 1357
+        },
+        "_TTFB": 207,
+        "_bytesIn": 239663,
+        "_requests": 10,
+        "_cached": 0
+      },
+      {
+        "id": "page_2_1_1",
+        "title": "Run 2, Repeat View for https://www.example.org/",
+        "startedDateTime": "2026-05-19T10:00:25.000Z",
+        "pageTimings": {
+          "onContentLoad": 621,
+          "onLoad": 874,
+          "_firstPaint": 437,
+          "_docTime": 1357
+        },
+        "_TTFB": 207,
+        "_bytesIn": 7713,
+        "_requests": 5,
+        "_cached": 1
+      }
+    ],
+    "entries": [
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.000Z",
+        "time": 200,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/html"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"doc-v1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 21400,
+            "mimeType": "text/html",
+            "compression": 15300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 6100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": 28,
+          "connect": 42,
+          "ssl": 36,
+          "send": 0,
+          "wait": 180,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 6390,
+        "_bytesOut": 310,
+        "_objectSize": 21400,
+        "_contentType": "text/html",
+        "_ttfb_ms": 180,
+        "_load_ms": 192,
+        "_protocol": "HTTP/2",
+        "_priority": "VeryHigh",
+        "_initiator": "",
+        "_request_id": "1000",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.220Z",
+        "time": 80,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/theme.css",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/css"
+            },
+            {
+              "name": "cache-control",
+              "value": "max-age=0, must-revalidate"
+            },
+            {
+              "name": "etag",
+              "value": "\"theme-1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 18200,
+            "mimeType": "text/css",
+            "compression": 14100
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 4100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 60,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 4390,
+        "_bytesOut": 310,
+        "_objectSize": 18200,
+        "_contentType": "text/css",
+        "_ttfb_ms": 60,
+        "_load_ms": 72,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1001",
+        "_is_secure": 1,
+        "_cacheControl": "max-age=0, must-revalidate"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.230Z",
+        "time": 82,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/vendor.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=3600"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 96400,
+            "mimeType": "application/javascript",
+            "compression": 64600
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 31800
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 62,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 32090,
+        "_bytesOut": 310,
+        "_objectSize": 96400,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 62,
+        "_load_ms": 74,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1002",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=3600"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.235Z",
+        "time": 78,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/app.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 41200,
+            "mimeType": "application/javascript",
+            "compression": 28300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 12900
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 58,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 13190,
+        "_bytesOut": 310,
+        "_objectSize": 41200,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 58,
+        "_load_ms": 70,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1003",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.420Z",
+        "time": 75,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/logo.svg",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/svg+xml"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 3100,
+            "mimeType": "image/svg+xml",
+            "compression": 1900
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 1200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 55,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 1490,
+        "_bytesOut": 310,
+        "_objectSize": 3100,
+        "_contentType": "image/svg+xml",
+        "_ttfb_ms": 55,
+        "_load_ms": 67,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1004",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=86400"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.430Z",
+        "time": 90,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/img/hero.jpg",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/jpeg"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 148000,
+            "mimeType": "image/jpeg",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 148000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 70,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 148290,
+        "_bytesOut": 310,
+        "_objectSize": 148000,
+        "_contentType": "image/jpeg",
+        "_ttfb_ms": 70,
+        "_load_ms": 82,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1005",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=604800"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.640Z",
+        "time": 72,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/fonts/inter.woff2",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "font/woff2"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 24000,
+            "mimeType": "font/woff2",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 24000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 52,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 24290,
+        "_bytesOut": 310,
+        "_objectSize": 24000,
+        "_contentType": "font/woff2",
+        "_ttfb_ms": 52,
+        "_load_ms": 64,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1006",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.700Z",
+        "time": 110,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/collect.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=1800"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 22800,
+            "mimeType": "application/javascript",
+            "compression": 14600
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 8200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": 28,
+          "connect": 42,
+          "ssl": 36,
+          "send": 0,
+          "wait": 90,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 8490,
+        "_bytesOut": 310,
+        "_objectSize": 22800,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 90,
+        "_load_ms": 102,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1007",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=1800"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:00.900Z",
+        "time": 95,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/config.json",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"cfg-9\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 940,
+            "mimeType": "application/json",
+            "compression": 520
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 420
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 75,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 710,
+        "_bytesOut": 310,
+        "_objectSize": 940,
+        "_contentType": "application/json",
+        "_ttfb_ms": 75,
+        "_load_ms": 87,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1008",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_1_0_1",
+        "startedDateTime": "2026-05-19T09:00:01.300Z",
+        "time": 100,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/pixel.gif",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/gif"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 43,
+            "mimeType": "image/gif",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 43
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 80,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 333,
+        "_bytesOut": 310,
+        "_objectSize": 43,
+        "_contentType": "image/gif",
+        "_ttfb_ms": 80,
+        "_load_ms": 92,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1009",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      },
+      {
+        "pageref": "page_1_1_1",
+        "startedDateTime": "2026-05-19T09:00:25.000Z",
+        "time": 200,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/html"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"doc-v1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 21400,
+            "mimeType": "text/html",
+            "compression": 15300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 6100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 180,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 6390,
+        "_bytesOut": 310,
+        "_objectSize": 21400,
+        "_contentType": "text/html",
+        "_ttfb_ms": 180,
+        "_load_ms": 192,
+        "_protocol": "HTTP/2",
+        "_priority": "VeryHigh",
+        "_initiator": "",
+        "_request_id": "1000",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_1_1_1",
+        "startedDateTime": "2026-05-19T09:00:25.220Z",
+        "time": 80,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/theme.css",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 304,
+          "statusText": "Not Modified",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/css"
+            },
+            {
+              "name": "cache-control",
+              "value": "max-age=0, must-revalidate"
+            },
+            {
+              "name": "etag",
+              "value": "\"theme-1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 0,
+            "mimeType": "text/css"
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 0
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 60,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 290,
+        "_bytesOut": 310,
+        "_objectSize": 0,
+        "_contentType": "text/css",
+        "_ttfb_ms": 60,
+        "_load_ms": 72,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1001",
+        "_is_secure": 1,
+        "_cacheControl": "max-age=0, must-revalidate"
+      },
+      {
+        "pageref": "page_1_1_1",
+        "startedDateTime": "2026-05-19T09:00:25.900Z",
+        "time": 95,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/config.json",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 304,
+          "statusText": "Not Modified",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"cfg-9\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 0,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 0
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 75,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 290,
+        "_bytesOut": 310,
+        "_objectSize": 0,
+        "_contentType": "application/json",
+        "_ttfb_ms": 75,
+        "_load_ms": 87,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1002",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_1_1_1",
+        "startedDateTime": "2026-05-19T09:00:26.300Z",
+        "time": 100,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/pixel.gif",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/gif"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 43,
+            "mimeType": "image/gif",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 43
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 80,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 333,
+        "_bytesOut": 310,
+        "_objectSize": 43,
+        "_contentType": "image/gif",
+        "_ttfb_ms": 80,
+        "_load_ms": 92,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1003",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      },
+      {
+        "pageref": "page_1_1_1",
+        "startedDateTime": "2026-05-19T09:00:26.250Z",
+        "time": 115,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/cart",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 09:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 120,
+            "mimeType": "application/json",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 120
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 95,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 410,
+        "_bytesOut": 310,
+        "_objectSize": 120,
+        "_contentType": "application/json",
+        "_ttfb_ms": 95,
+        "_load_ms": 107,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1004",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.000Z",
+        "time": 227,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/html"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"doc-v1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 21400,
+            "mimeType": "text/html",
+            "compression": 15300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 6100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": 28,
+          "connect": 42,
+          "ssl": 36,
+          "send": 0,
+          "wait": 207,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 6390,
+        "_bytesOut": 310,
+        "_objectSize": 21400,
+        "_contentType": "text/html",
+        "_ttfb_ms": 207,
+        "_load_ms": 219,
+        "_protocol": "HTTP/2",
+        "_priority": "VeryHigh",
+        "_initiator": "",
+        "_request_id": "1000",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.253Z",
+        "time": 89,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/theme.css",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/css"
+            },
+            {
+              "name": "cache-control",
+              "value": "max-age=0, must-revalidate"
+            },
+            {
+              "name": "etag",
+              "value": "\"theme-1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 18200,
+            "mimeType": "text/css",
+            "compression": 14100
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 4100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 69,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 4390,
+        "_bytesOut": 310,
+        "_objectSize": 18200,
+        "_contentType": "text/css",
+        "_ttfb_ms": 69,
+        "_load_ms": 81,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1001",
+        "_is_secure": 1,
+        "_cacheControl": "max-age=0, must-revalidate"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.265Z",
+        "time": 91,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/vendor.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=3600"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 96400,
+            "mimeType": "application/javascript",
+            "compression": 64600
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 31800
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 71,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 32090,
+        "_bytesOut": 310,
+        "_objectSize": 96400,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 71,
+        "_load_ms": 83,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1002",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=3600"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.270Z",
+        "time": 87,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/app.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 41200,
+            "mimeType": "application/javascript",
+            "compression": 28300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 12900
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 67,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 13190,
+        "_bytesOut": 310,
+        "_objectSize": 41200,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 67,
+        "_load_ms": 79,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1003",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.483Z",
+        "time": 83,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/logo.svg",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/svg+xml"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=86400"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 3100,
+            "mimeType": "image/svg+xml",
+            "compression": 1900
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 1200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 63,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 1490,
+        "_bytesOut": 310,
+        "_objectSize": 3100,
+        "_contentType": "image/svg+xml",
+        "_ttfb_ms": 63,
+        "_load_ms": 75,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1004",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=86400"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.494Z",
+        "time": 101,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/img/hero.jpg",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/jpeg"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=604800"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 148000,
+            "mimeType": "image/jpeg",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 148000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 81,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 148290,
+        "_bytesOut": 310,
+        "_objectSize": 148000,
+        "_contentType": "image/jpeg",
+        "_ttfb_ms": 81,
+        "_load_ms": 93,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1005",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=604800"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.736Z",
+        "time": 80,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/fonts/inter.woff2",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "font/woff2"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=31536000, immutable"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 24000,
+            "mimeType": "font/woff2",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 24000
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 60,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 24290,
+        "_bytesOut": 310,
+        "_objectSize": 24000,
+        "_contentType": "font/woff2",
+        "_ttfb_ms": 60,
+        "_load_ms": 72,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1006",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=31536000, immutable"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:00.805Z",
+        "time": 123,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/collect.js",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/javascript"
+            },
+            {
+              "name": "cache-control",
+              "value": "public, max-age=1800"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 22800,
+            "mimeType": "application/javascript",
+            "compression": 14600
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 8200
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": 28,
+          "connect": 42,
+          "ssl": 36,
+          "send": 0,
+          "wait": 103,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 8490,
+        "_bytesOut": 310,
+        "_objectSize": 22800,
+        "_contentType": "application/javascript",
+        "_ttfb_ms": 103,
+        "_load_ms": 115,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1007",
+        "_is_secure": 1,
+        "_cacheControl": "public, max-age=1800"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:01.035Z",
+        "time": 106,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/config.json",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"cfg-9\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 940,
+            "mimeType": "application/json",
+            "compression": 520
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 420
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 86,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 710,
+        "_bytesOut": 310,
+        "_objectSize": 940,
+        "_contentType": "application/json",
+        "_ttfb_ms": 86,
+        "_load_ms": 98,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1008",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_2_0_1",
+        "startedDateTime": "2026-05-19T10:00:01.495Z",
+        "time": 112,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/pixel.gif",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/gif"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:00 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 43,
+            "mimeType": "image/gif",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 43
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 92,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 333,
+        "_bytesOut": 310,
+        "_objectSize": 43,
+        "_contentType": "image/gif",
+        "_ttfb_ms": 92,
+        "_load_ms": 104,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1009",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      },
+      {
+        "pageref": "page_2_1_1",
+        "startedDateTime": "2026-05-19T10:00:25.000Z",
+        "time": 227,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/html"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"doc-v1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 21400,
+            "mimeType": "text/html",
+            "compression": 15300
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 6100
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 207,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 6390,
+        "_bytesOut": 310,
+        "_objectSize": 21400,
+        "_contentType": "text/html",
+        "_ttfb_ms": 207,
+        "_load_ms": 219,
+        "_protocol": "HTTP/2",
+        "_priority": "VeryHigh",
+        "_initiator": "",
+        "_request_id": "1000",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_2_1_1",
+        "startedDateTime": "2026-05-19T10:00:25.253Z",
+        "time": 89,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/assets/theme.css",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 304,
+          "statusText": "Not Modified",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "text/css"
+            },
+            {
+              "name": "cache-control",
+              "value": "max-age=0, must-revalidate"
+            },
+            {
+              "name": "etag",
+              "value": "\"theme-1\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 0,
+            "mimeType": "text/css"
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 0
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 69,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 290,
+        "_bytesOut": 310,
+        "_objectSize": 0,
+        "_contentType": "text/css",
+        "_ttfb_ms": 69,
+        "_load_ms": 81,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1001",
+        "_is_secure": 1,
+        "_cacheControl": "max-age=0, must-revalidate"
+      },
+      {
+        "pageref": "page_2_1_1",
+        "startedDateTime": "2026-05-19T10:00:26.035Z",
+        "time": 106,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/config.json",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 304,
+          "statusText": "Not Modified",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "etag",
+              "value": "\"cfg-9\""
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 0,
+            "mimeType": "application/json"
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 0
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 86,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 290,
+        "_bytesOut": 310,
+        "_objectSize": 0,
+        "_contentType": "application/json",
+        "_ttfb_ms": 86,
+        "_load_ms": 98,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1002",
+        "_is_secure": 1,
+        "_cacheControl": "no-cache"
+      },
+      {
+        "pageref": "page_2_1_1",
+        "startedDateTime": "2026-05-19T10:00:26.495Z",
+        "time": 112,
+        "request": {
+          "method": "GET",
+          "url": "https://stats.analytics-example.net/pixel.gif",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "stats.analytics-example.net"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "image/gif"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 43,
+            "mimeType": "image/gif",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 43
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 92,
+          "receive": 12
+        },
+        "serverIPAddress": "203.0.113.20",
+        "connection": "21",
+        "_bytesIn": 333,
+        "_bytesOut": 310,
+        "_objectSize": 43,
+        "_contentType": "image/gif",
+        "_ttfb_ms": 92,
+        "_load_ms": 104,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1003",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      },
+      {
+        "pageref": "page_2_1_1",
+        "startedDateTime": "2026-05-19T10:00:26.438Z",
+        "time": 129,
+        "request": {
+          "method": "GET",
+          "url": "https://www.example.org/api/cart",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": ":authority",
+              "value": "www.example.org"
+            }
+          ],
+          "queryString": [],
+          "cookies": [],
+          "headersSize": 310,
+          "bodySize": 0
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/2",
+          "headers": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-store"
+            },
+            {
+              "name": "date",
+              "value": "Tue, 19 May 2026 10:00:25 GMT"
+            }
+          ],
+          "cookies": [],
+          "content": {
+            "size": 120,
+            "mimeType": "application/json",
+            "compression": 0
+          },
+          "redirectURL": "",
+          "headersSize": 290,
+          "bodySize": 120
+        },
+        "cache": {},
+        "timings": {
+          "blocked": -1,
+          "dns": -1,
+          "connect": -1,
+          "ssl": -1,
+          "send": 0,
+          "wait": 109,
+          "receive": 12
+        },
+        "serverIPAddress": "198.51.100.7",
+        "connection": "11",
+        "_bytesIn": 410,
+        "_bytesOut": 310,
+        "_objectSize": 120,
+        "_contentType": "application/json",
+        "_ttfb_ms": 109,
+        "_load_ms": 121,
+        "_protocol": "HTTP/2",
+        "_priority": "High",
+        "_initiator": "https://www.example.org/",
+        "_request_id": "1004",
+        "_is_secure": 1,
+        "_cacheControl": "no-store"
+      }
+    ]
+  }
+}
