@@ -353,6 +353,42 @@ describe("analyzeCacheForHar — synthetic scenarios", () => {
     expect(report.ownResources.total).toBe(1);
     expect(report.ownResources.cdnHits).toBe(1);
   });
+
+  it("leaves browser-cache hits out of the CDN hit ratio", () => {
+    const immutableHit = {
+      "cache-control": "public, max-age=31536000, immutable",
+      "x-vercel-cache": "HIT",
+    };
+    const har = makeHar({ "cache-control": "public, max-age=0" }, [
+      makeEntry("https://example.com/a.css", immutableHit, "disk"),
+      makeEntry("https://example.com/b.css", immutableHit, "disk"),
+      makeEntry("https://example.com/c.css", immutableHit, "memory"),
+      makeEntry("https://example.com/d.css", immutableHit),
+      makeEntry("https://example.com/e.css", { "x-vercel-cache": "MISS" }),
+    ]);
+    const { ownResources } = analyzeCacheForHar(har);
+
+    expect(ownResources.network).toBe(2);
+    expect(ownResources.cdnHits).toBe(1);
+    expect(ownResources.cdnHitRatio).toBe(0.5);
+    // Cache-Control still describes the cached copies: immutability counts every own resource.
+    expect(ownResources.total).toBe(5);
+    expect(ownResources.immutableRatio).toBe(0.8);
+  });
+
+  it("makes no CDN claim when the browser cache served every own resource", () => {
+    const hit = { "cache-control": "public, max-age=31536000, immutable", "x-vercel-cache": "HIT" };
+    const har = makeHar({ "cache-control": "public, max-age=0" }, [
+      makeEntry("https://example.com/a.css", hit, "disk"),
+      makeEntry("https://example.com/b.css", hit, "disk"),
+    ]);
+    const report = analyzeCacheForHar(har);
+
+    expect(report.ownResources).toMatchObject({ network: 0, cdnHits: 0, cdnHitRatio: 0 });
+    expect(report.recommendations.map((r) => r.label)).not.toContain(
+      "CDN cache effective for static assets"
+    );
+  });
 });
 
 describe("analyzeCacheForHar — WebPageTest inferred cache hits", () => {

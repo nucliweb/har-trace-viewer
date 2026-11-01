@@ -162,10 +162,24 @@ describe("analyzeHops", () => {
     );
     expect(hops.find((h) => h.host === "a.net")!.connection).toEqual({
       dns: 663,
-      connect: 454,
+      connect: 154,
       ssl: 300,
     });
     expect(hops.find((h) => h.host === "b.net")!.connection).toBeNull();
+  });
+
+  it("reports TCP apart from TLS, which HAR counts inside connect", () => {
+    const hops = analyzeHops(
+      har([
+        entry("https://data.other.net/", { timing: { dns: 0.04, connect: 25.62, ssl: 25.075 } }),
+        entry("http://plain.other.net/", { timing: { dns: 3, connect: 12, ssl: 0 } }),
+      ]),
+      DOC
+    );
+    const connection = (host: string) => hops.find((h) => h.host === host)!.connection!;
+    expect(connection("data.other.net").connect).toBeCloseTo(0.545, 3);
+    expect(connection("data.other.net").ssl).toBeCloseTo(25.075, 3);
+    expect(connection("plain.other.net")).toEqual({ dns: 3, connect: 12, ssl: 0 });
   });
 
   it("counts browser-cache hits apart from the requests that reached the host", () => {

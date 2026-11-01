@@ -193,6 +193,7 @@ describe("compareFlows — metrics", () => {
       "DCL",
       "onLoad",
       "Requests",
+      "Browser cache hits",
       "Transfer",
       "CDN hit ratio",
       "Browser cache hit ratio",
@@ -208,9 +209,22 @@ describe("compareFlows — metrics", () => {
       deltaPct: -60,
       rating: "better",
     });
-    expect(row("Requests")).toMatchObject({ a: 5, b: 3, delta: -2, rating: "better" });
+    expect(row("Requests")).toMatchObject({ a: 5, b: 1, delta: -4, rating: "better" });
     expect(row("TTFB")).toMatchObject({ delta: 0, deltaPct: 0, rating: "same" });
     expect(row("LCP")).toMatchObject({ a: 400, b: 250, rating: "better" });
+  });
+
+  it("counts network requests as the request-mix caveat does, and cache hits apart", () => {
+    const comparison = compareFlows(firstView(), repeatView());
+    const requests = comparison.metrics.find((m) => m.key === "requests")!;
+    const caveat = comparison.caveats.find((c) => c.id === "request-mix")!;
+
+    expect(caveat.text).toContain(`(${requests.a} → ${requests.b})`);
+    expect(row("Browser cache hits")).toMatchObject({ a: 0, b: 2, delta: 2, rating: "better" });
+  });
+
+  it("leaves the CDN hit ratio unrated when one side sent no own request to the CDN", () => {
+    expect(row("CDN hit ratio")).toMatchObject({ b: null, delta: null, rating: "none" });
   });
 
   it("rates a higher cache hit ratio as better", () => {
@@ -421,7 +435,7 @@ describe("compareFlows — caveats", () => {
     expect(compareFlows(a, b).caveats).toEqual([
       {
         id: "inferred-cache-hits",
-        affects: ["browserCacheHitRatio"],
+        affects: ["cacheHits", "browserCacheHitRatio"],
         text: "B: 1 browser-cache hit is inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.",
       },
     ]);
@@ -439,6 +453,7 @@ describe("COMPARED_METRICS", () => {
       ["dcl", "ms"],
       ["onLoad", "ms"],
       ["requests", "count"],
+      ["cacheHits", "count"],
       ["bytes", "bytes"],
       ["cdnHitRatio", "ratio"],
       ["browserCacheHitRatio", "ratio"],

@@ -32,7 +32,17 @@ describe("MetricsSummary", () => {
     expect(screen.getByRole("table", { name: "Metrics per page" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Page 1 · Home" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Page 2 · Plain" })).toBeInTheDocument();
-    for (const row of ["TTFB", "FCP", "LCP", "DCL", "onLoad", "Requests", "Transfer"]) {
+    const rows = [
+      "TTFB",
+      "FCP",
+      "LCP",
+      "DCL",
+      "onLoad",
+      "Requests",
+      "Browser cache hits",
+      "Transfer",
+    ];
+    for (const row of rows) {
       expect(screen.getByRole("rowheader", { name: row })).toBeInTheDocument();
     }
     expect(screen.getByRole("rowheader", { name: "CDN hit ratio" })).toBeInTheDocument();

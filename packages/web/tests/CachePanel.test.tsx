@@ -31,6 +31,27 @@ describe("CachePanel", () => {
     expect(screen.getByText("Browser cache hits inferred from WebPageTest")).toBeInTheDocument();
   });
 
+  it("counts CDN hits over the own resources that reached the network", () => {
+    const hit = { "x-vercel-cache": "HIT" };
+    renderPanel(
+      makeHar([
+        makeEntry({ responseHeaders: hit, fromCache: "disk" }),
+        makeEntry({ responseHeaders: hit }),
+        makeEntry({ responseHeaders: { "x-vercel-cache": "MISS" } }),
+      ])
+    );
+
+    expect(row("CDN hits")).toHaveTextContent("1/2 50%");
+  });
+
+  it("shows no CDN hit ratio when the browser cache served every own resource", () => {
+    renderPanel(
+      makeHar([makeEntry({ responseHeaders: { "x-vercel-cache": "HIT" }, fromCache: "disk" })])
+    );
+
+    expect(row("CDN hits")).toHaveTextContent("—");
+  });
+
   it("shows the 304 revalidations next to the hits", () => {
     renderPanel(makeHar([makeEntry({ status: 304 }), makeEntry()]));
 

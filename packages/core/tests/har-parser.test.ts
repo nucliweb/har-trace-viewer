@@ -117,6 +117,45 @@ describe("parseHar — transfer size of cached entries", () => {
   });
 });
 
+describe("parseHar — bytes on the wire", () => {
+  // Chrome DevTools exports: no wire sizes but response._transferSize, content.size uncompressed.
+  const chromeResponse = (overrides: Record<string, unknown>) => ({
+    status: 200,
+    headers: [{ name: "content-encoding", value: "br" }],
+    content: { mimeType: "text/javascript", size: 141022 },
+    bodySize: -1,
+    headersSize: -1,
+    ...overrides,
+  });
+  const withResponse = (response: Record<string, unknown>) => {
+    const raw = firefoxHar();
+    raw.log.entries.push(firefoxEntry("https://example.com/c.js", "text/javascript", { response }));
+    return parseHar(raw).entries.at(-1)!;
+  };
+
+  it("reads Chrome's response._transferSize, keeping the uncompressed size as bodySize", () => {
+    const entry = withResponse(chromeResponse({ _transferSize: 47162 }));
+    expect(entry.transferSize).toBe(47162);
+    expect(entry.bodySize).toBe(141022);
+  });
+
+  it("counts no body bytes for a 304 revalidation", () => {
+    const notModified = { status: 304, content: { mimeType: "text/html", size: 112507 } };
+    expect(withResponse(chromeResponse({ ...notModified, bodySize: 0 })).transferSize).toBe(0);
+    expect(
+      withResponse(chromeResponse({ ...notModified, bodySize: 0, headersSize: 137 })).transferSize
+    ).toBe(137);
+  });
+
+  it("uses the compressed bodySize even when headersSize is unknown", () => {
+    expect(withResponse(chromeResponse({ bodySize: 47000 })).transferSize).toBe(47000);
+  });
+
+  it("falls back to the uncompressed content.size only when no wire size is known", () => {
+    expect(withResponse(chromeResponse({})).transferSize).toBe(141022);
+  });
+});
+
 describe("parseHar — Firefox-style HAR", () => {
   it("infers resourceType from mimeType", () => {
     const { entries } = parseHar(firefoxHar());
@@ -143,12 +182,12 @@ describe("parseHar — Firefox-style HAR", () => {
     expect(entries[0].bodySize).toBe(5000);
   });
 
-  it("falls back to content.size when bodySize or headersSize is unknown", () => {
+  it("keeps the compressed bodySize when only headersSize is unknown", () => {
     const raw = firefoxHar();
     raw.log.entries[1].response.headersSize = -1;
     const { entries } = parseHar(raw);
 
-    expect(entries[1].transferSize).toBe(5000);
+    expect(entries[1].transferSize).toBe(1200);
   });
 
   it("falls back to 0 when no size information exists", () => {

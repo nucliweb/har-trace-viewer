@@ -280,9 +280,12 @@ export interface CacheRecommendation {
 export interface CacheReport {
   document: ResourceCacheProfile;
   ownResources: {
-    total: number;
+    total: number; // own resources the page used, browser-cache hits included
+    // Own resources that reached the network: browser-cache hits never reach the CDN, so
+    // cdnHits and cdnHitRatio count only these. Absent in flows generated before it existed.
+    network?: number;
     cdnHits: number;
-    cdnHitRatio: number;
+    cdnHitRatio: number; // cdnHits / network
     immutableCount: number;
     immutableRatio: number;
   };

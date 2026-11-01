@@ -106,6 +106,8 @@ function RecResources({ resources }: { resources: RecommendationResource[] }) {
 
 export function CachePanel({ report, pageLabel, onClose }: Props) {
   const { document: doc, ownResources, browser, recommendations } = report;
+  // Browser-cache hits never reach the CDN: the ratio covers the own network requests.
+  const cdnJudged = ownResources.network ?? ownResources.total;
   const inferred = browser.inferred ?? 0;
   const revalidated = browser.revalidated ?? 0;
 
@@ -175,8 +177,14 @@ export function CachePanel({ report, pageLabel, onClose }: Props) {
               <div className={styles.row}>
                 <span className={styles.rowLabel}>CDN hits</span>
                 <span className={styles.rowValue}>
-                  {ownResources.cdnHits}/{ownResources.total}
-                  <span className={styles.pct}> {pct(ownResources.cdnHitRatio)}</span>
+                  {cdnJudged > 0 ? (
+                    <>
+                      {ownResources.cdnHits}/{cdnJudged}
+                      <span className={styles.pct}> {pct(ownResources.cdnHitRatio)}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </span>
               </div>
               <div className={styles.row}>

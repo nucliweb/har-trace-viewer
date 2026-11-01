@@ -461,6 +461,12 @@ function recommendationRows(recommendations: CacheRecommendation[], width: numbe
   return rows;
 }
 
+// Browser-cache hits never reach the CDN: the ratio covers the own network requests.
+function cdnHits(own: CacheReport["ownResources"]): string {
+  const judged = own.network ?? own.total;
+  return judged > 0 ? `${own.cdnHits}/${judged} ${pct(own.cdnHitRatio)}` : "—";
+}
+
 /** The cache report of a page: document, static assets and browser cache, then the recommendations. */
 export function cacheRegion(report: CacheReport, width: number): Line[] {
   const { document: doc, ownResources: own, browser, recommendations } = report;
@@ -484,7 +490,7 @@ export function cacheRegion(report: CacheReport, width: number): Line[] {
   const assets: Line[] =
     own.total > 0
       ? [
-          kv("CDN hits", `${own.cdnHits}/${own.total} ${pct(own.cdnHitRatio)}`),
+          kv("CDN hits", cdnHits(own)),
           kv("Immutable", `${own.immutableCount}/${own.total} ${pct(own.immutableRatio)}`),
         ]
       : [[seg("No own static assets", { dim: true })]];

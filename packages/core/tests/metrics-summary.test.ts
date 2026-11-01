@@ -81,9 +81,28 @@ describe("summarizeFlowMetrics", () => {
     const flow = generateFlow([{ name: "Cached", har: parseHarJson(JSON.stringify(raw)) }]);
     const [page] = summarizeFlowMetrics(flow);
     const network = flow.pages[0].har.entries.filter((e) => !e.fromCache);
-    expect(page.requests).toBe(network.length + 1);
     expect(page.transferBytes).toBe(network.reduce((s, e) => s + e.transferSize, 0));
     expect(page.transferBytes).toBe(network.length * 1500);
+  });
+
+  it("counts network requests and browser-cache hits apart", () => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/disk.js", "text/javascript", { _fromCache: "disk" }),
+      firefoxEntry("https://example.com/memory.css", "text/css", { _fromCache: "memory" })
+    );
+    const flow = generateFlow([{ name: "Repeat", har: parseHarJson(JSON.stringify(raw)) }]);
+    const [page] = summarizeFlowMetrics(flow);
+    expect(page.requests).toBe(5);
+    expect(page.cacheHits).toBe(2);
+  });
+
+  it("has no CDN hit ratio when the browser cache served every own resource", () => {
+    const raw = firefoxHar();
+    raw.log.entries = raw.log.entries.map((e, i) => (i === 0 ? e : { ...e, _fromCache: "disk" }));
+    const flow = generateFlow([{ name: "Repeat", har: parseHarJson(JSON.stringify(raw)) }]);
+    const [page] = summarizeFlowMetrics(flow);
+    expect(page.cdnHitRatio).toBeNull();
   });
 
   it("takes the cache ratios from the cache report", () => {

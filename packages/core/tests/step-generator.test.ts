@@ -1099,8 +1099,8 @@ describe("generateFlow — chronological steps", () => {
     const at = (needle: string) => flow.steps[indexOf(flow, needle)].timestamp;
 
     expect(at("DNS")).toBe(0);
-    // First byte = startTime + blocked + dns + connect + ssl + send + wait (the
-    // TTFB badge shows only the wait): 0 + 0 + 10 + 20 + 0 + 1 + 50.
+    // First byte = startTime + blocked + dns + connect (TLS included) + send + wait
+    // (the TTFB badge shows only the wait): 0 + 0 + 10 + 20 + 1 + 50.
     expect(at("TTFB")).toBe(81);
     expect(at("Critical")).toBe(60);
     expect(at("First Contentful")).toBe(90);
@@ -1108,6 +1108,35 @@ describe("generateFlow — chronological steps", () => {
     expect(at("Third-party")).toBe(160);
     expect(at("Largest Contentful")).toBe(400);
     expect(at("Page loaded")).toBe(500);
+  });
+
+  it("counts TLS once: HAR includes it in connect", () => {
+    const har = makeHar([criticalCss(200)]);
+    // A realistic HTTPS handshake: connect 61.7 ms of which 47.4 ms are TLS.
+    har.documentEntry.timing = {
+      blocked: 0.6,
+      dns: 14.3,
+      connect: 61.7,
+      ssl: 47.4,
+      send: 0.3,
+      wait: 45.2,
+      receive: 0.8,
+    };
+    har.documentEntry.ttfb = 45.2;
+    const flow = generateFlow([{ name: "Home", har }]);
+    const step = (needle: string) => flow.steps[indexOf(flow, needle)];
+
+    // Request sent = startTime + blocked + dns + connect; first byte adds send + wait.
+    expect(step("First request").timestamp).toBeCloseTo(76.6, 5);
+    expect(step("TTFB").timestamp).toBeCloseTo(122.1, 5);
+    expect(step("DNS").metrics).toEqual([
+      { label: "DNS", value: "14ms" },
+      { label: "TCP connect", value: "14ms" },
+      { label: "TLS", value: "47ms" },
+    ]);
+    expect(Object.values(step("First request").pathTimings ?? {})).toEqual([
+      "DNS 14ms · TCP 14ms · TLS 47ms",
+    ]);
   });
 
   it("sorts the steps of each page independently in a multi-page flow", () => {

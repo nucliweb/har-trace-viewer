@@ -31,6 +31,8 @@ interface RawHarEntry {
   _transferSize?: number;
   // WebPageTest omits or nulls parts of the response (content: null, no headers).
   response?: {
+    // Where Chrome DevTools exports the bytes on the wire.
+    _transferSize?: number;
     status?: number;
     headers?: { name: string; value: string }[];
     content?: { mimeType?: string; size?: number } | null;
@@ -241,15 +243,18 @@ function parseResourcePriority(raw?: string): ResourcePriority | undefined {
   }
 }
 
+const isSize = (value: unknown): value is number => typeof value === "number" && value >= 0;
+
+// Bytes on the wire: headers plus the compressed body. HAR's bodySize is what crossed the
+// network (0 for a 304) and content.size the uncompressed body, used only when nothing else is.
 function parseTransferSize(e: RawHarEntry): number {
-  if (typeof e._transferSize === "number" && e._transferSize >= 0) return e._transferSize;
+  const { _transferSize, bodySize, headersSize, content } = e.response ?? {};
+  if (isSize(e._transferSize)) return e._transferSize;
+  if (isSize(_transferSize)) return _transferSize;
   // Served from the browser cache: nothing crossed the network.
   if (parseFromCache(e._fromCache, e.cache)) return 0;
-  const { bodySize, headersSize, content } = e.response ?? {};
-  if (typeof bodySize === "number" && typeof headersSize === "number") {
-    if (bodySize >= 0 && headersSize >= 0) return bodySize + headersSize;
-  }
-  return content?.size != null && content.size >= 0 ? content.size : 0;
+  if (isSize(bodySize)) return bodySize + (isSize(headersSize) ? headersSize : 0);
+  return isSize(content?.size) ? content.size : 0;
 }
 
 function parsePageTime(value: number | undefined): number | null {

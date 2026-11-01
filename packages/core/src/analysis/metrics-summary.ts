@@ -1,4 +1,5 @@
-import type { Flow } from "../types.js";
+import type { CacheReport, Flow } from "../types.js";
+import { browserCacheHits, networkRequests } from "./network-requests.js";
 
 export type MetricRating = "good" | "needs-improvement" | "poor" | "none";
 
@@ -12,9 +13,13 @@ export interface PageMetricsSummary {
   /** DOMContentLoaded and load event times in ms; null when the event never fired. */
   dcl: number | null;
   onLoad: number | null;
+  /** Requests that reached the network, the document and 304 revalidations included. */
   requests: number;
+  /** Resources the browser cache served, WebPageTest inferred hits included. */
+  cacheHits: number;
   transferBytes: number;
-  cdnHitRatio: number;
+  /** Over the own resources that reached the network; null when none did. */
+  cdnHitRatio: number | null;
   browserCacheHitRatio: number;
   /** Layout shift score and interaction latency in ms; null without a trace or matching events. */
   cls?: number | null;
@@ -41,6 +46,11 @@ export function rateMetric(metric: RatedMetric, value: number | null | undefined
   return "poor";
 }
 
+function cdnHitRatio(own: CacheReport["ownResources"] | undefined): number | null {
+  if (!own) return 0;
+  return (own.network ?? own.total) > 0 ? own.cdnHitRatio : null;
+}
+
 /** One summary per page, reading the same numbers the step badges are built from. */
 export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
   return flow.pages.map((page, i) => {
@@ -55,9 +65,10 @@ export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
       inp: trace?.inp ?? null,
       dcl: har.pages[0]?.onContentLoad ?? null,
       onLoad: har.pages[0]?.onLoad ?? null,
-      requests: har.entries.length,
+      requests: networkRequests(har).length,
+      cacheHits: browserCacheHits(har),
       transferBytes: har.entries.reduce((sum, e) => sum + e.transferSize, 0),
-      cdnHitRatio: report?.ownResources.cdnHitRatio ?? 0,
+      cdnHitRatio: cdnHitRatio(report?.ownResources),
       browserCacheHitRatio: report?.browser.hitRatio ?? 0,
     };
   });

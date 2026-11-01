@@ -3,6 +3,8 @@ import { detectNode } from "../inference/node-detector.js";
 import { detectPop } from "../inference/pops.js";
 import type { CdnProvider, HarEntry, NetworkRegion, ParsedHar } from "../types.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
+import { tcpConnectMs } from "../utils/timing.js";
+import { isBrowserCacheHit } from "./network-requests.js";
 
 export interface HostHop {
   host: string;
@@ -22,7 +24,10 @@ export interface HostHop {
   hitRatio: number;
   /** Over the requests that reached the host; null when the browser cache served them all. */
   avgTtfbMs: number | null;
-  /** First non-zero connection timings seen for the host; null when every entry reused a connection. */
+  /**
+   * First non-zero connection timings seen for the host, `connect` the TCP handshake alone and
+   * `ssl` the TLS one; null when every entry reused a connection.
+   */
   connection: { dns: number; connect: number; ssl: number } | null;
   fromBrowserCache: boolean;
 }
@@ -59,7 +64,7 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
   const pop = pops.find((p) => p.code === popCode);
 
   // A browser-cache hit replays a stored response: its timings and CDN headers are not this load's.
-  const network = entries.filter((e) => e.fromCache === false);
+  const network = entries.filter((e) => !isBrowserCacheHit(e));
   let cacheHits = 0;
   let cacheMisses = 0;
   for (const e of network) {
@@ -90,7 +95,7 @@ function buildHop(host: string, entries: HarEntry[], documentRoot: string): Host
     connection: handshake
       ? {
           dns: Math.max(handshake.timing.dns, 0),
-          connect: Math.max(handshake.timing.connect, 0),
+          connect: tcpConnectMs(handshake.timing),
           ssl: Math.max(handshake.timing.ssl, 0),
         }
       : null,

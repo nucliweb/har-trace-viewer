@@ -3,6 +3,7 @@ import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
 import type { DeltaUnit } from "../utils/format.js";
 import { getHostname } from "../utils/domain.js";
+import { networkRequests } from "./network-requests.js";
 import { summarizeFlowMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
 
@@ -26,6 +27,7 @@ export type ComparedMetric =
   | "dcl"
   | "onLoad"
   | "requests"
+  | "cacheHits"
   | "bytes"
   | "cdnHitRatio"
   | "browserCacheHitRatio";
@@ -178,6 +180,13 @@ export const COMPARED_METRICS: readonly MetricSpec[] = [
   { key: "dcl", label: "DCL", unit: "ms", value: (p) => p.dcl },
   { key: "onLoad", label: "onLoad", unit: "ms", value: (p) => p.onLoad },
   { key: "requests", label: "Requests", unit: "count", value: (p) => p.requests },
+  {
+    key: "cacheHits",
+    label: "Browser cache hits",
+    unit: "count",
+    value: (p) => p.cacheHits,
+    higherIsBetter: true,
+  },
   { key: "bytes", label: "Transfer", unit: "bytes", value: (p) => p.transferBytes },
   {
     key: "cdnHitRatio",
@@ -229,9 +238,9 @@ const firstPageHops = (flow: Flow): HostHop[] => {
 // TTFBs of the first page's network requests by host, then by URL, in request order.
 function ttfbsByHostAndUrl(flow: Flow): Map<string, Map<string, number[]>> {
   const byHost = new Map<string, Map<string, number[]>>();
-  for (const entry of flow.pages[0].har.entries) {
+  for (const entry of networkRequests(flow.pages[0].har)) {
     const host = getHostname(entry.url);
-    if (host === null || entry.fromCache !== false) continue;
+    if (host === null) continue;
     const byUrl = byHost.get(host) ?? new Map<string, number[]>();
     byUrl.set(entry.url, [...(byUrl.get(entry.url) ?? []), entry.ttfb]);
     byHost.set(host, byUrl);
@@ -281,15 +290,13 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
 // averages stop describing the same resources.
 const REQUEST_MIX_THRESHOLD = 0.2;
 
-const networkRequests = (flow: Flow): number =>
-  flow.pages[0].har.entries.filter((e) => e.fromCache === false).length;
-
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
   const caveats: ComparisonCaveat[] = [];
-  const requestsA = networkRequests(a);
-  const requestsB = networkRequests(b);
+  // The same count as the "requests" metric.
+  const requestsA = networkRequests(a.pages[0].har).length;
+  const requestsB = networkRequests(b.pages[0].har).length;
   const difference = requestsB - requestsA;
   if (Math.abs(difference) > REQUEST_MIX_THRESHOLD * Math.max(requestsA, requestsB)) {
     caveats.push({
@@ -306,7 +313,7 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
     if (inferred === 0) continue;
     caveats.push({
       id: "inferred-cache-hits",
-      affects: ["browserCacheHitRatio"],
+      affects: ["cacheHits", "browserCacheHitRatio"],
       text: `${side}: ${plural(inferred, "browser-cache hit")} ${inferred === 1 ? "is" : "are"} inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.`,
     });
   }

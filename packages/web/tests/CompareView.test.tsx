@@ -140,8 +140,12 @@ describe("CompareView", () => {
       const cells = within(onLoad).getAllByRole("cell");
       expect(cellTexts(onLoad)).toEqual(["500 ms", "200 ms", "−300 ms", "−60%"]);
       expect(cells[2]).toHaveAttribute("data-rating", "better");
+      // Network requests only: B's two browser-cache hits have a row of their own.
       const requests = within(table).getByRole("row", { name: /^Requests/ });
-      expect(within(requests).getAllByRole("cell")[2]).toHaveTextContent("−2");
+      expect(cellTexts(requests).slice(0, 3)).toEqual(["5", "1", "−4"]);
+      const cacheHits = within(table).getByRole("row", { name: /^Browser cache hits/ });
+      expect(cellTexts(cacheHits).slice(0, 3)).toEqual(["0", "2", "+2"]);
+      expect(within(cacheHits).getAllByRole("cell")[2]).toHaveAttribute("data-rating", "better");
     });
 
     it("rates each side's Web Vitals like the metrics summary", async () => {

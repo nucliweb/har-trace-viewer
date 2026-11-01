@@ -67,7 +67,8 @@ describe("HopsPanel", () => {
     expect(rows[2]).toHaveTextContent("50%");
     expect(rows[0]).toHaveTextContent("Akamai Edge");
     expect(rows[0]).toHaveTextContent("n/a");
-    expect(rows[0]).toHaveTextContent("663 ms / 454 ms / 200 ms");
+    // HAR counts TLS inside connect: TCP alone is 454 − 200 ms.
+    expect(rows[0]).toHaveTextContent("663 ms / 254 ms / 200 ms");
     expect(rows[1]).toHaveTextContent("reused");
   });
 

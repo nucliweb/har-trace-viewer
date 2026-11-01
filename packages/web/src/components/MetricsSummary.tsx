@@ -29,8 +29,13 @@ const ROWS: Row[] = [
   { label: "DCL", value: (p) => p.dcl, format: (p) => formatMs(p.dcl) },
   { label: "onLoad", value: (p) => p.onLoad, format: (p) => formatMs(p.onLoad) },
   { label: "Requests", value: (p) => p.requests, format: (p) => String(p.requests) },
+  { label: "Browser cache hits", value: (p) => p.cacheHits, format: (p) => String(p.cacheHits) },
   { label: "Transfer", value: (p) => p.transferBytes, format: (p) => formatBytes(p.transferBytes) },
-  { label: "CDN hit ratio", value: (p) => p.cdnHitRatio, format: (p) => pct(p.cdnHitRatio) },
+  {
+    label: "CDN hit ratio",
+    value: (p) => p.cdnHitRatio,
+    format: (p) => (p.cdnHitRatio === null ? "n/a" : pct(p.cdnHitRatio)),
+  },
   {
     label: "Browser cache hit ratio",
     value: (p) => p.browserCacheHitRatio,

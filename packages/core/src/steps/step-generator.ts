@@ -1,4 +1,6 @@
 import { getHostname, getRootDomain } from "../utils/domain.js";
+import { tcpConnectMs } from "../utils/timing.js";
+import { isOwnNetworkResource } from "../analysis/network-requests.js";
 import {
   detectCdnPopCity,
   detectCdnRegion,
@@ -416,8 +418,10 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   // first request and the page start) and trace FCP/LCP count from the
   // navigation's navigationStart. Both mark the start of the same navigation,
   // so the two scales are compared directly.
+  // HAR counts TLS inside connect: the request leaves once connect (TCP + TLS) is over.
   const { dns, connect, ssl, blocked, send } = documentEntry.timing;
-  const requestSentAt = documentEntry.startTime + blocked + dns + connect + ssl;
+  const tcp = tcpConnectMs(documentEntry.timing);
+  const requestSentAt = documentEntry.startTime + blocked + dns + connect;
   const firstByteAt = requestSentAt + send + documentEntry.ttfb;
 
   // ── Fixed prologue: nothing can be fetched before the document is requested
@@ -425,7 +429,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
   // and it still reads better after the connection steps).
   const connectionMetrics = [
     { label: "DNS", value: formatMs(dns) },
-    { label: "TCP connect", value: formatMs(connect) },
+    { label: "TCP connect", value: formatMs(tcp) },
   ];
   if (ssl > 0) connectionMetrics.push({ label: "TLS", value: formatMs(ssl) });
 
@@ -439,7 +443,7 @@ function generatePageSteps(pageFlow: PageFlow, hasGfw: boolean): PageStep[] {
     metrics: connectionMetrics,
   };
 
-  const reqConnectionLabel = `DNS ${formatMs(dns)} · TCP ${formatMs(connect)}${ssl > 0 ? ` · TLS ${formatMs(ssl)}` : ""}`;
+  const reqConnectionLabel = `DNS ${formatMs(dns)} · TCP ${formatMs(tcp)}${ssl > 0 ? ` · TLS ${formatMs(ssl)}` : ""}`;
   const firstPath = firstActivePath(hasCdn, hasGfw);
   // A document the CDN served from its cache never reaches the origin.
   const documentToOrigin = reachesOrigin(hasCdn, [documentEntry]);
@@ -734,9 +738,7 @@ function analyzePage(pageFlow: PageFlow, hasGfw: boolean): PageAnalysis {
     cacheEntries,
   });
 
-  const ownNonDocNetwork = entries.filter(
-    (e) => !e.isDocument && getRootDomain(e.url) === documentRoot && e.fromCache === false
-  );
+  const ownNonDocNetwork = entries.filter((e) => isOwnNetworkResource(e, documentRoot));
   const cdnHitEntries = hasCdn
     ? ownNonDocNetwork.filter((e) => detectCdnCacheStatus(e.responseHeaders) === "hit")
     : [];

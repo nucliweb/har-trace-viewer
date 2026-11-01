@@ -154,6 +154,8 @@ describe("TuiApp — a comparison", () => {
     expect(frame).toContain("A First view");
     expect(frame).toContain("B Repeat view");
     expect(frame).toMatch(/onLoad\s+500 ms\s+200 ms\s+−300 ms\s+−60%/);
+    expect(frame).toMatch(/Requests\s+5\s+1\s+−4/);
+    expect(frame).toMatch(/Browser cache hits\s+0\s+2\s+\+2/);
     expect(frame).toContain("B made 4 fewer network requests than A (5 → 1)");
   });
 

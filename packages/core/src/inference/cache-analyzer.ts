@@ -1,4 +1,5 @@
 import { getRootDomain } from "../utils/domain.js";
+import { isOwnNetworkResource, isOwnResource } from "../analysis/network-requests.js";
 import type {
   CacheReport,
   CacheRecommendation,
@@ -232,13 +233,13 @@ function buildRecommendations(
     if (own.cdnHitRatio >= 0.8) {
       recs.push({
         label: "CDN cache effective for static assets",
-        description: `${Math.round(own.cdnHitRatio * 100)}% of own resources served from CDN cache.`,
+        description: `${Math.round(own.cdnHitRatio * 100)}% of own resources fetched over the network came from the CDN cache.`,
         severity: "good",
       });
     } else if (own.cdnHits > 0 && own.cdnHitRatio < 0.5) {
       recs.push({
         label: "Low CDN hit rate for static assets",
-        description: `Only ${Math.round(own.cdnHitRatio * 100)}% of own resources hit the CDN cache. Check Cache-Control headers and CDN configuration.`,
+        description: `Only ${Math.round(own.cdnHitRatio * 100)}% of own resources fetched over the network hit the CDN cache. Check Cache-Control headers and CDN configuration.`,
         severity: "warning",
       });
     }
@@ -302,11 +303,13 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
   const documentProfile = profileResourceCache(doc.responseHeaders);
   const documentRoot = getRootDomain(doc.url);
 
-  const ownNonDoc = har.entries.filter(
-    (e) => !e.isDocument && getRootDomain(e.url) === documentRoot
-  );
+  const ownNonDoc = har.entries.filter((e) => isOwnResource(e, documentRoot));
+  // A browser-cache hit replays a stored response: its CDN status is not this load's.
+  const ownNetwork = ownNonDoc.filter((e) => isOwnNetworkResource(e, documentRoot));
 
-  const cdnHits = ownNonDoc.filter((e) => detectCdnCacheStatus(e.responseHeaders) === "hit").length;
+  const cdnHits = ownNetwork.filter(
+    (e) => detectCdnCacheStatus(e.responseHeaders) === "hit"
+  ).length;
 
   const immutableCount = ownNonDoc.filter((e) =>
     (e.responseHeaders["cache-control"] ?? "").includes("immutable")
@@ -323,8 +326,9 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
 
   const ownResources: CacheReport["ownResources"] = {
     total: ownTotal,
+    network: ownNetwork.length,
     cdnHits,
-    cdnHitRatio: ownTotal > 0 ? cdnHits / ownTotal : 0,
+    cdnHitRatio: ownNetwork.length > 0 ? cdnHits / ownNetwork.length : 0,
     immutableCount,
     immutableRatio: ownTotal > 0 ? immutableCount / ownTotal : 0,
   };
