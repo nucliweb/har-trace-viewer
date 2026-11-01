@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "preview": "vite preview",
     "demo:build": "node scripts/build-demo.mjs",
     "test": "vitest run",

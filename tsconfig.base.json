@@ -6,8 +6,8 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "noEmit": true,
+    "isolatedModules": true,
+    "noFallthroughCasesInSwitch": true
   }
 }

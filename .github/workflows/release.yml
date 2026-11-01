@@ -10,10 +10,11 @@ jobs:
     timeout-minutes: 15
     # The npm-publish environment asks a maintainer to approve the run before it publishes.
     environment: npm-publish
+    # contents: write lets the run create the GitHub Release for the tag
     # id-token: the OIDC token of the run, which npm (trusted publishing) accepts instead of a
     # stored secret
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v5
@@ -41,3 +42,13 @@ jobs:
       - name: Publish to npm
         working-directory: packages/cli
         run: npm publish --loglevel verbose
+      # Creates the GitHub Release for the tag with generated notes; a rerun skips it when it exists
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
+          fi
