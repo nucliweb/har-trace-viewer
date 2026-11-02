@@ -99,3 +99,23 @@
   color: var(--color-red);
   font-weight: 700;
 }
+
+.sectionTitle {
+  margin: var(--space-lg) 0 var(--space-xs);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sectionNote {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.num {
+  text-align: right;
+}

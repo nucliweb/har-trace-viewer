@@ -63,6 +63,7 @@ export const RUN_METRICS: readonly RunMetric[] = [
   "lcp",
   "cls",
   "inp",
+  "tbt",
   "dcl",
   "onLoad",
   "requests",
@@ -80,6 +81,7 @@ const RUN_METRIC_NAMES: Record<string, RunMetric> = {
   lcp: "lcp",
   cls: "cls",
   inp: "inp",
+  tbt: "tbt",
   dcl: "dcl",
   onload: "onLoad",
   requests: "requests",
@@ -88,7 +90,7 @@ const RUN_METRIC_NAMES: Record<string, RunMetric> = {
 
 export const RUN_METRIC_CHOICES = Object.keys(RUN_METRIC_NAMES);
 
-/** The metric a user names (ttfb, server-wait, fcp, lcp, cls, inp, dcl, onload, requests, transfer); null otherwise. */
+/** The metric a user names (ttfb, server-wait, fcp, lcp, cls, inp, tbt, dcl, onload, requests, transfer); null otherwise. */
 export function parseRunMetric(name: string): RunMetric | null {
   return RUN_METRIC_NAMES[name.trim().toLowerCase()] ?? null;
 }

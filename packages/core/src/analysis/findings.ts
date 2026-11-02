@@ -107,6 +107,11 @@ const RULES: [string | RegExp, Rule][] = [
     rule("third-party-before-load", "requests", "medium"),
   ],
   ["Consent manager on the page", rule("consent-manager", "fcp", "medium")],
+  // Main thread
+  ["Long tasks block the main thread", rule("long-tasks", "inp", "high")],
+  ["Third-party scripts cost main-thread time", rule("third-party-main-thread", "inp", "medium")],
+  ["Browser extensions ran in the recording", rule("browser-extensions", "none", "low")],
+  ["Main thread stays responsive", rule("main-thread-responsive", "inp", "high")],
 ];
 
 // For recommendations without a rule: the metric their label names, else their report's.
@@ -122,6 +127,7 @@ const SOURCE_METRIC: Record<string, FindingMetric> = {
   render: "lcp",
   compression: "transfer",
   thirdParty: "transfer",
+  mainThread: "inp",
 };
 
 /** A rule id from a label: kebab-case, without the counts and sizes that change between runs. */
@@ -245,7 +251,7 @@ function reports(analysis: PageAnalysis | undefined): [string, Recommendation[]]
 
 // ── Metric findings ──────────────────────────────────────────────────────────
 
-type VitalKey = "ttfb" | "fcp" | "lcp" | "cls" | "inp";
+type VitalKey = "ttfb" | "fcp" | "lcp" | "cls" | "inp" | "tbt";
 
 interface VitalRule {
   key: VitalKey;
@@ -303,7 +309,21 @@ const VITALS: VitalRule[] = [
     recommendation:
       "Keep the main thread free to respond: break up long tasks, defer non-essential JavaScript, and keep event handlers short, moving work after the next paint.",
   },
+  {
+    key: "tbt",
+    id: "high-tbt",
+    label: "TBT",
+    confidence: "medium",
+    happened: (v) =>
+      `Long tasks blocked the main thread for ${v} between the first paint and the first interaction (or the end of the recording)`,
+    recommendation:
+      "Split the work after the first paint into tasks under 50 ms (yield between chunks), move heavy computation off the main thread and defer the scripts the page does not need to become interactive.",
+  },
 ];
+
+// A finding's metric for a vital the FindingMetric list does not name: TBT predicts INP.
+const VITAL_METRIC: Partial<Record<VitalKey, FindingMetric>> = { tbt: "inp" };
+const findingMetric = (key: VitalKey): FindingMetric => VITAL_METRIC[key] ?? (key as FindingMetric);
 
 const formatVital = (key: VitalKey, value: number) =>
   key === "cls" ? String(Number(value.toFixed(3))) : formatMs(value);
@@ -328,7 +348,7 @@ function vitalFinding(
     id: vital.id,
     title: `${vital.label} ${poorRating ? "is poor" : "needs improvement"}: ${shown}`,
     severity: poorRating ? "critical" : "warning",
-    metric: vital.key,
+    metric: findingMetric(vital.key),
     summary: poorRating
       ? `${happened}, over the ${poor} limit for poor (good is ${good} or less).`
       : `${happened}, over the ${good} limit for good (poor is over ${poor}).`,
@@ -418,7 +438,7 @@ function varianceFinding(
     id: "run-to-run-variance",
     title: `Run-to-run variance in ${and(varying.map((v) => v.label))}`,
     severity: overGood.length > 0 ? "warning" : "info",
-    metric: varying[0].key,
+    metric: findingMetric(varying[0].key),
     summary: `Over ${runs} runs, ${ranges.join("; ")}. ${
       overGood.length > 0
         ? `The spread of ${and(overGood)} is wider than the good threshold, so a single run can rate differently from the median.`
@@ -487,9 +507,10 @@ export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}
 
 // ── The findings document (--format findings) ────────────────────────────────
 
-export type FindingsPageMetrics = Omit<PageMetricsSummary, "name" | "cls" | "inp"> & {
+export type FindingsPageMetrics = Omit<PageMetricsSummary, "name" | "cls" | "inp" | "tbt"> & {
   cls: number | null;
   inp: number | null;
+  tbt: number | null;
 };
 
 export interface FindingsDocumentPage {
@@ -526,6 +547,7 @@ function documentMetrics(m: PageMetricsSummary): FindingsPageMetrics {
     lcp: roundOrNull(m.lcp, 1),
     cls: roundOrNull(m.cls ?? null, 3),
     inp: roundOrNull(m.inp ?? null, 1),
+    tbt: roundOrNull(m.tbt ?? null, 1),
     dcl: roundOrNull(m.dcl, 1),
     onLoad: roundOrNull(m.onLoad, 1),
     requests: m.requests,

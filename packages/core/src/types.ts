@@ -148,6 +148,51 @@ export interface ParsedTrace {
   // The main frame's http(s) requests sent up to the last paint metric (FCP or LCP), in the
   // order they were sent. Absent in flows parsed before they were kept.
   requests?: TraceRequest[];
+  // What the renderer's main thread did: its tasks by category and script, the long tasks and
+  // the Total Blocking Time. Null when the trace has no main-thread tasks; absent in flows
+  // parsed before it was kept.
+  mainThread?: MainThreadProfile | null;
+}
+
+// ── Main thread ───────────────────────────────────────────────────────────────
+// Times in ms from navigationStart.
+
+// What a slice of main-thread time went to, as DevTools' Performance panel colours it.
+export type TaskCategory = "scripting" | "rendering" | "painting" | "parsing" | "gc" | "other";
+
+// Main-thread time under one script URL (the nearest script event around it: a function
+// call, a script evaluation or a compile), with its share of the long tasks' blocking time.
+export interface ScriptTime {
+  url: string;
+  ms: number;
+  // Of the long tasks between the first paint and the end of the TBT window, in proportion to
+  // the script's time in each.
+  blockingMs: number;
+  tasks: number; // tasks the script ran in
+}
+
+// A main-thread task longer than 50 ms, which keeps the page from answering input.
+export interface LongTask {
+  startMs: number;
+  durationMs: number;
+  blockingMs: number; // the time past 50 ms
+  url: string | null; // the script that took most of the task, when a script did
+  category: TaskCategory; // what took most of the task
+}
+
+export interface MainThreadProfile {
+  busyMs: number; // the sum of the tasks' durations
+  byCategory: Record<TaskCategory, number>;
+  scripts: ScriptTime[]; // most time first, at most 100
+  longTasks: LongTask[]; // in time order
+  // Total Blocking Time: the blocking time of the long tasks from the first contentful paint
+  // to the first interaction, or to the end of the recording without one. Null without an FCP.
+  tbtMs: number | null;
+  tbtFromMs: number | null;
+  tbtToMs: number;
+  tbtEndedBy: "interaction" | "recording";
+  // Time under chrome-extension:// scripts: the recording's browser, not the page.
+  extensionMs: number;
 }
 
 // A largestContentfulPaint::Candidate, with the image URL and node name of the matching
@@ -373,6 +418,9 @@ export interface PageAnalysis {
   // Third parties by entity, their cost before and after onLoad and the consent manager.
   // Absent in flows generated before it existed.
   thirdPartyReport?: ThirdPartyReport;
+  // Long tasks, Total Blocking Time and the scripts behind them. Absent without a trace that
+  // profiles the main thread, and in flows generated before it existed.
+  mainThreadReport?: MainThreadReport;
   // LCP attribution, render-blocking resources and critical request chains. Absent in flows
   // generated before it existed.
   renderReport?: RenderReport;
@@ -391,6 +439,7 @@ export type RunMetric =
   | "lcp"
   | "cls"
   | "inp"
+  | "tbt"
   | "dcl"
   | "onLoad"
   | "requests"
@@ -706,6 +755,40 @@ export interface ConnectionsReport {
   recommendations: Recommendation[];
 }
 
+// ── Main thread report ────────────────────────────────────────────────────────
+
+// Who a script belongs to: the page, a third party (by entity) or a browser extension.
+export type ScriptParty = "first" | "third" | "extension";
+
+export interface MainThreadScript extends ScriptTime {
+  party: ScriptParty;
+  entity: string; // the third party's name, the page's domain, or "Browser extensions"
+}
+
+// Main-thread time by who owns the scripts.
+export interface MainThreadParty {
+  entity: string;
+  party: ScriptParty;
+  category?: ThirdPartyCategory; // of a third party
+  ms: number;
+  blockingMs: number;
+  scripts: number;
+}
+
+export interface MainThreadReport {
+  busyMs: number;
+  byCategory: Record<TaskCategory, number>;
+  tbtMs: number | null;
+  tbtFromMs: number | null;
+  tbtToMs: number;
+  tbtEndedBy: "interaction" | "recording";
+  longTasks: LongTask[];
+  scripts: MainThreadScript[]; // most time first, at most 20
+  parties: MainThreadParty[]; // most time first
+  extensionMs: number;
+  recommendations: Recommendation[];
+}
+
 // ── Third parties report ──────────────────────────────────────────────────────
 
 // What a third party does on the page, from the built-in catalogue of known services.
@@ -747,6 +830,10 @@ export interface ThirdPartyEntity {
   renderBlocking: number;
   // Median TTFB of the requests sent before onLoad, beacons and 304s aside; null without any.
   medianTtfbMs: number | null;
+  // Main-thread time under the entity's scripts and their share of the long tasks' blocking
+  // time (see MainThreadProfile). Absent without a trace that profiles the main thread.
+  mainThreadMs?: number;
+  blockingMs?: number;
 }
 
 export interface ThirdPartyTotals extends ThirdPartyCost {

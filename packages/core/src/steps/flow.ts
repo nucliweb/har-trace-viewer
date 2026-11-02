@@ -5,6 +5,7 @@ import { analyzeCompression } from "../analysis/compression.js";
 import { analyzeConnections } from "../analysis/connections.js";
 import { analyzeRender } from "../analysis/render-report.js";
 import { analyzeThirdParties } from "../analysis/third-parties.js";
+import { analyzeMainThread } from "../analysis/main-thread.js";
 import { describePage, type PageContext } from "./page-context.js";
 import { generatePageSteps, generateTransitionStep } from "./page-steps.js";
 import { pageTopology } from "./topology.js";
@@ -48,6 +49,9 @@ function analyzePage(ctx: PageContext, pageFlow: PageFlow): PageAnalysis {
     connectionsReport: analyzeConnections(har),
     renderReport: analyzeRender(har, pageFlow.trace),
     thirdPartyReport: analyzeThirdParties(har, pageFlow.trace),
+    ...(pageFlow.trace?.mainThread
+      ? { mainThreadReport: analyzeMainThread(har, pageFlow.trace) }
+      : {}),
   };
 }
 

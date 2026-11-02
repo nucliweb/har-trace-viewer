@@ -121,13 +121,16 @@ describe("budgetValues", () => {
       onload: summary.onLoad,
       cls: summary.cls,
       inp: summary.inp,
+      tbt: summary.tbt,
       requests: summary.requests,
       transfer: summary.transferBytes,
       "cdn-hit-ratio": summary.cdnHitRatio,
       "cache-hit-ratio": summary.browserCacheHitRatio,
     });
     expect(traced.values.lcp).not.toBeNull();
+    expect(traced.values.tbt).toBe(0);
     expect(plain.values.lcp).toBeNull();
+    expect(plain.values.tbt).toBeNull();
   });
 });
 

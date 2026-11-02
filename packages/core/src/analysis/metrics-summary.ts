@@ -34,9 +34,15 @@ export interface PageMetricsSummary {
   /** Layout shift score and interaction latency in ms; null without a trace or matching events. */
   cls?: number | null;
   inp?: number | null;
+  /**
+   * Total Blocking Time in ms: the long tasks' time past 50 ms between the first contentful
+   * paint and the first interaction (or the end of the recording). Null without a trace that
+   * profiles the main thread, or without an FCP.
+   */
+  tbt?: number | null;
 }
 
-export type RatedMetric = "ttfb" | "fcp" | "lcp" | "cls" | "inp" | (string & {});
+export type RatedMetric = "ttfb" | "fcp" | "lcp" | "cls" | "inp" | "tbt" | (string & {});
 
 // [good upper bound, poor lower bound] (ms; CLS is unitless), per web.dev Core Web Vitals.
 export const METRIC_THRESHOLDS: Record<string, readonly [number, number]> = {
@@ -45,6 +51,8 @@ export const METRIC_THRESHOLDS: Record<string, readonly [number, number]> = {
   lcp: [2500, 4000],
   cls: [0.1, 0.25],
   inp: [200, 500],
+  // TBT has no field threshold: Lighthouse's lab limits.
+  tbt: [200, 600],
 };
 
 /** Rates a metric value. Metrics without official thresholds (onLoad, DCL) and missing values rate "none". */
@@ -76,6 +84,7 @@ export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
       lcp: trace?.lcp ?? har.pages[0]?.lcp ?? null,
       cls: trace?.cls ?? null,
       inp: trace?.inp ?? null,
+      tbt: trace?.mainThread?.tbtMs ?? null,
       dcl: har.pages[0]?.onContentLoad ?? null,
       onLoad: har.pages[0]?.onLoad ?? null,
       requests: networkRequests(har).length,

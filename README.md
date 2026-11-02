@@ -117,6 +117,12 @@ The findings say when third parties dominate the page weight (40% of the bytes o
 
 A consent manager decides which other third parties load, so the cost of consent is best read as a comparison: record the page before accepting and again after, then compare them (`htv before-consent.har --compare-with after-consent.har`). The Deltas panel in the HTML report, the Hosts tab in the terminal and the Markdown report list the third parties of both recordings joined by service, what B added first, with the requests and bytes each one added.
 
+### Main thread
+
+With a Chrome trace, htv reads the renderer's main thread: every task, what it spent its time on (scripting, rendering, painting, parsing, garbage collection) and the script each slice of time belongs to, from the function calls, script evaluations and compilations around it. From them it reports the **Total Blocking Time** (TBT): the time past 50 ms of every long task between the first contentful paint and the first interaction, or the end of the recording without one, rated with Lighthouse's lab thresholds (200 ms, 600 ms). TBT appears with the other metrics in every output, as a `--budget tbt=200` limit, and as the `high-tbt` finding when it needs improvement or is poor.
+
+The main-thread findings name the long tasks and the scripts that blocked the most (`long-tasks`), the third-party scripts that cost main-thread time by service (`third-party-main-thread`, the same catalogue as the [third parties](#third-parties) report, whose table carries each service's main-thread and blocking time), and the scripts of the browser's extensions (`browser-extensions`): their time belongs to the recording's browser, not to the page, so record in a guest or incognito window before acting on the numbers. The Markdown report and the JSON (`pageAnalyses[].mainThreadReport`) list the busy time by category and the scripts by time, party and blocking time; the Metrics panel of the HTML report and the Overview tab of the terminal show the top scripts.
+
 ### Options
 
 | Flag                       | Description                                                                                                                                                                 |
@@ -163,13 +169,13 @@ htv --har wpt.har --compare -o compare.html     # median first view (A) vs media
 
 `--budget` and `--fail-on` turn htv into a check for CI. Each budget is checked on every page, and on both sides of a comparison:
 
-| Metric                                                      | Value                                                                                               |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `ttfb`, `server-wait`, `fcp`, `lcp`, `dcl`, `onload`, `inp` | Maximum in ms: `2500`, `2500ms` or `2.5s`                                                           |
-| `cls`                                                       | Maximum score: `0.1`                                                                                |
-| `requests`                                                  | Maximum number of network requests: `80`                                                            |
-| `transfer`                                                  | Maximum bytes on the wire: `500000`, `500kb`, `1.5mb` (1 kb = 1000 bytes, as the report shows them) |
-| `cdn-hit-ratio`, `cache-hit-ratio`                          | Minimum ratio: `0.9` or `90%`                                                                       |
+| Metric                                                             | Value                                                                                               |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `ttfb`, `server-wait`, `fcp`, `lcp`, `dcl`, `onload`, `inp`, `tbt` | Maximum in ms: `2500`, `2500ms` or `2.5s`                                                           |
+| `cls`                                                              | Maximum score: `0.1`                                                                                |
+| `requests`                                                         | Maximum number of network requests: `80`                                                            |
+| `transfer`                                                         | Maximum bytes on the wire: `500000`, `500kb`, `1.5mb` (1 kb = 1000 bytes, as the report shows them) |
+| `cdn-hit-ratio`, `cache-hit-ratio`                                 | Minimum ratio: `0.9` or `90%`                                                                       |
 
 After the report is written, htv prints one line per budget per page (`pass` or `FAIL`, the actual value and the limit) and one line per [finding](#findings) that reaches `--fail-on`: a recommendation of the cache, network or another report, or a Core Web Vital or TTFB rated poor (`critical`) or in need of improvement (`warning`). The lines go to stderr, so `--format json` keeps stdout pure JSON; without `--output` no terminal report opens, and the result is printed to stdout instead, so the command runs without a TTY. A metric the page cannot provide (LCP without a trace, INP without interactions) shows `n/a` and passes, unless `--budget-strict` is given.
 

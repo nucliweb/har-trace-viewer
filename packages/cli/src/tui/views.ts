@@ -1,5 +1,6 @@
 import {
   COMPARED_METRICS,
+  SCRIPT_PARTY_LABEL,
   THIRD_PARTY_CATEGORY_LABEL,
   analyzeHops,
   analyzeThirdParties,
@@ -24,6 +25,7 @@ import type {
   FlowComparison,
   HarEntry,
   HostHop,
+  MainThreadReport,
   NetworkReport,
   Recommendation,
   StepPair,
@@ -100,7 +102,51 @@ function nodeRows(flow: Flow, pageIndex: number): Line[] {
   );
 }
 
-/** The rated metrics of one page beside its network nodes, and the region note when there is one. */
+// Scripts the Overview tab lists, most main-thread time first.
+const MAX_OVERVIEW_SCRIPTS = 8;
+
+/** The main thread of a page: busy time by category, the TBT window and the top scripts. */
+function mainThreadPanel(report: MainThreadReport, width: number): Line[] {
+  const categories = (Object.entries(report.byCategory) as [string, number][])
+    .filter(([, ms]) => ms > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, ms]) => `${category} ${formatMs(ms)}`)
+    .join(" · ");
+  const window =
+    report.tbtMs === null
+      ? "TBT n/a without an FCP"
+      : `TBT ${formatMs(report.tbtMs)} from FCP to ${report.tbtEndedBy === "interaction" ? "the first interaction" : "the end of the recording"}`;
+  const busy = `Busy ${formatMs(report.busyMs)}: ${categories}`;
+  const tasks = `${window} · ${report.longTasks.length} long ${report.longTasks.length === 1 ? "task" : "tasks"}`;
+  return panel(
+    "Main thread",
+    [
+      ...wrap(busy, width - 4),
+      ...wrap(tasks, width - 4),
+      BLANK,
+      ...table(
+        ["Script", "Party", "Entity", "Time", "Blocking", "Tasks"],
+        report.scripts
+          .slice(0, MAX_OVERVIEW_SCRIPTS)
+          .map((s) => [
+            seg(shortUrl(s.url), { bold: true }),
+            SCRIPT_PARTY_LABEL[s.party],
+            s.entity,
+            formatMs(s.ms),
+            formatMs(s.blockingMs),
+            String(s.tasks),
+          ]),
+        ["left", "left", "left", "right", "right", "right"]
+      ),
+    ],
+    width
+  );
+}
+
+/**
+ * The rated metrics of one page beside its network nodes, its main thread when the trace
+ * profiles it, and the region note when there is one.
+ */
 export function overviewRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const summary = summarizeFlowMetrics(flow)[pageIndex];
   const rows = COMPARED_METRICS.map((metric) => {
@@ -118,6 +164,8 @@ export function overviewRegion(flow: Flow, pageIndex: number, width: number): Li
     { title: "Network", body: nodeRows(flow, pageIndex) },
     width
   );
+  const mainThread = flow.pageAnalyses[pageIndex]?.mainThreadReport;
+  if (mainThread) lines.push(BLANK, ...mainThreadPanel(mainThread, width));
   const suggestion = flow.hints.suggestedClientRegion;
   if (suggestion && flow.clientRegion === "default") {
     const text = `${suggestion.reason}. Re-run with --region ${suggestion.region} to draw the Great Firewall.`;

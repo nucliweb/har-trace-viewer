@@ -19,6 +19,8 @@ export * from "./analysis/critical-path.js";
 export * from "./analysis/render-report.js";
 export * from "./analysis/third-party-entities.js";
 export * from "./analysis/third-parties.js";
+export * from "./analysis/main-thread.js";
+export * from "./parsers/main-thread.js";
 export * from "./analysis/findings.js";
 export * from "./analysis/waterfall.js";
 export * from "./analysis/compare.js";

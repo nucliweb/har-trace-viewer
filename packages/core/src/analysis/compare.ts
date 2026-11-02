@@ -34,6 +34,7 @@ export type ComparedMetric =
   | "lcp"
   | "cls"
   | "inp"
+  | "tbt"
   | "dcl"
   | "onLoad"
   | "requests"
@@ -208,6 +209,7 @@ export const COMPARED_METRICS: readonly MetricSpec[] = [
   { key: "lcp", label: "LCP", unit: "ms", value: (p) => p.lcp },
   { key: "cls", label: "CLS", unit: "score", value: (p) => p.cls },
   { key: "inp", label: "INP", unit: "ms", value: (p) => p.inp },
+  { key: "tbt", label: "TBT", unit: "ms", value: (p) => p.tbt },
   { key: "dcl", label: "DCL", unit: "ms", value: (p) => p.dcl },
   { key: "onLoad", label: "onLoad", unit: "ms", value: (p) => p.onLoad },
   { key: "requests", label: "Requests", unit: "count", value: (p) => p.requests },

@@ -513,7 +513,7 @@ CI checks (each page, both sides of a comparison; the result goes to stderr afte
 the report, or to stdout without --output instead of the terminal report):
   --budget <metric>=<value>[,<metric>=<value>...]
                       Fail when a page goes over a limit; repeatable. Metrics:
-                      ttfb, server-wait, fcp, lcp, dcl, onload, inp in ms
+                      ttfb, server-wait, fcp, lcp, dcl, onload, inp, tbt in ms
                       (2500, 2500ms or 2.5s); cls (0.1); requests (80);
                       transfer in bytes (500000, 500kb, 1.5mb; 1 kb = 1000 B);
                       cdn-hit-ratio and cache-hit-ratio as minimums (0.9 or 90%).
@@ -626,6 +626,7 @@ const RUN_METRIC_LABELS: Record<RunMetric, string> = {
   lcp: "LCP",
   cls: "CLS",
   inp: "INP",
+  tbt: "TBT",
   dcl: "DCL",
   onLoad: "onLoad",
   requests: "requests",

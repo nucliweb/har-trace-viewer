@@ -1,14 +1,7 @@
 import type { ParsedTrace, TraceLcpCandidate, TraceRequest } from "../types.js";
+import { profileMainThread } from "./main-thread.js";
+import type { RawTraceEvent } from "./main-thread.js";
 import { computeCls, computeInp } from "./web-vitals.js";
-
-interface RawTraceEvent {
-  name: string;
-  ts: number;
-  pid?: number;
-  tid?: number;
-  ph?: string;
-  args?: Record<string, unknown>;
-}
 
 interface RawTrace {
   traceEvents: RawTraceEvent[];
@@ -108,6 +101,7 @@ function parseTraceEvents(events: RawTraceEvent[]): ParsedTrace {
     lcpCandidate: lastLcp ? describeLcpCandidate(lastLcp, events, toMs) : null,
     firstInputMs: firstInput ? toMs(firstInput.ts) : null,
     requests: collectRequests(events, nav, lastPaint),
+    mainThread: profileMainThread(events, nav, fcp, firstInput ? toMs(firstInput.ts) : null),
   };
 }
 

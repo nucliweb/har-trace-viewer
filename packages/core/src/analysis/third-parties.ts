@@ -55,11 +55,31 @@ function hostsByRequests(entries: HarEntry[]): string[] {
   return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
 }
 
+// Main-thread time and blocking time by entity key, from the trace's scripts.
+function mainThreadByEntity(
+  trace: ParsedTrace | undefined
+): Map<string, { ms: number; blockingMs: number }> {
+  const byEntity = new Map<string, { ms: number; blockingMs: number }>();
+  for (const script of trace?.mainThread?.scripts ?? []) {
+    if (!/^https?:/i.test(script.url)) continue;
+    const identity = identifyThirdParty(script.url);
+    const key = `${identity.category}:${identity.name}`;
+    const sum = byEntity.get(key) ?? { ms: 0, blockingMs: 0 };
+    sum.ms += script.ms;
+    sum.blockingMs += script.blockingMs;
+    byEntity.set(key, sum);
+  }
+  return byEntity;
+}
+
+const round = (ms: number) => Math.round(ms * 1000) / 1000;
+
 function describeEntity(
   identity: ReturnType<typeof identifyThirdParty>,
   entries: HarEntry[],
   onLoad: number | null,
-  blocking: Set<string>
+  blocking: Set<string>,
+  mainThread: { ms: number; blockingMs: number } | undefined
 ): ThirdPartyEntity {
   const network = entries.filter((e) => !isBrowserCacheHit(e));
   const afterLoad = (e: HarEntry) => onLoad !== null && e.startTime > onLoad;
@@ -72,6 +92,9 @@ function describeEntity(
     afterLoad: cost(network.filter(afterLoad)),
     renderBlocking: network.filter((e) => blocking.has(e.url)).length,
     medianTtfbMs: medianTtfbByLoad(network, onLoad).beforeLoad,
+    ...(mainThread
+      ? { mainThreadMs: round(mainThread.ms), blockingMs: round(mainThread.blockingMs) }
+      : {}),
   };
 }
 
@@ -209,8 +232,20 @@ export function analyzeThirdParties(
     group.entries.push(entry);
     groups.set(key, group);
   }
+  const profiled = trace?.mainThread != null;
+  const mainThread = mainThreadByEntity(trace);
   const entities = [...groups.values()]
-    .map(({ identity, entries }) => describeEntity(identity, entries, onLoad, blocking))
+    .map(({ identity, entries }) =>
+      describeEntity(
+        identity,
+        entries,
+        onLoad,
+        blocking,
+        profiled
+          ? (mainThread.get(`${identity.category}:${identity.name}`) ?? { ms: 0, blockingMs: 0 })
+          : undefined
+      )
+    )
     .sort(byWeight);
 
   const totals = totalsOf(entities);

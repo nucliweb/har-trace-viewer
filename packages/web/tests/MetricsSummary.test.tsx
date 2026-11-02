@@ -50,6 +50,69 @@ describe("MetricsSummary", () => {
     expect(screen.getByRole("rowheader", { name: "Browser cache hit ratio" })).toBeInTheDocument();
   });
 
+  it("rates the TBT of a profiled trace and lists the scripts that took the main thread", () => {
+    const base = makeFlow();
+    const page = base.pages[0];
+    const trace = {
+      ...page.trace!,
+      mainThread: {
+        busyMs: 400,
+        byCategory: { scripting: 300, rendering: 60, painting: 20, parsing: 10, gc: 5, other: 5 },
+        scripts: [
+          { url: "https://www.googletagmanager.com/gtm.js", ms: 220, blockingMs: 150, tasks: 2 },
+          { url: "https://webperf-snippets.nucliweb.net/app.js", ms: 80, blockingMs: 10, tasks: 1 },
+        ],
+        longTasks: [
+          {
+            startMs: 300,
+            durationMs: 250,
+            blockingMs: 200,
+            url: "https://www.googletagmanager.com/gtm.js",
+            category: "scripting" as const,
+          },
+        ],
+        tbtMs: 350,
+        tbtFromMs: 181,
+        tbtToMs: 2000,
+        tbtEndedBy: "recording" as const,
+        extensionMs: 0,
+      },
+    };
+    render(
+      <MetricsSummary flow={generateFlow([{ ...page, name: "Home", trace }])} onClose={noop} />
+    );
+
+    expect(cell("TBT", 0)).toHaveTextContent("350 ms");
+    expect(cell("TBT", 0).dataset.rating).toBe("needs-improvement");
+    expect(
+      screen.getByRole("heading", { name: "Main thread · Page 1 · Home" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Busy 400 ms: scripting 300 ms · rendering 60 ms · painting 20 ms · parsing 10 ms · gc 5 ms · other 5 ms. TBT 350 ms from FCP to the end of the recording, 1 long task."
+      )
+    ).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Main-thread scripts · Page 1 · Home" });
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("gtm.js");
+    expect(rows[0]).toHaveTextContent("Third party");
+    expect(rows[0]).toHaveTextContent("Google Tag Manager");
+    expect(rows[0]).toHaveTextContent("220 ms");
+    expect(rows[0]).toHaveTextContent("150 ms");
+    expect(rows[1]).toHaveTextContent("First party");
+  });
+
+  it("shows TBT as n/a and no main-thread section for a page without a profiled trace", () => {
+    render(<MetricsSummary flow={twoPageFlow()} onClose={noop} />);
+    // The fixture trace of page 1 profiles the main thread; page 2 has no trace.
+    expect(cell("TBT", 0)).toHaveTextContent("0 ms");
+    expect(cell("TBT", 1)).toHaveTextContent("n/a");
+    expect(
+      screen.getByRole("heading", { name: "Main thread · Page 1 · Home" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Page 2/ })).not.toBeInTheDocument();
+  });
+
   it("shows the TTFB from the navigation start, rated, and the server wait apart, unrated", () => {
     const har = makeHar([]);
     // A redirect before the document: dns 10 + connect 20 + send 1 + wait 50 after 120 ms.

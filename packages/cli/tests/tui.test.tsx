@@ -7,7 +7,7 @@ import { buildWaterfall, generateFlow, parseHarJson } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { TuiApp } from "../src/tui/App";
 import { lineText } from "../src/tui/lines";
-import { hostsRegion } from "../src/tui/views";
+import { hostsRegion, overviewRegion } from "../src/tui/views";
 import { waterfallRegion } from "../src/tui/waterfall-view";
 import {
   criticalCss,
@@ -208,6 +208,48 @@ describe("TuiApp — a flow", () => {
     expect(rows.join("\n")).toMatch(/www\.googletagmanager\.com\s.*h3 · 1 conn\s/);
     // No row of the hosts table is cut short.
     expect(rows.every((row) => row.length <= 170 && !row.includes("…"))).toBe(true);
+  });
+
+  it("shows the main thread of a profiled trace on the Overview tab", () => {
+    const base = firstView();
+    const page = base.pages[0];
+    const trace = {
+      ...page.trace!,
+      mainThread: {
+        busyMs: 400,
+        byCategory: { scripting: 300, rendering: 60, painting: 20, parsing: 10, gc: 5, other: 5 },
+        scripts: [
+          { url: "https://cdn.third.com/tag-300.js", ms: 220, blockingMs: 150, tasks: 2 },
+          { url: "https://example.com/app/chunk-47TTPNLV.js", ms: 80, blockingMs: 10, tasks: 1 },
+        ],
+        longTasks: [
+          {
+            startMs: 300,
+            durationMs: 250,
+            blockingMs: 200,
+            url: "https://cdn.third.com/tag-300.js",
+            category: "scripting" as const,
+          },
+        ],
+        tbtMs: 350,
+        tbtFromMs: 150,
+        tbtToMs: 2000,
+        tbtEndedBy: "recording" as const,
+        extensionMs: 0,
+      },
+    };
+    const flow = generateFlow([{ ...page, trace }]);
+    // The test terminal is 100 columns wide: render the overview at 170 so the summary stays on one line.
+    const rows = overviewRegion(flow, 0, 170).map(lineText).join("\n");
+
+    expect(rows).toMatch(/TBT\s+350 ms/);
+    expect(rows).toMatch(/Main thread/);
+    expect(rows).toMatch(/Busy 400 ms: scripting 300 ms · rendering 60 ms · painting 20 ms/);
+    expect(rows).toMatch(/TBT 350 ms from FCP to the end of the recording · 1 long task/);
+    expect(rows).toMatch(/tag-300\.js\s+Third party\s+third\.com\s+220 ms\s+150 ms\s+2/);
+    expect(rows).toMatch(/chunk-47TTPNLV\.js\s+First party\s+example\.com\s+80 ms\s+10 ms\s+1/);
+    // Without a profile the panel stays out.
+    expect(overviewRegion(firstView(), 0, 170).map(lineText).join("\n")).not.toMatch(/Main thread/);
   });
 
   it("lists the third parties by entity under the hosts", () => {

@@ -1,12 +1,14 @@
 import {
+  SCRIPT_PARTY_LABEL,
   SERVER_WAIT_LABEL,
   TTFB_LABEL,
   formatBytes,
   formatMs,
   rateMetric,
+  shortUrl,
   summarizeFlowMetrics,
 } from "@htv/core";
-import type { Flow, MetricRating, PageMetricsSummary } from "@htv/core";
+import type { Flow, MainThreadReport, MetricRating, PageMetricsSummary } from "@htv/core";
 import { useMemo } from "react";
 import styles from "./MetricsSummary.module.css";
 
@@ -38,6 +40,7 @@ const ROWS: Row[] = [
   { label: "LCP", metric: "lcp", value: (p) => p.lcp, format: (p) => formatMs(p.lcp) },
   { label: "CLS", metric: "cls", value: (p) => p.cls, format: (p) => formatCls(p.cls) },
   { label: "INP", metric: "inp", value: (p) => p.inp, format: (p) => formatMs(p.inp) },
+  { label: "TBT", metric: "tbt", value: (p) => p.tbt, format: (p) => formatMs(p.tbt) },
   { label: "DCL", value: (p) => p.dcl, format: (p) => formatMs(p.dcl) },
   { label: "onLoad", value: (p) => p.onLoad, format: (p) => formatMs(p.onLoad) },
   { label: "Requests", value: (p) => p.requests, format: (p) => String(p.requests) },
@@ -68,8 +71,68 @@ export const RATING_TEXT: Record<MetricRating, string> = {
   none: "",
 };
 
+const TOP_SCRIPTS = 8;
+
+/** The main thread of one page: its busy time, the TBT window and the scripts that took the time. */
+function MainThreadSection({ report, label }: { report: MainThreadReport; label: string }) {
+  const categories = (Object.entries(report.byCategory) as [string, number][])
+    .filter(([, ms]) => ms > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, ms]) => `${category} ${formatMs(ms)}`)
+    .join(" · ");
+  const window =
+    report.tbtMs === null
+      ? "TBT n/a without an FCP"
+      : `TBT ${formatMs(report.tbtMs)} from FCP to ${report.tbtEndedBy === "interaction" ? "the first interaction" : "the end of the recording"}`;
+  return (
+    <>
+      <h3 className={styles.sectionTitle}>{`Main thread · ${label}`}</h3>
+      <p className={styles.sectionNote}>
+        {`Busy ${formatMs(report.busyMs)}: ${categories}. ${window}, ${report.longTasks.length} long ${report.longTasks.length === 1 ? "task" : "tasks"}.`}
+      </p>
+      {report.scripts.length > 0 && (
+        <table className={styles.table}>
+          <caption className={styles.caption}>{`Main-thread scripts · ${label}`}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Script</th>
+              <th scope="col">Party</th>
+              <th scope="col">Entity</th>
+              <th scope="col">Time</th>
+              <th
+                scope="col"
+                title="Its share of the long tasks' time past 50 ms, within the TBT window"
+              >
+                Blocking
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.scripts.slice(0, TOP_SCRIPTS).map((s) => (
+              <tr key={s.url}>
+                <th scope="row" title={s.url}>
+                  {shortUrl(s.url)}
+                </th>
+                <td>{SCRIPT_PARTY_LABEL[s.party]}</td>
+                <td>{s.entity}</td>
+                <td className={styles.num}>{formatMs(s.ms)}</td>
+                <td className={styles.num}>{formatMs(s.blockingMs)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
+}
+
 export function MetricsSummary({ flow, onClose }: Props) {
   const pages = useMemo(() => summarizeFlowMetrics(flow), [flow]);
+  const mainThreads = flow.pageAnalyses.flatMap((analysis, i) =>
+    analysis.mainThreadReport
+      ? [{ report: analysis.mainThreadReport, label: `Page ${i + 1} · ${pages[i].name}` }]
+      : []
+  );
 
   return (
     <div className={styles.panel}>
@@ -113,6 +176,9 @@ export function MetricsSummary({ flow, onClose }: Props) {
             ))}
           </tbody>
         </table>
+        {mainThreads.map(({ report, label }) => (
+          <MainThreadSection key={label} report={report} label={label} />
+        ))}
       </div>
     </div>
   );

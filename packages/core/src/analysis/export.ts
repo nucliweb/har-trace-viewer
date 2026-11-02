@@ -30,6 +30,7 @@ import type {
   HarEntry,
   MetricSpread,
   RunMetric,
+  MainThreadReport,
   RunSpread,
   ThirdPartyReport,
 } from "../types.js";
@@ -147,6 +148,7 @@ const METRIC_ROWS: readonly MetricRow[] = [
   { key: "lcp", label: "LCP", unit: "ms", value: (m) => m.lcp },
   { key: "cls", label: "CLS", unit: "score", value: (m) => m.cls },
   { key: "inp", label: "INP", unit: "ms", value: (m) => m.inp },
+  { key: "tbt", label: "TBT", unit: "ms", value: (m) => m.tbt },
   { key: "dcl", label: "DCL", unit: "ms", value: (m) => m.dcl },
   { key: "onLoad", label: "onLoad", unit: "ms", value: (m) => m.onLoad },
   { key: "requests", label: "Requests", unit: "count", value: (m) => m.requests },
@@ -295,6 +297,41 @@ function thirdPartiesSection(flow: Flow, index: number): string[] {
   ];
 }
 
+const PARTY_LABEL = { first: "First party", third: "Third party", extension: "Extension" } as const;
+
+function mainThreadSection(report: MainThreadReport | undefined): string[] {
+  if (!report) return ["No main-thread profile: the trace has no main-thread tasks."];
+  const categories = (Object.entries(report.byCategory) as [string, number][])
+    .filter(([, ms]) => ms > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, ms]) => `${category} ${formatMs(ms)}`)
+    .join(", ");
+  const window =
+    report.tbtMs === null
+      ? "TBT n/a (no FCP)"
+      : `TBT ${formatMs(report.tbtMs)} (FCP → ${report.tbtEndedBy === "interaction" ? "first interaction" : "end of recording"}, ${formatMs(report.tbtToMs)})`;
+  const lines = [
+    `Main thread busy ${formatMs(report.busyMs)}: ${categories} · ${window} · ${report.longTasks.length} long ${report.longTasks.length === 1 ? "task" : "tasks"}`,
+    "",
+  ];
+  if (report.scripts.length > 0) {
+    lines.push(
+      ...table(
+        ["Script", "Party", "Entity", "Time", "Blocking", "Tasks"],
+        report.scripts.map((s) => [
+          s.url,
+          PARTY_LABEL[s.party],
+          s.entity,
+          formatMs(s.ms),
+          formatMs(s.blockingMs),
+          String(s.tasks),
+        ])
+      )
+    );
+  }
+  return lines;
+}
+
 function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSummary): string[] {
   const page = flow.pages[index];
   const heading = side ? `${side.toUpperCase()}: ${page.name}` : page.name;
@@ -321,6 +358,10 @@ function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSu
     "### Third parties",
     "",
     ...thirdPartiesSection(flow, index),
+    "",
+    "### Main thread",
+    "",
+    ...mainThreadSection(flow.pageAnalyses[index]?.mainThreadReport),
     "",
   ];
 }
@@ -367,8 +408,8 @@ function comparisonSection(a: Flow, b: Flow): string[] {
 /**
  * A report to paste into a ticket or a doc, GitHub-flavoured Markdown without HTML: per page
  * its metrics, findings (by severity, with the recommendation and up to five evidence rows),
- * hosts and third parties. A comparison opens with a table of the metrics of A and B and one of
- * their third parties.
+ * hosts, third parties and main thread. A comparison opens with a table of the metrics of A and B
+ * and one of their third parties.
  */
 export function markdownReport(flow: Flow, compare?: Flow): string {
   const sides = sidesOf(flow, compare);

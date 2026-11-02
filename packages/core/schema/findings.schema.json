@@ -61,6 +61,7 @@
         "lcp",
         "cls",
         "inp",
+        "tbt",
         "dcl",
         "onLoad",
         "requests",
@@ -83,6 +84,10 @@
         "lcp": { "$ref": "#/$defs/nullableNumber" },
         "cls": { "$ref": "#/$defs/nullableNumber" },
         "inp": { "$ref": "#/$defs/nullableNumber" },
+        "tbt": {
+          "$ref": "#/$defs/nullableNumber",
+          "description": "Total Blocking Time: the long tasks' time past 50 ms between the first contentful paint and the first interaction or the end of the recording; null without a trace that profiles the main thread."
+        },
         "dcl": { "$ref": "#/$defs/nullableNumber" },
         "onLoad": { "$ref": "#/$defs/nullableNumber" },
         "requests": {
