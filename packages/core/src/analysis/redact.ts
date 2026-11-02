@@ -240,6 +240,12 @@ class Redactor {
       this.maskedHosts.set(host, `host-${this.maskedHosts.size + 1}${MASKED_HOST_SUFFIX}`);
       this.report.hosts++;
     }
+    // A masked host's registrable domain names it too (the third-party report calls an unknown
+    // service by its domain): it takes the placeholder of the first host under it.
+    for (const [host, masked] of [...this.maskedHosts]) {
+      const root = getRootDomain(`https://${host}/`).toLowerCase();
+      if (!this.maskedHosts.has(root)) this.maskedHosts.set(root, masked);
+    }
     const alternatives = [...this.maskedHosts.keys()]
       .sort((a, b) => b.length - a.length)
       .map(escapeRegExp);

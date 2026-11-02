@@ -124,6 +124,24 @@ describe("markdownReport", () => {
     expect(lines.some((l) => l.startsWith("| example.com |"))).toBe(true);
   });
 
+  it("lists the third parties as a table under the hosts", () => {
+    const i = lines.indexOf("### Third parties");
+    expect(i).toBeGreaterThan(lines.indexOf("### Hosts"));
+    expect(lines[i + 2]).toBe("1 third party · 5% of the bytes · 20% of the requests");
+    expect(lines[i + 4]).toBe(
+      "| Third party | Category | Hosts | Requests | Bytes | Before onLoad | Render-blocking |"
+    );
+    expect(lines[i + 6]).toBe(
+      "| example.net | Other | cdn.example.net | 1 | 1.0 KB | 1 (1.0 KB) | 0 |"
+    );
+  });
+
+  it("says so when a page has no third parties", () => {
+    const flow = generateFlow([{ name: "Own", har: makeHar([makeEntry()]) }]);
+    const out = markdownReport(flow).split("\n");
+    expect(out[out.indexOf("### Third parties") + 2]).toBe("No third-party requests.");
+  });
+
   it("escapes pipes in headings and table cells", () => {
     expect(markdownReport(flowNamed("a|b"))).toContain("## a\\|b");
   });
@@ -135,6 +153,13 @@ describe("markdownReport", () => {
     expect(out[cmp + 2]).toBe("| Metric | A | B | Delta | Rating |");
     expect(cmp).toBeLessThan(out.indexOf("## A: Cold"));
     expect(out.indexOf("## A: Cold")).toBeLessThan(out.indexOf("## B: Warm"));
+    const third = out.indexOf("## Third parties A vs B");
+    expect(third).toBeGreaterThan(cmp);
+    expect(third).toBeLessThan(out.indexOf("## A: Cold"));
+    expect(out[third + 2]).toBe(
+      "| Third party | Category | Requests A | Requests B | Δ | Bytes A | Bytes B | Δ |"
+    );
+    expect(out[third + 4]).toBe("| example.net | Other | 1 | 1 | 0 | 1.0 KB | 1.0 KB | 0 B |");
   });
 
   it("shows the page's value and the min–max of each metric for the median of several runs", () => {

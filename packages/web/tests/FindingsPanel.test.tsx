@@ -19,11 +19,12 @@ function findings() {
       responseHeaders: { "cache-control": "no-store" },
     }),
   ]);
-  // The synthetic responses carry no Content-Encoding, which the compression report flags:
-  // leave that source out so the panel's groups stay the ones this file describes.
+  // The synthetic responses carry no Content-Encoding, which the compression report flags, and
+  // the page has no third party, which the third-party report rates as good: leave those sources
+  // out so the panel's groups stay the ones this file describes.
   return collectFindings(
     generateFlow([{ name: "Home", har, trace: makeTrace(900, 5_200) }])
-  ).filter((f) => f.source !== "compression");
+  ).filter((f) => f.source !== "compression" && f.source !== "thirdParty");
 }
 
 const group = (name: string) => screen.getByRole("region", { name: new RegExp(`^${name}`) });

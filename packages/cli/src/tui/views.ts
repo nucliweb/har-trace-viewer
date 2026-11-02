@@ -1,6 +1,8 @@
 import {
   COMPARED_METRICS,
+  THIRD_PARTY_CATEGORY_LABEL,
   analyzeHops,
+  analyzeThirdParties,
   compareStepMetrics,
   formatBytes,
   formatDelta,
@@ -25,6 +27,7 @@ import type {
   NetworkReport,
   Recommendation,
   StepPair,
+  ThirdPartyReport,
 } from "@htv/core";
 import {
   BLANK,
@@ -343,15 +346,85 @@ function connectionCost(hop: HostHop): string {
   return c ? [c.dns, c.connect, c.ssl].map(formatMs).join(" / ") : "reused";
 }
 
+const thirdPartiesOf = (flow: Flow, pageIndex: number): ThirdPartyReport => {
+  const { har, trace } = flow.pages[pageIndex];
+  return flow.pageAnalyses[pageIndex]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
+};
+
+const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${formatBytes(c.bytes)})`;
+
+/** The third parties of a page by entity: what each one cost, when it ran and whether it held the first paint. */
+function thirdPartiesPanel(report: ThirdPartyReport, title: string, width: number): Line[] {
+  if (report.entities.length === 0) {
+    return panel(title, [line(seg("No third-party requests.", { dim: true }))], width);
+  }
+  const count = report.entities.length;
+  const summary = [
+    `${count} third ${count === 1 ? "party" : "parties"}`,
+    `${pct(report.byteShare)} of the bytes`,
+    `${pct(report.requestShare)} of the requests`,
+    `${report.totals.renderBlocking} render-blocking`,
+    ...(report.consentManager ? [`consent manager: ${report.consentManager}`] : []),
+  ].join(" · ");
+  return panel(
+    title,
+    [
+      line(seg(summary, { dim: true })),
+      BLANK,
+      ...table(
+        [
+          "Third party",
+          "Category",
+          "Requests",
+          "Cached",
+          "Transfer",
+          "Before onLoad",
+          "After onLoad",
+          "Blocking",
+          "Median TTFB",
+          "Hosts",
+        ],
+        report.entities.map((e) => [
+          seg(e.name, { bold: true }),
+          THIRD_PARTY_CATEGORY_LABEL[e.category],
+          String(e.requests),
+          String(e.cacheHits),
+          formatBytes(e.bytes),
+          cost(e.beforeLoad),
+          cost(e.afterLoad),
+          String(e.renderBlocking),
+          formatMs(e.medianTtfbMs),
+          e.hosts.join(", "),
+        ]),
+        ["left", "left", "right", "right", "right", "right", "right", "right", "right", "left"]
+      ),
+    ],
+    width
+  );
+}
+
 /**
  * Every host of a page: requests, browser-cache hits, bytes, median TTFB before and after
- * onLoad, connection cost, CDN cache hits, provider and PoP.
+ * onLoad, connection cost, CDN cache hits, provider and PoP. Below it, the third parties by
+ * entity.
  */
 export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const { har } = flow.pages[pageIndex];
   const hops = analyzeHops(har, har.documentEntry.url);
+  return [
+    ...hostsPanel(hops, `Hosts · ${pageLabel(flow, pageIndex)}`, width),
+    BLANK,
+    ...thirdPartiesPanel(
+      thirdPartiesOf(flow, pageIndex),
+      `Third parties · ${pageLabel(flow, pageIndex)}`,
+      width
+    ),
+  ];
+}
+
+function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
   return panel(
-    `Hosts · ${pageLabel(flow, pageIndex)}`,
+    title,
     table(
       [
         "Host",
@@ -400,8 +473,68 @@ export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[
   );
 }
 
-/** The hosts of both flows joined by name; the TTFB delta covers the URLs both requested. */
+/** The third parties of both flows joined by entity, what B added first. */
+function thirdPartyDeltaPanel(
+  comparison: FlowComparison,
+  names: { a: string; b: string },
+  width: number
+): Line[] {
+  const { a, b, entities } = comparison.thirdParties;
+  const title = `Third parties · A ${names.a} vs B ${names.b}`;
+  if (entities.length === 0) {
+    return panel(
+      title,
+      [line(seg("No third-party requests on either side.", { dim: true }))],
+      width
+    );
+  }
+  const consent = [a.consentManager, b.consentManager].some(Boolean)
+    ? ` · consent manager: A ${a.consentManager ?? "none"}, B ${b.consentManager ?? "none"}`
+    : "";
+  const summary = `Third-party bytes: A ${formatBytes(a.totals.bytes)} (${pct(a.byteShare)}) → B ${formatBytes(b.totals.bytes)} (${pct(b.byteShare)})${consent}`;
+  return panel(
+    title,
+    [
+      line(seg(summary, { dim: true })),
+      BLANK,
+      ...table(
+        ["Third party", "Category", "Req A", "Req B", "Δ", "Bytes A", "Bytes B", "Δ bytes"],
+        entities.map((pair) => [
+          seg(pair.name, { bold: true }),
+          THIRD_PARTY_CATEGORY_LABEL[pair.category],
+          String(pair.a?.requests ?? 0),
+          String(pair.b?.requests ?? 0),
+          seg(formatDelta(pair.requests, "count"), {
+            color: DELTA_COLOR[rateDelta(pair.requests)],
+          }),
+          formatBytes(pair.a?.bytes ?? 0),
+          formatBytes(pair.b?.bytes ?? 0),
+          seg(formatDelta(pair.bytes, "bytes"), { color: DELTA_COLOR[rateDelta(pair.bytes)] }),
+        ]),
+        ["left", "left", "right", "right", "right", "right", "right", "right"]
+      ),
+    ],
+    width
+  );
+}
+
+/**
+ * The hosts of both flows joined by name; the TTFB delta covers the URLs both requested. Below
+ * them, the third parties of both flows joined by entity.
+ */
 export function hostDeltaRegion(
+  comparison: FlowComparison,
+  names: { a: string; b: string },
+  width: number
+): Line[] {
+  return [
+    ...hostDeltaPanel(comparison, names, width),
+    BLANK,
+    ...thirdPartyDeltaPanel(comparison, names, width),
+  ];
+}
+
+function hostDeltaPanel(
   comparison: FlowComparison,
   names: { a: string; b: string },
   width: number

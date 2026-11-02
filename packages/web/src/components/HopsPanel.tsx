@@ -1,11 +1,19 @@
-import { formatBytes, formatMs, protocolLabel, summarizeHops } from "@htv/core";
-import type { HostHop } from "@htv/core";
+import {
+  THIRD_PARTY_CATEGORY_LABEL,
+  formatBytes,
+  formatMs,
+  protocolLabel,
+  summarizeHops,
+} from "@htv/core";
+import type { HostHop, ThirdPartyReport } from "@htv/core";
 import { useMemo } from "react";
 import { regionLabel } from "../lib/region-label.js";
 import styles from "./HopsPanel.module.css";
 
 interface Props {
   hops: HostHop[];
+  /** The page's third parties by entity; absent for flows generated before it existed. */
+  thirdParties?: ThirdPartyReport;
   pageLabel: string;
   onClose: () => void;
 }
@@ -19,7 +27,77 @@ function formatConnection(hop: HostHop): string {
   return [c.dns, c.connect, c.ssl].map(formatMs).join(" / ");
 }
 
-export function HopsPanel({ hops, pageLabel, onClose }: Props) {
+const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${formatBytes(c.bytes)})`;
+
+function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
+  const count = report.entities.length;
+  const summary =
+    count === 0
+      ? "No third-party requests."
+      : [
+          `${count} third ${count === 1 ? "party" : "parties"}`,
+          `${pct(report.byteShare)} of the bytes`,
+          `${pct(report.requestShare)} of the requests`,
+          `${report.totals.renderBlocking} render-blocking`,
+          ...(report.consentManager ? [`consent manager: ${report.consentManager}`] : []),
+        ].join(" · ");
+  return (
+    <>
+      <h3 className={styles.sectionTitle}>Third parties</h3>
+      <p className={styles.sectionSummary}>{summary}</p>
+      {count > 0 && (
+        <table className={styles.table}>
+          <caption className={styles.caption}>Third parties per entity</caption>
+          <thead>
+            <tr>
+              <th scope="col">Third party</th>
+              <th scope="col">Category</th>
+              <th scope="col">Hosts</th>
+              <th scope="col">Requests</th>
+              <th scope="col" title="Served from the browser cache, without a request">
+                Cached
+              </th>
+              <th scope="col">Bytes</th>
+              <th scope="col" title="Network requests sent up to the load event, and their bytes">
+                Before onLoad
+              </th>
+              <th scope="col" title="Network requests sent after the load event, and their bytes">
+                After onLoad
+              </th>
+              <th scope="col" title="Requests that held the first paint">
+                Render-blocking
+              </th>
+              <th
+                scope="col"
+                title="Median TTFB of the requests sent before onLoad, beacons and 304 revalidations aside"
+              >
+                Median TTFB
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.entities.map((e) => (
+              <tr key={`${e.category}:${e.name}`}>
+                <th scope="row">{e.name}</th>
+                <td>{THIRD_PARTY_CATEGORY_LABEL[e.category]}</td>
+                <td className={styles.hosts}>{e.hosts.join(", ")}</td>
+                <td className={styles.num}>{e.requests}</td>
+                <td className={styles.num}>{e.cacheHits}</td>
+                <td className={styles.num}>{formatBytes(e.bytes)}</td>
+                <td className={styles.num}>{cost(e.beforeLoad)}</td>
+                <td className={styles.num}>{cost(e.afterLoad)}</td>
+                <td className={styles.num}>{e.renderBlocking}</td>
+                <td className={styles.num}>{formatMs(e.medianTtfbMs)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
+}
+
+export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
   const summary = useMemo(() => summarizeHops(hops), [hops]);
   // Stable sort keeps the requests order inside each party.
   const ordered = useMemo(
@@ -106,6 +184,7 @@ export function HopsPanel({ hops, pageLabel, onClose }: Props) {
             })}
           </tbody>
         </table>
+        {thirdParties && <ThirdPartiesSection report={thirdParties} />}
       </div>
     </div>
   );

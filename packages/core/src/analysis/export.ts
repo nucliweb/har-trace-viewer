@@ -13,6 +13,8 @@ import { compareFlows } from "./compare.js";
 import type { ComparedMetric } from "./compare.js";
 import { collectFindings } from "./findings.js";
 import { analyzeHops, protocolLabel } from "./hops.js";
+import { analyzeThirdParties } from "./third-parties.js";
+import { THIRD_PARTY_CATEGORY_LABEL } from "./third-party-entities.js";
 import {
   rateMetric,
   summarizeFlowMetrics,
@@ -29,6 +31,7 @@ import type {
   MetricSpread,
   RunMetric,
   RunSpread,
+  ThirdPartyReport,
 } from "../types.js";
 
 // Every export takes the flow to report and, for a comparison, the second flow (B).
@@ -257,6 +260,41 @@ function hostsTable(flow: Flow, index: number): string[] {
   );
 }
 
+const pct = (share: number) => `${Math.round(share * 100)}%`;
+
+function thirdPartiesOf(flow: Flow, index: number): ThirdPartyReport {
+  const { har, trace } = flow.pages[index];
+  return flow.pageAnalyses[index]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
+}
+
+function thirdPartiesSection(flow: Flow, index: number): string[] {
+  const report = thirdPartiesOf(flow, index);
+  if (report.entities.length === 0) return ["No third-party requests."];
+  const count = report.entities.length;
+  const summary = [
+    `${count} third ${count === 1 ? "party" : "parties"}`,
+    `${pct(report.byteShare)} of the bytes`,
+    `${pct(report.requestShare)} of the requests`,
+    ...(report.consentManager ? [`consent manager: ${report.consentManager}`] : []),
+  ].join(" · ");
+  return [
+    summary,
+    "",
+    ...table(
+      ["Third party", "Category", "Hosts", "Requests", "Bytes", "Before onLoad", "Render-blocking"],
+      report.entities.map((e) => [
+        e.name,
+        THIRD_PARTY_CATEGORY_LABEL[e.category],
+        e.hosts.join(", "),
+        String(e.requests),
+        formatBytes(e.bytes),
+        `${e.beforeLoad.requests} (${formatBytes(e.beforeLoad.bytes)})`,
+        String(e.renderBlocking),
+      ])
+    ),
+  ];
+}
+
 function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSummary): string[] {
   const page = flow.pages[index];
   const heading = side ? `${side.toUpperCase()}: ${page.name}` : page.name;
@@ -280,6 +318,34 @@ function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSu
     "",
     ...hostsTable(flow, index),
     "",
+    "### Third parties",
+    "",
+    ...thirdPartiesSection(flow, index),
+    "",
+  ];
+}
+
+function thirdPartyComparisonSection(a: Flow, b: Flow): string[] {
+  const { entities } = compareFlows(a, b).thirdParties;
+  if (entities.length === 0) return [];
+  const rows = entities.map((pair) => [
+    pair.name,
+    THIRD_PARTY_CATEGORY_LABEL[pair.category],
+    String(pair.a?.requests ?? 0),
+    String(pair.b?.requests ?? 0),
+    formatDelta(pair.requests, "count"),
+    formatBytes(pair.a?.bytes ?? 0),
+    formatBytes(pair.b?.bytes ?? 0),
+    formatDelta(pair.bytes, "bytes"),
+  ]);
+  return [
+    "## Third parties A vs B",
+    "",
+    ...table(
+      ["Third party", "Category", "Requests A", "Requests B", "Δ", "Bytes A", "Bytes B", "Δ"],
+      rows
+    ),
+    "",
   ];
 }
 
@@ -300,13 +366,16 @@ function comparisonSection(a: Flow, b: Flow): string[] {
 
 /**
  * A report to paste into a ticket or a doc, GitHub-flavoured Markdown without HTML: per page
- * its metrics, findings (by severity, with the recommendation and up to five evidence rows)
- * and hosts. A comparison opens with a table of the metrics of A and B.
+ * its metrics, findings (by severity, with the recommendation and up to five evidence rows),
+ * hosts and third parties. A comparison opens with a table of the metrics of A and B and one of
+ * their third parties.
  */
 export function markdownReport(flow: Flow, compare?: Flow): string {
   const sides = sidesOf(flow, compare);
   const lines = ["# HAR Trace Viewer report", ""];
-  if (compare) lines.push(...comparisonSection(flow, compare));
+  if (compare) {
+    lines.push(...comparisonSection(flow, compare), ...thirdPartyComparisonSection(flow, compare));
+  }
   for (const side of sides) {
     const summaries = summarizeFlowMetrics(side.flow);
     summaries.forEach((summary, index) => lines.push(...pageSection(side, index, summary)));

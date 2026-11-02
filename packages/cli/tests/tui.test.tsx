@@ -210,6 +210,45 @@ describe("TuiApp — a flow", () => {
     expect(rows.every((row) => row.length <= 170 && !row.includes("…"))).toBe(true);
   });
 
+  it("lists the third parties by entity under the hosts", () => {
+    const rows = hostsRegion(firstView(), 0, 170).map(lineText).join("\n");
+
+    expect(rows).toMatch(/Third parties · /);
+    expect(rows).toMatch(
+      /1 third party · \d+% of the bytes · \d+% of the requests · 0 render-blocking/
+    );
+    expect(rows).toMatch(/Third party\s+Category\s+Requests\s+Cached\s+Transfer\s+Before onLoad/);
+    expect(rows).toMatch(
+      /third\.com\s+Other\s+1\s+0\s+1\.0 KB\s+1 \(1\.0 KB\)\s+0 \(0 B\)\s+0\s+10 ms\s+cdn\.third\.com/
+    );
+  });
+
+  it("names the known third parties of a real recording", () => {
+    const har = parseHarJson(
+      readFileSync(
+        join(__dirname, "../../core/tests/fixtures/webperf-snippets.har.fixture.json"),
+        "utf8"
+      )
+    );
+    const rows = hostsRegion(generateFlow([{ name: "Cold", har }]), 0, 170)
+      .map(lineText)
+      .join("\n");
+
+    expect(rows).toMatch(/Google Tag Manager\s+Tag manager\s+1\s/);
+    expect(rows).toMatch(/DebugBear\s+Analytics\s+2\s/);
+  });
+
+  it("compares the third parties of both sides on the Hosts tab", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={60} />
+    );
+
+    await press(stdin, "5");
+    expect(lastFrame()).toMatch(/Third parties · A First view vs B Repeat view/);
+    expect(lastFrame()).toMatch(/Third-party bytes: A 1\.0 KB \(\d+%\) → B 0 B \(0%\)/);
+    expect(lastFrame()).toMatch(/third\.com\s+Other\s+1\s+0\s+−1\s+1\.0 KB\s+0 B\s+−1\.0 KB/);
+  });
+
   it("captions the third parties with their median TTFB", async () => {
     const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 

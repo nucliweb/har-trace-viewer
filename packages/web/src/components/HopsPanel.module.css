@@ -154,3 +154,25 @@
 .dot_google-cloud-cdn {
   background: var(--color-green);
 }
+
+.sectionTitle {
+  margin: var(--space-lg) 0 var(--space-xs);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sectionSummary {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+/* Host lists may run long: wrap them instead of stretching the table. */
+.table td.hosts {
+  white-space: normal;
+  max-width: 320px;
+}

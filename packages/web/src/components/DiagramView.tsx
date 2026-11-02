@@ -197,6 +197,7 @@ export function DiagramView({ flow }: Props) {
         {showHops && (
           <HopsPanel
             hops={hops}
+            thirdParties={analysis.thirdPartyReport}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
             onClose={() => setShowHops(false)}
           />

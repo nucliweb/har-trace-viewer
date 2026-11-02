@@ -166,8 +166,16 @@
         },
         "source": {
           "type": "string",
-          "description": "The report the finding comes from: cache, network, render, compression, connections, or metrics for the Core Web Vitals and TTFB.",
-          "examples": ["cache", "network", "render", "compression", "connections", "metrics"]
+          "description": "The report the finding comes from: cache, network, render, compression, connections, thirdParty, or metrics for the Core Web Vitals and TTFB.",
+          "examples": [
+            "cache",
+            "network",
+            "render",
+            "compression",
+            "connections",
+            "thirdParty",
+            "metrics"
+          ]
         }
       }
     }

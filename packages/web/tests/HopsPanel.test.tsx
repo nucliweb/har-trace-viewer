@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { analyzeHops, generateFlow } from "@htv/core";
+import { analyzeHops, analyzeThirdParties, generateFlow } from "@htv/core";
 import type { Flow, HarEntry, ParsedHar } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { HopsPanel } from "../src/components/HopsPanel.js";
@@ -178,6 +178,52 @@ describe("HopsPanel", () => {
     expect(cell("old\\.example\\.org")).toBe("n/a");
   });
 
+  it("lists the third parties by entity when given the report", () => {
+    render(
+      <HopsPanel
+        hops={analyzeHops(har, doc.url)}
+        thirdParties={analyzeThirdParties(har, undefined)}
+        pageLabel="Page 1"
+        onClose={noop}
+      />
+    );
+    expect(
+      screen.getByText("1 third party · 50% of the bytes · 50% of the requests · 0 render-blocking")
+    ).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Third parties per entity" });
+    const row = within(table).getByRole("row", { name: /^thirdparty\.net/ });
+    const cells = within(row)
+      .getAllByRole("cell")
+      .map((td) => td.textContent);
+    expect(cells).toEqual([
+      "Other",
+      "cdn.thirdparty.net",
+      "2",
+      "0",
+      "4.0 KB",
+      "2 (4.0 KB)",
+      "0 (0 B)",
+      "0",
+      "50 ms",
+    ]);
+  });
+
+  it("says so when the page has no third parties", () => {
+    const own: ParsedHar = { ...har, entries: [doc, entry("https://static.example.com/a.js")] };
+    render(
+      <HopsPanel
+        hops={analyzeHops(own, doc.url)}
+        thirdParties={analyzeThirdParties(own, undefined)}
+        pageLabel="Page 1"
+        onClose={noop}
+      />
+    );
+    expect(screen.getByText("No third-party requests.")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("table", { name: "Third parties per entity" })
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the page label and the summary line", () => {
     panel();
     expect(screen.getByRole("heading", { name: "Page 1 · Home" })).toBeInTheDocument();
@@ -192,6 +238,7 @@ describe("Hops toggle in DiagramView", () => {
     expect(screen.queryByRole("table", { name: "Hops per host" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle hops" }));
     expect(screen.getByRole("table", { name: "Hops per host" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Third parties per entity" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle metrics summary" }));
     expect(screen.queryByRole("table", { name: "Hops per host" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle hops" }));

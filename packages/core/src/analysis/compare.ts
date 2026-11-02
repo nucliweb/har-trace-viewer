@@ -1,4 +1,13 @@
-import type { DiagramStep, Flow, Metric, StepKind } from "../types.js";
+import type {
+  DiagramStep,
+  Flow,
+  Metric,
+  StepKind,
+  ThirdPartyCategory,
+  ThirdPartyEntity,
+  ThirdPartyReport,
+} from "../types.js";
+import { analyzeThirdParties } from "./third-parties.js";
 import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
 import type { DeltaUnit } from "../utils/format.js";
@@ -70,10 +79,29 @@ export interface ComparisonCaveat {
   text: string;
 }
 
+/** A third party of either flow, with B − A of its network requests and bytes. */
+export interface ThirdPartyPair {
+  name: string;
+  category: ThirdPartyCategory;
+  a?: ThirdPartyEntity;
+  b?: ThirdPartyEntity;
+  requests: number;
+  bytes: number;
+}
+
+/** The third parties of both flows: each side's report and the entities joined by name. */
+export interface ThirdPartyComparison {
+  a: ThirdPartyReport;
+  b: ThirdPartyReport;
+  // What B added first (biggest byte delta), then what both share, then what B dropped.
+  entities: ThirdPartyPair[];
+}
+
 export interface FlowComparison {
   pairs: StepPair[];
   metrics: MetricDelta[];
   hops: HopPair[];
+  thirdParties: ThirdPartyComparison;
   caveats: ComparisonCaveat[];
 }
 
@@ -289,6 +317,35 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
   });
 }
 
+const firstPageThirdParties = (flow: Flow): ThirdPartyReport => {
+  const { har, trace } = flow.pages[0];
+  return flow.pageAnalyses[0]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
+};
+
+const entityKey = (e: ThirdPartyEntity) => `${e.category}:${e.name}`;
+
+function compareThirdParties(a: Flow, b: Flow): ThirdPartyComparison {
+  const reportA = firstPageThirdParties(a);
+  const reportB = firstPageThirdParties(b);
+  const pairs = new Map<string, ThirdPartyPair>();
+  const pairFor = (e: ThirdPartyEntity) =>
+    pairs.get(entityKey(e)) ?? { name: e.name, category: e.category, requests: 0, bytes: 0 };
+  for (const entity of reportA.entities) {
+    pairs.set(entityKey(entity), { ...pairFor(entity), a: entity });
+  }
+  for (const entity of reportB.entities) {
+    pairs.set(entityKey(entity), { ...pairFor(entity), b: entity });
+  }
+  const entities = [...pairs.values()]
+    .map((pair) => ({
+      ...pair,
+      requests: (pair.b?.requests ?? 0) - (pair.a?.requests ?? 0),
+      bytes: (pair.b?.bytes ?? 0) - (pair.a?.bytes ?? 0),
+    }))
+    .sort((x, y) => y.bytes - x.bytes || (y.b?.bytes ?? 0) - (x.b?.bytes ?? 0));
+  return { a: reportA, b: reportB, entities };
+}
+
 // Share of the busier flow's network requests the other flow may lack before ratios and host
 // medians stop describing the same resources.
 const REQUEST_MIX_THRESHOLD = 0.2;
@@ -326,14 +383,15 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
 /**
  * Compares the first page of two flows, A the baseline and B the candidate (for instance a
  * first view and a repeat view): their steps paired by kind, the metrics summary of each
- * with B − A deltas, their hosts joined by name, and the caveats that change how the
- * deltas read.
+ * with B − A deltas, their hosts and their third parties joined by name, and the caveats that
+ * change how the deltas read.
  */
 export function compareFlows(a: Flow, b: Flow): FlowComparison {
   return {
     pairs: pairSteps(a, b),
     metrics: compareMetrics(a, b),
     hops: compareHops(a, b),
+    thirdParties: compareThirdParties(a, b),
     caveats: compareCaveats(a, b),
   };
 }

@@ -98,6 +98,15 @@ const RULES: [string | RegExp, Rule][] = [
   ["Cookies sent to static hosts", rule("cookies-to-static-hosts", "transfer", "high")],
   ["HTTP/3 advertised but not used", rule("http3-advertised-not-used", "none", "medium")],
   ["Every busy host on one HTTP/2 or HTTP/3 connection", rule("connections-good", "none", "high")],
+  // Third parties
+  ["No third-party requests", rule("no-third-parties", "transfer", "high")],
+  ["Third parties are light", rule("third-parties-light", "transfer", "high")],
+  ["Third parties dominate the page weight", rule("third-party-weight", "transfer", "high")],
+  [
+    "Third-party requests before the load event",
+    rule("third-party-before-load", "requests", "medium"),
+  ],
+  ["Consent manager on the page", rule("consent-manager", "fcp", "medium")],
 ];
 
 // For recommendations without a rule: the metric their label names, else their report's.
@@ -109,7 +118,11 @@ const METRIC_WORDS: [RegExp, FindingMetric][] = [
   [/\bTTFB\b|first byte/i, "ttfb"],
   [/compress|gzip|brotli|zstd|minif/i, "transfer"],
 ];
-const SOURCE_METRIC: Record<string, FindingMetric> = { render: "lcp", compression: "transfer" };
+const SOURCE_METRIC: Record<string, FindingMetric> = {
+  render: "lcp",
+  compression: "transfer",
+  thirdParty: "transfer",
+};
 
 /** A rule id from a label: kebab-case, without the counts and sizes that change between runs. */
 function slug(label: string): string {

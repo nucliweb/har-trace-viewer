@@ -322,6 +322,62 @@ describe("compareFlows — hops", () => {
   });
 });
 
+describe("compareFlows — third parties", () => {
+  it("joins the third parties of both flows by entity with B − A requests and bytes", () => {
+    const { thirdParties } = compareFlows(firstView(), repeatView());
+    expect(thirdParties.a.totals).toMatchObject({ requests: 1, entities: 1 });
+    expect(thirdParties.b.totals).toMatchObject({ requests: 0, entities: 0 });
+    expect(thirdParties.entities).toEqual([
+      expect.objectContaining({
+        name: "third.com",
+        category: "other",
+        a: expect.objectContaining({ requests: 1, bytes: 1024 }),
+        requests: -1,
+        bytes: -1024,
+      }),
+    ]);
+    expect(thirdParties.entities[0].b).toBeUndefined();
+  });
+
+  it("lists what B added first: a recording after consent against one before it", () => {
+    const cmp = makeEntry({
+      url: "https://cdn.cookielaw.org/otSDKStub.js",
+      startTime: 50,
+      resourceType: "script",
+      transferSize: 20_000,
+    });
+    const before = makeHar([cmp, thirdPartyScript(300)]);
+    const after = makeHar([
+      cmp,
+      thirdPartyScript(300),
+      makeEntry({
+        url: "https://securepubads.g.doubleclick.net/tag/js/gpt.js",
+        startTime: 600,
+        resourceType: "script",
+        transferSize: 90_000,
+      }),
+      makeEntry({
+        url: "https://www.google-analytics.com/g/collect",
+        startTime: 650,
+        method: "POST",
+        transferSize: 300,
+      }),
+    ]);
+    const { thirdParties } = compareFlows(
+      generateFlow([{ name: "Before consent", har: before }]),
+      generateFlow([{ name: "After consent", har: after }])
+    );
+    expect(thirdParties.entities.map((p) => [p.name, p.bytes])).toEqual([
+      ["Google Ads", 90_000],
+      ["Google Analytics", 300],
+      ["OneTrust", 0],
+      ["third.com", 0],
+    ]);
+    expect(thirdParties.a.consentManager).toBe("OneTrust");
+    expect(thirdParties.b.byteShare).toBeGreaterThan(thirdParties.a.byteShare);
+  });
+});
+
 describe("compareFlows — the Chrome fixture against itself", () => {
   const load = () =>
     generateFlow([

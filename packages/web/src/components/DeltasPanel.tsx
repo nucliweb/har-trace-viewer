@@ -1,5 +1,7 @@
 import {
   COMPARED_METRICS,
+  THIRD_PARTY_CATEGORY_LABEL,
+  formatBytes,
   formatDelta,
   formatDeltaPct,
   formatMetricValue,
@@ -14,6 +16,7 @@ import type {
   DeltaUnit,
   FlowComparison,
   HopPair,
+  ThirdPartyComparison,
 } from "@htv/core";
 import { RATING_CLASS, RATING_TEXT } from "./MetricsSummary.js";
 import metricsStyles from "./MetricsSummary.module.css";
@@ -113,9 +116,63 @@ function NoteRefs({
   );
 }
 
-/** Metrics summary and hosts of two flows side by side, with B − A for each. */
+const pct = (share: number) => `${Math.round(share * 100)}%`;
+
+/** The third parties of both flows by entity, what B added first; a consent comparison reads here. */
+function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison }) {
+  const { a, b, entities } = thirdParties;
+  if (entities.length === 0) {
+    return <p className={styles.sectionNote}>No third-party requests on either side.</p>;
+  }
+  const consent = [a.consentManager, b.consentManager].some(Boolean)
+    ? ` · consent manager: A ${a.consentManager ?? "none"}, B ${b.consentManager ?? "none"}`
+    : "";
+  return (
+    <>
+      <p className={styles.sectionNote}>
+        {`Third-party bytes: A ${formatBytes(a.totals.bytes)} (${pct(a.byteShare)}) → B ${formatBytes(b.totals.bytes)} (${pct(b.byteShare)})${consent}`}
+      </p>
+      <table className={`${hopsStyles.table} ${styles.table}`}>
+        <caption className={hopsStyles.caption}>Third-party deltas</caption>
+        <thead>
+          <tr>
+            <th scope="col">Third party</th>
+            <th scope="col" className={styles.left}>
+              Category
+            </th>
+            <th scope="col">Requests A</th>
+            <th scope="col">Requests B</th>
+            <th scope="col">Δ</th>
+            <th scope="col">Bytes A</th>
+            <th scope="col">Bytes B</th>
+            <th scope="col">Δ bytes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entities.map((pair) => (
+            <tr key={`${pair.category}:${pair.name}`}>
+              <th scope="row">{pair.name}</th>
+              <td className={styles.left}>{THIRD_PARTY_CATEGORY_LABEL[pair.category]}</td>
+              <td className={hopsStyles.num}>{pair.a?.requests ?? 0}</td>
+              <td className={hopsStyles.num}>{pair.b?.requests ?? 0}</td>
+              <DeltaCell
+                text={formatDelta(pair.requests, "count")}
+                rating={rateDelta(pair.requests)}
+              />
+              <td className={hopsStyles.num}>{formatBytes(pair.a?.bytes ?? 0)}</td>
+              <td className={hopsStyles.num}>{formatBytes(pair.b?.bytes ?? 0)}</td>
+              <DeltaCell text={formatDelta(pair.bytes, "bytes")} rating={rateDelta(pair.bytes)} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+/** Metrics summary, hosts and third parties of two flows side by side, with B − A for each. */
 export function DeltasPanel({ comparison, names, onClose }: Props) {
-  const { metrics, hops, caveats } = comparison;
+  const { metrics, hops, thirdParties, caveats } = comparison;
   return (
     <div className={`${metricsStyles.panel} ${styles.panel}`}>
       <div className={metricsStyles.header}>
@@ -213,6 +270,9 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
             ))}
           </tbody>
         </table>
+
+        <h3 className={styles.sectionTitle}>Third parties</h3>
+        <ThirdPartyDeltas thirdParties={thirdParties} />
       </div>
     </div>
   );

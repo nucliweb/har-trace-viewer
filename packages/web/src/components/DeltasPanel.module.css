@@ -58,3 +58,10 @@
 .notes li::marker {
   color: var(--color-yellow);
 }
+
+.sectionNote {
+  margin: 0 0 var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}

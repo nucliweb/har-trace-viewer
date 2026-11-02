@@ -497,7 +497,8 @@ describe("--bundle end to end (built CLI)", () => {
     expect(styles).not.toMatch(/https?:|@import/);
     expect(html).not.toMatch(/(?:src|href)="(?:https?:)?\/\//);
     expect(html).not.toContain('<link rel="stylesheet"');
-    expect(html).not.toContain("fonts.googleapis");
+    // The third-party catalogue names fonts.googleapis.com; only a URL to it would load fonts.
+    expect(html).not.toMatch(/\/\/fonts\.googleapis\.com/);
     expect(html).not.toContain("./assets/");
     // React DOM's resource hoisting queries `link[rel="preload"]`, so look for the tag.
     expect(html).not.toMatch(/<link[^>]*rel="preload"/);

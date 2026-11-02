@@ -192,6 +192,19 @@ describe("CompareView", () => {
       expect(cellTexts(thirdPartyRow).slice(0, 3)).toEqual(["1", "0", "−1"]);
     });
 
+    it("joins the third parties of both flows by entity, with request and byte deltas", async () => {
+      await openDeltas();
+
+      expect(screen.getByRole("heading", { name: "Third parties" })).toBeInTheDocument();
+      expect(
+        screen.getByText(/^Third-party bytes: A 1\.0 KB \(\d+%\) → B 0 B \(0%\)$/)
+      ).toBeInTheDocument();
+      const table = screen.getByRole("table", { name: "Third-party deltas" });
+      const row = within(table).getByRole("row", { name: /^third\.com/ });
+      expect(cellTexts(row)).toEqual(["Other", "1", "0", "−1", "1.0 KB", "0 B", "−1.0 KB"]);
+      expect(within(row).getAllByRole("cell")[3]).toHaveAttribute("data-rating", "better");
+    });
+
     it("notes how to read the deltas, numbered on the metrics and hosts they touch", async () => {
       await openDeltas();
 

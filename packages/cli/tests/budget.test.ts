@@ -201,6 +201,8 @@ describe("failingFindings", () => {
         {
           ...real.pageAnalyses[0],
           cacheReport: { ...real.pageAnalyses[0].cacheReport, recommendations },
+          // The synthetic page's third parties would add findings of their own.
+          thirdPartyReport: undefined,
         },
       ],
     };

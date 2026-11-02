@@ -370,6 +370,9 @@ export interface PageAnalysis {
   compressionReport?: CompressionReport;
   // Protocol and connection reuse per host. Absent in flows generated before it existed.
   connectionsReport?: ConnectionsReport;
+  // Third parties by entity, their cost before and after onLoad and the consent manager.
+  // Absent in flows generated before it existed.
+  thirdPartyReport?: ThirdPartyReport;
   // LCP attribution, render-blocking resources and critical request chains. Absent in flows
   // generated before it existed.
   renderReport?: RenderReport;
@@ -703,6 +706,69 @@ export interface ConnectionsReport {
   recommendations: Recommendation[];
 }
 
+// ── Third parties report ──────────────────────────────────────────────────────
+
+// What a third party does on the page, from the built-in catalogue of known services.
+export type ThirdPartyCategory =
+  | "tag-manager"
+  | "analytics"
+  | "advertising"
+  | "consent"
+  | "social"
+  | "video"
+  | "fonts"
+  | "customer-success"
+  | "cdn"
+  | "utility"
+  | "other";
+
+// Network requests and the bytes they moved on the wire.
+export interface ThirdPartyCost {
+  requests: number;
+  bytes: number;
+}
+
+// A third party of a page: the known service a host belongs to (Google Tag Manager, OneTrust,
+// Cloudinary), or the registrable domain of a host the catalogue does not know.
+export interface ThirdPartyEntity {
+  name: string;
+  category: ThirdPartyCategory;
+  // Whether the catalogue knows the service; an unknown entity is named after its domain.
+  known: boolean;
+  hosts: string[]; // busiest first (first request on a tie)
+  requests: number; // network requests, browser-cache hits aside
+  bytes: number; // transfer size of the network requests
+  cacheHits: number; // entries the browser cache served
+  // The network requests sent up to the load event and after it; every request counts as
+  // before it when the event never fired.
+  beforeLoad: ThirdPartyCost;
+  afterLoad: ThirdPartyCost;
+  // Requests that held the first paint (see RenderBlockingReport).
+  renderBlocking: number;
+  // Median TTFB of the requests sent before onLoad, beacons and 304s aside; null without any.
+  medianTtfbMs: number | null;
+}
+
+export interface ThirdPartyTotals extends ThirdPartyCost {
+  entities: number;
+  cacheHits: number;
+  beforeLoad: ThirdPartyCost;
+  afterLoad: ThirdPartyCost;
+  renderBlocking: number;
+}
+
+export interface ThirdPartyReport {
+  entities: ThirdPartyEntity[]; // most bytes first (most requests on a tie)
+  totals: ThirdPartyTotals;
+  // Every network request of the page, the document included: what the shares are of.
+  page: ThirdPartyCost;
+  byteShare: number; // 0–1 of the page's transfer bytes
+  requestShare: number; // 0–1 of the page's network requests
+  // The consent manager (CMP) the page loads, by entity name; null without one.
+  consentManager: string | null;
+  recommendations: Recommendation[];
+}
+
 // ── Render report ─────────────────────────────────────────────────────────────
 // Times in ms from the start of the navigation: the trace's navigationStart, or the HAR page
 // origin when only the HAR times a request (both mark the start of the same navigation).
@@ -862,7 +928,14 @@ export type FindingConfidence = "high" | "medium" | "low";
 // The report a finding comes from: a page analysis report named `<source>Report`, or
 // "metrics" for the findings rated from the metrics summary.
 export type FindingSource =
-  "cache" | "network" | "render" | "compression" | "connections" | "metrics" | (string & {});
+  | "cache"
+  | "network"
+  | "render"
+  | "compression"
+  | "connections"
+  | "thirdParty"
+  | "metrics"
+  | (string & {});
 
 export interface FindingEvidence {
   url: string;
