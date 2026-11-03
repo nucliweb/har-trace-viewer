@@ -41,7 +41,9 @@ export function parseRecording<K extends ParseKind>(kind: K, text: string): Pars
   try {
     value = JSON.parse(text);
   } catch (error) {
-    throw new Error(`Not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Not valid JSON: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
   }
   const found = detectRecordingKind(value);
   if (found === null) throw new Error(UNRECOGNIZED_JSON);
