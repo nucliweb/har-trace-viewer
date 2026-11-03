@@ -508,10 +508,17 @@ export interface WaterfallRow {
   status: number;
   fromCache: HarEntry["fromCache"];
   transferSize: number;
+  bodySize: number; // decompressed body bytes
   startMs: number;
   endMs: number;
+  ttfbMs: number; // the wait phase
   phases: WaterfallPhases;
   priority: ResourcePriority | null;
+  mimeType: string;
+  // Null when the HAR has none, or the flow was parsed before they were kept.
+  method: string | null;
+  httpVersion: HttpVersion | null;
+  contentEncoding: ContentEncoding | null;
   redirectURL?: string; // where a 3xx response points
   renderBlocking?: boolean; // held the first paint (trace status, else the HAR's inference)
   isLcpResource?: boolean; // the image the LCP element painted
@@ -530,7 +537,28 @@ export interface WaterfallFilter {
   types?: ResourceType[];
   host?: string;
   party?: WaterfallParty;
-  search?: string; // a case-insensitive substring of the URL
+  // A resource query (see parseResourceQuery): free text matches the URL, `field:value`
+  // terms such as `domain:cdn.* status:4xx larger-than:100k` narrow the rows.
+  search?: string;
+}
+
+// How a resource table is sorted: the column and the direction. Rows without a value for
+// the column (no priority, no protocol) go last either way.
+export type ResourceSortKey =
+  | "start"
+  | "name"
+  | "host"
+  | "type"
+  | "status"
+  | "priority"
+  | "protocol"
+  | "encoding"
+  | "size"
+  | "ttfb"
+  | "time";
+export interface ResourceSort {
+  key: ResourceSortKey;
+  direction: "asc" | "desc";
 }
 
 // Where a waterfall's time axis ends: the end of the recording, or the last page mark (onLoad,

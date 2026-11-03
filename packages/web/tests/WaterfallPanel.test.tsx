@@ -144,9 +144,119 @@ describe("WaterfallPanel", () => {
     await user.selectOptions(screen.getByLabelText("Party"), "");
     await user.selectOptions(screen.getByLabelText("Host"), "example.com");
     expect(names()).toHaveLength(4);
-    await user.type(screen.getByLabelText("Search URLs"), "IMG/");
+    await user.type(screen.getByLabelText("Filter requests"), "IMG/");
     expect(names()).toEqual(["hero.avif"]);
     expect(screen.getByText("1 of 5 requests")).toBeInTheDocument();
+  });
+
+  it("filters with the field language", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const input = screen.getByLabelText("Filter requests");
+
+    await user.type(input, "type:script status:3xx");
+    expect(names()).toEqual(["tag.js?id=42"]);
+    await user.clear(input);
+    await user.type(input, "-domain:example.com");
+    expect(names()).toEqual(["tag.js?id=42"]);
+    await user.clear(input);
+    await user.type(input, "larger-than:40k");
+    expect(names()).toEqual(["hero.avif"]);
+    await user.clear(input);
+    await user.type(input, "is:lcp");
+    expect(names()).toEqual(["hero.avif"]);
+    await user.clear(input);
+    await user.type(input, "is:cached");
+    expect(names()).toEqual(["font.woff2"]);
+    await user.clear(input);
+    await user.type(input, "party:first -is:cached slower-than:50ms");
+    expect(names()).toEqual(["example.com", "hero.avif"]);
+  });
+
+  it("says what it could not read in the filter", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.type(screen.getByLabelText("Filter requests"), "type:video");
+    expect(screen.getByRole("status")).toHaveTextContent('type: unknown type "video"');
+    expect(screen.getByText("No request matches the filters.")).toBeInTheDocument();
+  });
+
+  it("explains the filter syntax on demand", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const summary = screen.getByText("Filter syntax");
+
+    await user.click(summary);
+    expect(screen.getByText("larger-than")).toBeInTheDocument();
+    expect(screen.getByText("domain:cdn.*")).toBeInTheDocument();
+  });
+
+  it("sorts the rows by a column, reverses it, and returns to the start order", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const size = screen.getByRole("button", { name: "Sort by size" });
+
+    await user.click(size);
+    expect(names()).toEqual(["hero.avif", "example.com", "main.css", "tag.js?id=42", "font.woff2"]);
+    expect(screen.getByText("5 requests · by size ↓")).toBeInTheDocument();
+    await user.click(size);
+    expect(names()).toEqual(["font.woff2", "example.com", "main.css", "tag.js?id=42", "hero.avif"]);
+    await user.click(size);
+    expect(names()).toEqual(["example.com", "main.css", "tag.js?id=42", "hero.avif", "font.woff2"]);
+    expect(screen.getByText("5 requests")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Sort by name" }));
+    expect(names()[0]).toBe("example.com");
+    expect(names()[4]).toBe("tag.js?id=42");
+  });
+
+  it("shows the requests as a table with priority, protocol and encoding, sorted by its headers", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Table" }));
+    const table = screen.getByRole("table", { name: /Requests/ });
+    expect(screen.queryByRole("list", { name: /Requests/ })).not.toBeInTheDocument();
+    for (const column of [
+      "Name",
+      "Type",
+      "Status",
+      "Priority",
+      "Protocol",
+      "Encoding",
+      "Size",
+      "TTFB",
+      "Time",
+      "Start",
+    ]) {
+      expect(
+        within(table).getByRole("columnheader", { name: new RegExp(column) })
+      ).toBeInTheDocument();
+    }
+    const body = () => within(table).getAllByRole("row").slice(1);
+    expect(body()).toHaveLength(5);
+    expect(body()[3]).toHaveTextContent("hero.avif");
+    expect(body()[3]).toHaveTextContent("High");
+    expect(body()[3]).toHaveTextContent("48 KB");
+    expect(within(body()[3]).getByText("LCP")).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: /Start/ })).toHaveAttribute(
+      "aria-sort",
+      "ascending"
+    );
+
+    await user.click(within(table).getByRole("button", { name: "Sort by status" }));
+    expect(within(table).getByRole("columnheader", { name: /Status/ })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    );
+    expect(body()[0]).toHaveTextContent("tag.js?id=42");
+    expect(body()[0]).toHaveTextContent("302");
+
+    await user.click(screen.getByRole("button", { name: "Waterfall" }));
+    expect(screen.getByRole("list", { name: /Requests/ })).toBeInTheDocument();
+    // The sort carries over.
+    expect(names()[0]).toBe("tag.js?id=42");
   });
 
   it("zooms the time axis on the page load when late requests stretch the recording", async () => {
@@ -166,7 +276,7 @@ describe("WaterfallPanel", () => {
   it("says when no request matches", async () => {
     const user = userEvent.setup();
     renderPanel();
-    await user.type(screen.getByLabelText("Search URLs"), "nothing-like-this");
+    await user.type(screen.getByLabelText("Filter requests"), "nothing-like-this");
     expect(screen.getByText("No request matches the filters.")).toBeInTheDocument();
   });
 

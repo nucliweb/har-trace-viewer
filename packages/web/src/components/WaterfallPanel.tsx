@@ -1,15 +1,20 @@
 import { useId, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
+  RESOURCE_QUERY_HELP,
   buildWaterfall,
   filterWaterfallRows,
   formatBytes,
   formatMs,
+  parseResourceQuery,
+  sortWaterfallRows,
   waterfallAxisMs,
 } from "@htv/core";
 import type {
   ParsedHar,
   ParsedTrace,
+  ResourceSort,
+  ResourceSortKey,
   ResourceType,
   WaterfallAxis,
   WaterfallFilter,
@@ -63,6 +68,52 @@ const MARKS: { key: keyof WaterfallMarks; label: string; name: string }[] = [
   { key: "dcl", label: "DCL", name: "DCL" },
   { key: "onLoad", label: "Load", name: "onLoad" },
 ];
+
+// The columns of the table view, which also name the sorts: the measures start largest
+// first, the names and categories in their order.
+const COLUMNS: { key: ResourceSortKey; label: string; numeric: boolean }[] = [
+  { key: "name", label: "Name", numeric: false },
+  { key: "type", label: "Type", numeric: false },
+  { key: "status", label: "Status", numeric: false },
+  { key: "priority", label: "Priority", numeric: false },
+  { key: "protocol", label: "Protocol", numeric: false },
+  { key: "encoding", label: "Encoding", numeric: false },
+  { key: "size", label: "Size", numeric: true },
+  { key: "ttfb", label: "TTFB", numeric: true },
+  { key: "time", label: "Time", numeric: true },
+  { key: "start", label: "Start", numeric: true },
+];
+const DEFAULT_DIRECTION: Record<ResourceSortKey, ResourceSort["direction"]> = {
+  start: "asc",
+  name: "asc",
+  host: "asc",
+  type: "asc",
+  status: "desc",
+  priority: "asc",
+  protocol: "asc",
+  encoding: "asc",
+  size: "desc",
+  ttfb: "desc",
+  time: "desc",
+};
+const START_ORDER: ResourceSort = { key: "start", direction: "asc" };
+const labelOf = (key: ResourceSortKey) => COLUMNS.find((c) => c.key === key)?.label ?? key;
+
+/**
+ * The sort after a click on a column: the column in its starting direction, reversed on a
+ * second click, and the start order on a third.
+ */
+function cycleSort(current: ResourceSort, key: ResourceSortKey): ResourceSort {
+  if (current.key !== key) return { key, direction: DEFAULT_DIRECTION[key] };
+  if (current.direction === DEFAULT_DIRECTION[key]) {
+    return { key, direction: current.direction === "asc" ? "desc" : "asc" };
+  }
+  return START_ORDER;
+}
+
+type View = "waterfall" | "table";
+
+const NONE = "—";
 
 const pct = (ms: number, totalMs: number) => (totalMs > 0 ? (ms / totalMs) * 100 : 0);
 
@@ -223,16 +274,7 @@ function Row({
           <span className={styles.nameText} data-name>
             {row.shortName}
           </span>
-          {row.isLcpResource && (
-            <span className={`${styles.badge} ${styles.badgeLcp}`} title="LCP resource">
-              LCP
-            </span>
-          )}
-          {row.renderBlocking && (
-            <span className={`${styles.badge} ${styles.badgeBlocking}`} title="Render-blocking">
-              RB
-            </span>
-          )}
+          <Badges row={row} />
         </span>
         <span className={styles.cell}>{row.resourceType}</span>
         <span className={`${styles.cell} ${row.status >= 400 ? styles.statusError : ""}`}>
@@ -248,7 +290,159 @@ function Row({
   );
 }
 
-function Ruler({ marks, totalMs }: { marks: PlacedMark[]; totalMs: number }) {
+/** A column header that sorts the rows: its label, and an arrow when it is the sort. */
+function SortButton({
+  column,
+  sort,
+  onSort,
+}: {
+  column: ResourceSortKey;
+  sort: ResourceSort;
+  onSort: (key: ResourceSortKey) => void;
+}) {
+  const active = sort.key === column;
+  return (
+    <button
+      type="button"
+      className={`${styles.sortBtn} ${active ? styles.sortBtnActive : ""}`}
+      aria-label={`Sort by ${labelOf(column).toLowerCase()}`}
+      onClick={() => onSort(column)}
+    >
+      {labelOf(column)}
+      {active && <span aria-hidden="true">{sort.direction === "asc" ? " ↑" : " ↓"}</span>}
+    </button>
+  );
+}
+
+function Badges({ row }: { row: WaterfallRow }) {
+  return (
+    <>
+      {row.isLcpResource && (
+        <span className={`${styles.badge} ${styles.badgeLcp}`} title="LCP resource">
+          LCP
+        </span>
+      )}
+      {row.renderBlocking && (
+        <span className={`${styles.badge} ${styles.badgeBlocking}`} title="Render-blocking">
+          RB
+        </span>
+      )}
+    </>
+  );
+}
+
+/** The requests as a table, one column per field, each header sorting the rows. */
+function Table({
+  rows,
+  count,
+  sort,
+  onSort,
+}: {
+  rows: WaterfallRow[];
+  count: number;
+  sort: ResourceSort;
+  onSort: (key: ResourceSortKey) => void;
+}) {
+  return (
+    <table className={styles.grid} aria-label={`Requests, ${count}`}>
+      <thead>
+        <tr>
+          {COLUMNS.map((column) => (
+            <th
+              key={column.key}
+              scope="col"
+              className={column.numeric ? styles.num : undefined}
+              aria-sort={
+                sort.key === column.key
+                  ? sort.direction === "asc"
+                    ? "ascending"
+                    : "descending"
+                  : "none"
+              }
+            >
+              <SortButton column={column.key} sort={sort} onSort={onSort} />
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.entryIndex}>
+            <td className={styles.nameCell} title={row.url}>
+              <span className={styles.name}>
+                <span className={styles.nameText} data-name>
+                  {row.shortName}
+                </span>
+                <Badges row={row} />
+              </span>
+            </td>
+            <td>{row.resourceType}</td>
+            <td className={row.status >= 400 ? styles.statusError : undefined}>
+              {row.status > 0 ? row.status : NONE}
+            </td>
+            <td>{row.priority ?? NONE}</td>
+            <td>{row.httpVersion && row.httpVersion !== "unknown" ? row.httpVersion : NONE}</td>
+            <td>{row.contentEncoding ?? NONE}</td>
+            <td className={styles.num}>{sizeText(row)}</td>
+            <td className={styles.num}>{formatMs(row.ttfbMs)}</td>
+            <td className={styles.num}>{formatMs(row.endMs - row.startMs)}</td>
+            <td className={styles.num}>{formatMs(row.startMs)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The fields of the filter language, behind a disclosure. */
+function FilterHelp() {
+  return (
+    <details className={styles.help}>
+      <summary className={styles.helpSummary}>Filter syntax</summary>
+      <div className={styles.helpBody}>
+        <p className={styles.helpText}>
+          Terms separated by spaces, all of which a request must match. A bare word matches the URL,{" "}
+          <code>field:value</code> narrows by a field, a leading <code>-</code> keeps what does not
+          match, and double quotes keep spaces in a value.
+        </p>
+        <table className={styles.helpTable}>
+          <thead>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">Values</th>
+              <th scope="col">Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            {RESOURCE_QUERY_HELP.map((help) => (
+              <tr key={help.field}>
+                <td>
+                  <code>{help.field}</code>
+                </td>
+                <td>{help.values}</td>
+                <td>
+                  <code>{help.example}</code>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
+function Ruler({
+  marks,
+  totalMs,
+  sort,
+  onSort,
+}: {
+  marks: PlacedMark[];
+  totalMs: number;
+  sort: ResourceSort;
+  onSort: (key: ResourceSortKey) => void;
+}) {
   const lanes = Math.max(1, ...marks.map((m) => m.lane + 1));
   const name = `Time ruler: ${MARKS.flatMap(({ key, name }) => {
     const mark = marks.find((m) => m.key === key);
@@ -256,10 +450,11 @@ function Ruler({ marks, totalMs }: { marks: PlacedMark[]; totalMs: number }) {
   }).join(", ")}`;
   return (
     <div className={styles.rulerRow}>
-      <span className={styles.headCell}>Name</span>
-      <span className={styles.headCell}>Type</span>
-      <span className={styles.headCell}>Status</span>
-      <span className={`${styles.headCell} ${styles.size}`}>Size</span>
+      {(["name", "type", "status", "size"] as const).map((key) => (
+        <span key={key} className={`${styles.headCell} ${key === "size" ? styles.size : ""}`}>
+          <SortButton column={key} sort={sort} onSort={onSort} />
+        </span>
+      ))}
       <div
         className={styles.ruler}
         role="img"
@@ -290,16 +485,20 @@ function Ruler({ marks, totalMs }: { marks: PlacedMark[]; totalMs: number }) {
 }
 
 /**
- * The page's requests on one time axis: a filter bar (type, party, host, URL text), a ruler
- * with the page's marks (TTFB, FCP, LCP, DCL, onLoad) and one row per request, its bar split
- * into phases. The axis spans the whole recording or zooms on the page load. Renders 300 rows
- * at a time.
+ * The page's requests on one time axis: a filter bar (type, party, host, and a query in the
+ * field language of parseResourceQuery), a ruler with the page's marks (TTFB, FCP, LCP, DCL,
+ * onLoad) and one row per request, its bar split into phases, or the same requests as a
+ * table with their priority, protocol, encoding and timings. The column headers sort the
+ * rows. The axis spans the whole recording or zooms on the page load. Renders 300 rows at a
+ * time.
  */
 export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const waterfall = useMemo(() => buildWaterfall(har, trace), [har, trace]);
   const [filter, setFilterState] = useState<WaterfallFilter>({});
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [activeRow, setActiveRow] = useState<number | null>(null);
+  const [sort, setSort] = useState<ResourceSort>(START_ORDER);
+  const [view, setView] = useState<View>("waterfall");
   const searchId = useId();
   const partyId = useId();
   const hostId = useId();
@@ -318,7 +517,11 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
     for (const row of allRows) counts.set(row.host, (counts.get(row.host) ?? 0) + 1);
     return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
   }, [allRows]);
-  const rows = useMemo(() => filterWaterfallRows(allRows, filter), [allRows, filter]);
+  const rows = useMemo(
+    () => sortWaterfallRows(filterWaterfallRows(allRows, filter), sort),
+    [allRows, filter, sort]
+  );
+  const problems = useMemo(() => parseResourceQuery(filter.search ?? "").problems, [filter.search]);
   const marks = useMemo(() => placeMarks(waterfall.marks, totalMs), [waterfall.marks, totalMs]);
   const shown = rows.slice(0, limit);
 
@@ -326,6 +529,11 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
     setFilterState((current) => ({ ...current, ...change }));
     setLimit(PAGE_SIZE);
   };
+  const onSort = (key: ResourceSortKey) => setSort((current) => cycleSort(current, key));
+  const sortText =
+    sort.key === START_ORDER.key && sort.direction === START_ORDER.direction
+      ? ""
+      : ` · by ${labelOf(sort.key).toLowerCase()} ${sort.direction === "asc" ? "↑" : "↓"}`;
   const toggleType = (type: ResourceType) => {
     const selected = new Set(filter.types ?? []);
     if (selected.has(type)) selected.delete(type);
@@ -409,12 +617,18 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
             id={searchId}
             className={styles.search}
             type="search"
-            aria-label="Search URLs"
-            placeholder="Filter URLs"
+            aria-label="Filter requests"
+            placeholder="Filter: text, domain:cdn.*, status:4xx, larger-than:100k…"
             value={filter.search ?? ""}
             onChange={(e) => setFilter({ search: e.target.value })}
           />
+          <FilterHelp />
         </div>
+        {problems.length > 0 && (
+          <p className={styles.problems} role="status">
+            {problems.join(" · ")}
+          </p>
+        )}
         <div className={styles.legend} aria-hidden="true">
           {PHASES.map(({ key, label }) => (
             <span key={key} className={styles.legendItem}>
@@ -427,28 +641,49 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
             Cache hit
           </span>
         </div>
-        <p className={styles.count} aria-live="polite">
-          {rows.length === allRows.length
-            ? `${allRows.length} requests`
-            : `${rows.length} of ${allRows.length} requests`}
-        </p>
+        <div className={styles.status}>
+          <p className={styles.count} aria-live="polite">
+            {rows.length === allRows.length
+              ? `${allRows.length} requests${sortText}`
+              : `${rows.length} of ${allRows.length} requests${sortText}`}
+          </p>
+          <div className={styles.chips} role="group" aria-label="View">
+            {(["waterfall", "table"] as const).map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`${styles.chip} ${view === name ? styles.chipActive : ""}`}
+                aria-pressed={view === name}
+                onClick={() => setView(name)}
+              >
+                {name === "waterfall" ? "Waterfall" : "Table"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <div className={styles.body} role="region" aria-label="Waterfall details" tabIndex={0}>
-        <div className={styles.table}>
-          <Ruler marks={marks} totalMs={totalMs} />
-          <div className={styles.markLines} aria-hidden="true">
-            {marks.map((mark) => (
-              <span
-                key={mark.key}
-                className={`${styles.markLine} ${styles[`mark_${mark.key}`]}`}
-                style={at(mark.at)}
-              />
-            ))}
-          </div>
+        <div className={view === "table" ? styles.tableView : styles.table}>
+          {view === "waterfall" && (
+            <>
+              <Ruler marks={marks} totalMs={totalMs} sort={sort} onSort={onSort} />
+              <div className={styles.markLines} aria-hidden="true">
+                {marks.map((mark) => (
+                  <span
+                    key={mark.key}
+                    className={`${styles.markLine} ${styles[`mark_${mark.key}`]}`}
+                    style={at(mark.at)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
           {rows.length === 0 ? (
             <p className={styles.empty}>No request matches the filters.</p>
+          ) : view === "table" ? (
+            <Table rows={shown} count={rows.length} sort={sort} onSort={onSort} />
           ) : (
             <ol className={styles.rows} aria-label={`Requests, ${rows.length}`}>
               {shown.map((row) => (

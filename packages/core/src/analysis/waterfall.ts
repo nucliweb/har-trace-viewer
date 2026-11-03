@@ -2,10 +2,14 @@ import { getHostname, getRootDomain } from "../utils/domain.js";
 import { shortUrl } from "../utils/format.js";
 import { renderBlockingUrls } from "./critical-path.js";
 import { documentTiming } from "./render-timing.js";
+import { matchesResourceQuery, parseResourceQuery } from "./resource-query.js";
 import type {
   HarEntry,
   ParsedHar,
   ParsedTrace,
+  ResourcePriority,
+  ResourceSort,
+  ResourceType,
   Waterfall,
   WaterfallAxis,
   WaterfallFilter,
@@ -61,18 +65,84 @@ export function waterfallAxisMs(waterfall: Waterfall, axis: WaterfallAxis): numb
   return axis === "load" && lastMark > 0 ? lastMark : waterfall.totalMs;
 }
 
-/** The rows that match every criterion of the filter; all of them with an empty filter. */
+/**
+ * The rows that match every criterion of the filter, the search read as a resource query;
+ * all of them with an empty filter.
+ */
 export function filterWaterfallRows(rows: WaterfallRow[], filter: WaterfallFilter): WaterfallRow[] {
   const types = filter.types && filter.types.length > 0 ? new Set(filter.types) : null;
-  const search = filter.search?.trim().toLowerCase() || null;
-  if (!types && !filter.host && !filter.party && !search) return rows;
+  const query = parseResourceQuery(filter.search ?? "");
+  if (!types && !filter.host && !filter.party && query.terms.length === 0) return rows;
   return rows.filter(
     (row) =>
       (!types || types.has(row.resourceType)) &&
       (!filter.host || row.host === filter.host) &&
       (!filter.party || row.party === filter.party) &&
-      (!search || row.url.toLowerCase().includes(search))
+      matchesResourceQuery(row, query)
   );
+}
+
+// Display order of the types: render-critical first, then images, runtime requests, the rest.
+const TYPE_RANK: Record<ResourceType, number> = {
+  document: 0,
+  stylesheet: 1,
+  script: 2,
+  font: 3,
+  image: 4,
+  fetch: 5,
+  other: 6,
+};
+const PRIORITY_RANK: Record<ResourcePriority, number> = {
+  VeryHigh: 0,
+  High: 1,
+  Medium: 2,
+  Low: 3,
+  VeryLow: 4,
+};
+
+/** The value a row sorts by for a column; null when it has none, to go last. */
+function sortValue(row: WaterfallRow, key: ResourceSort["key"]): number | string | null {
+  switch (key) {
+    case "start":
+      return row.startMs;
+    case "name":
+      return row.shortName.toLowerCase();
+    case "host":
+      return row.host;
+    case "type":
+      return TYPE_RANK[row.resourceType];
+    case "status":
+      return row.status;
+    case "priority":
+      return row.priority === null ? null : PRIORITY_RANK[row.priority];
+    case "protocol":
+      return row.httpVersion === null || row.httpVersion === "unknown" ? null : row.httpVersion;
+    case "encoding":
+      return row.contentEncoding;
+    case "size":
+      return row.transferSize;
+    case "ttfb":
+      return row.ttfbMs;
+    default:
+      return row.endMs - row.startMs;
+  }
+}
+
+/**
+ * A copy of the rows sorted by a column, rows that tie in their current order and rows
+ * without a value for the column last, whatever the direction.
+ */
+export function sortWaterfallRows(rows: WaterfallRow[], sort: ResourceSort): WaterfallRow[] {
+  const sign = sort.direction === "desc" ? -1 : 1;
+  const keyed = rows.map((row) => ({ row, value: sortValue(row, sort.key) }));
+  keyed.sort((a, b) => {
+    if (a.value === null || b.value === null)
+      return a.value === null ? (b.value === null ? 0 : 1) : -1;
+    if (a.value < b.value) return -sign;
+    if (a.value > b.value) return sign;
+    return 0;
+  });
+  return keyed.map(({ row }) => row);
 }
 
 /**
@@ -103,10 +173,16 @@ export function buildWaterfall(
       status: entry.status,
       fromCache: entry.fromCache,
       transferSize: entry.transferSize,
+      bodySize: entry.bodySize,
       startMs: entry.startTime,
       endMs: entry.startTime + duration,
+      ttfbMs: entry.ttfb,
       phases,
       priority: entry.priority ?? null,
+      mimeType: entry.mimeType,
+      method: entry.method ?? null,
+      httpVersion: entry.httpVersion ?? null,
+      contentEncoding: entry.contentEncoding ?? null,
       ...(entry.redirectURL !== undefined ? { redirectURL: entry.redirectURL } : {}),
       ...(blocking.has(entry.url) ? { renderBlocking: true } : {}),
       ...(lcpUrl !== undefined && entry.url === lcpUrl ? { isLcpResource: true } : {}),

@@ -9,7 +9,8 @@ const DIST_ENTRY = join(CLI_ROOT, "dist", "index.js");
 const HAR = join(CLI_ROOT, "..", "core", "tests", "fixtures", "webperf-snippets.har.fixture.json");
 
 const LEAVE_ALT_SCREEN = "\u001B[?1049l";
-const TAB_NAMES = ["Findings", "Waterfall", "Overview", "Steps", "Hosts", "Cache & network"];
+// "Cache & network" shortens to "Cache" on the 80 columns a pseudo-terminal defaults to.
+const TAB_NAMES = ["Findings", "Waterfall", "Resources", "Overview", "Steps", "Hosts", "Cache"];
 const TIMEOUT_MS = 10_000;
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
@@ -53,8 +54,8 @@ describe("htv in a pseudo-terminal", () => {
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", (chunk: string) => {
         output += chunk;
-        // The first frame is on screen once the last tab name has been drawn.
-        if (!sentQuit && output.includes("Cache & network")) {
+        // The first frame is on screen once the status bar has been drawn.
+        if (!sentQuit && output.includes("q quit")) {
           sentQuit = true;
           child.stdin.write("q");
         }

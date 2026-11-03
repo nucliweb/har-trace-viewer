@@ -6,10 +6,14 @@ import {
   collectFindings,
   compareFlows,
   filterWaterfallRows,
+  parseResourceQuery,
+  sortWaterfallRows,
   stepAtPair,
 } from "@htv/core";
-import type { Flow, WaterfallAxis, WaterfallParty } from "@htv/core";
+import type { Flow, ResourceSort, WaterfallAxis, WaterfallParty } from "@htv/core";
 import { findingsRegion } from "./findings-view.js";
+import { helpRegion } from "./help-view.js";
+import { SORT_CYCLE, nextSort, resourcesRegion } from "./resources-view.js";
 import { waterfallRegion } from "./waterfall-view.js";
 import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
 import type { Line } from "./lines.js";
@@ -34,7 +38,17 @@ interface Props {
   columns?: number;
 }
 
-const TABS = ["Findings", "Waterfall", "Overview", "Steps", "Hosts", "Cache & network"] as const;
+const TABS = [
+  "Findings",
+  "Waterfall",
+  "Resources",
+  "Overview",
+  "Steps",
+  "Hosts",
+  "Cache & network",
+] as const;
+// Shorter tab labels for a terminal where the pages of a flow would not fit beside the tabs.
+const SHORT_TABS: Partial<Record<(typeof TABS)[number], string>> = { "Cache & network": "Cache" };
 type Side = "a" | "b";
 // The party filter of the waterfall, cycled with f.
 const PARTIES: (WaterfallParty | null)[] = [null, "first", "third"];
@@ -70,24 +84,45 @@ function headerLines(
     seg(ctx, { bold: true }),
     frame("─╮"),
   ];
-  // Six tabs and the pages of a flow share the line: the padding inside each label keeps
-  // them apart.
-  const tabs: Line = TABS.map((name, i) =>
-    seg(` ${i + 1} ${name} `, i === tab ? { inverse: true, bold: true, color: "cyan" } : {})
-  );
-  const strip: Line = pages
-    ? [
-        seg("Pages ", { dim: true }),
-        ...pages.names.flatMap((name, i) => [
-          seg(` ${name} `, i === pages.current ? { inverse: true } : { dim: true }),
-          seg(" "),
-        ]),
-      ]
-    : [];
+  // Seven tabs and the pages of a flow share the line. The tabs sit two spaces apart; the
+  // highlight of the current one takes the space on each side of it.
+  const tabLine = (short: boolean): Line => {
+    const out: Line = [];
+    TABS.forEach((name, i) => {
+      const label = `${i + 1} ${short ? (SHORT_TABS[name] ?? name) : name}`;
+      const selected = i === tab;
+      if (i > 0) out.push(seg(selected || i - 1 === tab ? " " : "  "));
+      out.push(
+        seg(
+          selected ? ` ${label} ` : label,
+          selected ? { inverse: true, bold: true, color: "cyan" } : {}
+        )
+      );
+    });
+    return out;
+  };
+  const pageStrip = (label: boolean): Line =>
+    pages
+      ? [
+          ...(label ? [seg("Pages ", { dim: true })] : []),
+          ...pages.names.flatMap((name, i) => [
+            seg(` ${name} `, i === pages.current ? { inverse: true } : { dim: true }),
+            seg(" "),
+          ]),
+        ]
+      : [];
   const inner = width - 4;
-  // The strip is a convenience: when it does not fit next to the tabs, the context names the page.
-  if (lineWidth(tabs) + 2 + lineWidth(strip) > inner) strip.length = 0;
-  const gap = Math.max(1, inner - lineWidth(tabs) - lineWidth(strip));
+  // When the line is short of room, the tabs shorten first, then the strip loses its label,
+  // then goes (a convenience: the context names the page anyway), then the tabs shorten alone.
+  const fits = (tabs: Line, strip: Line) =>
+    lineWidth(tabs) + (strip.length > 0 ? 2 + lineWidth(strip) : 0) <= inner;
+  const [tabs, strip] = [
+    [tabLine(false), pageStrip(true)],
+    [tabLine(true), pageStrip(true)],
+    [tabLine(true), pageStrip(false)],
+    [tabLine(false), []],
+  ].find(([t, s]) => fits(t, s)) ?? [tabLine(true), []];
+  const gap = strip.length > 0 ? Math.max(1, inner - lineWidth(tabs) - lineWidth(strip)) : 0;
   const mid: Line = [
     frame("│ "),
     ...padLine(truncateLine([...tabs, seg(" ".repeat(gap)), ...strip], inner), inner),
@@ -112,9 +147,11 @@ function LineView({ line }: { line: Line }) {
 }
 
 /**
- * The report in the terminal: the findings, the request waterfall, an overview of the metrics,
- * the diagram's steps, the hosts and the cache analysis, one tab each, drawn as framed panels. A comparison shows
- * both flows with their B − A deltas.
+ * The report in the terminal: the findings, the request waterfall, the requests as a sortable
+ * table, an overview of the metrics, the diagram's steps, the hosts and the cache analysis,
+ * one tab each, drawn as framed panels. The waterfall and the resources share a filter with
+ * the field language of parseResourceQuery. A comparison shows both flows with their B − A
+ * deltas. `?` shows the keys and the filter syntax.
  */
 export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const { exit } = useApp();
@@ -129,6 +166,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const [searching, setSearching] = useState(false);
   const [party, setParty] = useState<WaterfallParty | null>(null);
   const [axis, setAxis] = useState<WaterfallAxis>("end");
+  const [sort, setSort] = useState<ResourceSort>(SORT_CYCLE[0]);
+  const [help, setHelp] = useState(false);
 
   const names = useMemo(
     () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
@@ -140,33 +179,48 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   );
   // The tabs that show one side of a comparison at a time, picked with a/b.
   const sided = (tabName: string) =>
-    tabName === "Findings" || tabName === "Waterfall" || tabName === "Cache & network";
+    ["Findings", "Waterfall", "Resources", "Cache & network"].includes(tabName);
   const stepCount = comparison ? comparison.pairs.length : flow.steps.length;
   const pageCount = flow.pages.length;
   const width = Math.max(MIN_COLUMNS, size.columns);
   const viewport = Math.max(1, size.rows - HEADER_LINES - STATUS_LINES);
   const current = TABS[tab];
+  // The tabs that list the page's requests, which share the filter and the party.
+  const listing = current === "Waterfall" || current === "Resources";
 
-  // The page the waterfall shows: the current page, or the side picked in a comparison.
+  // The page the waterfall and the resources show: the current page, or the side picked in a
+  // comparison.
   const shownPage = compare ? (side === "a" ? flow : compare).pages[0] : flow.pages[page];
   const waterfall = useMemo(
-    () => (current === "Waterfall" ? buildWaterfall(shownPage.har, shownPage.trace) : null),
-    [current, shownPage]
+    () => (listing ? buildWaterfall(shownPage.har, shownPage.trace) : null),
+    [listing, shownPage]
   );
-  const waterfallView = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!waterfall) return null;
     const rows = filterWaterfallRows(waterfall.rows, { search, party: party ?? undefined });
-    return waterfallRegion(waterfall, rows, { search, searching, party, axis }, width);
-  }, [waterfall, search, searching, party, axis, width]);
+    return { rows, problems: parseResourceQuery(search).problems };
+  }, [waterfall, search, party]);
+  const listView = useMemo(() => {
+    if (!waterfall || !filtered) return null;
+    const { rows, problems } = filtered;
+    const filter = { search, searching, problems };
+    if (current === "Resources") {
+      const sorted = sortWaterfallRows(rows, sort);
+      return resourcesRegion(waterfall.rows.length, sorted, { ...filter, party, sort }, width);
+    }
+    return waterfallRegion(waterfall, rows, { ...filter, party, axis }, width);
+  }, [current, waterfall, filtered, search, searching, party, axis, sort, width]);
 
   const region = useMemo((): Line[] => {
+    if (help) return helpRegion(width);
     switch (current) {
       case "Findings": {
         const list = compare ? findings[side] : findings.a.filter((f) => f.page.index === page);
         return findingsRegion(list, width);
       }
       case "Waterfall":
-        return waterfallView?.lines ?? [];
+      case "Resources":
+        return listView?.lines ?? [];
       case "Overview":
         return comparison
           ? compareOverviewRegion(comparison, width)
@@ -203,11 +257,12 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     comparison,
     names,
     findings,
-    waterfallView,
+    listView,
+    help,
   ]);
 
   // Lines at the top of the region that stay in view while the rest scrolls.
-  const pinned = current === "Waterfall" ? (waterfallView?.pinned ?? 0) : 0;
+  const pinned = listing && !help ? (listView?.pinned ?? 0) : 0;
   const rowsViewport = Math.max(1, viewport - pinned);
   const maxScroll = Math.max(0, region.length - pinned - rowsViewport);
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
@@ -239,11 +294,15 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       exit();
       return;
     }
+    if (help) {
+      setHelp(false);
+      return;
+    }
     if (searching) {
       editSearch(input, key);
       return;
     }
-    if (current === "Waterfall" && key.escape && search) {
+    if (listing && key.escape && search) {
       setSearch("");
       setScroll(0);
       return;
@@ -263,14 +322,21 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     else if (key.upArrow) scrollTo(scroll - 1);
     else if (key.pageDown || input === " ") scrollTo(scroll + rowsViewport);
     else if (key.pageUp) scrollTo(scroll - rowsViewport);
-    else if (input === "/" && current === "Waterfall") {
+    else if (input === "?") setHelp(true);
+    else if (input === "/" && listing) {
       setSearching(true);
       setScroll(0);
-    } else if (input === "f" && current === "Waterfall") {
+    } else if (input === "f" && listing) {
       setParty(nextParty);
       setScroll(0);
     } else if (input === "z" && current === "Waterfall") {
       setAxis((a) => (a === "end" ? "load" : "end"));
+    } else if (input === "s" && current === "Resources") {
+      setSort(nextSort);
+      setScroll(0);
+    } else if (input === "S" && current === "Resources") {
+      setSort((s) => ({ ...s, direction: s.direction === "asc" ? "desc" : "asc" }));
+      setScroll(0);
     } else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
       movePage(input === "p" ? 1 : -1);
     } else if ((input === "a" || input === "b") && compare) {
@@ -290,27 +356,32 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const scrolled = region.slice(pinned);
   const visible = [...region.slice(0, pinned), ...scrolled.slice(scroll, scroll + rowsViewport)];
 
-  const waterfallHelp = searching
-    ? ["type to search", "Enter keep", "Esc clear"]
+  const listKeys = searching
+    ? ["type to filter", "Enter keep", "Esc clear"]
     : current === "Waterfall"
-      ? ["/ search", "f party", "z axis", search ? "Esc clear search" : null]
-      : [];
-  const help = searching
-    ? waterfallHelp.join("  ·  ")
-    : [
-        `1-${TABS.length}/Tab tabs`,
-        current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
-        maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn scroll") : null,
-        compare && sided(current) ? "a/b side" : null,
-        ...waterfallHelp,
-        "q quit",
-      ]
-        .filter(Boolean)
-        // Narrow terminals get a tighter separator, so that the help fits beside the position.
-        .join(width < 100 ? " · " : "  ·  ");
+      ? ["/ filter", "f party", "z axis", search ? "Esc clear filter" : null]
+      : current === "Resources"
+        ? ["/ filter", "f party", "s sort", "S reverse", search ? "Esc clear filter" : null]
+        : [];
+  const keys = help
+    ? "any key closes the help"
+    : searching
+      ? listKeys.join("  ·  ")
+      : [
+          `1-${TABS.length}/Tab tabs`,
+          current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
+          maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn scroll") : null,
+          compare && sided(current) ? "a/b side" : null,
+          ...listKeys,
+          "? help",
+          "q quit",
+        ]
+          .filter(Boolean)
+          // Narrow terminals get a tighter separator, so that the help fits beside the position.
+          .join(width < 100 ? " · " : "  ·  ");
   const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - scroll));
   const position = maxScroll > 0 ? `${scroll + 1}-${scroll + shownRows}/${scrolled.length} ` : "";
-  const statusText = ` ${help}`;
+  const statusText = ` ${keys}`;
   const statusGap = Math.max(1, width - statusText.length - position.length);
   const status: Line = [seg(`${statusText}${" ".repeat(statusGap)}${position}`, { inverse: true })];
 

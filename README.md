@@ -24,19 +24,19 @@ A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`h
 
 The destination picks the format:
 
-| Command                          | Output                                                                                                                                   |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `htv page.har`                   | Browses the report in the terminal: Findings, Waterfall, Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
-| `htv page.har -o r.html`         | A single self-contained HTML file with the interactive diagram, which opens offline                                                      |
-| `htv page.har -o r.json`         | The full analysis as JSON                                                                                                                |
-| `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                                        |
-| `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                           |
-| `htv page.har --format markdown` | A [Markdown report](#markdown-csv-and-mermaid) to paste into a ticket or a doc, on stdout (or `-o report.md`)                            |
-| `htv page.har --format csv`      | One CSV row per request, on stdout (or `-o requests.csv`)                                                                                |
-| `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                              |
-| `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                                   |
+| Command                          | Output                                                                                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `htv page.har`                   | Browses the report in the terminal: Findings, Waterfall, Resources, Overview, Steps, Hosts and Cache & network tabs (needs an interactive terminal) |
+| `htv page.har -o r.html`         | A single self-contained HTML file with the interactive diagram, which opens offline                                                                 |
+| `htv page.har -o r.json`         | The full analysis as JSON                                                                                                                           |
+| `htv page.har --format json`     | The same JSON on stdout, to pipe into another tool or an AI agent                                                                                   |
+| `htv page.har --format findings` | Only the [findings](#findings) of each page and its metrics, as compact JSON on stdout (or `-o findings.json`)                                      |
+| `htv page.har --format markdown` | A [Markdown report](#markdown-csv-and-mermaid) to paste into a ticket or a doc, on stdout (or `-o report.md`)                                       |
+| `htv page.har --format csv`      | One CSV row per request, on stdout (or `-o requests.csv`)                                                                                           |
+| `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                                         |
+| `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                                              |
 
-In the terminal, `1`–`6` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings, waterfall or cache a comparison shows, `/`, `f` and `z` search, filter and zoom the waterfall, and `q` quits.
+In the terminal, `1`–`7` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings, waterfall, resources or cache a comparison shows, `/` and `f` filter the waterfall and the resources, `z` zooms the waterfall, `s`/`S` sort the resources, `?` shows the keys and the filter syntax, and `q` quits.
 
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
 
@@ -105,9 +105,31 @@ The same findings open the terminal report, on the Findings tab (`1`), grouped b
 
 The waterfall lays every request of a page on one time axis, sorted by start: its short name, type, status and size, and a bar split into its phases (blocked, DNS, connect, TLS, send, wait, receive), with the TLS handshake drawn after the TCP connection and the phases a reused connection skips left out. Browser-cache hits are drawn hollow. Vertical marks show the document's TTFB, FCP and LCP (from the trace), DOMContentLoaded and onLoad, and badges point at the LCP resource and the render-blocking requests (from the trace's render-blocking status, or inferred from the HAR's initiators and priorities without one).
 
-In the HTML report and the web app, the Waterfall button opens it for the current page (each diagram of a comparison has its own). Chips filter by resource type, the selects by first or third party and by host, and the search box by URL. The Axis select spans the whole recording or zooms on the page load (up to the last mark), when late requests such as beacons stretch the recording. Hovering or focusing a row shows its full URL and the duration of each phase; `↑`/`↓` move between rows. It renders 300 rows at a time, with a button for the next ones, so that a HAR of thousands of requests stays responsive.
+In the HTML report and the web app, the Waterfall button opens it for the current page (each diagram of a comparison has its own). Chips filter by resource type, the selects by first or third party and by host, and the filter box takes a query in the field language below. The Axis select spans the whole recording or zooms on the page load (up to the last mark), when late requests such as beacons stretch the recording. The column headers sort the rows (a second click reverses the order, a third restores the start order), and the Table view lists the same requests with their priority, protocol, encoding, size, TTFB, time and start, each column sortable. Hovering or focusing a row shows its full URL and the duration of each phase; `↑`/`↓` move between rows. It renders 300 rows at a time, with a button for the next ones, so that a HAR of thousands of requests stays responsive.
 
-In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled to the terminal width: `░` blocked, `▒` DNS, connect and TLS, `█` request and wait, `▓` download and `╌` a cache hit, with `L` before the LCP resource and `B` before the render-blocking requests. The ruler marks `T` TTFB, `F` FCP, `L` LCP, `D` DCL and `O` onLoad, and stays in view while the rows scroll. `/` opens a search that filters the rows by URL (`Enter` keeps it, `Esc` clears it), `f` cycles first party, third party and all, and `z` zooms the axis on the page load and back (`›` points at the requests after it).
+#### Filter language
+
+The filter takes terms separated by spaces, all of which a request must match, after DevTools' network filter. A bare word matches the URL (double quotes keep spaces in it), `field:value` narrows by a field, and a leading `-` keeps the requests that do not match. An unknown field reads as URL text; a value a field cannot read matches nothing and is reported under the box.
+
+| Field                               | Values                                                                                             | Example             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------- |
+| `domain` (or `host`)                | a host and its subdomains, or a pattern with `*`                                                   | `domain:cdn.*`      |
+| `status`                            | a code, a class such as `4xx`, a range `300-399`, or `>=400`                                       | `status:4xx`        |
+| `type`                              | `document` `css` `js` `font` `image` `fetch` `other` (DevTools' aliases work: `doc`, `img`, `xhr`) | `type:js`           |
+| `mime`                              | part of the MIME type                                                                              | `mime:image/`       |
+| `method`                            | the request method                                                                                 | `method:post`       |
+| `larger-than`, `smaller-than`       | a transfer size in bytes, `k` or `M`                                                               | `larger-than:100k`  |
+| `slower-than`, `faster-than`        | a duration in `ms` or `s`                                                                          | `slower-than:500ms` |
+| `size` `body` `time` `ttfb` `start` | an operator (`>` `>=` `<` `<=` `=`) and a value                                                    | `ttfb:>300ms`       |
+| `priority`                          | `highest` `high` `medium` `low` `lowest`                                                           | `priority:highest`  |
+| `protocol`                          | `h1` `h2` `h3`                                                                                     | `protocol:h1`       |
+| `encoding`                          | `br` `gzip` `zstd` `deflate` `identity` `none`                                                     | `encoding:none`     |
+| `party`                             | `first` or `third`                                                                                 | `party:third`       |
+| `is`                                | `cached` `blocking` `lcp` `redirect` `error` `document`                                            | `-is:cached`        |
+
+`domain:*.cdn.com type:js -is:cached larger-than:50k` lists the scripts of a CDN that came over the network at more than 50 KB.
+
+In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled to the terminal width: `░` blocked, `▒` DNS, connect and TLS, `█` request and wait, `▓` download and `╌` a cache hit, with `L` before the LCP resource and `B` before the render-blocking requests. The ruler marks `T` TTFB, `F` FCP, `L` LCP, `D` DCL and `O` onLoad, and stays in view while the rows scroll. `/` opens the filter, which takes the same language (`Enter` keeps it, `Esc` clears it), `f` cycles first party, third party and all, and `z` zooms the axis on the page load and back (`›` points at the requests after it). The Resources tab (`3`) lists the same requests as a table with their type, status, priority, protocol, encoding, size, TTFB, time and start; it shares the filter and the party with the waterfall, `s` cycles the column it sorts by (the measures largest first) and `S` reverses the order. `?` shows the keys and the filter syntax on any tab.
 
 ### Third parties
 

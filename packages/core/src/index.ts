@@ -23,6 +23,7 @@ export * from "./analysis/main-thread.js";
 export * from "./parsers/main-thread.js";
 export * from "./analysis/findings.js";
 export * from "./analysis/waterfall.js";
+export * from "./analysis/resource-query.js";
 export * from "./analysis/compare.js";
 export * from "./utils/format.js";
 export * from "./analysis/export.js";

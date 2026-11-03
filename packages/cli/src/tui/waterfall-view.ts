@@ -10,18 +10,23 @@ import type {
 import { BLANK, panel, seg } from "./lines.js";
 import type { Line, Segment } from "./lines.js";
 
-/**
- * What the waterfall shows: the URL search (and whether its prompt is open), the party and
- * where the time axis ends.
- */
-export interface WaterfallViewState {
+/** The filter of a request list: its query, whether its prompt is open, what it could not read. */
+export interface FilterState {
   search: string;
   searching: boolean;
+  problems?: string[];
+}
+
+/**
+ * What the waterfall shows: the filter (and whether its prompt is open), the party and
+ * where the time axis ends.
+ */
+export interface WaterfallViewState extends FilterState {
   party: WaterfallParty | null;
   axis: WaterfallAxis;
 }
 
-const TYPE_LABEL: Record<ResourceType, string> = {
+export const TYPE_LABEL: Record<ResourceType, string> = {
   document: "doc",
   stylesheet: "css",
   script: "script",
@@ -210,15 +215,21 @@ function rowLine(row: WaterfallRow, layout: Layout, marks: PlacedMark[]): Line {
   ];
 }
 
-function filterLine(state: WaterfallViewState): Line {
-  const party = `Party: ${state.party ?? "all"}  Axis: ${state.axis}`;
-  if (state.searching) {
-    return [seg(party, { dim: true }), seg("  Search: ", { dim: true }), seg(`${state.search}▏`)];
-  }
-  if (state.search) {
-    return [seg(party, { dim: true }), seg("  Search: ", { dim: true }), seg(state.search)];
-  }
-  return [seg(`${party}  / search  f party  z axis`, { dim: true })];
+/**
+ * The line above a request list: what it shows (`status`), then the filter being typed or
+ * kept, with what it could not read, or the keys (`hint`) when there is none.
+ */
+export function filterLine(state: FilterState, status: string, hint: string): Line {
+  if (!state.searching && !state.search) return [seg(`${status}  ${hint}`, { dim: true })];
+  const problems = (state.problems ?? []).map((problem) =>
+    seg(`  ⚠ ${problem}`, { color: "yellow" })
+  );
+  return [
+    seg(status, { dim: true }),
+    seg("  Filter: ", { dim: true }),
+    seg(state.searching ? `${state.search}▏` : state.search),
+    ...problems,
+  ];
 }
 
 function legendLines(marks: PlacedMark[]): Line[] {
@@ -268,7 +279,11 @@ export function waterfallRegion(
       ? `Waterfall · ${total} requests`
       : `Waterfall · ${rows.length} of ${total} requests`;
   const body: Line[] = [
-    filterLine(state),
+    filterLine(
+      state,
+      `Party: ${state.party ?? "all"}  Axis: ${state.axis}`,
+      "/ filter  f party  z axis  ? help"
+    ),
     headerLine(layout),
     axisLine(marks, layout),
     ...(rows.length === 0
