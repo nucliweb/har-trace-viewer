@@ -2,7 +2,13 @@ import { formatBytes, shortUrl } from "@htv/core";
 import type { HarEntry } from "@htv/core";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./CacheSidebar.module.css";
-import { Sidebar, SidebarGroup, SidebarRow, SidebarRows, SidebarTypeHeader } from "./Sidebar.js";
+import {
+  Sidebar,
+  SidebarGroup,
+  SidebarPagedRows,
+  SidebarRow,
+  SidebarTypeHeader,
+} from "./Sidebar.js";
 
 interface Props {
   resources: HarEntry[];
@@ -14,8 +20,9 @@ export function CacheSidebar({ resources }: Props) {
       {[...groupByType(resources)].map(([type, entries]) => (
         <SidebarGroup as="details" key={type} open={entries.length <= 6}>
           <SidebarTypeHeader as="summary" type={type} count={entries.length} />
-          <SidebarRows>
-            {entries.map((entry, i) => (
+          <SidebarPagedRows
+            items={entries}
+            render={(entry, i) => (
               <SidebarRow
                 key={i}
                 url={entry.url}
@@ -28,8 +35,8 @@ export function CacheSidebar({ resources }: Props) {
                   {entry.fromCache === "memory" ? "mem" : "disk"}
                 </span>
               </SidebarRow>
-            ))}
-          </SidebarRows>
+            )}
+          />
         </SidebarGroup>
       ))}
     </Sidebar>

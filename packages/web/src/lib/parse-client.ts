@@ -29,6 +29,12 @@ let worker: Worker | null = null;
  * worker chunk is not inlined). Later calls parse on the main thread directly.
  */
 let workerBroken = false;
+/**
+ * Set once the worker has posted a message: it loaded and runs. An error after that is a
+ * crash of the parse itself (the tab ran out of memory on a huge file), which parsing again
+ * on the main thread would only repeat, freezing the page this time.
+ */
+let workerAlive = false;
 let nextId = 1;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 const pending = new Map<number, Pending>();
@@ -59,6 +65,15 @@ async function parseOnMainThread(
   return readRecordingFile(kind, file);
 }
 
+function reportCrash(message: string | undefined): void {
+  const detail = message ? ` (${message})` : "";
+  shutdown(
+    new Error(
+      `The parser crashed in the browser${detail}. The file may be too large for this tab: try the htv command line, or a HAR without response bodies.`
+    )
+  );
+}
+
 function fallBackToMainThread(): void {
   workerBroken = true;
   shutdown(null);
@@ -74,7 +89,9 @@ function getWorker(): Worker {
   const created = new Worker(new URL("../workers/parse.worker.ts", import.meta.url), {
     type: "module",
   });
+  workerAlive = false;
   created.onmessage = (event: MessageEvent<ParseResponse>) => {
+    workerAlive = true;
     const message = event.data;
     const entry = pending.get(message.id);
     if (!entry) return;
@@ -88,8 +105,9 @@ function getWorker(): Worker {
     scheduleIdleShutdown();
   };
   created.onerror = (event) => {
-    event.preventDefault(); // keep the load failure out of the console
-    fallBackToMainThread();
+    event.preventDefault(); // keep the failure out of the console
+    if (workerAlive) reportCrash(event.message);
+    else fallBackToMainThread();
   };
   created.onmessageerror = fallBackToMainThread;
   worker = created;

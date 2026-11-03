@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CSSProperties, ElementType, ReactNode } from "react";
 import type { ResourceType } from "@htv/core";
 import { TYPE_LABELS } from "../lib/resource-types.js";
@@ -92,6 +93,36 @@ export function SidebarTypeHeader({
 
 export function SidebarRows({ children }: { children: ReactNode }) {
   return <div className={styles.rows}>{children}</div>;
+}
+
+// Rows rendered at once: a page of 10 000 requests lists its first rows and waits for
+// "Show more", so that opening the sidebar stays quick.
+const PAGE_SIZE = 200;
+
+interface PagedRowsProps<T> {
+  items: T[];
+  render: (item: T, index: number) => ReactNode;
+}
+
+/** The first rows of a list, with a button for the next page; a new list starts over. */
+export function SidebarPagedRows<T>({ items, render }: PagedRowsProps<T>) {
+  const [paging, setPaging] = useState({ items, limit: PAGE_SIZE });
+  const limit = paging.items === items ? paging.limit : PAGE_SIZE;
+  const left = items.length - limit;
+  return (
+    <div className={styles.rows}>
+      {items.slice(0, limit).map(render)}
+      {left > 0 && (
+        <button
+          type="button"
+          className={styles.more}
+          onClick={() => setPaging({ items, limit: limit + PAGE_SIZE })}
+        >
+          {`Show ${Math.min(PAGE_SIZE, left)} more (${left} left)`}
+        </button>
+      )}
+    </div>
+  );
 }
 
 interface RowProps {

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { HarEntry } from "@htv/core";
 import { ResourceSidebar } from "../src/components/ResourceSidebar.js";
@@ -57,5 +58,27 @@ describe("ResourceSidebar preconnect tip", () => {
     ]);
 
     expect(screen.queryByText(/preconnect/i)).toBeNull();
+  });
+});
+
+describe("ResourceSidebar on a large page", () => {
+  it("lists 200 rows of a type at a time, with a button for the next ones", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 450 }, (_, i) =>
+      entry(`https://cdn.example.com/asset-${i}.js`)
+    );
+    const { container } = render(
+      <ResourceSidebar resources={many} title="All resources" overview onClose={() => undefined} />
+    );
+    const rows = () =>
+      container.querySelectorAll('[title^="https://cdn.example.com/asset-"]').length;
+
+    expect(screen.getByText("450 resources")).toBeInTheDocument();
+    expect(rows()).toBe(200);
+    await user.click(screen.getByRole("button", { name: "Show 200 more (250 left)" }));
+    expect(rows()).toBe(400);
+    await user.click(screen.getByRole("button", { name: "Show 50 more (50 left)" }));
+    expect(rows()).toBe(450);
+    expect(screen.queryByRole("button", { name: /Show \d+ more/ })).toBeNull();
   });
 });

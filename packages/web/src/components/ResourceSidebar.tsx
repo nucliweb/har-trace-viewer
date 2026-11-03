@@ -7,6 +7,7 @@ import {
   Sidebar,
   SidebarGroup,
   SidebarGroupHeader,
+  SidebarPagedRows,
   SidebarRow,
   SidebarRows,
   SidebarTypeHeader,
@@ -83,16 +84,17 @@ function DomainsSection({
   return (
     <SidebarGroup>
       <SidebarGroupHeader label="Domains" count={domains.length} />
-      <SidebarRows>
-        {domains.map((d) => (
+      <SidebarPagedRows
+        items={domains}
+        render={(d) => (
           <div key={d.hostname} className={styles.domainRow}>
             <span className={styles.domainName} title={d.hostname}>
               {d.hostname}
             </span>
             {d.preconnect && <PreconnectBadge source={d.preconnect} />}
           </div>
-        ))}
-      </SidebarRows>
+        )}
+      />
       {tipCandidates.length > 0 && (
         <div className={styles.preconnectTip}>
           <span className={styles.tipIcon}>💡</span>
@@ -197,8 +199,9 @@ export function ResourceSidebar({
       {[...grouped.entries()].map(([type, entries]) => (
         <SidebarGroup key={type}>
           <SidebarTypeHeader type={type} count={entries.length} />
-          <SidebarRows>
-            {entries.map((entry, i) => (
+          <SidebarPagedRows
+            items={entries}
+            render={(entry, i) => (
               <SidebarRow
                 key={i}
                 url={entry.url}
@@ -207,8 +210,8 @@ export function ResourceSidebar({
               >
                 <span className={styles.rowDur}>{formatMs(entry.duration)}</span>
               </SidebarRow>
-            ))}
-          </SidebarRows>
+            )}
+          />
         </SidebarGroup>
       ))}
     </Sidebar>

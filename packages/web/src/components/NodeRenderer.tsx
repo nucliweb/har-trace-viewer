@@ -9,6 +9,9 @@ import { GlowFilter, PathLayer } from "./diagram/PathLayer.js";
 import { ZoneBands } from "./diagram/ZoneBands.js";
 import styles from "./NodeRenderer.module.css";
 
+// Both WIDTH and MAX_WIDTH are multiples of it.
+const WIDTH_STEP = 50;
+
 interface Props {
   nodes: DiagramNode[];
   paths: DiagramPath[];
@@ -35,10 +38,12 @@ function NodeRendererView({
   const options = useMemo(() => layoutOptions(nodes), [nodes]);
   const svgRef = useRef<SVGSVGElement>(null);
   const size = useElementSize(svgRef, { width: WIDTH, height: HEIGHT });
-  // The diagram is as wide as the container's aspect ratio asks, so it fills it both ways.
+  // The diagram is as wide as the container's aspect ratio asks, so it fills it both ways, in
+  // steps: the layout is solved again when the width crosses a step, not on every pixel of a
+  // resize.
   const width = Math.min(
     MAX_WIDTH,
-    Math.max(WIDTH, Math.round((HEIGHT * size.width) / size.height))
+    Math.max(WIDTH, Math.round((HEIGHT * size.width) / size.height / WIDTH_STEP) * WIDTH_STEP)
   );
   const geometry = useMemo(
     () => layout(nodes, paths, options, { width }),
