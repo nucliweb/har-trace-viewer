@@ -137,7 +137,7 @@ function heightAt(points: { x: number; y: number }[], x: number): number | undef
   return undefined;
 }
 
-export interface ClusterPath {
+interface ClusterPath {
   from: NodePosition;
   to: NodePosition;
   path: DiagramPath;

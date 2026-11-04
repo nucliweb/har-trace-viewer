@@ -23,7 +23,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
  * What a parsed JSON value is: a HAR has `log.entries`, a Chrome trace has `traceEvents` or
  * is the bare array of its events; anything else is neither.
  */
-export function detectRecordingKind(value: unknown): ParseKind | null {
+function detectRecordingKind(value: unknown): ParseKind | null {
   if (Array.isArray(value)) return "trace";
   if (!isObject(value)) return null;
   if (isObject(value.log) && Array.isArray(value.log.entries)) return "har";

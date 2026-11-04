@@ -2,6 +2,7 @@ import {
   THIRD_PARTY_CATEGORY_LABEL,
   formatBytes,
   formatMs,
+  pct,
   protocolLabel,
   summarizeHops,
 } from "@htv/core";
@@ -18,7 +19,6 @@ interface Props {
   onClose: () => void;
 }
 
-const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function formatConnection(hop: HostHop): string {

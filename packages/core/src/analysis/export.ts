@@ -6,6 +6,7 @@ import {
   formatDeltaPct,
   formatMetricValue,
   formatMs,
+  pct,
 } from "../utils/format.js";
 import type { DeltaUnit } from "../utils/format.js";
 import { phaseMs, tcpConnectMs } from "../utils/timing.js";
@@ -262,8 +263,6 @@ function hostsTable(flow: Flow, index: number): string[] {
   );
 }
 
-const pct = (share: number) => `${Math.round(share * 100)}%`;
-
 function thirdPartiesOf(flow: Flow, index: number): ThirdPartyReport {
   const { har, trace } = flow.pages[index];
   return flow.pageAnalyses[index]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
@@ -393,12 +392,12 @@ function thirdPartyComparisonSection(a: Flow, b: Flow): string[] {
 function comparisonSection(a: Flow, b: Flow): string[] {
   const rows = compareFlows(a, b).metrics.map((m) => {
     const unit = UNIT_OF.get(m.key) ?? "count";
-    const pct = formatDeltaPct(m.deltaPct);
+    const change = formatDeltaPct(m.deltaPct);
     return [
       m.label,
       formatMetricValue(m.a, unit),
       formatMetricValue(m.b, unit),
-      m.delta === null ? "n/a" : `${formatDelta(m.delta, unit)}${pct ? ` (${pct})` : ""}`,
+      m.delta === null ? "n/a" : `${formatDelta(m.delta, unit)}${change ? ` (${change})` : ""}`,
       m.rating === "none" ? "" : m.rating,
     ];
   });

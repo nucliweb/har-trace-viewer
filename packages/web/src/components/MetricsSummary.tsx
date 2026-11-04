@@ -4,6 +4,7 @@ import {
   TTFB_LABEL,
   formatBytes,
   formatMs,
+  pct,
   rateMetric,
   shortUrl,
   summarizeFlowMetrics,
@@ -17,7 +18,6 @@ interface Props {
   onClose: () => void;
 }
 
-const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
 const formatCls = (value: number | null | undefined) =>
   value === null || value === undefined ? "n/a" : value.toFixed(3);
 

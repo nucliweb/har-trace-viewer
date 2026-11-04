@@ -261,21 +261,6 @@ export function identifyThirdParty(url: string): ThirdPartyIdentity {
   return { name: getRootDomain(url), category: "other", known: false };
 }
 
-/** The categories in the order reports list them. */
-export const THIRD_PARTY_CATEGORIES: readonly ThirdPartyCategory[] = [
-  "tag-manager",
-  "analytics",
-  "advertising",
-  "consent",
-  "social",
-  "video",
-  "fonts",
-  "customer-success",
-  "cdn",
-  "utility",
-  "other",
-];
-
 export const THIRD_PARTY_CATEGORY_LABEL: Record<ThirdPartyCategory, string> = {
   "tag-manager": "Tag manager",
   analytics: "Analytics",

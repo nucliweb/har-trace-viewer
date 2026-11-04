@@ -1,4 +1,4 @@
-import { getHostname, getRootDomain } from "../utils/domain.js";
+import { getHostname } from "../utils/domain.js";
 import { detectPop, detectVercelFunctionRegion } from "./pops.js";
 import type {
   CdnProvider,
@@ -303,8 +303,3 @@ function isAzureEntry(url: string, headers: Record<string, string>): boolean {
 }
 
 const EU_TLD_RE = /\.(eu|de|fr|nl|ie|be|pl|es|it|se|no|dk|at|ch|co\.uk|co\.de)$/i;
-
-export function hasThirdParties(entries: { url: string }[], documentUrl: string): boolean {
-  const documentRoot = getRootDomain(documentUrl);
-  return entries.some((e) => getRootDomain(e.url) !== documentRoot);
-}

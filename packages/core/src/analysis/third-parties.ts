@@ -3,7 +3,7 @@ import { medianTtfbByLoad } from "./host-ttfb.js";
 import { isBrowserCacheHit, networkRequests } from "./network-requests.js";
 import { identifyThirdParty, THIRD_PARTY_CATEGORY_LABEL } from "./third-party-entities.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
-import { formatBytes } from "../utils/format.js";
+import { formatBytes, pct } from "../utils/format.js";
 import type {
   HarEntry,
   ParsedHar,
@@ -35,7 +35,6 @@ const CONSENT_WARNING_BYTES = 100_000;
 
 const plural = (count: number, one: string, many = `${one}s`) =>
   `${count} ${count === 1 ? one : many}`;
-const pct = (share: number) => `${Math.round(share * 100)}%`;
 const NO_COST: ThirdPartyCost = { requests: 0, bytes: 0 };
 
 function cost(entries: HarEntry[]): ThirdPartyCost {

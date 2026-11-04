@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  fileName,
   formatBytes,
   formatDelta,
   formatDeltaPct,
   formatMetricValue,
   formatMs,
+  pct,
   shortUrl,
 } from "../src/utils/format.js";
 
@@ -90,5 +92,28 @@ describe("formatMetricValue", () => {
     [null, "ms", "n/a"],
   ] as const)("formats %s %s as %s", (value, unit, expected) => {
     expect(formatMetricValue(value, unit)).toBe(expected);
+  });
+});
+
+describe("pct", () => {
+  it.each([
+    [0, "0%"],
+    [0.456, "46%"],
+    [0.004, "0%"],
+    [1, "100%"],
+    [1.5, "150%"],
+  ])("formats the ratio %s as %s", (ratio, expected) => {
+    expect(pct(ratio)).toBe(expected);
+  });
+});
+
+describe("fileName", () => {
+  it.each([
+    ["https://cdn.example.com/a/app.js?v=1#top", "app.js"],
+    ["https://example.com/a/b/", "b"],
+    ["https://example.com/", "https://example.com/"],
+    ["not a url", "not a url"],
+  ])("reads %s as %s", (url, expected) => {
+    expect(fileName(url)).toBe(expected);
   });
 });

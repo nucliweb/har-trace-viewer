@@ -16,7 +16,7 @@ import {
 import type { DiagramStep, HarEntry, Metric, MetricUnit, NodeId, PathId } from "../types.js";
 
 // Steps are built per page and tagged with their pageIndex by generateFlow.
-export type PageStep = Omit<DiagramStep, "pageIndex">;
+type PageStep = Omit<DiagramStep, "pageIndex">;
 
 export const TRANSITION_TITLE_PREFIX = "→ User navigates to ";
 

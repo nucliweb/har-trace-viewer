@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { formatBytes, formatMs } from "@htv/core";
+import { fileName, formatBytes, formatMs } from "@htv/core";
 import type { Finding, FindingEvidence, FindingSeverity } from "@htv/core";
 import styles from "./FindingsPanel.module.css";
 
@@ -31,14 +31,6 @@ function findingMeta(finding: Finding): string {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-function fileName(url: string): string {
-  try {
-    return new URL(url).pathname.split("/").filter(Boolean).pop() ?? url;
-  } catch {
-    return url;
-  }
 }
 
 function EvidenceRow({ evidence }: { evidence: FindingEvidence }) {

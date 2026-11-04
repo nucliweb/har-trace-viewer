@@ -16,14 +16,14 @@ export function isBeacon(entry: HarEntry): boolean {
 }
 
 /** The middle value (the mean of the two middle ones for an even count); null without values. */
-export function median(values: number[]): number | null {
+function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
-export interface TtfbByLoad {
+interface TtfbByLoad {
   /** Median TTFB of the requests sent before onLoad; null when there are none. */
   beforeLoad: number | null;
   /** Median TTFB of the requests sent after onLoad; null when there are none. */

@@ -6,6 +6,7 @@ import {
   formatDeltaPct,
   formatMetricValue,
   formatMs,
+  pct,
   rateDelta,
   rateMetric,
 } from "@htv/core";
@@ -115,8 +116,6 @@ function NoteRefs({
     </sup>
   );
 }
-
-const pct = (share: number) => `${Math.round(share * 100)}%`;
 
 /** The third parties of both flows by entity, what B added first; a consent comparison reads here. */
 function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison }) {

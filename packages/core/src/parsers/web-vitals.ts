@@ -1,4 +1,4 @@
-export interface VitalsEvent {
+interface VitalsEvent {
   name: string;
   ts: number; // microseconds
   ph?: string;

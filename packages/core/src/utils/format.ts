@@ -71,7 +71,7 @@ export function formatMetricValue(value: number | null, unit: DeltaUnit): string
     case "bytes":
       return formatBytes(value);
     case "ratio":
-      return `${Math.round(value * 100)}%`;
+      return pct(value);
     case "score":
       return value.toFixed(3);
     default:
@@ -80,8 +80,26 @@ export function formatMetricValue(value: number | null, unit: DeltaUnit): string
 }
 
 /** Formats a percentage change, rounded: "−60%", "+12%"; empty without a value. */
-export function formatDeltaPct(pct: number | null): string {
-  return pct === null ? "" : `${sign(Math.round(pct))}${Math.abs(Math.round(pct))}%`;
+export function formatDeltaPct(change: number | null): string {
+  return change === null ? "" : `${sign(Math.round(change))}${Math.abs(Math.round(change))}%`;
+}
+
+/** Formats a ratio as a whole percentage: 0.456 -> "46%", 1.5 -> "150%". */
+export function pct(ratio: number): string {
+  return `${Math.round(ratio * 100)}%`;
+}
+
+/**
+ * The last non-empty path segment of a URL, for a compact resource name:
+ * "https://cdn.example.com/a/app.js?v=1" -> "app.js". Falls back to the raw string when the
+ * URL cannot be parsed or has no path segment (a bare origin).
+ */
+export function fileName(url: string): string {
+  try {
+    return new URL(url).pathname.split("/").filter(Boolean).pop() ?? url;
+  } catch {
+    return url;
+  }
 }
 
 const MAX_URL_LABEL = 36;

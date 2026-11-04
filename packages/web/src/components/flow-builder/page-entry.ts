@@ -109,7 +109,7 @@ export const pageOptionLabel = (page: ReturnType<typeof listHarPages>[number]) =
   `${webPageTestLabel(page.title) ?? (page.title || page.url)} (${page.entries} req)`;
 
 /** What the Generate button builds: the flow's pages, its options and the pages of B, if any. */
-export interface Generation {
+interface Generation {
   pages: PageFlow[];
   options: FlowOptions;
   comparePages?: PageFlow[];

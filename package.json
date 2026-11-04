@@ -12,6 +12,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "smoke": "npm run smoke -w har-trace-viewer",
     "lint": "eslint .",
+    "knip": "knip",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -27,6 +28,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
+    "knip": "^5.88.1",
     "prettier": "^3.9.10",
     "typescript-eslint": "^8.72.1"
   },

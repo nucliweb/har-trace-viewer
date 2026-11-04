@@ -37,7 +37,7 @@ export const ANCHOR_RADIUS: Record<NodeKind, number> = {
   "third-parties": 19,
 };
 // Paths leave their source slightly tilted towards the target, so fanned-out paths separate.
-export const SOURCE_LEAN = 3;
+const SOURCE_LEAN = 3;
 // Request lane above the path, response lane below.
 export const LANE_OFFSET = 5;
 // Bezier control points as fractions of the run (x) and the rise (y) between the anchors.
@@ -74,7 +74,7 @@ export function bezier(
 }
 
 // A point of a cubic Bezier curve given by its four control points.
-export function cubicPoint(px: number[], py: number[], t: number) {
+function cubicPoint(px: number[], py: number[], t: number) {
   const u = 1 - t;
   const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
   return {
@@ -83,7 +83,7 @@ export function cubicPoint(px: number[], py: number[], t: number) {
   };
 }
 
-export interface Anchors {
+interface Anchors {
   run: number;
   x0: number;
   y0: number;

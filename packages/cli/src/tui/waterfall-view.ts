@@ -21,7 +21,7 @@ export interface FilterState {
  * What the waterfall shows: the filter (and whether its prompt is open), the party and
  * where the time axis ends.
  */
-export interface WaterfallViewState extends FilterState {
+interface WaterfallViewState extends FilterState {
   party: WaterfallParty | null;
   axis: WaterfallAxis;
 }

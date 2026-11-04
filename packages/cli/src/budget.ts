@@ -158,7 +158,7 @@ export function budgetValues(flow: Flow): PageBudgetValues[] {
   }));
 }
 
-export interface BudgetResult {
+interface BudgetResult {
   page: string;
   metric: BudgetMetric;
   limit: number;
@@ -186,7 +186,7 @@ export function evaluateBudgets(
 }
 
 /** A finding at the --fail-on severity or worse, and the page it belongs to. */
-export interface FailingFinding extends Pick<Finding, "id" | "title" | "severity" | "source"> {
+interface FailingFinding extends Pick<Finding, "id" | "title" | "severity" | "source"> {
   page: string;
 }
 
@@ -213,7 +213,7 @@ export interface CheckOptions {
   strict: boolean;
 }
 
-export interface CheckResult {
+interface CheckResult {
   budgets: BudgetResult[];
   failOn?: FailOnSeverity;
   findings: FailingFinding[];

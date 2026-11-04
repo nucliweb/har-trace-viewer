@@ -3,7 +3,7 @@
 
 // A JWT: header {"alg":"HS256","typ":"JWT"}, payload {"sub":"jane"}, a made-up signature.
 export const JWT_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-export const jwt = (signature: string) => `${JWT_HEADER}.eyJzdWIiOiJqYW5lIn0.${signature}`;
+const jwt = (signature: string) => `${JWT_HEADER}.eyJzdWIiOiJqYW5lIn0.${signature}`;
 
 export const SECRETS = {
   pageToken: "PAGE_TOKEN_SECRET_1",
@@ -25,13 +25,13 @@ export const SECRETS = {
 };
 
 export const DOCUMENT_URL = `https://shop.example.com/account?email=${SECRETS.email}&token=${SECRETS.pageToken}&lang=en`;
-export const LOGIN_URL = `https://shop.example.com/login?session=${SECRETS.session}&next=%2Faccount`;
-export const API_URL = `https://api.example.com/v1/profile?access_token=${SECRETS.accessToken}&lang=en`;
+const LOGIN_URL = `https://shop.example.com/login?session=${SECRETS.session}&next=%2Faccount`;
+const API_URL = `https://api.example.com/v1/profile?access_token=${SECRETS.accessToken}&lang=en`;
 export const PIXEL_URL = `https://tracker.vendor-one.io/pixel.gif?uid=${SECRETS.userId}&sig=${SECRETS.hexSignature}&page=home`;
 export const FONT_URL = "https://assets.vendor-two.net/fonts/brand.woff2";
-export const AVATAR_URL = "https://shop.example.com/avatars/jane.doe%40example.org/logo@2x.png";
+const AVATAR_URL = "https://shop.example.com/avatars/jane.doe%40example.org/logo@2x.png";
 export const GTAG_URL = "https://www.googletagmanager.com/gtag/js?id=G-ABC123";
-export const APP_JS_URL = `https://shop.example.com/app.js?key=${SECRETS.initiatorKey}`;
+const APP_JS_URL = `https://shop.example.com/app.js?key=${SECRETS.initiatorKey}`;
 
 const header = (name: string, value: string) => ({ name, value });
 

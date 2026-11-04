@@ -1,7 +1,7 @@
 import type { HarEntry, PreconnectSource, ResourcePriority, ResourceType } from "@htv/core";
 
 // More preconnects than this compete with the critical requests for bandwidth and CPU.
-export const MAX_PRECONNECT_HOSTS = 3;
+const MAX_PRECONNECT_HOSTS = 3;
 
 // Tag managers, analytics, beacons and ads: they load after the render on purpose, so a
 // preconnect to them only takes a connection away from what the page needs to render.

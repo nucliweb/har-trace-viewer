@@ -4,7 +4,7 @@ import type { HistoricalPath } from "../../types.js";
 import styles from "../NodeRenderer.module.css";
 import type { PathGeometry } from "./layout.js";
 
-export const GLOW_FILTER_ID = "glow";
+const GLOW_FILTER_ID = "glow";
 
 const PATH_COLORS: Partial<Record<PathId, string>> = {
   "browser-gfw": "var(--color-red)",

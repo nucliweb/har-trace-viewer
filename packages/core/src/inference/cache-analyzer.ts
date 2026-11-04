@@ -1,7 +1,7 @@
 import { WPT_REPEAT_VIEW_ID } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { isOwnNetworkResource, isOwnResource } from "../analysis/network-requests.js";
-import { formatMs } from "../utils/format.js";
+import { formatMs, pct } from "../utils/format.js";
 import type {
   CacheReport,
   CacheRecommendation,
@@ -396,7 +396,7 @@ function buildRecommendations(
     if (own.immutableRatio >= 0.8) {
       recs.push({
         label: "Static assets use long-term caching",
-        description: `${Math.round(own.immutableRatio * 100)}% of own resources use immutable long-term caching — ideal for content-hashed assets.`,
+        description: `${pct(own.immutableRatio)} of own resources use immutable long-term caching — ideal for content-hashed assets.`,
         severity: "good",
       });
     } else if (own.immutableRatio < 0.5) {
@@ -411,13 +411,13 @@ function buildRecommendations(
     if (own.cdnHitRatio >= 0.8) {
       recs.push({
         label: "CDN cache effective for static assets",
-        description: `${Math.round(own.cdnHitRatio * 100)}% of own resources fetched over the network came from the CDN cache.`,
+        description: `${pct(own.cdnHitRatio)} of own resources fetched over the network came from the CDN cache.`,
         severity: "good",
       });
     } else if (own.cdnHits > 0 && own.cdnHitRatio < 0.5) {
       recs.push({
         label: "Low CDN hit rate for static assets",
-        description: `Only ${Math.round(own.cdnHitRatio * 100)}% of own resources fetched over the network hit the CDN cache. Check Cache-Control headers and CDN configuration.`,
+        description: `Only ${pct(own.cdnHitRatio)} of own resources fetched over the network hit the CDN cache. Check Cache-Control headers and CDN configuration.`,
         severity: "warning",
       });
     }
@@ -447,7 +447,7 @@ function buildRecommendations(
     if (browser.hitRatio >= 0.7) {
       recs.push({
         label: "Browser cache working well",
-        description: `${Math.round(browser.hitRatio * 100)}% of resources served from browser cache — effective for repeat visits.`,
+        description: `${pct(browser.hitRatio)} of resources served from browser cache — effective for repeat visits.`,
         severity: "good",
       });
     } else if (browser.hitRatio === 0) {
@@ -463,7 +463,7 @@ function buildRecommendations(
     } else if (browser.hitRatio < 0.4) {
       recs.push({
         label: "Low browser cache hit ratio",
-        description: `Only ${Math.round(browser.hitRatio * 100)}% of resources came from browser cache. Review Cache-Control headers for static assets.`,
+        description: `Only ${pct(browser.hitRatio)} of resources came from browser cache. Review Cache-Control headers for static assets.`,
         severity: "warning",
       });
     }

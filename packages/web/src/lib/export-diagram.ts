@@ -37,7 +37,7 @@ const BADGE_PADDING = 12;
 const MONO_ADVANCE = 0.6;
 const FALLBACK_BACKGROUND: Record<Theme, string> = { light: "#f5f7fa", dark: "#060910" };
 
-export interface ExportBadge {
+interface ExportBadge {
   label: string;
   value: string;
   color: string;
@@ -45,7 +45,7 @@ export interface ExportBadge {
   opacity: number;
 }
 
-export interface SerializeOptions {
+interface SerializeOptions {
   theme: Theme;
   /** `@font-face` rules with data: URIs, see `collectFontFaceCss`. */
   fontCss: string;

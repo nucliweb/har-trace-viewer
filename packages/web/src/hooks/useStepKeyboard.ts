@@ -16,7 +16,7 @@ const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditabl
  * contenteditable element (typing in the FlowBuilder). Space is also left alone on buttons, where
  * it activates the button.
  */
-export function stepKeyAction(event: KeyboardEvent, actions: Actions): boolean {
+function stepKeyAction(event: KeyboardEvent, actions: Actions): boolean {
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return false;
   const target = event.target instanceof Element ? event.target : null;
   if (target?.closest(EDITABLE)) return false;

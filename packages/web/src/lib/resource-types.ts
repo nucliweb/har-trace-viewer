@@ -4,7 +4,7 @@ import type { ResourceType } from "@htv/core";
  * Display order for resource groups: render-critical types first (document, CSS, JS, fonts),
  * then images, then runtime requests, then everything else.
  */
-export const TYPE_ORDER: ResourceType[] = [
+const TYPE_ORDER: ResourceType[] = [
   "document",
   "stylesheet",
   "script",

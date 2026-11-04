@@ -8,7 +8,7 @@ export interface PageEntriesState {
   compare: PageEntry;
 }
 
-export type PageEntriesAction =
+type PageEntriesAction =
   | { type: "update"; id: string; patch: EntryPatch }
   | { type: "move"; index: number; delta: -1 | 1 }
   | { type: "add"; entry: PageEntry }

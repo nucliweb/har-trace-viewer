@@ -102,7 +102,7 @@ class EntryMatcher {
  * `resourceRefs` / `cacheResourceRefs`. Returns the inputs untouched when no
  * step carries inline resources; never mutates them.
  */
-export function inlineResourcesToRefs(
+function inlineResourcesToRefs(
   pages: PageFlow[],
   steps: DiagramStep[]
 ): { pages: PageFlow[]; steps: DiagramStep[] } {

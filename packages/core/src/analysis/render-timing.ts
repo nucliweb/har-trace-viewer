@@ -53,7 +53,7 @@ export function harRequestTiming(entry: HarEntry): {
   };
 }
 
-export interface DocumentTiming {
+interface DocumentTiming {
   startMs: number;
   responseStartMs: number; // first byte: the TTFB of the LCP breakdown
   endMs: number;

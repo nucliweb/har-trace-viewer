@@ -56,7 +56,7 @@ export function groupRuns<T extends RunPage>(pages: T[]): RunGroup<T>[] {
   return groups;
 }
 
-export const RUN_METRICS: readonly RunMetric[] = [
+const RUN_METRICS: readonly RunMetric[] = [
   "ttfb",
   "serverWait",
   "fcp",

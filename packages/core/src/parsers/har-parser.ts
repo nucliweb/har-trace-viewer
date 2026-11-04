@@ -320,7 +320,7 @@ const unquote = (value: string) =>
     : value;
 
 /** The metrics of a Server-Timing header, each with its duration and description when given. */
-export function parseServerTiming(header: string): ServerTimingMetric[] {
+function parseServerTiming(header: string): ServerTimingMetric[] {
   const metrics: ServerTimingMetric[] = [];
   for (const part of splitUnquoted(header, ",")) {
     const [rawName, ...params] = splitUnquoted(part, ";");

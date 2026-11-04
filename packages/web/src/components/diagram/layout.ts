@@ -41,7 +41,7 @@ export type { NodePosition } from "./geometry.js";
 
 export type ZoneId = "client" | "edge" | "intermediate" | "origin" | "third-parties";
 
-export interface LayoutOptions {
+interface LayoutOptions {
   // The client sits behind the Great Firewall: China zone with a GFW checkpoint column.
   hasGfw: boolean;
   hasCdn: boolean;
@@ -71,7 +71,7 @@ export interface PathGeometry {
   responseLabelY: number;
 }
 
-export interface Layout {
+interface Layout {
   width: number;
   height: number;
   // Top of the browser-cache sub-zone of the client zone.

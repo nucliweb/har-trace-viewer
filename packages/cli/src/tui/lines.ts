@@ -41,7 +41,7 @@ export const DELTA_COLOR: Record<DeltaRating, string | undefined> = {
   none: undefined,
 };
 
-export type Align = "left" | "right";
+type Align = "left" | "right";
 
 const pad = (text: string, width: number, align: Align) =>
   align === "right" ? text.padStart(width) : text.padEnd(width);

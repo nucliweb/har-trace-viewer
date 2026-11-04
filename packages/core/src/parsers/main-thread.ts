@@ -11,7 +11,7 @@ export interface RawTraceEvent {
 }
 
 // A task past this keeps the page from answering input; the rest counts as blocking.
-export const LONG_TASK_MS = 50;
+const LONG_TASK_MS = 50;
 const MAX_SCRIPTS = 100;
 const EXTENSION_SCHEME = "chrome-extension://";
 

@@ -6,7 +6,7 @@ import { TYPE_LABEL, filterLine } from "./waterfall-view.js";
 import type { FilterState } from "./waterfall-view.js";
 
 /** What the resources table shows: the filter, the party and the sort. */
-export interface ResourcesViewState extends FilterState {
+interface ResourcesViewState extends FilterState {
   party: WaterfallParty | null;
   sort: ResourceSort;
 }
@@ -47,7 +47,7 @@ export function nextSort(current: ResourceSort): ResourceSort {
   return { ...SORT_CYCLE[(index + 1) % SORT_CYCLE.length] };
 }
 
-export const sortLabel = (sort: ResourceSort) =>
+const sortLabel = (sort: ResourceSort) =>
   `${SORT_LABEL[sort.key]} ${sort.direction === "asc" ? "↑" : "↓"}`;
 
 // The widest name column, and the room the other columns need beside it.

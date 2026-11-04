@@ -52,6 +52,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@htv/core": "*",
     "@types/react": "^19.3.0",
     "esbuild": "^0.28.2",
     "ink": "^8.0.0",

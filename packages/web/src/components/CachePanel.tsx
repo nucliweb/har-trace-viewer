@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { formatBytes } from "@htv/core";
+import { fileName, formatBytes, pct } from "@htv/core";
 import type {
   CacheReport,
   CdnCacheStatus,
@@ -59,10 +59,6 @@ function formatMaxAge(seconds: number): string {
   return formatDuration(seconds);
 }
 
-function pct(ratio: number): string {
-  return `${Math.round(ratio * 100)}%`;
-}
-
 function CdnStatusBadge({ status }: { status: CdnCacheStatus }) {
   const label = status === "unknown" ? "—" : status.toUpperCase();
   return <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>{label}</span>;
@@ -78,14 +74,6 @@ function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "c
       return <span className={`${styles.sevIcon} ${styles.sevWarn}`}>⚠</span>;
     case "critical":
       return <span className={`${styles.sevIcon} ${styles.sevCrit}`}>✕</span>;
-  }
-}
-
-function fileName(url: string): string {
-  try {
-    return new URL(url).pathname.split("/").filter(Boolean).pop() ?? url;
-  } catch {
-    return url;
   }
 }
 

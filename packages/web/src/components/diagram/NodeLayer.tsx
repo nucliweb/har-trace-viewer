@@ -4,7 +4,7 @@ import styles from "../NodeRenderer.module.css";
 import { NodeGlyph } from "./NodeGlyph.js";
 import type { NodePosition } from "./layout.js";
 
-export const NODE_COLORS: Record<NodeKind, string> = {
+const NODE_COLORS: Record<NodeKind, string> = {
   browser: "var(--color-node-browser)",
   cache: "var(--color-node-browser)",
   gfw: "var(--color-red)",

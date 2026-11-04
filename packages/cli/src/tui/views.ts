@@ -5,6 +5,7 @@ import {
   analyzeHops,
   analyzeThirdParties,
   compareStepMetrics,
+  fileName,
   formatBytes,
   formatDelta,
   formatDeltaPct,
@@ -12,6 +13,7 @@ import {
   formatMs,
   getStepCacheResources,
   getStepResources,
+  pct,
   protocolLabel,
   rateDelta,
   rateMetric,
@@ -53,8 +55,6 @@ const SIDE_BY_SIDE_MIN = 96;
 const CACHE_ROW_MIN = 120;
 const METRICS_WIDTH = 38;
 const LIST_WIDTH = 36;
-
-const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
 
 /** The page a flow position belongs to: "Page 2 / 3 · Checkout", or its name alone. */
 export function pageLabel(flow: Flow, pageIndex: number): string {
@@ -632,14 +632,6 @@ const SEVERITY: Record<Recommendation["severity"], { icon: string; color: string
   info: { icon: "i", color: "cyan" },
   warning: { icon: "!", color: "yellow" },
   critical: { icon: "✕", color: "red" },
-};
-
-const fileName = (url: string) => {
-  try {
-    return new URL(url).pathname.split("/").filter(Boolean).pop() ?? url;
-  } catch {
-    return url;
-  }
 };
 
 const kv = (label: string, value: string): Line => [

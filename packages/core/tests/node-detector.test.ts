@@ -8,7 +8,6 @@ import {
   detectNode,
   detectThirdPartyHop,
   detectThirdPartyRegion,
-  hasThirdParties,
   suggestClientRegion,
 } from "../src/inference/node-detector.js";
 import { detectPop } from "../src/inference/pops.js";
@@ -291,48 +290,6 @@ describe("detectCdnPopCity", () => {
   it("falls back to Hong Kong for Akamai behind the GFW and null otherwise", () => {
     expect(detectCdnPopCity({}, "akamai", true)).toBe("Hong Kong");
     expect(detectCdnPopCity({}, "akamai", false)).toBeNull();
-  });
-});
-
-describe("hasThirdParties", () => {
-  it("returns false when all entries share the document domain", () => {
-    const entries = [
-      { url: "https://webperf-snippets.nucliweb.net/" },
-      { url: "https://webperf-snippets.nucliweb.net/assets/main.js" },
-    ];
-    expect(hasThirdParties(entries, "https://webperf-snippets.nucliweb.net/")).toBe(false);
-  });
-
-  it("returns true when an entry has a different root domain", () => {
-    const entries = [
-      { url: "https://webperf-snippets.nucliweb.net/" },
-      { url: "https://www.googletagmanager.com/gtag/js" },
-    ];
-    expect(hasThirdParties(entries, "https://webperf-snippets.nucliweb.net/")).toBe(true);
-  });
-
-  it("detects third parties in the webperf-snippets HAR fixture", () => {
-    const json = readFileSync(harFixturePath, "utf8");
-    const { entries, documentEntry } = parseHarJson(json);
-
-    expect(hasThirdParties(entries, documentEntry.url)).toBe(true);
-  });
-});
-
-describe("hasThirdParties with multi-label public suffixes", () => {
-  it("treats subdomains of the same .com.au domain as first party", () => {
-    expect(
-      hasThirdParties(
-        [{ url: "https://static.example.com.au/a.js" }],
-        "https://www.example.com.au/"
-      )
-    ).toBe(false);
-  });
-
-  it("treats a different .co.uk domain as third party", () => {
-    expect(hasThirdParties([{ url: "https://news.co.uk/a.js" }], "https://www.bbc.co.uk/")).toBe(
-      true
-    );
   });
 });
 
