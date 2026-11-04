@@ -1,22 +1,43 @@
 import { nodeKind } from "@htv/core";
 import { regionLabel } from "../../lib/region-label.js";
 import type { DiagramNode, DiagramPath, NetworkRegion, NodeId, NodeKind, PathId } from "@htv/core";
+import {
+  BYPASS_CAPTIONS,
+  BYPASS_LABEL_OFFSET,
+  BYPASS_STEEP_CONTROL_X,
+  CLUSTER_LABEL,
+  CLUSTER_LABEL_BASELINE,
+  CLUSTER_LABEL_SLOTS_END,
+  bypassed,
+  pointAt,
+  solveClusterFan,
+} from "./cluster-fan.js";
+import type { ClusterFan } from "./cluster-fan.js";
+import {
+  ANCHOR_RADIUS,
+  CACHE_SUBZONE_Y,
+  CLUSTER_CACHE_SUBZONE_Y,
+  CONTROL_1,
+  CONTROL_2,
+  HEIGHT,
+  LANE_OFFSET,
+  WIDTH,
+  anchors,
+  bezier,
+  bypassControls,
+  round,
+  sampleCurve,
+} from "./geometry.js";
+import type { BypassShape, NodePosition, NodePositions } from "./geometry.js";
+
+export { GFW_ZONE_CAPTION_OFFSET, HEIGHT, MAX_WIDTH, WIDTH } from "./geometry.js";
+export type { NodePosition } from "./geometry.js";
 
 /**
  * Diagram geometry. The only hand-placed coordinates are the zone boundaries and the node
  * columns of each layout; path curves, request/response lanes and timing label positions are
  * derived from the node centres.
  */
-
-export const WIDTH = 900;
-export const HEIGHT = 480;
-// The diagram stretches with its container, up to this many units wide.
-export const MAX_WIDTH = 2400;
-// The client zone's browser-cache sub-zone starts here; the GFW zone caption sits just above.
-// With stacked third-party clusters it starts lower, leaving their paths room to fan out.
-const CACHE_SUBZONE_Y = 370;
-const CLUSTER_CACHE_SUBZONE_Y = 430;
-export const GFW_ZONE_CAPTION_OFFSET = 8;
 
 export type ZoneId = "client" | "edge" | "intermediate" | "origin" | "third-parties";
 
@@ -38,15 +59,6 @@ export interface Zone {
   color: string;
 }
 
-export interface NodePosition {
-  cx: number;
-  cy: number;
-  present: boolean;
-  // Stacked third-party clusters caption themselves right of their glyph, so the paths
-  // arriving from the left never cross a caption; so does the browser cache, low in its band.
-  captionRight?: boolean;
-}
-
 export interface PathGeometry {
   d: string;
   requestD: string;
@@ -65,7 +77,7 @@ export interface Layout {
   // Top of the browser-cache sub-zone of the client zone.
   cacheSubzoneY: number;
   zones: Zone[];
-  nodes: Partial<Record<NodeId, NodePosition>>;
+  nodes: NodePositions;
   paths: Partial<Record<PathId, PathGeometry>>;
 }
 
@@ -121,23 +133,6 @@ const CLUSTER_STACK_CENTRE_Y = 262;
 const CLUSTER_STACK_SPAN = 280;
 const CLUSTER_MAX_SPACING = 80;
 
-// Distance from a node centre to where its paths attach, roughly half the glyph width.
-const ANCHOR_RADIUS: Record<NodeKind, number> = {
-  browser: 20,
-  cache: 15,
-  gfw: 17,
-  edge: 19,
-  origin: 19,
-  "third-parties": 19,
-};
-// Paths leave their source slightly tilted towards the target, so fanned-out paths separate.
-const SOURCE_LEAN = 3;
-// Request lane above the path, response lane below.
-const LANE_OFFSET = 5;
-// Bezier control points as fractions of the run (x) and the rise (y) between the anchors.
-const CONTROL_1 = { x: 0.33, y: 0.25 };
-const CONTROL_2 = { x: 0.72, y: 0.75 };
-
 // Hops shorter than this leave no room between the nodes: their label sits above the row.
 const SHORT_HOP = 180;
 const SHORT_HOP_LABEL_RISE = 35;
@@ -145,50 +140,6 @@ const SHORT_HOP_LABEL_RISE = 35;
 const LABEL_OFFSET = { centre: -9.25, request: -16.25, response: 22.75 };
 // Paths heading down (to the third parties) label just above their target, response below it.
 const DOWNWARD_LABEL_OFFSET = { centre: -2, response: 20 };
-
-// Browser → 3rd parties dips under the captions of the nodes it passes (GFW checkpoint, edge).
-// Per node: the caption's last baseline plus descender below the node centre, its half-width,
-// and how deep below the node centre the control points of the curve sit.
-// Paths to stacked clusters also pass the origin.
-const BYPASS_CAPTIONS: Partial<
-  Record<NodeKind, { bottom: number; halfWidth: number; controlDepth: number }>
-> = {
-  gfw: { bottom: 45, halfWidth: 50, controlDepth: 150 },
-  edge: { bottom: 64, halfWidth: 75, controlDepth: 110 },
-  origin: { bottom: 64, halfWidth: 75, controlDepth: 110 },
-};
-// Paths fanning out to stacked clusters dip under every caption they pass and turn up late
-// towards their cluster. Each one, in stack order, takes the gentlest start and then the
-// shallowest dip that keeps it clear of every obstacle and at least CLUSTER_FAN_GAP below the
-// path above it once out of the client zone (where they all leave the browser together,
-// without crossing), so they run side by side.
-const CLUSTER_FAN_GAP = 10;
-const CLUSTER_CONTROL_1_XS = [0.33, 0.25, 0.18, 0.1];
-const CLUSTER_CONTROL_2_X = 0.9;
-const CONTROL_DEPTH_STEP = 2;
-// Besides the captions they pass, the paths keep clear (their lanes included) of the GFW zone
-// caption, of the cache sub-zone, of the bottom of the diagram and, when they can, of the
-// browser caption.
-const CAPTION_CLEARANCE = 12;
-const BROWSER_CAPTION = { halfWidth: 30, top: 18, bottom: 42 };
-const GFW_ZONE_CAPTION = {
-  halfWidth: 84,
-  top: CLUSTER_CACHE_SUBZONE_Y - GFW_ZONE_CAPTION_OFFSET - 18,
-};
-const CACHE_SUBZONE_TOP = CLUSTER_CACHE_SUBZONE_Y - 8;
-const DIAGRAM_FLOOR_Y = HEIGHT - 16;
-// Their timing labels sit on the dip, centred on their path, one slot each between the client
-// zone and this fraction of the run, clear of the captions the paths pass.
-const CLUSTER_LABEL_SLOTS_END = 0.86;
-// Labels read "avg 1234ms" at most. Past the room for them side by side, the slots
-// interleave (paths 1, 3, 5 first, then 2, 4), so neighbouring slots hold labels of paths at
-// least two fan gaps apart.
-const CLUSTER_LABEL = { halfWidth: 40, above: 10, below: 4, clearance: 8 };
-const CLUSTER_LABEL_BASELINE = 4;
-// The GFW caption sits close to the browser: the curve leaves almost straight down to clear it.
-const BYPASS_STEEP_CONTROL_X = 0.1;
-// The timing label of a bypassing path hangs under the lowest point of its curve.
-const BYPASS_LABEL_OFFSET = { centre: 12, response: 20 };
 
 // Zone captions are the region labels, uppercased; the zones that are not places keep
 // captions of their own.
@@ -345,8 +296,6 @@ function positions(
   return result;
 }
 
-const round = (value: number) => Math.round(value);
-
 // The browser cache sits in the cache sub-zone, in the browser column, centred in the band.
 // Its hop from the browser leaves just under the browser caption and runs straight down.
 const BROWSER_CACHE_START = 44;
@@ -402,250 +351,6 @@ function scaledColumns(
     result[kind] = round(to[i] + ((cx - from[i]) / (from[i + 1] - from[i])) * (to[i + 1] - to[i]));
   }
   return result;
-}
-
-// A curve that dips under captions: both control points sit at `controlY`, at these
-// fractions of the run.
-interface BypassShape {
-  controlY: number;
-  control1X: number;
-  control2X: number;
-}
-
-// With `bypass` both control points sit at its height instead of between the anchors.
-function bezier(x0: number, y0: number, x1: number, y1: number, bypass?: BypassShape): string {
-  const dx = x1 - x0;
-  const dy = y1 - y0;
-  const points = [
-    [x0, y0],
-    [x0 + (bypass?.control1X ?? CONTROL_1.x) * dx, bypass?.controlY ?? y0 + CONTROL_1.y * dy],
-    [x0 + (bypass?.control2X ?? CONTROL_2.x) * dx, bypass?.controlY ?? y0 + CONTROL_2.y * dy],
-    [x1, y1],
-  ].map(([x, y]) => `${round(x)},${round(y)}`);
-  return `M ${points[0]} C ${points.slice(1).join(" ")}`;
-}
-
-// Nodes of the request chain that lie between the two ends of a path, with a caption to avoid.
-function bypassed(from: NodePosition, to: NodePosition, nodes: Layout["nodes"]) {
-  const [lo, hi] = [Math.min(from.cx, to.cx), Math.max(from.cx, to.cx)];
-  return (["gfw", "edge", "origin"] as const).filter((id) => {
-    const node = nodes[id];
-    return node?.present && node.cx > lo && node.cx < hi;
-  });
-}
-
-// A point of a cubic Bezier curve given by its four control points.
-function cubicPoint(px: number[], py: number[], t: number) {
-  const u = 1 - t;
-  const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
-  return {
-    x: w.reduce((sum, k, j) => sum + k * px[j], 0),
-    y: w.reduce((sum, k, j) => sum + k * py[j], 0),
-  };
-}
-
-interface Anchors {
-  run: number;
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
-
-function anchors(from: NodePosition, to: NodePosition, path: DiagramPath): Anchors {
-  const run = Math.sign(to.cx - from.cx) || 1;
-  const rise = Math.sign(to.cy - from.cy);
-  return {
-    run,
-    x0: from.cx + run * ANCHOR_RADIUS[nodeKind(path.from)],
-    y0: from.cy + rise * SOURCE_LEAN,
-    x1: to.cx - run * ANCHOR_RADIUS[nodeKind(path.to)],
-    y1: to.cy,
-  };
-}
-
-function bypassControls({ x0, y0, x1, y1 }: Anchors, shape: BypassShape) {
-  const dx = x1 - x0;
-  return {
-    px: [x0, x0 + shape.control1X * dx, x0 + shape.control2X * dx, x1],
-    py: [y0, shape.controlY, shape.controlY, y1],
-  };
-}
-
-const clusterShape = (controlY: number, control1X: number): BypassShape => ({
-  controlY,
-  control1X,
-  control2X: CLUSTER_CONTROL_2_X,
-});
-
-const sampleCurve = ({ px, py }: { px: number[]; py: number[] }) =>
-  Array.from({ length: 101 }, (_, i) => cubicPoint(px, py, i / 100));
-
-interface Rect {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
-
-const inside = (r: Rect, x: number, y: number) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
-const overlaps = (a: Rect, b: Rect) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
-
-// Where the paths to stacked clusters must not run: above the bottom of the captions they pass
-// (as far as each caption reaches), the browser caption, the bottom of the client zone and of
-// the diagram.
-function clusterObstacles(
-  skipped: ReturnType<typeof bypassed>,
-  nodes: Layout["nodes"],
-  clientZoneEnd: number,
-  avoidBrowserCaption: boolean
-): { path: Rect[]; captions: Rect[] } {
-  const captions = skipped.map((id) => {
-    const node = nodes[id]!;
-    const caption = BYPASS_CAPTIONS[id]!;
-    return {
-      x0: node.cx - caption.halfWidth,
-      x1: node.cx + caption.halfWidth,
-      y0: -Infinity,
-      y1: node.cy + caption.bottom,
-    };
-  });
-  const browser = nodes.browser!;
-  const clientCentre = clientZoneEnd / 2;
-  const path: Rect[] = [
-    ...captions.map((c) => ({ ...c, y1: c.y1 + CAPTION_CLEARANCE })),
-    { x0: -Infinity, x1: clientZoneEnd, y0: CACHE_SUBZONE_TOP, y1: Infinity },
-    { x0: -Infinity, x1: Infinity, y0: DIAGRAM_FLOOR_Y, y1: Infinity },
-  ];
-  if (nodes.gfw?.present) {
-    path.push({
-      x0: clientCentre - GFW_ZONE_CAPTION.halfWidth,
-      x1: clientCentre + GFW_ZONE_CAPTION.halfWidth,
-      y0: GFW_ZONE_CAPTION.top,
-      y1: Infinity,
-    });
-  }
-  if (avoidBrowserCaption) {
-    path.push({
-      x0: browser.cx - BROWSER_CAPTION.halfWidth,
-      x1: browser.cx + BROWSER_CAPTION.halfWidth,
-      y0: browser.cy + BROWSER_CAPTION.top,
-      y1: browser.cy + BROWSER_CAPTION.bottom,
-    });
-  }
-  return { captions, path };
-}
-
-// The point of a sampled curve at `x`, or its last point.
-const pointAt = (points: { x: number; y: number }[], x: number, run: number) =>
-  points.find((p) => run * (p.x - x) >= 0) ?? points[points.length - 1];
-
-// The height of a sampled curve at `x`, interpolated; undefined outside its run.
-function heightAt(points: { x: number; y: number }[], x: number): number | undefined {
-  for (let i = 1; i < points.length; i++) {
-    const [a, b] = [points[i - 1], points[i]];
-    if ((a.x - x) * (b.x - x) <= 0) {
-      return a.x === b.x ? a.y : a.y + ((x - a.x) / (b.x - a.x)) * (b.y - a.y);
-    }
-  }
-  return undefined;
-}
-
-interface ClusterPath {
-  from: NodePosition;
-  to: NodePosition;
-  path: DiagramPath;
-  labelX: number;
-}
-
-// The shape of the paths to stacked clusters, in stack order (see CLUSTER_FAN_GAP), with their
-// timing labels clear of the captions too. A path that cannot keep clear of the browser
-// caption may graze it; one that fits nowhere takes the steepest start, one gap below the
-// path above it.
-function solveClusterFan(
-  clusterPaths: ClusterPath[],
-  nodes: Layout["nodes"],
-  clientZoneEnd: number
-): BypassShape[] {
-  const shapes: BypassShape[] = [];
-  const labels: Rect[] = [];
-  let above: { x: number; y: number }[] | null = null;
-  for (const cp of clusterPaths) {
-    const ends = anchors(cp.from, cp.to, cp.path);
-    const skipped = bypassed(cp.from, cp.to, nodes);
-    const clearOfPathAbove = (points: { x: number; y: number }[]) =>
-      !above ||
-      points.every((p) => {
-        const y = heightAt(above!, p.x);
-        if (y === undefined || p.x <= clientZoneEnd || p.x > ends.x1 - CLUSTER_FAN_GAP) return true;
-        return p.y >= y + CLUSTER_FAN_GAP;
-      });
-    const fits = (shape: BypassShape, avoidBrowserCaption: boolean) => {
-      const obstacles = clusterObstacles(skipped, nodes, clientZoneEnd, avoidBrowserCaption);
-      const points = sampleCurve(bypassControls(ends, shape));
-      if (points.some((p) => obstacles.path.some((r) => inside(r, p.x, p.y)))) return null;
-      if (!clearOfPathAbove(points)) return null;
-      const { y } = pointAt(points, cp.labelX, ends.run);
-      const { halfWidth, above: up, below, clearance } = CLUSTER_LABEL;
-      const label = {
-        x0: cp.labelX - halfWidth - clearance,
-        x1: cp.labelX + halfWidth + clearance,
-        y0: y - up - clearance,
-        y1: y + below + clearance,
-      };
-      if (
-        obstacles.captions.some((c) => overlaps(c, label)) ||
-        labels.some((l) => overlaps(l, label)) ||
-        label.y1 > HEIGHT
-      ) {
-        return null;
-      }
-      return points;
-    };
-    let found: { shape: BypassShape; points: { x: number; y: number }[] } | null = null;
-    for (const avoidBrowserCaption of [true, false]) {
-      for (const control1X of CLUSTER_CONTROL_1_XS) {
-        for (
-          let controlY = cp.from.cy;
-          controlY <= 2 * HEIGHT && !found;
-          controlY += CONTROL_DEPTH_STEP
-        ) {
-          const shape = clusterShape(controlY, control1X);
-          const points = fits(shape, avoidBrowserCaption);
-          if (points) found = { shape, points };
-        }
-        if (found) break;
-      }
-      if (found) break;
-    }
-    if (!found) {
-      const previous = shapes.at(-1);
-      const shape = clusterShape(
-        previous
-          ? previous.controlY + CLUSTER_FAN_GAP
-          : Math.max(...skipped.map((id) => nodes[id]!.cy + BYPASS_CAPTIONS[id]!.controlDepth)),
-        BYPASS_STEEP_CONTROL_X
-      );
-      found = { shape, points: sampleCurve(bypassControls(ends, shape)) };
-    }
-    shapes.push(found.shape);
-    const { y } = pointAt(found.points, cp.labelX, ends.run);
-    labels.push({
-      x0: cp.labelX - CLUSTER_LABEL.halfWidth,
-      x1: cp.labelX + CLUSTER_LABEL.halfWidth,
-      y0: y - CLUSTER_LABEL.above,
-      y1: y + CLUSTER_LABEL.below,
-    });
-    above = found.points;
-  }
-  return shapes;
-}
-
-// A path to one of several stacked clusters: its curve (see solveClusterFan) and the x of
-// its timing label slot.
-interface ClusterFan {
-  shape: BypassShape;
-  labelX: number;
 }
 
 function pathGeometry(
