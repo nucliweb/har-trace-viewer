@@ -153,6 +153,34 @@ describe("DiagramView", () => {
       expect(screen.queryByText("First-party")).not.toBeInTheDocument();
       expect(screen.getByText("Domains")).toBeInTheDocument();
     });
+
+    it("closes with the same button that opened it", async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
+      await openSidebar(user, lastIndex);
+      const button = screen.getByRole("button", { name: "View resource list" });
+      expect(button).toHaveAttribute("aria-expanded", "true");
+
+      await user.click(button);
+      expect(screen.queryByText("All resources")).not.toBeInTheDocument();
+      expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+
+    // Every drawer docks on the right: one opening closes the other, so none hides behind another.
+    it("shares the right side with the toolbar panels", async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
+      const cacheLabel = `Page 1 · ${flow.pages[0].name}`;
+      await openSidebar(user, lastIndex);
+
+      await user.click(screen.getByRole("button", { name: "Toggle cache analysis" }));
+      expect(screen.getByText(cacheLabel)).toBeInTheDocument();
+      expect(screen.queryByText("All resources")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "View resource list" }));
+      expect(screen.getByText("All resources")).toBeInTheDocument();
+      expect(screen.queryByText(cacheLabel)).not.toBeInTheDocument();
+    });
   });
 });
 

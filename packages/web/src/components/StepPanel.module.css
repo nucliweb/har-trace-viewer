@@ -135,9 +135,14 @@
   margin-left: calc(-1 * var(--space-sm));
 }
 
-.resourcesBtn:hover {
+.resourcesBtn:hover,
+.resourcesBtnActive {
   border-color: var(--color-cyan);
   color: var(--color-cyan);
+}
+
+.resourcesBtnActive {
+  background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
 }
 
 /* Controls */

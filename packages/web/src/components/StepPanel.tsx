@@ -8,7 +8,8 @@ interface Props {
   state: DiagramState;
   // Network requests of the current step.
   resources: HarEntry[];
-  onOpenResources: (resources: HarEntry[]) => void;
+  resourcesOpen: boolean;
+  onToggleResources: () => void;
 }
 
 const SPEEDS: { label: string; value: Speed }[] = [
@@ -159,7 +160,7 @@ export function StepControls({ nav, className }: { nav: StepNavigation; classNam
   );
 }
 
-export function StepPanel({ state, resources, onOpenResources }: Props) {
+export function StepPanel({ state, resources, resourcesOpen, onToggleResources }: Props) {
   const { flow, stepIndex, goTo } = state;
   const step = flow.steps[stepIndex];
   const total = flow.steps.length;
@@ -197,9 +198,10 @@ export function StepPanel({ state, resources, onOpenResources }: Props) {
             ))}
             {resources.length > 0 && (
               <button
-                className={styles.resourcesBtn}
-                onClick={() => onOpenResources(resources)}
+                className={`${styles.resourcesBtn} ${resourcesOpen ? styles.resourcesBtnActive : ""}`}
+                onClick={onToggleResources}
                 aria-label="View resource list"
+                aria-expanded={resourcesOpen}
                 title="View resource list"
               >
                 <ResourceListIcon />

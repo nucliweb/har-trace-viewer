@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { analyzeHops, collectFindings, getStepCacheResources, getStepResources } from "@htv/core";
-import type { Flow, HarEntry } from "@htv/core";
+import type { Flow } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
@@ -21,6 +21,8 @@ interface Props {
   flow: Flow;
 }
 
+type Drawer = "findings" | "waterfall" | "hops" | "metrics" | "cache" | "resources";
+
 export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
   const viewRef = useRef<HTMLDivElement>(null);
@@ -37,21 +39,16 @@ export function DiagramView({ flow }: Props) {
   // Indexing keeps the analysis reference stable while the user stays on a page.
   const analysis = flow.pageAnalyses[pageIndex];
   const page = flow.pages[pageIndex];
-  const [sidebarResources, setSidebarResources] = useState<HarEntry[] | null>(null);
-  const [showCachePanel, setShowCachePanel] = useState(false);
-  const [showMetrics, setShowMetrics] = useState(false);
-  const [showHops, setShowHops] = useState(false);
-  const [showFindings, setShowFindings] = useState(false);
-  const [showWaterfall, setShowWaterfall] = useState(false);
+  // Every drawer docks on the right, so only one is open at a time: none hides behind another.
+  const [drawer, setDrawer] = useState<Drawer | null>(null);
+  const toggleDrawer = (name: Drawer) => setDrawer((open) => (open === name ? null : name));
+  const closeDrawer = () => setDrawer(null);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
   const allFindings = useMemo(() => collectFindings(flow), [flow]);
   const findings = useMemo(
     () => allFindings.filter((f) => f.page.index === pageIndex),
     [allFindings, pageIndex]
   );
-
-  const openSidebar = (resources: HarEntry[]) => setSidebarResources(resources);
-  const closeSidebar = () => setSidebarResources(null);
 
   const historicalPaths = useMemo(
     () => computeHistoricalPaths(flow.steps, stepIndex),
@@ -71,69 +68,39 @@ export function DiagramView({ flow }: Props) {
       <div className={styles.toolbar}>
         <FindingsButton
           findings={findings}
-          active={showFindings}
+          active={drawer === "findings"}
           className={styles.findingsBtn}
           activeClassName={styles.cacheBtnActive}
-          onClick={() => {
-            setShowFindings((v) => !v);
-            setShowWaterfall(false);
-            setShowHops(false);
-            setShowMetrics(false);
-            setShowCachePanel(false);
-          }}
+          onClick={() => toggleDrawer("findings")}
         />
         <WaterfallButton
-          active={showWaterfall}
+          active={drawer === "waterfall"}
           className={styles.waterfallBtn}
           activeClassName={styles.cacheBtnActive}
-          onClick={() => {
-            setShowWaterfall((v) => !v);
-            setShowFindings(false);
-            setShowHops(false);
-            setShowMetrics(false);
-            setShowCachePanel(false);
-          }}
+          onClick={() => toggleDrawer("waterfall")}
         />
         <button
-          className={`${styles.hopsBtn} ${showHops ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowHops((v) => !v);
-            setShowWaterfall(false);
-            setShowMetrics(false);
-            setShowCachePanel(false);
-            setShowFindings(false);
-          }}
+          className={`${styles.hopsBtn} ${drawer === "hops" ? styles.cacheBtnActive : ""}`}
+          onClick={() => toggleDrawer("hops")}
           aria-label="Toggle hops"
-          aria-expanded={showHops}
+          aria-expanded={drawer === "hops"}
           title="Hops per host"
         >
           Hops
         </button>
         <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
         <button
-          className={`${styles.metricsBtn} ${showMetrics ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowMetrics((v) => !v);
-            setShowWaterfall(false);
-            setShowCachePanel(false);
-            setShowHops(false);
-            setShowFindings(false);
-          }}
+          className={`${styles.metricsBtn} ${drawer === "metrics" ? styles.cacheBtnActive : ""}`}
+          onClick={() => toggleDrawer("metrics")}
           aria-label="Toggle metrics summary"
-          aria-expanded={showMetrics}
+          aria-expanded={drawer === "metrics"}
           title="Metrics summary"
         >
           Metrics
         </button>
         <button
-          className={`${styles.cacheBtn} ${showCachePanel ? styles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowCachePanel((v) => !v);
-            setShowWaterfall(false);
-            setShowMetrics(false);
-            setShowHops(false);
-            setShowFindings(false);
-          }}
+          className={`${styles.cacheBtn} ${drawer === "cache" ? styles.cacheBtnActive : ""}`}
+          onClick={() => toggleDrawer("cache")}
           aria-label="Toggle cache analysis"
           title="Cache Analysis"
         >
@@ -159,51 +126,56 @@ export function DiagramView({ flow }: Props) {
         {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}
         <BadgeRow steps={flow.steps} pageIndex={pageIndex} stepIndex={stepIndex} />
         {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}
-        {sidebarResources && (
+        {drawer === "resources" && (
           <ResourceSidebar
-            resources={sidebarResources}
+            resources={resources}
             title={isOverviewStep ? "All resources" : step.title}
             overview={isOverviewStep}
-            onClose={closeSidebar}
+            onClose={closeDrawer}
             preconnectHints={page.har.preconnectHints}
             documentHostname={new URL(page.har.documentEntry.url).hostname}
             renderDeadline={page.trace?.lcp ?? page.trace?.fcp ?? null}
           />
         )}
-        {showCachePanel && (
+        {drawer === "cache" && (
           <CachePanel
             report={analysis.cacheReport}
             network={analysis.networkReport}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
-            onClose={() => setShowCachePanel(false)}
+            onClose={closeDrawer}
           />
         )}
-        {showMetrics && <MetricsSummary flow={flow} onClose={() => setShowMetrics(false)} />}
-        {showFindings && (
+        {drawer === "metrics" && <MetricsSummary flow={flow} onClose={closeDrawer} />}
+        {drawer === "findings" && (
           <FindingsPanel
             findings={findings}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
-            onClose={() => setShowFindings(false)}
+            onClose={closeDrawer}
           />
         )}
-        {showWaterfall && (
+        {drawer === "waterfall" && (
           <WaterfallPanel
             har={page.har}
             trace={page.trace}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
-            onClose={() => setShowWaterfall(false)}
+            onClose={closeDrawer}
           />
         )}
-        {showHops && (
+        {drawer === "hops" && (
           <HopsPanel
             hops={hops}
             thirdParties={analysis.thirdPartyReport}
             pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
-            onClose={() => setShowHops(false)}
+            onClose={closeDrawer}
           />
         )}
       </div>
-      <StepPanel state={state} resources={resources} onOpenResources={openSidebar} />
+      <StepPanel
+        state={state}
+        resources={resources}
+        resourcesOpen={drawer === "resources"}
+        onToggleResources={() => toggleDrawer("resources")}
+      />
     </div>
   );
 }
