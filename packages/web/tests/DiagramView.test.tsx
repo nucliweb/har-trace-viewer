@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { collectFindings } from "@htv/core";
+import { collectFindings, getStepResources } from "@htv/core";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
@@ -164,6 +164,27 @@ describe("DiagramView", () => {
       await user.click(button);
       expect(screen.queryByText("All resources")).not.toBeInTheDocument();
       expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+
+    // Milestone steps (FCP, LCP) list no requests: the list stays on the last step that had some.
+    it("keeps the last step's resources through a step without any", async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
+      const count = (i: number) => getStepResources(flow, flow.steps[i]).length;
+      const listed = flow.steps.findIndex((_, i) => count(i) > 0 && count(i + 1) === 0);
+      const later = flow.steps.findIndex((_, i) => i > listed + 1 && count(i) > 0);
+      expect(listed).toBeGreaterThanOrEqual(0);
+      expect(later).toBeGreaterThan(listed + 1);
+      await openSidebar(user, listed);
+
+      await goTo(user, listed + 1);
+      expect(screen.getByText(`${count(listed)} resources`)).toBeInTheDocument();
+      expect(screen.queryByText("0 resources")).not.toBeInTheDocument();
+      const header = screen.getByText(`${count(listed)} resources`).parentElement!;
+      expect(header).toHaveTextContent(flow.steps[listed].title);
+
+      await goTo(user, later);
+      expect(screen.getByText(`${count(later)} resources`)).toBeInTheDocument();
     });
 
     // Every drawer docks on the right: one opening closes the other, so none hides behind another.

@@ -43,6 +43,15 @@ export function DiagramView({ flow }: Props) {
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const toggleDrawer = (name: Drawer) => setDrawer((open) => (open === name ? null : name));
   const closeDrawer = () => setDrawer(null);
+  // The resource list follows the steps that request something. Milestone steps (FCP, LCP)
+  // request nothing, so the list stays on the last step that did, under that step's title.
+  const [listedIndex, setListedIndex] = useState(stepIndex);
+  if (drawer === "resources" && resources.length > 0 && listedIndex !== stepIndex) {
+    setListedIndex(stepIndex);
+  }
+  const listedStep = flow.steps[listedIndex] ?? step;
+  const listedPage = flow.pages[listedStep.pageIndex];
+  const listedResources = useMemo(() => getStepResources(flow, listedStep), [flow, listedStep]);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
   const allFindings = useMemo(() => collectFindings(flow), [flow]);
   const findings = useMemo(
@@ -58,7 +67,7 @@ export function DiagramView({ flow }: Props) {
   // The last step of a page is its overview ("Page loaded"). A transition step belongs to the
   // page it leads to, so the next step starting a new page also marks the end of this one.
   // Not tied to the title or the onload badge, which is absent when the load event never fired.
-  const isOverviewStep = flow.steps[stepIndex + 1]?.pageIndex !== step.pageIndex;
+  const listedIsOverview = flow.steps[listedIndex + 1]?.pageIndex !== listedStep.pageIndex;
 
   return (
     // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
@@ -128,13 +137,13 @@ export function DiagramView({ flow }: Props) {
         {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}
         {drawer === "resources" && (
           <ResourceSidebar
-            resources={resources}
-            title={isOverviewStep ? "All resources" : step.title}
-            overview={isOverviewStep}
+            resources={listedResources}
+            title={listedIsOverview ? "All resources" : listedStep.title}
+            overview={listedIsOverview}
             onClose={closeDrawer}
-            preconnectHints={page.har.preconnectHints}
-            documentHostname={new URL(page.har.documentEntry.url).hostname}
-            renderDeadline={page.trace?.lcp ?? page.trace?.fcp ?? null}
+            preconnectHints={listedPage.har.preconnectHints}
+            documentHostname={new URL(listedPage.har.documentEntry.url).hostname}
+            renderDeadline={listedPage.trace?.lcp ?? listedPage.trace?.fcp ?? null}
           />
         )}
         {drawer === "cache" && (
