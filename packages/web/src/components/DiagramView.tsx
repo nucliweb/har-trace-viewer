@@ -1,5 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { analyzeHops, collectFindings, getStepCacheResources, getStepResources } from "@htv/core";
+import {
+  analyzeHops,
+  collectFindings,
+  getStepCacheResources,
+  getStepInferredCacheHits,
+  getStepResources,
+} from "@htv/core";
 import type { Flow } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
@@ -36,6 +42,11 @@ export function DiagramView({ flow }: Props) {
     () => getStepCacheResources(flow, flow.steps[stepIndex]),
     [flow, stepIndex]
   );
+  const inferredCacheHits = useMemo(
+    () => getStepInferredCacheHits(flow, flow.steps[stepIndex]),
+    [flow, stepIndex]
+  );
+  const hasCacheList = cacheResources.length + inferredCacheHits.length > 0;
   // Indexing keeps the analysis reference stable while the user stays on a page.
   const analysis = flow.pageAnalyses[pageIndex];
   const page = flow.pages[pageIndex];
@@ -119,9 +130,7 @@ export function DiagramView({ flow }: Props) {
       <div className={styles.canvas}>
         {/* The cache list docks on the left: the diagram moves aside so the browser and the
             hop to its cache stay in view. */}
-        <div
-          className={`${styles.diagram} ${cacheResources.length > 0 ? styles.diagramBesideCache : ""}`}
-        >
+        <div className={`${styles.diagram} ${hasCacheList ? styles.diagramBesideCache : ""}`}>
           <NodeRenderer
             nodes={analysis.nodes}
             paths={analysis.paths}
@@ -134,7 +143,7 @@ export function DiagramView({ flow }: Props) {
         </div>
         {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}
         <BadgeRow steps={flow.steps} pageIndex={pageIndex} stepIndex={stepIndex} />
-        {cacheResources.length > 0 && <CacheSidebar resources={cacheResources} />}
+        {hasCacheList && <CacheSidebar resources={cacheResources} inferred={inferredCacheHits} />}
         {drawer === "resources" && (
           <ResourceSidebar
             resources={listedResources}

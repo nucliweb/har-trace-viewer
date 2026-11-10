@@ -85,6 +85,22 @@ export function formatDeltaPct(change: number | null): string {
 }
 
 /** Formats a ratio as a whole percentage: 0.456 -> "46%", 1.5 -> "150%". */
+/** A span of seconds in its largest unit: "5.4 d", "3 h", "12 min", "40 s". */
+export function formatDuration(seconds: number): string {
+  const units: [number, string][] = [
+    [86400, "d"],
+    [3600, "h"],
+    [60, "min"],
+  ];
+  for (const [size, unit] of units) {
+    if (seconds >= size) {
+      const value = seconds / size;
+      return `${value < 10 ? Number(value.toFixed(1)) : Math.round(value)} ${unit}`;
+    }
+  }
+  return `${seconds} s`;
+}
+
 export function pct(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;
 }

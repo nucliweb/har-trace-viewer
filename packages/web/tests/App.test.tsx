@@ -52,6 +52,18 @@ describe("App", () => {
     expect(screen.getAllByRole("tablist")).toHaveLength(1);
   });
 
+  it("tells why an embedded flow draws the Great Firewall", () => {
+    const flow = {
+      ...makeFlow(),
+      clientRegion: "cn" as const,
+      hints: { suggestedClientRegion: { region: "cn" as const, reason: "document DNS 663ms" } },
+    };
+    window.__HTV_FLOW__ = JSON.parse(JSON.stringify(flow));
+    render(<App />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("so the diagram draws it");
+  });
+
   it("toggles the theme from the header", async () => {
     const user = userEvent.setup();
     render(<App />);

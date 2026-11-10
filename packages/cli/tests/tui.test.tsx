@@ -7,7 +7,7 @@ import { buildWaterfall, generateFlow, parseHarJson } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { TuiApp } from "../src/tui/App";
 import { lineText } from "../src/tui/lines";
-import { hostsRegion, overviewRegion } from "../src/tui/views";
+import { hostsRegion, overviewRegion, stepsRegion } from "../src/tui/views";
 import { waterfallRegion } from "../src/tui/waterfall-view";
 import {
   criticalCss,
@@ -768,5 +768,40 @@ describe("TuiApp — a flow of several pages", () => {
     expect(lastFrame()).not.toContain("1 request failed (4xx)");
     await press(stdin, "p");
     expect(lastFrame()).toContain("1 request failed (4xx)");
+  });
+});
+
+describe("TUI views — WebPageTest repeat view and client region", () => {
+  it("lists the inferred browser-cache hits of a step apart from the HAR's own", () => {
+    const har = {
+      ...makeHar([secondaryImage(200)], { onContentLoad: 150, onLoad: 200 }),
+      inferredCacheHits: [
+        {
+          url: "https://example.com/app.css",
+          resourceType: "stylesheet" as const,
+          transferSize: 4096,
+          lifetime: 86400,
+        },
+      ],
+    };
+    const flow = generateFlow([{ name: "Repeat view", har }]);
+    const critical = flow.steps.findIndex((s) => s.kind === "critical");
+    const text = stepsRegion(flow, critical, 170, 60).map(lineText).join("\n");
+
+    expect(text).toContain("Inferred from the browser cache · 1");
+    expect(text).toMatch(/app\.css\s+stylesheet\s+4\.1 KB\s+1 d/);
+  });
+
+  it("says why the overview draws the Great Firewall and how to turn it off", () => {
+    const flow: Flow = {
+      ...firstView(),
+      clientRegion: "cn",
+      hints: { suggestedClientRegion: { region: "cn", reason: "document DNS 320ms ≥ 300ms" } },
+    };
+    const text = overviewRegion(flow, 0, 170).map(lineText).join(" ").replace(/\s+/g, " ");
+
+    expect(text).toContain(
+      "Drawn behind the Great Firewall: document DNS 320ms ≥ 300ms. Re-run with --region default to draw the default topology."
+    );
   });
 });

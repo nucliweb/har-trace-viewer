@@ -4,6 +4,7 @@ import {
   formatBytes,
   formatDelta,
   formatDeltaPct,
+  formatDuration,
   formatMetricValue,
   formatMs,
   pct,
@@ -92,6 +93,18 @@ describe("formatMetricValue", () => {
     [null, "ms", "n/a"],
   ] as const)("formats %s %s as %s", (value, unit, expected) => {
     expect(formatMetricValue(value, unit)).toBe(expected);
+  });
+});
+
+describe("formatDuration", () => {
+  it.each([
+    [40, "40 s"],
+    [720, "12 min"],
+    [10800, "3 h"],
+    [466560, "5.4 d"],
+    [31536000, "365 d"],
+  ])("formats %s seconds as %s", (seconds, expected) => {
+    expect(formatDuration(seconds)).toBe(expected);
   });
 });
 

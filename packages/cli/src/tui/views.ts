@@ -9,9 +9,11 @@ import {
   formatBytes,
   formatDelta,
   formatDeltaPct,
+  formatDuration,
   formatMetricValue,
   formatMs,
   getStepCacheResources,
+  getStepInferredCacheHits,
   getStepResources,
   pct,
   protocolLabel,
@@ -27,6 +29,7 @@ import type {
   FlowComparison,
   HarEntry,
   HostHop,
+  InferredCacheHit,
   MainThreadReport,
   NetworkReport,
   Recommendation,
@@ -167,8 +170,11 @@ export function overviewRegion(flow: Flow, pageIndex: number, width: number): Li
   const mainThread = flow.pageAnalyses[pageIndex]?.mainThreadReport;
   if (mainThread) lines.push(BLANK, ...mainThreadPanel(mainThread, width));
   const suggestion = flow.hints.suggestedClientRegion;
-  if (suggestion && flow.clientRegion === "default") {
-    const text = `${suggestion.reason}. Re-run with --region ${suggestion.region} to draw the Great Firewall.`;
+  if (suggestion) {
+    const text =
+      flow.clientRegion === "default"
+        ? `${suggestion.reason}. Re-run with --region ${suggestion.region} to draw the Great Firewall.`
+        : `Drawn behind the Great Firewall: ${suggestion.reason}. Re-run with --region default to draw the default topology.`;
     lines.push(...panel("Note", wrap(text, width - 4), width));
   }
   return lines;
@@ -219,6 +225,27 @@ export function compareOverviewRegion(comparison: FlowComparison, width: number)
 }
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
+
+// The largest first, as resourceRows; a hit has no time of its own, so its freshness shows.
+function inferredRows(hits: InferredCacheHit[]): Line[] {
+  const shown = [...hits]
+    .sort((a, b) => b.transferSize - a.transferSize)
+    .slice(0, MAX_STEP_RESOURCES);
+  const lines = table(
+    ["Resource", "Type", "Size", "Fresh for"],
+    shown.map((h) => [
+      shortUrl(h.url),
+      h.resourceType,
+      formatBytes(h.transferSize),
+      formatDuration(h.lifetime),
+    ]),
+    ["left", "left", "right", "right"]
+  );
+  if (hits.length > shown.length) {
+    lines.push([seg(`… ${hits.length - shown.length} more`, { dim: true })]);
+  }
+  return lines;
+}
 
 function resourceRows(entries: HarEntry[]): Line[] {
   const shown = [...entries]
@@ -293,6 +320,14 @@ function stepDetailRows(flow: Flow, stepIndex: number, width: number): Line[] {
   const cached = getStepCacheResources(flow, step);
   if (cached.length > 0)
     rows.push(BLANK, heading(`From the browser cache · ${cached.length}`), ...resourceRows(cached));
+  // A WebPageTest repeat view leaves its cache hits out: htv infers them from the first view.
+  const inferred = getStepInferredCacheHits(flow, step);
+  if (inferred.length > 0)
+    rows.push(
+      BLANK,
+      heading(`Inferred from the browser cache · ${inferred.length}`),
+      ...inferredRows(inferred)
+    );
   return rows;
 }
 

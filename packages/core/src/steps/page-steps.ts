@@ -3,7 +3,7 @@ import { SERVER_WAIT_LABEL, TTFB_LABEL } from "../analysis/metrics-summary.js";
 import { getHostname } from "../utils/domain.js";
 import { formatCaptionMs, formatMetricValue, formatMs } from "../utils/format.js";
 import { phaseMs, reusesConnection, tcpConnectMs } from "../utils/timing.js";
-import { avgMs, reachesOrigin, type PageContext } from "./page-context.js";
+import { avgMs, isThirdParty, reachesOrigin, type PageContext } from "./page-context.js";
 import { clusterNode, clusterPath, ttfbCaption } from "./third-party-clusters.js";
 import { firstStart, sortByTimeline, type TimedItem } from "./timeline.js";
 import {
@@ -13,7 +13,15 @@ import {
   serverPathDirections,
   serverPaths,
 } from "./topology.js";
-import type { DiagramStep, HarEntry, Metric, MetricUnit, NodeId, PathId } from "../types.js";
+import type {
+  DiagramStep,
+  HarEntry,
+  InferredCacheHit,
+  Metric,
+  MetricUnit,
+  NodeId,
+  PathId,
+} from "../types.js";
 
 // Steps are built per page and tagged with their pageIndex by generateFlow.
 type PageStep = Omit<DiagramStep, "pageIndex">;
@@ -34,7 +42,10 @@ function metric(label: string, raw: number | null | undefined, unit: MetricUnit)
 const count = (label: string, n: number): Metric => metric(label, n, "count");
 const ms = (label: string, value: number | null | undefined): Metric => metric(label, value, "ms");
 
-function isCriticalResource(entry: HarEntry): boolean {
+// What places a resource in a group: an entry of the HAR or a hit inferred from the first view.
+type Groupable = Pick<HarEntry, "resourceType" | "priority">;
+
+function isCriticalResource(entry: Groupable): boolean {
   return (
     entry.resourceType === "stylesheet" ||
     (entry.resourceType === "script" &&
@@ -44,28 +55,43 @@ function isCriticalResource(entry: HarEntry): boolean {
   // so they stay secondary; stylesheets are always critical.
 }
 
-function isSecondaryResource(entry: HarEntry): boolean {
-  return !entry.isDocument && !isCriticalResource(entry) && entry.resourceType !== "fetch";
+function isSecondaryType(entry: Groupable): boolean {
+  return !isCriticalResource(entry) && entry.resourceType !== "fetch";
 }
 
-// "3 from cache" when a single store served the entries, "2 memory · 1 disk" otherwise.
-function cacheTiming(entries: HarEntry[]): string {
+function isSecondaryResource(entry: HarEntry): boolean {
+  return !entry.isDocument && isSecondaryType(entry);
+}
+
+// "3 from cache" when a single store served the entries ("3 inferred from cache" when every hit
+// was inferred), "2 memory · 1 disk" otherwise.
+function cacheTiming(entries: HarEntry[], inferred: number): string {
   const memory = entries.filter((e) => e.fromCache === "memory").length;
   const disk = entries.length - memory;
-  return memory > 0 && disk > 0
-    ? `${memory} memory · ${disk} disk`
-    : `${entries.length} from cache`;
+  const stores = (
+    [
+      [memory, "memory"],
+      [disk, "disk"],
+      [inferred, "inferred"],
+    ] as const
+  ).filter(([n]) => n > 0);
+  if (stores.length > 1) return stores.map(([n, store]) => `${n} ${store}`).join(" · ");
+  return inferred > 0 ? `${inferred} inferred from cache` : `${entries.length} from cache`;
 }
 
-// A step that reads `cached` entries from the browser cache also lights the hop to it,
-// the entries coming back to the browser.
-function withCacheHop<T extends PageStep>(step: T, cached: HarEntry[]): T {
-  if (cached.length === 0) return step;
+// A step that reads `cached` entries (or `inferred` hits) from the browser cache also lights
+// the hop to it, the entries coming back to the browser.
+function withCacheHop<T extends PageStep>(
+  step: T,
+  cached: HarEntry[],
+  inferred: InferredCacheHit[]
+): T {
+  if (cached.length === 0 && inferred.length === 0) return step;
   return {
     ...step,
     activeNodes: [...step.activeNodes, "cache"],
     activePaths: [...step.activePaths, "browser-cache"],
-    pathTimings: { ...step.pathTimings, "browser-cache": cacheTiming(cached) },
+    pathTimings: { ...step.pathTimings, "browser-cache": cacheTiming(cached, inferred.length) },
     pathDirections: { ...step.pathDirections, "browser-cache": "response" },
   };
 }
@@ -84,9 +110,19 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   // Steps point at the page entries instead of copying them; empty lists are omitted.
   const refs = (list: HarEntry[]): number[] | undefined =>
     list.length > 0 ? list.map((entry) => entryIndex.get(entry)!) : undefined;
+  const { inferredCacheHits } = ctx;
+  const hitIndex = new Map(inferredCacheHits.map((hit, index) => [hit, index]));
+  const inferredRefs = (list: InferredCacheHit[]): number[] | undefined =>
+    list.length > 0 ? list.map((hit) => hitIndex.get(hit)!) : undefined;
 
   const criticalEntries = ctx.ownEntries.filter((e) => !e.isDocument && isCriticalResource(e));
   const secondaryEntries = ctx.ownEntries.filter((e) => !e.isDocument && isSecondaryResource(e));
+  // The hits a WebPageTest repeat view left out join the group their type and domain place
+  // them in; they have no start time, so they never move a group on the timeline.
+  const ownInferred = inferredCacheHits.filter((hit) => !isThirdParty(hit, ctx.documentRoot));
+  const criticalInferred = ownInferred.filter(isCriticalResource);
+  const secondaryInferred = ownInferred.filter(isSecondaryType);
+  const thirdPartyInferred = inferredCacheHits.filter((hit) => isThirdParty(hit, ctx.documentRoot));
 
   const edgeLabel = hasCdn ? cdnResult.name : "Origin";
 
@@ -191,8 +227,8 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   // The hops a resource group travels: its network requests go to the edge, and on to the
   // origin unless the CDN served all of them from its cache. A group the browser cache
   // served entirely stays on the client; an empty group keeps the whole chain.
-  const resourceHops = (network: HarEntry[], cached: HarEntry[]) => {
-    if (network.length === 0 && cached.length > 0) {
+  const resourceHops = (network: HarEntry[], cached: number) => {
+    if (network.length === 0 && cached > 0) {
       return { activeNodes: ["browser"] as NodeId[], activePaths: [] as PathId[] };
     }
     const toOrigin = network.length === 0 || reachesOrigin(ctx, network);
@@ -209,7 +245,8 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   const criticalMetrics: DiagramStep["metrics"] = [];
   if (criticalCss.length > 0) criticalMetrics.push(count("CSS files", criticalCss.length));
   if (criticalJs.length > 0) criticalMetrics.push(count("JS files", criticalJs.length));
-  if (criticalCache.length > 0) criticalMetrics.push(count("From cache", criticalCache.length));
+  const criticalFromCache = criticalCache.length + criticalInferred.length;
+  if (criticalFromCache > 0) criticalMetrics.push(count("From cache", criticalFromCache));
 
   timeline.push({
     timestamp: criticalAt,
@@ -220,7 +257,7 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
         title: "Critical resources loading",
         description: "Browser parses the HTML and fetches render-blocking CSS and scripts.",
         timestamp: criticalAt,
-        ...resourceHops(criticalNetwork, criticalCache),
+        ...resourceHops(criticalNetwork, criticalFromCache),
         metrics: criticalMetrics,
         pathTimings:
           criticalNetwork.length > 0
@@ -230,8 +267,10 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
             : {},
         resourceRefs: refs(criticalNetwork),
         cacheResourceRefs: refs(criticalCache),
+        inferredCacheRefs: inferredRefs(criticalInferred),
       },
-      criticalCache
+      criticalCache,
+      criticalInferred
     ),
   });
 
@@ -262,8 +301,11 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
 
   const secondaryNetwork = secondaryEntries.filter((e) => e.fromCache === false);
   const secondaryCache = secondaryEntries.filter((e) => e.fromCache !== false);
-  const secondaryMetrics: DiagramStep["metrics"] = [count("Resources", secondaryEntries.length)];
-  if (secondaryCache.length > 0) secondaryMetrics.push(count("From cache", secondaryCache.length));
+  const secondaryFromCache = secondaryCache.length + secondaryInferred.length;
+  const secondaryMetrics: DiagramStep["metrics"] = [
+    count("Resources", secondaryEntries.length + secondaryInferred.length),
+  ];
+  if (secondaryFromCache > 0) secondaryMetrics.push(count("From cache", secondaryFromCache));
 
   timeline.push({
     timestamp: secondaryAt,
@@ -274,7 +316,7 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
         title: "Secondary resources",
         description: "Async scripts, images, and fonts load in the background.",
         timestamp: secondaryAt,
-        ...resourceHops(secondaryNetwork, secondaryCache),
+        ...resourceHops(secondaryNetwork, secondaryFromCache),
         metrics: secondaryMetrics,
         pathTimings:
           secondaryNetwork.length > 0
@@ -284,8 +326,10 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
             : {},
         resourceRefs: refs(secondaryNetwork),
         cacheResourceRefs: refs(secondaryCache),
+        inferredCacheRefs: inferredRefs(secondaryInferred),
       },
-      secondaryCache
+      secondaryCache,
+      secondaryInferred
     ),
   });
 
@@ -306,7 +350,8 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
     });
   }
 
-  if (hasThirdPartyNodes) {
+  // A repeat view whose third parties all came from the browser cache still has their step.
+  if (hasThirdPartyNodes || thirdPartyInferred.length > 0) {
     const thirdPartyNetwork = thirdPartyEntries.filter((e) => e.fromCache === false);
     const thirdPartyCache = thirdPartyEntries.filter((e) => e.fromCache !== false);
     const thirdPartyDomains = new Set(thirdPartyNetwork.map((e) => getHostname(e.url) ?? e.url));
@@ -314,35 +359,37 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
       count("Domains", thirdPartyDomains.size),
       count("Requests", thirdPartyNetwork.length),
     ];
-    if (thirdPartyCache.length > 0)
-      thirdPartyMetrics.push(count("From cache", thirdPartyCache.length));
+    const thirdPartyFromCache = thirdPartyCache.length + thirdPartyInferred.length;
+    if (thirdPartyFromCache > 0) thirdPartyMetrics.push(count("From cache", thirdPartyFromCache));
     const timing = (requests: number, ms: number | null) =>
       ms === null ? `${requests} req` : `${requests} req · ${ttfbCaption(ms)}`;
     // Several clusters: every cluster node and its path light up, each path with its median
     // TTFB when it has one (the cluster's caption carries its request count).
-    const thirdPartyHops = hasClusterNodes(thirdPartyClusters)
-      ? {
-          activeNodes: ["browser" as const, ...thirdPartyClusters.map((c) => clusterNode(c).id)],
-          activePaths: thirdPartyClusters.map((c) => clusterPath(c).id),
-          pathTimings: Object.fromEntries(
-            thirdPartyClusters.flatMap((c) =>
-              c.avgMs === null ? [] : [[clusterPath(c).id, ttfbCaption(c.avgMs)]]
-            )
-          ),
-        }
-      : {
-          activeNodes: ["browser" as const, "third-parties" as const],
-          activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties" as const] : [],
-          pathTimings:
-            thirdPartyNetwork.length > 0
-              ? {
-                  "browser-third-parties": timing(
-                    thirdPartyNetwork.length,
-                    medianTtfbByLoad(thirdPartyNetwork, page.onLoad).beforeLoad
-                  ),
-                }
-              : {},
-        };
+    const thirdPartyHops = !hasThirdPartyNodes
+      ? { activeNodes: ["browser" as const], activePaths: [] }
+      : hasClusterNodes(thirdPartyClusters)
+        ? {
+            activeNodes: ["browser" as const, ...thirdPartyClusters.map((c) => clusterNode(c).id)],
+            activePaths: thirdPartyClusters.map((c) => clusterPath(c).id),
+            pathTimings: Object.fromEntries(
+              thirdPartyClusters.flatMap((c) =>
+                c.avgMs === null ? [] : [[clusterPath(c).id, ttfbCaption(c.avgMs)]]
+              )
+            ),
+          }
+        : {
+            activeNodes: ["browser" as const, "third-parties" as const],
+            activePaths: thirdPartyNetwork.length > 0 ? ["browser-third-parties" as const] : [],
+            pathTimings:
+              thirdPartyNetwork.length > 0
+                ? {
+                    "browser-third-parties": timing(
+                      thirdPartyNetwork.length,
+                      medianTtfbByLoad(thirdPartyNetwork, page.onLoad).beforeLoad
+                    ),
+                  }
+                : {},
+          };
     timeline.push({
       timestamp: thirdPartyAt,
       rank: 4,
@@ -356,8 +403,10 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
           metrics: thirdPartyMetrics,
           resourceRefs: refs(thirdPartyNetwork),
           cacheResourceRefs: refs(thirdPartyCache),
+          inferredCacheRefs: inferredRefs(thirdPartyInferred),
         },
-        thirdPartyCache
+        thirdPartyCache,
+        thirdPartyInferred
       ),
     });
   }
@@ -392,7 +441,8 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
           ? undefined
           : { type: "onload", value: formatMs(page.onLoad), node: "browser" },
     },
-    cacheEntries
+    cacheEntries,
+    inferredCacheHits
   );
 
   return [...prologue, ...sortByTimeline(timeline), loadedStep];

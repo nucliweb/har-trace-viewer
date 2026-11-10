@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseHarPages } from "../src/parsers/har-parser.js";
+import { generateFlow } from "../src/steps/flow.js";
+import { getStepInferredCacheHits } from "../src/steps/step-resources.js";
 import { firefoxEntry } from "./helpers/firefox-har.js";
 
 const FIRST_VIEW_START = Date.parse("2026-01-01T00:00:00.000Z");
@@ -9,14 +11,17 @@ interface ResourceSpec {
   headers?: Record<string, string>;
   method?: string;
   status?: number;
+  mimeType?: string;
+  priority?: string;
 }
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
 function entry(pageref: string, startMs: number, spec: ResourceSpec) {
-  const base = firefoxEntry(spec.url, "application/javascript", {
+  const base = firefoxEntry(spec.url, spec.mimeType ?? "application/javascript", {
     pageref,
     startedDateTime: iso(startMs),
+    ...(spec.priority ? { _priority: spec.priority } : {}),
   });
   return {
     ...base,
@@ -208,5 +213,60 @@ describe("parseHarPages — WebPageTest repeat view cache inference", () => {
 
     expect(fromWpt[0].inferredCacheHits).toBeUndefined();
     expect(fromChrome[1].inferredCacheHits).toBeUndefined();
+  });
+});
+
+describe("generateFlow — inferred browser-cache hits in the repeat view's steps", () => {
+  const cached = (url: string, extra: Partial<ResourceSpec> = {}): ResourceSpec => ({
+    ...longLived(url),
+    ...extra,
+  });
+  // The repeat view requests only one image again: the stylesheet, the render-blocking script,
+  // the async script and the third-party library come from the browser cache.
+  const raw = wpt({
+    first: [
+      cached("https://example.com/app.css", { mimeType: "text/css" }),
+      cached("https://example.com/boot.js", { priority: "High" }),
+      cached("https://example.com/later.js", { priority: "Low" }),
+      cached("https://cdn.other.com/lib.js"),
+      { url: "https://example.com/hero.png", mimeType: "image/png" },
+    ],
+    repeat: [{ url: "https://example.com/hero.png", mimeType: "image/png" }],
+  });
+  const har = parseHarPages(raw)[1];
+  const flow = generateFlow([{ name: "Repeat view", har }]);
+  const step = (kind: string) => flow.steps.find((s) => s.kind === kind)!;
+  const inferred = (kind: string) =>
+    getStepInferredCacheHits(flow, step(kind)).map((hit) => hit.url);
+
+  it("lists each inferred hit in the step of its group", () => {
+    expect(inferred("critical")).toEqual([
+      "https://example.com/app.css",
+      "https://example.com/boot.js",
+    ]);
+    expect(inferred("secondary")).toEqual(["https://example.com/later.js"]);
+    expect(inferred("third-party")).toEqual(["https://cdn.other.com/lib.js"]);
+    // The overview lights the cache hop with every hit but lists none, as for the HAR's own.
+    expect(inferred("loaded")).toEqual([]);
+    expect(step("loaded").pathTimings?.["browser-cache"]).toBe("4 inferred from cache");
+  });
+
+  it("lights the hop to the browser cache and counts the hits as from cache", () => {
+    for (const kind of ["critical", "secondary", "third-party", "loaded"]) {
+      expect(step(kind).activePaths).toContain("browser-cache");
+    }
+    expect(step("critical").pathTimings?.["browser-cache"]).toBe("2 inferred from cache");
+    expect(step("critical").metrics).toContainEqual(
+      expect.objectContaining({ label: "From cache", raw: 2 })
+    );
+    // Nothing of the critical group reached the network: it stays on the client.
+    expect(step("critical").activeNodes).toEqual(["browser", "cache"]);
+  });
+
+  it("puts the browser cache in the topology with every inferred hit", () => {
+    const cache = flow.pageAnalyses[0].nodes.find((n) => n.id === "cache")!;
+    expect(cache.present).toBe(true);
+    expect(cache.resourceStats).toEqual({ count: 4, label: "from cache" });
+    expect(flow.pageAnalyses[0].paths.map((p) => p.id)).toContain("browser-cache");
   });
 });

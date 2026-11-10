@@ -126,9 +126,10 @@ export function pagePairOf(pages: PageEntry[]): [string, string] | null {
 export function buildGeneration(
   pages: PageEntry[],
   compareEntry: PageEntry,
-  clientRegion: ClientRegion
+  clientRegion: ClientRegion | undefined
 ): Generation {
-  const options = { clientRegion };
+  // Without a region the flow takes the one its latencies suggest.
+  const options: FlowOptions = clientRegion ? { clientRegion } : {};
   const pagePair = pagePairOf(pages);
   if (pagePair) {
     const [first] = pages;

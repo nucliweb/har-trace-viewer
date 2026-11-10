@@ -378,23 +378,33 @@ describe("client region (built CLI)", () => {
     pageAnalyses: { nodes: { id: string }[] }[];
   }
 
-  it("keeps the default topology and prints a note when latencies suggest China", () => {
+  it("draws the GFW topology and prints a note when latencies suggest China", () => {
     const dir = makeTempDir();
     const out = join(dir, "report");
 
     const res = runCli(["--har", writeSlowHar(dir), "--output", out]);
     expect(res.status, res.stderr).toBe(0);
     expect(res.stderr).toContain(
-      "Note: latencies look compatible with China/GFW routing (document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms). Re-run with --region cn to show the GFW topology."
+      "Note: latencies look compatible with China/GFW routing (document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms), so the report draws the GFW topology. A slow or mobile network shows the same latencies: pass --region default to draw the default topology."
     );
 
     const flow = extractFlow(
       readFileSync(join(out, "index.html"), "utf-8")
     ) as unknown as EmbeddedFlow;
     expect(flow.version).toBe(FLOW_VERSION);
-    expect(flow.clientRegion).toBe("default");
+    expect(flow.clientRegion).toBe("cn");
     expect(flow.hints.suggestedClientRegion?.region).toBe("cn");
-    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("gfw");
+    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
+  });
+
+  it("draws both sides of a comparison with the region A suggests", () => {
+    const dir = makeTempDir();
+    const res = runCli(["--har", writeSlowHar(dir), "--compare-with", HAR, "--format", "json"]);
+    expect(res.status, res.stderr).toBe(0);
+    const { a, b } = JSON.parse(res.stdout) as { a: EmbeddedFlow; b: EmbeddedFlow };
+    expect(a.clientRegion).toBe("cn");
+    expect(b.clientRegion).toBe("cn");
+    expect(b.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
   });
 
   it("builds the GFW topology with --region cn and prints no note", () => {
@@ -412,7 +422,7 @@ describe("client region (built CLI)", () => {
     expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
   });
 
-  it("prints no note when --region default is explicit", () => {
+  it("keeps the default topology and prints no note when --region default is explicit", () => {
     const dir = makeTempDir();
     const res = runCli([
       "--har",
@@ -424,6 +434,12 @@ describe("client region (built CLI)", () => {
     ]);
     expect(res.status, res.stderr).toBe(0);
     expect(res.stderr).not.toContain("Note:");
+
+    const flow = extractFlow(
+      readFileSync(join(dir, "report", "index.html"), "utf-8")
+    ) as unknown as EmbeddedFlow;
+    expect(flow.clientRegion).toBe("default");
+    expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("gfw");
   });
 });
 

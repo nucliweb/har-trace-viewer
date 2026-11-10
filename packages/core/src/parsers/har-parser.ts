@@ -758,6 +758,7 @@ function inferCacheHits(firstView: ParsedPage, repeatView: ParsedPage): Inferred
       resourceType: entry.resourceType,
       transferSize: entry.transferSize,
       lifetime,
+      ...(entry.priority ? { priority: entry.priority } : {}),
     });
   });
   return hits;

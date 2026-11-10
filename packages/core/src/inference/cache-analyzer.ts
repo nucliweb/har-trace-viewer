@@ -1,7 +1,7 @@
 import { WPT_REPEAT_VIEW_ID } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { isOwnNetworkResource, isOwnResource } from "../analysis/network-requests.js";
-import { formatMs, pct } from "../utils/format.js";
+import { formatDuration, formatMs, pct } from "../utils/format.js";
 import type {
   CacheReport,
   CacheRecommendation,
@@ -282,29 +282,13 @@ function versionedAssetRecommendations(findings: VersionedAssetFindings): CacheR
   return recs;
 }
 
-// "5.4 d", "3 h", "12 min", "40 s".
-function formatAge(seconds: number): string {
-  const units: [number, string][] = [
-    [86400, "d"],
-    [3600, "h"],
-    [60, "min"],
-  ];
-  for (const [size, unit] of units) {
-    if (seconds >= size) {
-      const value = seconds / size;
-      return `${value < 10 ? Number(value.toFixed(1)) : Math.round(value)} ${unit}`;
-    }
-  }
-  return `${seconds} s`;
-}
-
 // What shows that the CDN served the document from its cache: the status header that says
 // so, else an Age the CDN added. Null when nothing does.
 function cdnHitEvidence(entry: HarEntry, doc: ResourceCacheProfile): string | null {
   const { status, header } = detectCdnCacheEvidence(entry.responseHeaders);
   const age = doc.age ?? 0;
   if (status !== "hit" && !(status === "unknown" && age > 0)) return null;
-  return [header, age > 0 ? `Age ${formatAge(age)}` : null, `TTFB ${formatMs(entry.ttfb)}`]
+  return [header, age > 0 ? `Age ${formatDuration(age)}` : null, `TTFB ${formatMs(entry.ttfb)}`]
     .filter(Boolean)
     .join(", ");
 }

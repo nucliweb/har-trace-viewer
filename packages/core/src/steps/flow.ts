@@ -27,7 +27,9 @@ import type {
 // 5: steps carry their kind (DiagramStep.kind).
 // 6: cache reports count inferred and revalidated browser-cache hits (CacheReport.browser
 //    inferred, revalidated); WebPageTest repeat views carry ParsedHar.inferredCacheHits.
-export const FLOW_VERSION = 6;
+// 7: steps reference the inferred browser-cache hits of their group (DiagramStep
+//    inferredCacheRefs), which light the hop to the browser cache like the HAR's own hits.
+export const FLOW_VERSION = 7;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 
@@ -60,11 +62,12 @@ export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow
     throw new Error("Flow requires at least one page");
   }
 
-  const clientRegion: ClientRegion = options.clientRegion ?? "default";
-  // The GFW topology is opt-in: latencies alone cannot tell China routing
-  // apart from a slow or mobile network.
-  const hasGfw = clientRegion === "cn";
+  // Without a region of its own the flow takes the suggested one: latencies alone cannot tell
+  // China routing apart from a slow or mobile network, so the hint keeps the reason and an
+  // explicit "default" draws the default topology.
   const suggestion = suggestClientRegion(pages[0].har);
+  const clientRegion: ClientRegion = options.clientRegion ?? suggestion?.region ?? "default";
+  const hasGfw = clientRegion === "cn";
   const contexts = pages.map((page) => describePage(page, hasGfw));
 
   const steps: DiagramStep[] = [];

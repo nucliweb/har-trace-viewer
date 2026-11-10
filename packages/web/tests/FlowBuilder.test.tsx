@@ -160,6 +160,21 @@ describe("FlowBuilder", () => {
     expect(pages[0].har.entries.length).toBeGreaterThan(0);
   });
 
+  it("leaves the region to the latencies by default, and passes an explicit Default", async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn();
+    render(<FlowBuilder onGenerate={onGenerate} />);
+    await loadHar(user);
+    await screen.findByText("site.har");
+    expect(screen.getByLabelText("Client region")).toHaveDisplayValue("Auto (from the latencies)");
+    await user.click(generate());
+    expect(onGenerate.mock.calls[0][1]).toEqual({});
+
+    await user.selectOptions(screen.getByLabelText("Client region"), "default");
+    await user.click(generate());
+    expect(onGenerate.mock.calls[1][1]).toEqual({ clientRegion: "default" });
+  });
+
   it("only includes pages that have a HAR", async () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn();
@@ -263,7 +278,7 @@ describe("FlowBuilder", () => {
 
       const [pages, options, comparePagesArg] = onGenerate.mock.calls[0];
       expect(pages).toHaveLength(1);
-      expect(options).toEqual({ clientRegion: "default" });
+      expect(options).toEqual({});
       expect(comparePagesArg).toHaveLength(1);
       expect(comparePagesArg[0].har.entries.length).toBeGreaterThan(0);
     });

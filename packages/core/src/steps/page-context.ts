@@ -6,6 +6,7 @@ import type {
   CdnCacheStatus,
   HarEntry,
   HarPage,
+  InferredCacheHit,
   NodeDetectionResult,
   PageFlow,
   ParsedHar,
@@ -39,11 +40,13 @@ export interface PageContext {
   thirdPartyClusters: ThirdPartyCluster[];
   // Every entry but the main document that the browser cache served.
   cacheEntries: HarEntry[];
+  // The browser-cache hits of a WebPageTest repeat view, inferred from its first view.
+  inferredCacheHits: InferredCacheHit[];
   // The CDN cache status of an entry of the page, read from its headers once.
   cdnStatus: (entry: HarEntry) => CdnCacheStatus;
 }
 
-function isThirdParty(entry: HarEntry, documentRoot: string): boolean {
+export function isThirdParty(entry: { url: string }, documentRoot: string): boolean {
   return getRootDomain(entry.url) !== documentRoot;
 }
 
@@ -85,6 +88,7 @@ export function describePage(pageFlow: PageFlow, hasGfw: boolean): PageContext {
       page?.onLoad ?? null
     ),
     cacheEntries: har.entries.filter((e) => e !== document && e.fromCache !== false),
+    inferredCacheHits: har.inferredCacheHits ?? [],
     cdnStatus,
   };
 }

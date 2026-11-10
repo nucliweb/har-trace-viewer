@@ -3,7 +3,7 @@ import { collectFindings, getStepResources } from "@htv/core";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
-import { makeCompareFlows, makeFlow } from "./fixtures.js";
+import { makeCompareFlows, makeFlow, makeWptRepeatView } from "./fixtures.js";
 
 const flow = makeFlow();
 const stepOf = (type: string) => flow.steps.findIndex((s) => s.badge?.type === type);
@@ -223,5 +223,23 @@ describe("DiagramView — cache list beside the diagram", () => {
     expect(diagram().className).toContain("diagramBesideCache");
     await goTo(user, 0);
     expect(diagram().className).not.toContain("diagramBesideCache");
+  });
+});
+
+describe("DiagramView — inferred cache hits of a WebPageTest repeat view", () => {
+  it("lists them in the cache list with an inferred badge and moves the diagram aside", async () => {
+    const user = userEvent.setup();
+    const flow = makeWptRepeatView();
+    render(<DiagramView flow={flow} />);
+    const critical = flow.steps.findIndex((s) => s.kind === "critical");
+
+    await goTo(user, critical);
+    const row = screen.getByTitle("https://example.com/app.css");
+    expect(row).toHaveTextContent("app.css");
+    expect(within(row).getByText("inferred")).toBeInTheDocument();
+    expect(screen.getByText("1 resources")).toBeInTheDocument();
+    expect(document.querySelector("#diagram-svg")!.parentElement!.className).toContain(
+      "diagramBesideCache"
+    );
   });
 });

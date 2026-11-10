@@ -29,7 +29,8 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
   const entries = usePageEntries();
   const { pages, compare } = entries;
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
-  const [clientRegion, setClientRegion] = useState<ClientRegion>("default");
+  // "auto" leaves the region to the latencies: generateFlow takes the region they suggest.
+  const [clientRegion, setClientRegion] = useState<ClientRegion | "auto">("auto");
   const regionSelectId = useId();
   const [demoStatus, setDemoStatus] = useState<"idle" | "loading" | "error">("idle");
 
@@ -48,7 +49,11 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
   const canGenerate = !isParsing && (pagePair !== null || pages.some(hasFlowPages));
 
   const handleGenerate = () => {
-    const generation = buildGeneration(pages, compare, clientRegion);
+    const generation = buildGeneration(
+      pages,
+      compare,
+      clientRegion === "auto" ? undefined : clientRegion
+    );
     onGenerate(generation.pages, generation.options, generation.comparePages);
   };
 
@@ -128,9 +133,11 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
               className={styles.regionSelect}
               value={clientRegion}
               onChange={(e) => {
-                if (isClientRegion(e.target.value)) setClientRegion(e.target.value);
+                const value = e.target.value;
+                if (value === "auto" || isClientRegion(value)) setClientRegion(value);
               }}
             >
+              <option value="auto">Auto (from the latencies)</option>
               <option value="default">Default</option>
               <option value="cn">China (behind the Great Firewall)</option>
             </select>

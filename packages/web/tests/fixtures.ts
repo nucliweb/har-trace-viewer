@@ -34,6 +34,25 @@ export function makeFlow(): Flow {
 }
 
 /**
+ * A WebPageTest repeat view: it requests one image, and its HAR leaves out the stylesheet the
+ * browser cache served, which htv infers from the first view.
+ */
+export function makeWptRepeatView(): Flow {
+  const har = {
+    ...makeHar([secondaryImage(200)], { onContentLoad: 150, onLoad: 200 }),
+    inferredCacheHits: [
+      {
+        url: "https://example.com/app.css",
+        resourceType: "stylesheet" as const,
+        transferSize: 4096,
+        lifetime: 86400,
+      },
+    ],
+  };
+  return generateFlow([{ name: "Repeat view", har }]);
+}
+
+/**
  * A first view and a cached repeat view of the same synthetic page: the repeat view serves
  * its resources from the browser cache, loads no third party and fires onLoad earlier.
  */

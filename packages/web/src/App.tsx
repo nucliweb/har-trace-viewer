@@ -35,10 +35,16 @@ export function App() {
     options: FlowOptions,
     nextComparePages?: PageFlow[]
   ) => {
+    const nextFlow = generateFlow(nextPages, options);
     setPages(nextPages);
-    setFlow(generateFlow(nextPages, options));
+    setFlow(nextFlow);
     setComparePages(nextComparePages ?? null);
-    setCompare(nextComparePages ? generateFlow(nextComparePages, options) : null);
+    // Both sides of a comparison share a topology: B takes the region A was drawn with.
+    setCompare(
+      nextComparePages
+        ? generateFlow(nextComparePages, { clientRegion: nextFlow.clientRegion })
+        : null
+    );
     setNoticeDismissed(false);
   };
 
@@ -50,12 +56,18 @@ export function App() {
     setNoticeDismissed(false);
   };
 
-  const handleShowGfwTopology = pages
-    ? () => {
-        setFlow(generateFlow(pages, { clientRegion: "cn" }));
-        if (comparePages) setCompare(generateFlow(comparePages, { clientRegion: "cn" }));
-      }
-    : undefined;
+  const regionSuggestion = !noticeDismissed ? flow?.hints.suggestedClientRegion : undefined;
+  const regionApplied = flow?.clientRegion !== "default";
+
+  // Draws the topology the notice offers: the default one, or the suggested region's.
+  const handleSwitchRegion =
+    pages && regionSuggestion
+      ? () => {
+          const clientRegion = regionApplied ? "default" : regionSuggestion.region;
+          setFlow(generateFlow(pages, { clientRegion }));
+          if (comparePages) setCompare(generateFlow(comparePages, { clientRegion }));
+        }
+      : undefined;
 
   const handleReset = () => {
     setFlow(null);
@@ -63,11 +75,6 @@ export function App() {
     setCompare(null);
     setComparePages(null);
   };
-
-  const regionSuggestion =
-    flow?.clientRegion === "default" && !noticeDismissed
-      ? flow.hints.suggestedClientRegion
-      : undefined;
 
   return (
     <div className={styles.app}>
@@ -106,7 +113,8 @@ export function App() {
             {regionSuggestion && (
               <RegionNotice
                 suggestion={regionSuggestion}
-                onShowGfwTopology={handleShowGfwTopology}
+                applied={regionApplied}
+                onSwitch={handleSwitchRegion}
                 onDismiss={() => setNoticeDismissed(true)}
               />
             )}

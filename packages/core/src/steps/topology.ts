@@ -34,6 +34,8 @@ interface TopologyOptions {
   thirdPartyClusters: ThirdPartyCluster[];
   // Entries the browser cache served: a cache node and its path from the browser.
   cacheEntries: HarEntry[];
+  // Browser-cache hits a WebPageTest repeat view left out, inferred from its first view.
+  inferredCacheHits: number;
 }
 
 function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: DiagramPath[] } {
@@ -49,6 +51,7 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
     thirdPartyRegion,
     thirdPartyClusters,
     cacheEntries,
+    inferredCacheHits,
   } = opts;
   const browserRegion: NetworkRegion = hasGfw ? "china" : "client";
 
@@ -120,14 +123,15 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
     paths.push({ id: "browser-third-parties", from: "browser", to: "third-parties" });
   }
 
-  const hasCache = cacheEntries.length > 0;
+  const cacheHits = cacheEntries.length + inferredCacheHits;
+  const hasCache = cacheHits > 0;
   nodes.push({
     id: "cache",
     label: "Browser cache",
-    subLabel: hasCache ? cacheStores(cacheEntries) : undefined,
+    subLabel: hasCache ? cacheStores(cacheEntries, inferredCacheHits) : undefined,
     present: hasCache,
     region: "client",
-    resourceStats: hasCache ? { count: cacheEntries.length, label: "from cache" } : undefined,
+    resourceStats: hasCache ? { count: cacheHits, label: "from cache" } : undefined,
   });
   if (hasCache) paths.push({ id: "browser-cache", from: "browser", to: "cache" });
 
@@ -135,11 +139,13 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
 }
 
 // The stores the browser cache served the page from: "memory", "disk" or "memory + disk".
-function cacheStores(entries: HarEntry[]): string {
-  const memory = entries.some((e) => e.fromCache === "memory");
-  const disk = entries.some((e) => e.fromCache === "disk");
-  if (memory && disk) return "memory + disk";
-  return memory ? "memory" : "disk";
+function cacheStores(entries: HarEntry[], inferred: number): string {
+  const stores = [
+    entries.some((e) => e.fromCache === "memory") && "memory",
+    entries.some((e) => e.fromCache === "disk") && "disk",
+    inferred > 0 && "inferred",
+  ].filter((store) => store !== false);
+  return stores.join(" + ");
 }
 
 /** The nodes and paths of a page, each server node with the requests it answered. */
@@ -159,6 +165,7 @@ export function pageTopology(ctx: PageContext): { nodes: DiagramNode[]; paths: D
     thirdPartyRegion: detectThirdPartyRegion(thirdPartyEntries),
     thirdPartyClusters: ctx.thirdPartyClusters,
     cacheEntries: ctx.cacheEntries,
+    inferredCacheHits: ctx.inferredCacheHits.length,
   });
 
   const ownNonDocNetwork = har.entries.filter((e) => isOwnNetworkResource(e, documentRoot));

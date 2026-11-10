@@ -764,7 +764,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(6);
+    expect(FLOW_VERSION).toBe(7);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 
@@ -775,8 +775,22 @@ describe("generateFlow — client region", () => {
     expect(flow.hints.suggestedClientRegion).toBeUndefined();
   });
 
-  it("slow HAR without options: no GFW topology, only a suggestion with a reason", () => {
+  it("slow HAR without options: draws the suggested GFW topology and keeps the reason", () => {
     const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }]);
+
+    expect(flow.clientRegion).toBe("cn");
+    expect(flow.pageAnalyses[0].nodes.find((n) => n.id === "gfw")?.present).toBe(true);
+    expect(flow.steps.flatMap((s) => s.activeNodes)).toContain("gfw");
+    expect(flow.hints.suggestedClientRegion).toEqual({
+      region: "cn",
+      reason: "document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms",
+    });
+  });
+
+  it("slow HAR with clientRegion default: no GFW topology, only the suggestion", () => {
+    const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }], {
+      clientRegion: "default",
+    });
 
     expect(flow.clientRegion).toBe("default");
     expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).not.toContain("gfw");
@@ -825,7 +839,9 @@ describe("generateFlow — client region", () => {
     expect(edge.subLabel).toBe("Hong Kong");
     expect(edge.region).toBe("asia-pacific");
 
-    const byDefault = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }]);
+    const byDefault = generateFlow([{ name: "Home", har: slowHar(AKAMAI_HEADERS) }], {
+      clientRegion: "default",
+    });
     const defaultEdge = byDefault.pageAnalyses[0].nodes.find((n) => n.id === "edge")!;
     expect(defaultEdge.subLabel).toBeUndefined();
     expect(defaultEdge.region).toBe("edge");

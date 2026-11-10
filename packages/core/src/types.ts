@@ -109,6 +109,7 @@ export interface InferredCacheHit {
   resourceType: ResourceType;
   transferSize: number; // bytes the first view downloaded, saved by the repeat view
   lifetime: number; // freshness lifetime in seconds, from Cache-Control, Expires or Last-Modified
+  priority?: ResourcePriority; // the first view's request priority, when the HAR carries one
 }
 
 export interface ParsedHar {
@@ -345,6 +346,9 @@ export interface DiagramStep {
   // and getStepCacheResources. Network requests and browser-cache hits, respectively.
   resourceRefs?: number[];
   cacheResourceRefs?: number[];
+  // Indices into pages[pageIndex].har.inferredCacheHits, resolved with getStepInferredCacheHits:
+  // the browser-cache hits of a WebPageTest repeat view, which its HAR leaves out.
+  inferredCacheRefs?: number[];
   badge?: {
     type: "ttfb" | "fcp" | "lcp" | "onload";
     value: string;
@@ -365,10 +369,10 @@ export interface PageFlow {
 export type ClientRegion = "default" | "cn";
 
 export interface FlowOptions {
-  clientRegion?: ClientRegion; // "default" when omitted
+  clientRegion?: ClientRegion; // the suggested region when omitted, else "default"
 }
 
-// Non-binding hint derived from timings: never changes the topology by itself.
+// Hint derived from timings: the region a flow takes when no region is given.
 export interface ClientRegionSuggestion {
   region: Exclude<ClientRegion, "default">;
   reason: string;

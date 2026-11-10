@@ -1,5 +1,5 @@
 import { formatBytes, shortUrl } from "@htv/core";
-import type { HarEntry } from "@htv/core";
+import type { HarEntry, InferredCacheHit, ResourceType } from "@htv/core";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./CacheSidebar.module.css";
 import {
@@ -12,30 +12,61 @@ import {
 
 interface Props {
   resources: HarEntry[];
+  // Hits a WebPageTest repeat view left out of its HAR, inferred from the first view.
+  inferred?: InferredCacheHit[];
 }
 
-export function CacheSidebar({ resources }: Props) {
+type Store = "memory" | "disk" | "inferred";
+
+interface CacheRow {
+  url: string;
+  resourceType: ResourceType;
+  transferSize: number;
+  store: Store;
+}
+
+const BADGES: Record<Store, { label: string; className: string | undefined; title?: string }> = {
+  memory: { label: "mem", className: styles.badgeMemory },
+  disk: { label: "disk", className: styles.badgeDisk },
+  inferred: {
+    label: "inferred",
+    className: styles.badgeInferred,
+    title: "Left out of the repeat view's HAR; still fresh from the first view",
+  },
+};
+
+export function CacheSidebar({ resources, inferred = [] }: Props) {
+  const rows: CacheRow[] = [
+    ...resources.map((e) => ({
+      url: e.url,
+      resourceType: e.resourceType,
+      transferSize: e.transferSize,
+      store: e.fromCache === "memory" ? ("memory" as const) : ("disk" as const),
+    })),
+    ...inferred.map((hit) => ({ ...hit, store: "inferred" as const })),
+  ];
   return (
-    <Sidebar title="Cache" subtitle={`${resources.length} resources`} side="left" width={280}>
-      {[...groupByType(resources)].map(([type, entries]) => (
-        <SidebarGroup as="details" key={type} open={entries.length <= 6}>
-          <SidebarTypeHeader as="summary" type={type} count={entries.length} />
+    <Sidebar title="Cache" subtitle={`${rows.length} resources`} side="left" width={280}>
+      {[...groupByType(rows)].map(([type, group]) => (
+        <SidebarGroup as="details" key={type} open={group.length <= 6}>
+          <SidebarTypeHeader as="summary" type={type} count={group.length} />
           <SidebarPagedRows
-            items={entries}
-            render={(entry, i) => (
-              <SidebarRow
-                key={i}
-                url={entry.url}
-                label={shortUrl(entry.url)}
-                size={formatBytes(entry.transferSize)}
-              >
-                <span
-                  className={entry.fromCache === "memory" ? styles.badgeMemory : styles.badgeDisk}
+            items={group}
+            render={(row, i) => {
+              const badge = BADGES[row.store];
+              return (
+                <SidebarRow
+                  key={i}
+                  url={row.url}
+                  label={shortUrl(row.url)}
+                  size={formatBytes(row.transferSize)}
                 >
-                  {entry.fromCache === "memory" ? "mem" : "disk"}
-                </span>
-              </SidebarRow>
-            )}
+                  <span className={badge.className} title={badge.title}>
+                    {badge.label}
+                  </span>
+                </SidebarRow>
+              );
+            }}
           />
         </SidebarGroup>
       ))}

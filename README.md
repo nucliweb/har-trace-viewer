@@ -166,7 +166,7 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 | `--format <format>`        | `tui`, `html`, `json`, `findings`, `markdown`, `csv` or `mermaid`; every format but `tui` and `html` prints to stdout without `--output`                                    |
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
 | `--redact[=mask-hosts]`    | Redact the report before it is written or shown, in every format; `=mask-hosts` also masks third-party hostnames. See [Sharing a report safely](#sharing-a-report-safely)   |
-| `--region <id>`            | Client network region: `default`, or `cn` to draw the Great Firewall between the browser and the first server                                                               |
+| `--region <id>`            | Client network region: `default`, or `cn` for the Great Firewall before the first server. Without the flag, `cn` when the latencies suggest China/GFW routing               |
 | `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |
 | `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                     |
 | `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                         |
@@ -176,6 +176,8 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 ### Several runs
 
 A WebPageTest test of several runs exports one HAR page per run and view, with ids shaped `page_<run>_<view>_<step>` (view `0` is the first view, `1` the repeat view); `--list-pages` prints them. One run alone can mislead, so without `--select` or `--runs` htv keeps the median run of each view and step: the run whose LCP is the median (the lower middle for an even count), else onLoad, else DCL when some run lacks the LCP. The LCP and FCP come from the trace, else from the paint times WebPageTest stores in its HAR pages. The page is named after the runs it stands for (`Run 2 · First view (median of 3 runs)`), and a note on stderr says which run was kept for each view.
+
+A repeat view's HAR leaves out the requests the browser cache served. htv infers them from the first view of the same run: the resources the repeat view did not request again and that were still fresh when it started. Each step lists the inferred hits of its group (critical, secondary, third party) beside the HAR's own cache hits, lights the hop to the browser cache, and shows them with an `inferred` badge in the web cache list and an "Inferred from the browser cache" table in the terminal's Steps tab.
 
 The median page carries the spread of every metric over the runs (min, median, max and p75). The Markdown export shows each metric as the median page's value followed by its `(min–max)` over the runs, and a "Run-to-run variance" finding (`run-to-run-variance`) lists the Core Web Vitals and TTFB whose spread is wider than their good threshold (`warning`) or than 30% of their median (`info`), with the min, median and max of each as evidence.
 
@@ -259,10 +261,11 @@ htv \
   --output report/
 ```
 
-Client in China (adds the Great Firewall to the diagram; without the flag the CLI only prints a note when latencies suggest it):
+Client in China (adds the Great Firewall to the diagram). Without `--region`, htv draws it when the latencies of the first page look compatible with China/GFW routing (a document DNS lookup of 300 ms or more together with a TCP connect of 500 ms or more, or one of them with a `.cn` document host or a CDN PoP in mainland China) and prints a note saying why; a slow or mobile network shows the same latencies, so `--region default` draws the default topology. A comparison draws both sides with the region of A:
 
 ```bash
 htv --page "Home" --har home.har --output report/ --region cn
+htv --page "Home" --har home.har --output report/ --region default
 ```
 
 Comparison of a WebPageTest first view and repeat view (without and with cache), both from the same HAR:

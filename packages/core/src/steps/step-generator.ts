@@ -5,7 +5,11 @@ export { CLIENT_REGIONS, FLOW_VERSION, generateFlow, isClientRegion } from "./fl
 export { normalizeFlow, stepKindFromTitle } from "./flow-migrations.js";
 
 // Readers of a flow resolve step resources through these.
-export { getStepCacheResources, getStepResources } from "./step-resources.js";
+export {
+  getStepCacheResources,
+  getStepInferredCacheHits,
+  getStepResources,
+} from "./step-resources.js";
 export {
   MAX_THIRD_PARTY_CLUSTERS,
   clusterThirdParties,

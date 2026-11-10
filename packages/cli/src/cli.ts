@@ -528,8 +528,9 @@ the report, or to stdout without --output instead of the terminal report):
   written), 1 usage or input errors.
 
 Other:
-  --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")} (default: default).
-                      "cn" draws the Great Firewall before the first server.
+  --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")}. "cn" draws the
+                      Great Firewall before the first server. Without --region, cn when
+                      the latencies look compatible with China/GFW routing, else default.
   -h, --help          Show this help.
   -v, --version       Show the version.
 
@@ -738,10 +739,10 @@ export async function buildReport(args: Args): Promise<Report> {
   const spreads = new Map<PageFlow, RunSpread>();
   for (const p of args.pages) pageFlows.push(...(await readPageFlows(p, spreads)));
 
-  const options = { clientRegion: args.region ?? "default" } as const;
   const sides = await comparisonSides(pageFlows, args);
-  const flow = generateFlow(sides ? [sides[0]] : pageFlows, options);
-  const compare = sides ? generateFlow([sides[1]], options) : undefined;
+  const flow = generateFlow(sides ? [sides[0]] : pageFlows, { clientRegion: args.region });
+  // Both sides of a comparison share a topology: B takes the region A was drawn with.
+  const compare = sides ? generateFlow([sides[1]], { clientRegion: flow.clientRegion }) : undefined;
   for (const f of compare ? [flow, compare] : [flow]) {
     f.pages.forEach((page, i) => {
       const spread = spreads.get(page);
@@ -752,7 +753,7 @@ export async function buildReport(args: Args): Promise<Report> {
   const suggestion = flow.hints.suggestedClientRegion;
   if (suggestion && args.region === undefined) {
     console.error(
-      `Note: latencies look compatible with China/GFW routing (${suggestion.reason}). Re-run with --region ${suggestion.region} to show the GFW topology.`
+      `Note: latencies look compatible with China/GFW routing (${suggestion.reason}), so the report draws the GFW topology. A slow or mobile network shows the same latencies: pass --region default to draw the default topology.`
     );
   }
   return compare ? { flow, compare } : { flow };
