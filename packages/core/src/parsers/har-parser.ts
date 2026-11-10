@@ -625,7 +625,23 @@ function findDocument(
   return documentEntry ? { documentEntry, documentRedirects: [] } : null;
 }
 
-function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedHar | null {
+// Playwright marks no browser-cache hit: a hit is a successful response that put no byte on
+// the wire (_transferSize 0) and still has a body. Redirects and failures have no body.
+function isPlaywrightCacheHit(e: RawHarEntry): boolean {
+  const { status = 0, _transferSize, content } = e.response ?? {};
+  return status >= 200 && status < 300 && _transferSize === 0 && (content?.size ?? 0) > 0;
+}
+
+interface HarSource {
+  // Recorded by Playwright, which marks cache hits only by their size (isPlaywrightCacheHit).
+  playwright: boolean;
+}
+
+function buildParsedHar(
+  rawPages: RawHarPage[],
+  entries: RawHarEntry[],
+  source: HarSource
+): ParsedHar | null {
   if (entries.length === 0) return null;
 
   // Use the first entry's startedDateTime as origin; Chrome's page.startedDateTime
@@ -669,7 +685,9 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
       transferSize: parseTransferSize(e),
       bodySize: Math.max(0, response.content?.size ?? 0),
       isDocument: isHtmlMime(mimeType),
-      fromCache: parseFromCache(e._fromCache, e.cache),
+      fromCache:
+        parseFromCache(e._fromCache, e.cache) ||
+        (source.playwright && isPlaywrightCacheHit(e) ? "unknown" : false),
       ...personalizationFlags(e),
       ...(redirectURL !== null ? { redirectURL } : {}),
       ...bypassFlag(e),
@@ -703,7 +721,7 @@ const NO_DOCUMENT_ERROR = "HAR contains no HTML document entry";
 
 export function parseHar(raw: RawHar): ParsedHar {
   const { pages, entries } = assertHasContent(raw);
-  const parsed = buildParsedHar(pages, entries);
+  const parsed = buildParsedHar(pages, entries, harSource(raw));
   if (!parsed) throw new Error(NO_DOCUMENT_ERROR);
   return parsed;
 }
@@ -732,6 +750,10 @@ function freshnessLifetime(headers: Record<string, string>): number | null {
 export const WPT_REPEAT_VIEW_ID = /^page_(\d+)_1_(\d+)$/;
 
 const isWebPageTest = (raw: RawHar): boolean => /webpagetest/i.test(raw.log.creator?.name ?? "");
+
+const harSource = (raw: RawHar): HarSource => ({
+  playwright: /^playwright$/i.test(raw.log.creator?.name ?? ""),
+});
 
 interface ParsedPage {
   page: RawHarPage;
@@ -785,7 +807,7 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
   const parsedPages = new Map<string, ParsedPage>();
   for (const page of ordered) {
     const pageEntries = entries.filter((e) => (e.pageref ?? firstId) === page.id);
-    const parsed = buildParsedHar([page], pageEntries);
+    const parsed = buildParsedHar([page], pageEntries, harSource(raw));
     if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
   }
   if (parsedPages.size === 0) throw new Error(NO_DOCUMENT_ERROR);

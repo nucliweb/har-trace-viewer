@@ -191,6 +191,10 @@ htv --har wpt.har --compare -o compare.html     # median first view (A) vs media
 
 `--select` keeps every page it matches unless `--runs` is given too, in which case the median is taken over the selected pages (`--select "First View" --runs median`).
 
+### Playwright recordings
+
+Playwright marks no browser-cache hit: a successful response with no bytes on the wire (`_transferSize` 0) and a body counts as one, from a store the HAR does not record ("Store not recorded" in the cache report, a `cache` badge in the cache list).
+
 ### CI budgets
 
 `--budget` and `--fail-on` turn htv into a check for CI. Each budget is checked on every page, and on both sides of a comparison:

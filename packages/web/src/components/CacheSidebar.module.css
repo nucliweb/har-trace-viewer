@@ -1,5 +1,6 @@
 .badgeDisk,
 .badgeMemory,
+.badgeUnknown,
 .badgeInferred {
   font-size: 12px;
   font-weight: 700;
@@ -25,4 +26,10 @@
   background: color-mix(in srgb, var(--color-green) 12%, transparent);
   color: var(--color-green);
   border: 1px dashed color-mix(in srgb, var(--color-green) 45%, transparent);
+}
+
+.badgeUnknown {
+  background: color-mix(in srgb, var(--color-text2) 10%, transparent);
+  color: var(--color-text2);
+  border: 1px solid color-mix(in srgb, var(--color-text2) 35%, transparent);
 }

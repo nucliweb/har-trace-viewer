@@ -215,6 +215,18 @@ describe("analyzeCacheForHar — fixture", () => {
     expect(report.browser.hitRatio).toBe(0);
   });
 
+  it("counts hits of an unknown store apart and in the hit ratio", () => {
+    const har = makeSyntheticHar([
+      makeEntry({ url: "https://example.com/a.js", fromCache: "unknown", transferSize: 0 }),
+      makeEntry({ url: "https://example.com/b.js", fromCache: "disk", transferSize: 0 }),
+      makeEntry({ url: "https://example.com/c.js" }),
+    ]);
+    const { browser } = analyzeCacheForHar(har);
+
+    expect(browser).toMatchObject({ total: 3, fromDisk: 1, fromMemory: 0, fromUnknownStore: 1 });
+    expect(browser.hitRatio).toBeCloseTo(2 / 3);
+  });
+
   it("generates at least one recommendation", () => {
     const report = analyzeCacheForHar(loadHar());
     expect(report.recommendations.length).toBeGreaterThan(0);

@@ -462,7 +462,21 @@ function isRepeatView(har: ParsedHar, browser: CacheReport["browser"]): boolean 
   return (
     har.inferredCacheHits !== undefined ||
     har.pages.some((page) => WPT_REPEAT_VIEW_ID.test(page.id)) ||
-    browser.fromDisk + browser.fromMemory + (browser.revalidated ?? 0) > 0
+    browser.fromDisk +
+      browser.fromMemory +
+      (browser.fromUnknownStore ?? 0) +
+      (browser.revalidated ?? 0) >
+      0
+  );
+}
+
+/** The resources the browser cache served: from either store, of an unknown one, or inferred. */
+export function browserCacheHitCount(browser: CacheReport["browser"]): number {
+  return (
+    browser.fromDisk +
+    browser.fromMemory +
+    (browser.fromUnknownStore ?? 0) +
+    (browser.inferred ?? 0)
   );
 }
 
@@ -488,6 +502,7 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
   const allNonDoc = har.entries.filter((e) => !e.isDocument);
   const fromDisk = allNonDoc.filter((e) => e.fromCache === "disk").length;
   const fromMemory = allNonDoc.filter((e) => e.fromCache === "memory").length;
+  const fromUnknownStore = allNonDoc.filter((e) => e.fromCache === "unknown").length;
   const inferred = har.inferredCacheHits?.length ?? 0;
   const revalidated = allNonDoc.filter((e) => e.status === 304).length;
   const browserTotal = allNonDoc.length + inferred;
@@ -501,13 +516,12 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
     immutableRatio: ownTotal > 0 ? immutableCount / ownTotal : 0,
   };
 
+  const counts = { total: browserTotal, fromDisk, fromMemory, fromUnknownStore, inferred };
   const browser: CacheReport["browser"] = {
-    total: browserTotal,
-    fromDisk,
-    fromMemory,
-    inferred,
+    ...counts,
     revalidated,
-    hitRatio: browserTotal > 0 ? (fromDisk + fromMemory + inferred) / browserTotal : 0,
+    hitRatio:
+      browserTotal > 0 ? browserCacheHitCount({ ...counts, hitRatio: 0 }) / browserTotal : 0,
   };
 
   return {

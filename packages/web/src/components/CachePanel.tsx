@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { fileName, formatBytes, pct } from "@htv/core";
+import { browserCacheHitCount, fileName, formatBytes, pct } from "@htv/core";
 import type {
   CacheReport,
   CdnCacheStatus,
@@ -225,7 +225,7 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
                 {pct(browser.hitRatio)}
                 <span className={styles.pct}>
                   {" "}
-                  ({browser.fromDisk + browser.fromMemory + inferred}/{browser.total})
+                  ({browserCacheHitCount(browser)}/{browser.total})
                 </span>
               </span>
             </div>
@@ -239,6 +239,15 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
               <div className={styles.row}>
                 <span className={styles.rowLabel}>From memory</span>
                 <span className={styles.rowValue}>{browser.fromMemory}</span>
+              </div>
+            )}
+            {(browser.fromUnknownStore ?? 0) > 0 && (
+              <div
+                className={styles.row}
+                title="The HAR marks these responses as cache hits only by size, not by store"
+              >
+                <span className={styles.rowLabel}>Store not recorded</span>
+                <span className={styles.rowValue}>{browser.fromUnknownStore}</span>
               </div>
             )}
             {inferred > 0 && (

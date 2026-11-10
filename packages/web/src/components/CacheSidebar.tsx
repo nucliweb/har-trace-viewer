@@ -16,7 +16,7 @@ interface Props {
   inferred?: InferredCacheHit[];
 }
 
-type Store = "memory" | "disk" | "inferred";
+type Store = "memory" | "disk" | "unknown" | "inferred";
 
 interface CacheRow {
   url: string;
@@ -28,6 +28,11 @@ interface CacheRow {
 const BADGES: Record<Store, { label: string; className: string | undefined; title?: string }> = {
   memory: { label: "mem", className: styles.badgeMemory },
   disk: { label: "disk", className: styles.badgeDisk },
+  unknown: {
+    label: "cache",
+    className: styles.badgeUnknown,
+    title: "The HAR marks it as a cache hit only by size, not by store",
+  },
   inferred: {
     label: "inferred",
     className: styles.badgeInferred,
@@ -41,7 +46,7 @@ export function CacheSidebar({ resources, inferred = [] }: Props) {
       url: e.url,
       resourceType: e.resourceType,
       transferSize: e.transferSize,
-      store: e.fromCache === "memory" ? ("memory" as const) : ("disk" as const),
+      store: e.fromCache === false ? ("disk" as const) : e.fromCache,
     })),
     ...inferred.map((hit) => ({ ...hit, store: "inferred" as const })),
   ];

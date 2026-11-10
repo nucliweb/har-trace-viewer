@@ -64,14 +64,14 @@ function isSecondaryResource(entry: HarEntry): boolean {
 }
 
 // "3 from cache" when a single store served the entries ("3 inferred from cache" when every hit
-// was inferred), "2 memory · 1 disk" otherwise.
+// was inferred), "2 memory · 1 disk" otherwise ("unknown" for hits the HAR marks no store for).
 function cacheTiming(entries: HarEntry[], inferred: number): string {
-  const memory = entries.filter((e) => e.fromCache === "memory").length;
-  const disk = entries.length - memory;
+  const store = (name: HarEntry["fromCache"]) => entries.filter((e) => e.fromCache === name).length;
   const stores = (
     [
-      [memory, "memory"],
-      [disk, "disk"],
+      [store("memory"), "memory"],
+      [store("disk"), "disk"],
+      [store("unknown"), "unknown"],
       [inferred, "inferred"],
     ] as const
   ).filter(([n]) => n > 0);

@@ -1,8 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
-import { collectFindings, getStepResources } from "@htv/core";
+import { collectFindings, generateFlow, getStepResources } from "@htv/core";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
+import { criticalCss, makeHar, secondaryImage } from "../../core/tests/helpers/synthetic-har";
 import { makeCompareFlows, makeFlow, makeWptRepeatView } from "./fixtures.js";
 
 const flow = makeFlow();
@@ -241,5 +242,24 @@ describe("DiagramView — inferred cache hits of a WebPageTest repeat view", () 
     expect(document.querySelector("#diagram-svg")!.parentElement!.className).toContain(
       "diagramBesideCache"
     );
+  });
+});
+
+describe("DiagramView — cache hits whose store the HAR does not record", () => {
+  it("shows them in the cache list with a plain cache badge", async () => {
+    const user = userEvent.setup();
+    const har = makeHar(
+      [{ ...criticalCss(100), fromCache: "unknown" as const }, secondaryImage(200)],
+      { onContentLoad: 150, onLoad: 200 }
+    );
+    const flow = generateFlow([{ name: "Playwright", har }]);
+    render(<DiagramView flow={flow} />);
+
+    await goTo(
+      user,
+      flow.steps.findIndex((s) => s.kind === "critical")
+    );
+    const row = screen.getByTitle("https://example.com/critical-100.css");
+    expect(within(row).getByText("cache")).toBeInTheDocument();
   });
 });

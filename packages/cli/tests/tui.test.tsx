@@ -805,3 +805,18 @@ describe("TUI views — WebPageTest repeat view and client region", () => {
     );
   });
 });
+
+describe("TUI views — hits of an unknown store", () => {
+  it("counts them in the hit ratio and on a row of their own in the Cache tab", async () => {
+    const har = makeHar(
+      [{ ...criticalCss(100), fromCache: "unknown" as const }, secondaryImage(200)],
+      { onContentLoad: 150, onLoad: 200 }
+    );
+    const flow = generateFlow([{ name: "Playwright", har }]);
+    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={60} />);
+
+    await press(stdin, "7");
+    expect(lastFrame()).toMatch(/Hit ratio\s+50% \(1\/2\)/);
+    expect(lastFrame()).toMatch(/Store not recorded\s+1/);
+  });
+});

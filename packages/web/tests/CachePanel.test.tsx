@@ -31,6 +31,18 @@ describe("CachePanel", () => {
     expect(screen.getByText("Browser cache hits inferred from WebPageTest")).toBeInTheDocument();
   });
 
+  it("counts the hits whose store the HAR does not record", () => {
+    renderPanel(
+      makeHar([
+        makeEntry({ url: "https://example.com/a.js", fromCache: "unknown", transferSize: 0 }),
+        makeEntry({ url: "https://example.com/b.js" }),
+      ])
+    );
+
+    expect(row("Hit ratio")).toHaveTextContent("50% (1/2)");
+    expect(row("Store not recorded")).toHaveTextContent("1");
+  });
+
   it("counts CDN hits over the own resources that reached the network", () => {
     const hit = { "x-vercel-cache": "HIT" };
     renderPanel(

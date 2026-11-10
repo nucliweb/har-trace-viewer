@@ -39,7 +39,9 @@ export interface HarEntry {
   transferSize: number; // bytes on the wire (headers + compressed body)
   bodySize: number; // decompressed body bytes (response.content.size)
   isDocument: boolean;
-  fromCache: "disk" | "memory" | false;
+  // The browser cache served it: from memory, from disk, or "unknown" when the HAR marks no
+  // store (Playwright records a hit only as a response with no bytes on the wire).
+  fromCache: "disk" | "memory" | "unknown" | false;
   // Signs that the response is specific to the user, kept as flags so that no cookie or
   // credential reaches the report: the response sets a cookie, the request carried an
   // Authorization header. Omitted when absent.
@@ -628,6 +630,8 @@ export interface CacheReport {
     total: number; // resources the page used: network requests and cache hits, document aside
     fromDisk: number;
     fromMemory: number;
+    // Hits whose store the HAR does not record (Playwright); absent before flow version 7.
+    fromUnknownStore?: number;
     // WebPageTest repeat-view hits inferred from the first view; absent before flow version 6.
     inferred?: number;
     // 304 responses: cached copies the browser had to confirm; absent before flow version 6.

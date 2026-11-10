@@ -118,6 +118,56 @@ describe("parseHar — transfer size of cached entries", () => {
   });
 });
 
+// Playwright does not mark browser-cache hits: a hit is a response with no bytes on the wire
+// (_transferSize 0) and a body, the store it came from unrecorded.
+describe("parseHar — Playwright browser-cache hits", () => {
+  const playwright = (...entries: ReturnType<typeof firefoxEntry>[]) => {
+    const raw = firefoxHar();
+    raw.log.entries.push(...entries);
+    return parseHar({ log: { ...raw.log, creator: { name: "Playwright" } } }).entries.slice(
+      -entries.length
+    );
+  };
+  const response = (status: number, transferSize: number, size: number) => ({
+    response: {
+      status,
+      headers: [],
+      content: { mimeType: "text/javascript", size },
+      bodySize: transferSize - 300,
+      headersSize: 300,
+      _transferSize: transferSize,
+    },
+  });
+
+  it("reads a 2xx without bytes on the wire and with a body as a hit of an unknown store", () => {
+    const [hit] = playwright(
+      firefoxEntry("https://example.com/c.js", "text/javascript", response(200, 0, 5000))
+    );
+
+    expect(hit.fromCache).toBe("unknown");
+    expect(hit.transferSize).toBe(0);
+  });
+
+  it("keeps responses that crossed the network, redirects and failures on the network", () => {
+    const entries = playwright(
+      firefoxEntry("https://example.com/a.js", "text/javascript", response(200, 1200, 5000)),
+      firefoxEntry("https://example.com/old", "text/html", response(302, 0, 0)),
+      firefoxEntry("https://example.com/b.js", "text/javascript", response(-1, -1, -1))
+    );
+
+    expect(entries.map((e) => e.fromCache)).toEqual([false, false, false]);
+  });
+
+  it("leaves the same response of another exporter alone", () => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/c.js", "text/javascript", response(200, 0, 5000))
+    );
+
+    expect(parseHar(raw).entries.at(-1)!.fromCache).toBe(false);
+  });
+});
+
 describe("parseHar — bytes on the wire", () => {
   // Chrome DevTools exports: no wire sizes but response._transferSize, content.size uncompressed.
   const chromeResponse = (overrides: Record<string, unknown>) => ({

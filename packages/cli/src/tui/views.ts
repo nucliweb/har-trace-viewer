@@ -4,6 +4,7 @@ import {
   THIRD_PARTY_CATEGORY_LABEL,
   analyzeHops,
   analyzeThirdParties,
+  browserCacheHitCount,
   compareStepMetrics,
   fileName,
   formatBytes,
@@ -741,12 +742,12 @@ export function cacheRegion(report: CacheReport, width: number, network?: Networ
         ]
       : [[seg("No own static assets", { dim: true })]];
   const cache: Line[] = [
-    kv(
-      "Hit ratio",
-      `${pct(browser.hitRatio)} (${browser.fromDisk + browser.fromMemory + inferred}/${browser.total})`
-    ),
+    kv("Hit ratio", `${pct(browser.hitRatio)} (${browserCacheHitCount(browser)}/${browser.total})`),
     ...(browser.fromDisk > 0 ? [kv("From disk", String(browser.fromDisk))] : []),
     ...(browser.fromMemory > 0 ? [kv("From memory", String(browser.fromMemory))] : []),
+    ...(browser.fromUnknownStore
+      ? [kv("Store not recorded", String(browser.fromUnknownStore))]
+      : []),
     ...(inferred > 0 ? [kv("Inferred (WPT)", String(inferred))] : []),
     ...(revalidated > 0 ? [kv("Revalidated (304)", String(revalidated))] : []),
   ];

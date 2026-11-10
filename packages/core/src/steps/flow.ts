@@ -28,7 +28,9 @@ import type {
 // 6: cache reports count inferred and revalidated browser-cache hits (CacheReport.browser
 //    inferred, revalidated); WebPageTest repeat views carry ParsedHar.inferredCacheHits.
 // 7: steps reference the inferred browser-cache hits of their group (DiagramStep
-//    inferredCacheRefs), which light the hop to the browser cache like the HAR's own hits.
+//    inferredCacheRefs), which light the hop to the browser cache like the HAR's own hits;
+//    a hit whose store the HAR does not record reads fromCache "unknown" (CacheReport.browser
+//    fromUnknownStore).
 export const FLOW_VERSION = 7;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];

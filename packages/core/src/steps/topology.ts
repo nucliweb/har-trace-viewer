@@ -138,14 +138,15 @@ function buildTopology(opts: TopologyOptions): { nodes: DiagramNode[]; paths: Di
   return { nodes, paths };
 }
 
-// The stores the browser cache served the page from: "memory", "disk" or "memory + disk".
-function cacheStores(entries: HarEntry[], inferred: number): string {
+// The stores the browser cache served the page from ("memory", "disk", "memory + disk", with
+// "inferred" for a WebPageTest repeat view); none when the HAR records no store.
+function cacheStores(entries: HarEntry[], inferred: number): string | undefined {
   const stores = [
     entries.some((e) => e.fromCache === "memory") && "memory",
     entries.some((e) => e.fromCache === "disk") && "disk",
     inferred > 0 && "inferred",
   ].filter((store) => store !== false);
-  return stores.join(" + ");
+  return stores.length > 0 ? stores.join(" + ") : undefined;
 }
 
 /** The nodes and paths of a page, each server node with the requests it answered. */
