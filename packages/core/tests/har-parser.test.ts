@@ -168,6 +168,93 @@ describe("parseHar — Playwright browser-cache hits", () => {
   });
 });
 
+// Playwright keeps a whole session under one HAR page: every navigation of the main frame
+// (its _frameref) starts a page of its own, a redirect chain staying one navigation.
+describe("parseHarPages — navigations of one HAR page", () => {
+  const MAIN = "frame@main";
+  const at = (seconds: number) => new Date(Date.UTC(2026, 0, 1) + seconds * 1000).toISOString();
+  const doc = (url: string, seconds: number, extra: Record<string, unknown> = {}) =>
+    firefoxEntry(url, "text/html", {
+      startedDateTime: at(seconds),
+      _frameref: MAIN,
+      _resourceType: "document",
+      ...extra,
+    });
+  const asset = (url: string, seconds: number, frame = MAIN) =>
+    firefoxEntry(url, "text/javascript", { startedDateTime: at(seconds), _frameref: frame });
+  const redirect = (status: number, location: string) => ({
+    response: {
+      status,
+      headers: [{ name: "Location", value: location }],
+      content: { mimeType: "text/html", size: 0 },
+      bodySize: 0,
+      headersSize: 200,
+    },
+  });
+  const session = (entries: ReturnType<typeof firefoxEntry>[], onLoad = 20_500) => ({
+    log: {
+      creator: { name: "Playwright" },
+      pages: [
+        {
+          id: "page@1",
+          title: "Checkout",
+          startedDateTime: at(0),
+          pageTimings: { onContentLoad: onLoad - 100, onLoad },
+        },
+      ],
+      entries: entries.map((e) => ({ ...e, pageref: "page@1" })),
+    },
+  });
+
+  it("starts a page at each navigation of the main frame, a redirect chain staying one", () => {
+    const pages = parseHarPages(
+      session([
+        doc("https://example.com/", 0),
+        asset("https://example.com/app.js", 1),
+        doc("https://ads.example.net/frame.html", 2, { _frameref: "frame@ad" }),
+        doc("https://example.com/login", 10),
+        asset("https://example.com/login.js", 11),
+        doc("https://example.com/ship", 20, redirect(301, "https://example.com/ship/")),
+        doc("https://example.com/ship/", 20.1),
+        asset("https://example.com/ship.js", 20.2),
+      ])
+    );
+
+    expect(pages.map((p) => p.documentEntry.url)).toEqual([
+      "https://example.com/",
+      "https://example.com/login",
+      "https://example.com/ship/",
+    ]);
+    expect(pages.map((p) => p.entries.length)).toEqual([3, 2, 3]);
+    expect(pages[2].documentRedirects?.map((e) => e.url)).toEqual(["https://example.com/ship"]);
+  });
+
+  it("gives the load event to the navigation it fired in, timed from that navigation", () => {
+    const pages = parseHarPages(
+      session([
+        doc("https://example.com/", 0),
+        doc("https://example.com/login", 10),
+        doc("https://example.com/ship", 20),
+      ])
+    );
+
+    expect(pages.map((p) => p.pages[0].onLoad)).toEqual([null, null, 500]);
+    expect(pages.map((p) => p.pages[0].onContentLoad)).toEqual([null, null, 400]);
+    // The page title is the last document's: the earlier pages go by their URL.
+    expect(pages.map((p) => p.pages[0].title)).toEqual(["", "", "Checkout"]);
+    expect(new Set(pages.map((p) => p.pages[0].id)).size).toBe(3);
+  });
+
+  it("keeps a page whose entries name no frame in one piece", () => {
+    const raw = session([
+      firefoxEntry("https://example.com/", "text/html", { startedDateTime: at(0) }),
+      firefoxEntry("https://example.com/login", "text/html", { startedDateTime: at(10) }),
+    ]);
+
+    expect(parseHarPages(raw)).toHaveLength(1);
+  });
+});
+
 describe("parseHar — bytes on the wire", () => {
   // Chrome DevTools exports: no wire sizes but response._transferSize, content.size uncompressed.
   const chromeResponse = (overrides: Record<string, unknown>) => ({

@@ -29,6 +29,8 @@ interface RawHarEntry {
   pageref?: string;
   startedDateTime: string;
   time: number;
+  // The frame that made the request (Playwright).
+  _frameref?: string;
   _resourceType?: string;
   _priority?: string;
   _fromCache?: string;
@@ -790,10 +792,79 @@ function inferCacheHits(firstView: ParsedPage, repeatView: ParsedPage): Inferred
   return hits;
 }
 
+interface RawPageGroup {
+  page: RawHarPage;
+  entries: RawHarEntry[];
+}
+
+const startMs = (e: { startedDateTime: string }) => new Date(e.startedDateTime).getTime();
+
+// A page time (ms from the page start) moved to a navigation that starts `offset` ms later;
+// -1 when the event did not fire during that navigation.
+function pageTimeIn(value: number | undefined, offset: number, fired: boolean): number {
+  return fired && value !== undefined && value >= 0 ? value - offset : -1;
+}
+
+/**
+ * Splits a HAR page at each navigation of its main frame. Playwright keeps a whole session
+ * under one page; each load then gets its own steps, TTFB and load event. The main frame is
+ * the frame (_frameref) of the first document; a document that answers the redirect of the
+ * previous one belongs to the same navigation. Entries go to the navigation running when
+ * they started. The page timings belong to the navigation the event fired in, timed from its
+ * start, and the page title to the last navigation. A page whose entries name no frame, or
+ * that navigated once, stays whole.
+ */
+function splitNavigations(page: RawHarPage, entries: RawHarEntry[]): RawPageGroup[] {
+  const isDocument = (e: RawHarEntry) => e._resourceType === "document";
+  const mainFrame = entries.find(isDocument)?._frameref;
+  if (mainFrame === undefined) return [{ page, entries }];
+
+  const documents = entries
+    .filter((e) => isDocument(e) && e._frameref === mainFrame)
+    .sort((a, b) => startMs(a) - startMs(b));
+  const starts: number[] = [];
+  documents.forEach((d, i) => {
+    const previous = documents[i - 1];
+    if (previous && redirectTarget(previous) === d.request.url) return;
+    starts.push(i === 0 ? startMs(page) : startMs(d));
+  });
+  if (starts.length < 2) return [{ page, entries }];
+
+  const navigationAt = (ms: number) => {
+    let index = 0;
+    while (index + 1 < starts.length && starts[index + 1] <= ms) index++;
+    return index;
+  };
+  const pageStart = startMs(page);
+  const { onContentLoad, onLoad } = page.pageTimings ?? {};
+  const firedIn = (value: number | undefined) =>
+    value !== undefined && value >= 0 ? navigationAt(pageStart + value) : -1;
+  const loadIn = firedIn(onLoad);
+  const contentLoadIn = firedIn(onContentLoad);
+  const last = starts.length - 1;
+
+  const groups: RawPageGroup[] = starts.map((start, index) => ({
+    page: {
+      ...page,
+      id: index === 0 ? page.id : `${page.id}#${index + 1}`,
+      title: index === last ? page.title : "",
+      startedDateTime: new Date(start).toISOString(),
+      pageTimings: {
+        onContentLoad: pageTimeIn(onContentLoad, start - pageStart, contentLoadIn === index),
+        onLoad: pageTimeIn(onLoad, start - pageStart, loadIn === index),
+      },
+    },
+    entries: [],
+  }));
+  for (const entry of entries) groups[navigationAt(startMs(entry))].entries.push(entry);
+  return groups;
+}
+
 /**
  * Splits a HAR recorded across several navigations into one ParsedHar per page,
  * ordered by page startedDateTime. Entries are grouped by `pageref` (entries
- * without one belong to the first page) and timed against their own page.
+ * without one belong to the first page) and timed against their own page; a page
+ * that holds several navigations of its main frame is split at each (splitNavigations).
  * Pages without an HTML document are skipped. WebPageTest repeat views carry the
  * browser-cache hits inferred from the first view of their run.
  */
@@ -805,10 +876,12 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
   const firstId = ordered[0].id;
 
   const parsedPages = new Map<string, ParsedPage>();
-  for (const page of ordered) {
-    const pageEntries = entries.filter((e) => (e.pageref ?? firstId) === page.id);
-    const parsed = buildParsedHar([page], pageEntries, harSource(raw));
-    if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
+  for (const harPage of ordered) {
+    const harPageEntries = entries.filter((e) => (e.pageref ?? firstId) === harPage.id);
+    for (const { page, entries: pageEntries } of splitNavigations(harPage, harPageEntries)) {
+      const parsed = buildParsedHar([page], pageEntries, harSource(raw));
+      if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
+    }
   }
   if (parsedPages.size === 0) throw new Error(NO_DOCUMENT_ERROR);
 
