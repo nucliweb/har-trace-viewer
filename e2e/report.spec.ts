@@ -527,8 +527,9 @@ const drawerTitled = (page: Page, title: string | RegExp) =>
     .last();
 
 async function drawerWidths(page: Page) {
+  // Rounded: a drawer as wide as the viewport can measure a fraction of a pixel less.
   const width = async (title: string | RegExp) =>
-    (await drawerTitled(page, title).boundingBox())!.width;
+    Math.round((await drawerTitled(page, title).boundingBox())!.width);
   await page.getByRole("button", { name: /^Toggle findings/ }).click();
   const findings = await width("Findings");
   await page.getByRole("button", { name: "Toggle cache analysis" }).click();
