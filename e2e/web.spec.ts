@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -154,4 +155,36 @@ test.describe("mobile 360x740", () => {
     const svg = await page.locator("#diagram-svg").boundingBox();
     expect(svg!.width).toBeLessThanOrEqual(360);
   });
+});
+
+test("the keyboard opens the shortcuts and the settings as accessible modal dialogs", async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto(baseUrl);
+  await page.getByRole("button", { name: "Load demo flow →" }).click();
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+
+  await page.keyboard.press("?");
+  const help = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  await expect(help).toBeVisible();
+  // The dialog holds the focus and the step keys leave it alone.
+  await expect(help.locator(":focus")).toHaveCount(1);
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  const results = await new AxeBuilder({ page })
+    .include("dialog")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((v) => v.id)).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(help).toBeHidden();
+
+  await page.keyboard.press("c");
+  await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.keyboard.press("t");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(errors).toEqual([]);
 });

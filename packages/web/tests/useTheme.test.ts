@@ -25,6 +25,18 @@ describe("useTheme", () => {
     expect(renderHook(() => useTheme()).result.current.theme).toBe("light");
   });
 
+  it("goes back to the system preference when the choice is cleared", () => {
+    const { result } = renderHook(() => useTheme());
+    act(() => result.current.setChoice("dark"));
+    expect(result.current).toMatchObject({ theme: "dark", choice: "dark" });
+
+    act(() => result.current.setChoice(null));
+    expect(result.current).toMatchObject({ theme: "light", choice: null });
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    act(() => setMedia(DARK, true));
+    expect(result.current.theme).toBe("dark");
+  });
+
   it("follows live system changes until a choice is made", () => {
     const { result } = renderHook(() => useTheme());
     act(() => setMedia(DARK, true));

@@ -1,0 +1,84 @@
+.dialog {
+  /* The global reset zeroes every margin: auto puts the dialog back in the middle. */
+  margin: auto;
+  width: min(560px, calc(100vw - 2 * var(--space-md)));
+  max-height: calc(100dvh - 2 * var(--space-lg));
+  padding: 0;
+  border: 1px solid var(--color-border2);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.25);
+  flex-direction: column;
+}
+
+.dialog[open] {
+  display: flex;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-cyan);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text2);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.closeBtn:hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.closeBtn:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
+.body {
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .closeBtn {
+    width: 44px;
+    height: 44px;
+  }
+}

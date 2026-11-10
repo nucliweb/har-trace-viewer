@@ -44,6 +44,19 @@ describe("DiagramView", () => {
     expect(isHidden("FCP")).toBe(true);
   });
 
+  it("leaves the step keys to an open dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <DiagramView flow={flow} />
+        <dialog open aria-label="Settings" />
+      </>
+    );
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
+  });
+
   it("updates the step label with Next and Prev", async () => {
     const user = userEvent.setup();
     const total = flow.steps.length;

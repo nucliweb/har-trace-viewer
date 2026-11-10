@@ -16,9 +16,10 @@ function readStoredChoice(): Theme | null {
   }
 }
 
-function writeStoredChoice(theme: Theme): void {
+function writeStoredChoice(theme: Theme | null): void {
   try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    if (theme) window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    else window.localStorage.removeItem(THEME_STORAGE_KEY);
   } catch {
     // Storage is unavailable (private mode, blocked site data): the choice lasts for this page only.
   }
@@ -28,11 +29,19 @@ function systemTheme(): Theme {
   return window.matchMedia(DARK_QUERY).matches ? "dark" : "light";
 }
 
+interface ThemeState {
+  theme: Theme;
+  // The persisted choice; null follows the system preference.
+  choice: Theme | null;
+  toggleTheme: () => void;
+  setChoice: (choice: Theme | null) => void;
+}
+
 /**
  * Resolves the active theme: the persisted choice when there is one, otherwise the system
  * preference (followed live). The resolved value is written to `data-theme` on <html>.
  */
-export function useTheme(): { theme: Theme; toggleTheme: () => void } {
+export function useTheme(): ThemeState {
   const [choice, setChoice] = useState<Theme | null>(readStoredChoice);
   const [system, setSystem] = useState<Theme>(systemTheme);
   const theme = choice ?? system;
@@ -48,11 +57,14 @@ export function useTheme(): { theme: Theme; toggleTheme: () => void } {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  const toggleTheme = useCallback(() => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+  const choose = useCallback((next: Theme | null) => {
     writeStoredChoice(next);
     setChoice(next);
-  }, [theme]);
+  }, []);
+  const toggleTheme = useCallback(
+    () => choose(theme === "dark" ? "light" : "dark"),
+    [choose, theme]
+  );
 
-  return { theme, toggleTheme };
+  return { theme, choice, toggleTheme, setChoice: choose };
 }

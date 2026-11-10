@@ -13,6 +13,19 @@ export function setMedia(query: string, value: boolean): void {
   for (const listener of listeners.get(query) ?? []) listener();
 }
 
+// jsdom has no modal dialogs: showModal opens the dialog and close closes it, firing "close".
+// The browser's focus trap, Escape (a "cancel" event) and top layer are covered end to end.
+const dialogProto = (window.HTMLDialogElement ?? window.HTMLElement).prototype as HTMLDialogElement;
+if (typeof dialogProto.showModal !== "function") {
+  dialogProto.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  dialogProto.close = function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
+}
+
 beforeEach(() => {
   matches.clear();
   listeners.clear();

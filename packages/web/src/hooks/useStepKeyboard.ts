@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
+import { isModalOpen, isShortcutEvent } from "../lib/keyboard.js";
 import type { StepNavigation } from "./useDiagramState.js";
 
 type Actions = Pick<StepNavigation, "next" | "prev" | "goTo" | "togglePlay" | "total">;
-
-const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditable='false'])";
 
 /**
  * Step shortcuts: ArrowRight/ArrowLeft = next/prev, Home/End = first/last, Space = toggle autoplay.
@@ -12,14 +11,13 @@ const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditabl
  * The same handler listens on the diagram container (so it works while the region is focused) and
  * on the document (so it works after a click on the canvas). It never acts when the event was
  * already handled (defaultPrevented, which also prevents double handling between the two
- * listeners), when a modifier key is held, or when the focus is in an input, select, textarea or
- * contenteditable element (typing in the FlowBuilder). Space is also left alone on buttons, where
- * it activates the button.
+ * listeners), when a modifier key is held, when the focus is in an input, select, textarea or
+ * contenteditable element (typing in the FlowBuilder), or while a modal dialog is open. Space is
+ * also left alone on buttons, where it activates the button.
  */
 function stepKeyAction(event: KeyboardEvent, actions: Actions): boolean {
-  if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (!isShortcutEvent(event) || isModalOpen()) return false;
   const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest(EDITABLE)) return false;
   switch (event.key) {
     case "ArrowRight":
       actions.next();
