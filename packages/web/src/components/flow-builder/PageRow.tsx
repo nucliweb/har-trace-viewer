@@ -12,6 +12,8 @@ interface Props {
   idx: number;
   total: number;
   isDraggingOver: boolean;
+  /** Part of a multi-page journey: the row shows its order buttons and its remove button. */
+  journey: boolean;
   onNameChange: (name: string) => void;
   onHarFile: (file: File) => void;
   onSelectedPagesChange: (ids: string[]) => void;
@@ -32,6 +34,7 @@ export function PageRow({
   idx,
   total,
   isDraggingOver,
+  journey,
   onNameChange,
   onHarFile,
   onSelectedPagesChange,
@@ -64,26 +67,28 @@ export function PageRow({
         onDrop={handleHarDrop}
         aria-busy={isEntryParsing(page)}
       >
-        <div className={styles.rowOrder}>
-          <button
-            className={styles.orderBtn}
-            onClick={onMoveUp}
-            disabled={idx === 0}
-            title={t.moveUp}
-            aria-label={t.moveUpLabel}
-          >
-            ↑
-          </button>
-          <button
-            className={styles.orderBtn}
-            onClick={onMoveDown}
-            disabled={idx === total - 1}
-            title={t.moveDown}
-            aria-label={t.moveDownLabel}
-          >
-            ↓
-          </button>
-        </div>
+        {journey && (
+          <div className={styles.rowOrder}>
+            <button
+              className={styles.orderBtn}
+              onClick={onMoveUp}
+              disabled={idx === 0}
+              title={t.moveUp}
+              aria-label={t.moveUpLabel}
+            >
+              ↑
+            </button>
+            <button
+              className={styles.orderBtn}
+              onClick={onMoveDown}
+              disabled={idx === total - 1}
+              title={t.moveDown}
+              aria-label={t.moveDownLabel}
+            >
+              ↓
+            </button>
+          </div>
+        )}
 
         <input
           className={styles.nameInput}
@@ -96,15 +101,17 @@ export function PageRow({
 
         <FileZones entry={page} onHarFile={onHarFile} onTraceFile={onTraceFile} />
 
-        <button
-          className={styles.removeBtn}
-          onClick={onRemove}
-          disabled={total === 1}
-          title={t.removePage}
-          aria-label={t.removePage}
-        >
-          ×
-        </button>
+        {journey && (
+          <button
+            className={styles.removeBtn}
+            onClick={onRemove}
+            disabled={total === 1}
+            title={t.removePage}
+            aria-label={t.removePage}
+          >
+            ×
+          </button>
+        )}
       </div>
       {page.har && page.har.length > 1 && !(showComparePicker && page.comparePages) && (
         <PageChecklist
@@ -155,26 +162,27 @@ function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPicker
         />
         <span>{t.compareTwoPages}</span>
       </label>
-      {([0, 1] as const).map((side) => (
-        <span key={side} className={styles.pairField}>
-          <label className={styles.pairLabel} htmlFor={side === 0 ? idA : idB}>
-            {side === 0 ? "A" : "B"}
-          </label>
-          <select
-            id={side === 0 ? idA : idB}
-            className={styles.regionSelect}
-            value={pair[side]}
-            disabled={!enabled}
-            onChange={(e) => pick(side, e.target.value)}
-          >
-            {pages.map((page) => (
-              <option key={page.id} value={page.id}>
-                {pageOptionLabel(page, t)}
-              </option>
-            ))}
-          </select>
-        </span>
-      ))}
+      {/* The page selectors show once the comparison is asked for, never greyed out. */}
+      {enabled &&
+        ([0, 1] as const).map((side) => (
+          <span key={side} className={styles.pairField}>
+            <label className={styles.pairLabel} htmlFor={side === 0 ? idA : idB}>
+              {side === 0 ? "A" : "B"}
+            </label>
+            <select
+              id={side === 0 ? idA : idB}
+              className={styles.regionSelect}
+              value={pair[side]}
+              onChange={(e) => pick(side, e.target.value)}
+            >
+              {pages.map((page) => (
+                <option key={page.id} value={page.id}>
+                  {pageOptionLabel(page, t)}
+                </option>
+              ))}
+            </select>
+          </span>
+        ))}
     </fieldset>
   );
 }

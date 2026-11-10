@@ -12,6 +12,9 @@ interface Props {
   onThemeChoice: (choice: Theme | null) => void;
   locale: Locale;
   onLocale: (locale: Locale) => void;
+  // The builder offers "+ Add page": a flow from several HAR files.
+  journeys: boolean;
+  onJourneys: (on: boolean) => void;
   onShowHelp: () => void;
   onClose: () => void;
 }
@@ -30,12 +33,15 @@ export function SettingsModal({
   onThemeChoice,
   locale,
   onLocale,
+  journeys,
+  onJourneys,
   onShowHelp,
   onClose,
 }: Props) {
   const t = useMessages().settings;
   const themeName = useId();
   const languageName = useId();
+  const journeysHint = useId();
   return (
     <Modal title={t.title} onClose={onClose}>
       <fieldset className={styles.fieldset}>
@@ -69,6 +75,23 @@ export function SettingsModal({
             </label>
           ))}
         </div>
+      </fieldset>
+      <fieldset className={styles.fieldset}>
+        <legend className={styles.sectionTitle}>{t.builder}</legend>
+        <div className={styles.options}>
+          <label className={styles.option}>
+            <input
+              type="checkbox"
+              checked={journeys}
+              onChange={(event) => onJourneys(event.target.checked)}
+              aria-describedby={journeysHint}
+            />
+            {t.journeys}
+          </label>
+        </div>
+        <p id={journeysHint} className={styles.hint}>
+          {t.journeysHint}
+        </p>
       </fieldset>
       <button type="button" className={styles.linkButton} onClick={onShowHelp}>
         {t.showHelp}

@@ -19,6 +19,8 @@ interface Props {
   onGenerate: (pages: PageFlow[], options: FlowOptions, comparePages?: PageFlow[]) => void;
   /** When set, the empty state offers a ready-made demo flow, fetched on demand. */
   onLoadFlow?: (flow: Flow) => void;
+  /** Offers multi-page journeys: "+ Add page", the page order and removing a page. */
+  journeys?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ interface Props {
  * recording to compare with, the client region and the Generate button; the empty state
  * offers a demo flow.
  */
-export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
+export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props) {
   const t = useMessages().builder;
   const entries = usePageEntries();
   const { pages, compare } = entries;
@@ -44,6 +46,8 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
       .catch(() => setDemoStatus("error"));
   }, [onLoadFlow]);
 
+  // A journey of several pages keeps its controls with the option off: nothing added is hidden.
+  const journeyControls = journeys || pages.length > 1;
   const pagePair = pagePairOf(pages);
   const pickerAvailable = pages.length === 1 && (pages[0].har?.length ?? 0) > 1;
   const comparing = pagePair !== null || compare.har !== null;
@@ -63,7 +67,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
   return (
     <div className={styles.builder}>
       <h2 className={styles.heading}>{t.heading}</h2>
-      <p className={styles.hint}>{t.hint}</p>
+      <p className={styles.hint}>{journeyControls ? t.hint : t.hintSingle}</p>
 
       {onLoadFlow && (
         <div className={styles.demo}>
@@ -91,6 +95,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
             idx={idx}
             total={pages.length}
             isDraggingOver={draggingOver === page.id}
+            journey={journeyControls}
             onNameChange={(name) => entries.update(page.id, { name })}
             onHarFile={(file) => entries.loadHar(page.id, file)}
             onSelectedPagesChange={(selectedPageIds) =>
@@ -119,9 +124,11 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
       )}
 
       <div className={styles.footer}>
-        <button className={styles.addBtn} onClick={entries.add}>
-          {t.addPage}
-        </button>
+        {journeyControls && (
+          <button className={styles.addBtn} onClick={entries.add}>
+            {t.addPage}
+          </button>
+        )}
         <div className={styles.footerActions}>
           <div className={styles.regionField}>
             <label className={styles.regionLabel} htmlFor={regionSelectId}>

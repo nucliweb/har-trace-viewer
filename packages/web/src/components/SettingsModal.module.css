@@ -134,3 +134,9 @@
     min-height: 44px;
   }
 }
+
+.hint {
+  margin-top: var(--space-xs);
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+}

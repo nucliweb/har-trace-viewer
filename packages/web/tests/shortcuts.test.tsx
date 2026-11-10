@@ -105,6 +105,26 @@ describe("App — settings", () => {
     expect(await screen.findByRole("radio", { name: "System" })).toBeChecked();
   });
 
+  it("turn on multi-page journeys, which the builder offers and the next visit keeps", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    expect(screen.queryByRole("button", { name: "+ Add page" })).not.toBeInTheDocument();
+    await user.keyboard("c");
+
+    const journeys = screen.getByRole("checkbox", { name: "Multi-page journeys" });
+    expect(journeys).not.toBeChecked();
+    expect(journeys).toHaveAccessibleDescription(
+      "Build a flow from several HAR files, one per page."
+    );
+    await user.click(journeys);
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.getByRole("button", { name: "+ Add page" })).toBeInTheDocument();
+
+    unmount();
+    render(<App />);
+    expect(screen.getByRole("button", { name: "+ Add page" })).toBeInTheDocument();
+  });
+
   it("link to the keyboard shortcuts", async () => {
     const user = userEvent.setup();
     render(<App />);

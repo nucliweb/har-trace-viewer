@@ -21,6 +21,9 @@ export const es: Messages = {
     dark: "Oscuro",
     system: "Sistema",
     language: "Idioma",
+    builder: "Constructor",
+    journeys: "Recorridos de varias páginas",
+    journeysHint: "Construye un flujo con varios archivos HAR, uno por página.",
     showHelp: "Atajos de teclado e información",
   },
   help: {
@@ -48,6 +51,7 @@ export const es: Messages = {
   },
   builder: {
     heading: "Construye tu flujo",
+    hintSingle: "Carga un archivo HAR y, si la tienes, una traza de Chrome.",
     hint: "Añade una página para la traza de una sola página, o varias para visualizar un recorrido de usuario.",
     demoTitle: "¿No tienes archivos a mano?",
     demoCopy:

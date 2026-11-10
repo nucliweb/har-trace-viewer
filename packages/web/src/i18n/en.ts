@@ -25,6 +25,9 @@ export const en = {
     dark: "Dark",
     system: "System",
     language: "Language",
+    builder: "Builder",
+    journeys: "Multi-page journeys",
+    journeysHint: "Build a flow from several HAR files, one per page.",
     showHelp: "Keyboard shortcuts and about",
   },
   help: {
@@ -53,6 +56,7 @@ export const en = {
   builder: {
     heading: "Build your flow",
     hint: "Add one page for a single-page trace, or multiple pages to visualise a user journey.",
+    hintSingle: "Load a HAR file, and a Chrome trace if you have one.",
     demoTitle: "No files at hand?",
     demoCopy: "Step through a real page load, captured as a HAR file and a Chrome trace.",
     demoError: "Could not load the demo flow.",

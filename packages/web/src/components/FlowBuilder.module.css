@@ -330,10 +330,12 @@
   justify-content: space-between;
 }
 
+/* On the right, with or without "+ Add page" on the left. */
 .footerActions {
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  margin-left: auto;
 }
 
 .regionField {
@@ -720,6 +722,7 @@
   .footerActions {
     flex-direction: column;
     align-items: stretch;
+    margin-left: 0;
   }
 
   .regionField {

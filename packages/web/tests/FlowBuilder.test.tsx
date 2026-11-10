@@ -20,12 +20,33 @@ async function loadHar(user: ReturnType<typeof userEvent.setup>, index = 0, cont
 }
 
 describe("FlowBuilder", () => {
-  it("renders one empty page with Generate disabled", () => {
+  it("renders one empty page with Generate disabled, without the journey controls", () => {
     render(<FlowBuilder onGenerate={vi.fn()} />);
     expect(screen.getByLabelText("Page 1 name")).toHaveValue("Page 1");
     expect(screen.getByText("Drop .har")).toBeInTheDocument();
     expect(generate()).toBeDisabled();
+    expect(screen.getByText("Load a HAR file, and a Chrome trace if you have one.")).toBeVisible();
+    for (const name of ["+ Add page", "Move page up", "Move page down", "Remove page"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it("offers the journey controls when journeys are on", () => {
+    render(<FlowBuilder onGenerate={vi.fn()} journeys />);
+    expect(screen.getByRole("button", { name: "+ Add page" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Remove page" })).toBeDisabled();
+    expect(screen.getByText(/multiple pages to visualise a user journey/)).toBeVisible();
+  });
+
+  it("keeps the journey controls while a journey has several pages, journeys off", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<FlowBuilder onGenerate={vi.fn()} journeys />);
+    await user.click(screen.getByRole("button", { name: "+ Add page" }));
+    rerender(<FlowBuilder onGenerate={vi.fn()} journeys={false} />);
+    expect(screen.getAllByRole("button", { name: "Remove page" })).toHaveLength(2);
+
+    await user.click(screen.getAllByRole("button", { name: "Remove page" })[1]);
+    expect(screen.queryByRole("button", { name: "+ Add page" })).not.toBeInTheDocument();
   });
 
   it("parses a HAR on the main thread, shows its name and enables Generate", async () => {
@@ -127,7 +148,7 @@ describe("FlowBuilder", () => {
 
   it("adds, reorders and removes pages", async () => {
     const user = userEvent.setup();
-    render(<FlowBuilder onGenerate={vi.fn()} />);
+    render(<FlowBuilder onGenerate={vi.fn()} journeys />);
     await user.click(screen.getByRole("button", { name: "+ Add page" }));
     const names = () =>
       screen.getAllByPlaceholderText("Page name").map((i) => (i as HTMLInputElement).value);
@@ -178,7 +199,7 @@ describe("FlowBuilder", () => {
   it("only includes pages that have a HAR", async () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn();
-    render(<FlowBuilder onGenerate={onGenerate} />);
+    render(<FlowBuilder onGenerate={onGenerate} journeys />);
     await user.click(screen.getByRole("button", { name: "+ Add page" }));
     await loadHar(user, 1);
     await waitFor(() => expect(generate()).toBeEnabled());
@@ -312,9 +333,13 @@ describe("FlowBuilder", () => {
       await loadHar(user, 0, wptJson);
       await screen.findByText("site.har · 3 pages");
 
-      expect(
-        within(comparePages()).getByRole("checkbox", { name: /compare two pages/i })
-      ).not.toBeChecked();
+      const compareBox = within(comparePages()).getByRole("checkbox", {
+        name: /compare two pages/i,
+      });
+      expect(compareBox).not.toBeChecked();
+      // The page selectors show once the comparison is asked for, never greyed out.
+      expect(within(comparePages()).queryByRole("combobox")).not.toBeInTheDocument();
+      await user.click(compareBox);
       expect(within(comparePages()).getByLabelText("A")).toHaveDisplayValue(
         "Run 1 · First view (3 req)"
       );

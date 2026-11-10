@@ -8,6 +8,7 @@ import { HelpModal } from "./components/HelpModal.js";
 import { RegionNotice } from "./components/RegionNotice.js";
 import { SettingsModal } from "./components/SettingsModal.js";
 import { useAppShortcuts } from "./hooks/useAppShortcuts.js";
+import { useJourneys } from "./hooks/useJourneys.js";
 import { useTheme } from "./hooks/useTheme.js";
 import { MessagesContext } from "./i18n/context.js";
 import { useLocale } from "./i18n/useLocale.js";
@@ -36,6 +37,7 @@ export function App() {
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const { theme, choice: themeChoice, toggleTheme, setChoice: setThemeChoice } = useTheme();
   const { locale, t, setLocale, cycleLocale } = useLocale();
+  const [journeys, setJourneys] = useJourneys();
   // One dialog at a time: opening one replaces the other, its own key closes it.
   const [dialog, setDialog] = useState<"settings" | "help" | null>(null);
   const shortcuts = useMemo(() => {
@@ -152,6 +154,7 @@ export function App() {
           ) : (
             <div className={styles.builderWrapper}>
               <FlowBuilder
+                journeys={journeys}
                 onGenerate={handleGenerate}
                 // The demo chunk is not shipped inside generated reports.
                 onLoadFlow={embedded ? undefined : handleLoadFlow}
@@ -165,6 +168,8 @@ export function App() {
             onThemeChoice={setThemeChoice}
             locale={locale}
             onLocale={setLocale}
+            journeys={journeys}
+            onJourneys={setJourneys}
             onShowHelp={() => setDialog("help")}
             onClose={() => setDialog(null)}
           />

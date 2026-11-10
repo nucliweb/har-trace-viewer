@@ -21,6 +21,9 @@ export const ca: Messages = {
     dark: "Fosc",
     system: "Sistema",
     language: "Idioma",
+    builder: "Constructor",
+    journeys: "Recorreguts de diverses pàgines",
+    journeysHint: "Construeix un flux amb diversos fitxers HAR, un per pàgina.",
     showHelp: "Dreceres de teclat i informació",
   },
   help: {
@@ -48,6 +51,7 @@ export const ca: Messages = {
   },
   builder: {
     heading: "Construeix el teu flux",
+    hintSingle: "Carrega un fitxer HAR i, si en tens, una traça de Chrome.",
     hint: "Afegeix una pàgina per a la traça d'una sola pàgina, o diverses per visualitzar un recorregut d'usuari.",
     demoTitle: "No tens fitxers a mà?",
     demoCopy:
