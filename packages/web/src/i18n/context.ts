@@ -9,3 +9,11 @@ export const MessagesContext = createContext<Messages>(en);
 export function useMessages(): Messages {
   return useContext(MessagesContext);
 }
+
+/**
+ * The lang attribute for a text from @htv/core, which is always English: "en" inside a Spanish
+ * or Catalan interface, so a screen reader switches voice, and nothing in an English one.
+ */
+export function useCoreLang(): "en" | undefined {
+  return useMessages().lang === "en" ? undefined : "en";
+}

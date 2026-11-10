@@ -15,6 +15,8 @@
   --color-panel: light-dark(#f0f2f5, #0f1520);
   --color-border: light-dark(#d0d8e4, #1a2535);
   --color-border2: light-dark(#b8c4d0, #243044);
+  /* Form field outlines: 3:1 or more against every surface a field sits on (WCAG 1.4.11). */
+  --color-field-border: light-dark(#738394, #617690);
 
   --color-cyan: light-dark(#006d8a, #00d4ff);
   --color-green: light-dark(#006440, #00ff9d);

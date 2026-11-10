@@ -8,7 +8,7 @@ import {
 } from "@htv/core";
 import type { HostHop, ThirdPartyReport } from "@htv/core";
 import { useMemo } from "react";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import styles from "./HopsPanel.module.css";
 
@@ -30,6 +30,7 @@ const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${forma
 
 function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
   const t = useMessages().hops;
+  const lang = useCoreLang();
   const count = report.entities.length;
   const summary =
     count === 0
@@ -76,7 +77,7 @@ function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
             {report.entities.map((e) => (
               <tr key={`${e.category}:${e.name}`}>
                 <th scope="row">{e.name}</th>
-                <td>{THIRD_PARTY_CATEGORY_LABEL[e.category]}</td>
+                <td lang={lang}>{THIRD_PARTY_CATEGORY_LABEL[e.category]}</td>
                 <td className={styles.hosts}>{e.hosts.join(", ")}</td>
                 <td className={styles.num}>{e.requests}</td>
                 <td className={styles.num}>{e.cacheHits}</td>

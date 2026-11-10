@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   collectFindings,
   compareFlows,
@@ -8,6 +8,7 @@ import {
 } from "@htv/core";
 import type { DiagramStep, Flow, FlowComparison, MetricDelta, StepPair } from "@htv/core";
 import { useStepNavigation } from "../hooks/useDiagramState.js";
+import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { BadgeRow } from "./BadgeRow.js";
@@ -19,7 +20,7 @@ import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
 import stepStyles from "./StepPanel.module.css";
 import diagramStyles from "./DiagramView.module.css";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./CompareView.module.css";
 
 interface Props {
@@ -45,13 +46,22 @@ interface SideView {
   current: boolean;
 }
 
+type PaneDrawer = "findings" | "waterfall" | "cache";
+
 function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const messages = useMessages();
   const t = messages.compare;
   const { flow, name, stepIndex, current } = view;
-  const [showCachePanel, setShowCachePanel] = useState(false);
-  const [showFindings, setShowFindings] = useState(false);
-  const [showWaterfall, setShowWaterfall] = useState(false);
+  const paneRef = useRef<HTMLElement>(null);
+  // One drawer per pane at a time; closing hands the focus back to its toggle.
+  const [drawer, setDrawer] = useState<PaneDrawer | null>(null);
+  const toggleDrawer = (next: PaneDrawer) => setDrawer((open) => (open === next ? null : next));
+  const closeDrawer = useCallback(() => {
+    paneRef.current?.querySelector<HTMLElement>(`[data-drawer="${drawer}"]`)?.focus();
+    setDrawer(null);
+  }, [drawer]);
+  const inPane = useCallback(() => [paneRef.current], []);
+  useEscapeToClose(drawer !== null, closeDrawer, inPane);
   const findings = useMemo(() => collectFindings(flow, { side }), [flow, side]);
   const step = flow.steps[stepIndex];
   const analysis = flow.pageAnalyses[step.pageIndex];
@@ -62,6 +72,7 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   );
   return (
     <section
+      ref={paneRef}
       className={`${styles.pane} ${current ? "" : styles.paneDimmed}`}
       aria-label={`${TAG[side]} · ${name}`}
       data-step={stepIndex}
@@ -77,34 +88,25 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
         {!current && <span className={styles.paneNote}>{t.holds(step.title)}</span>}
         <FindingsButton
           findings={findings}
-          active={showFindings}
+          active={drawer === "findings"}
+          drawer="findings"
           className={`${diagramStyles.findingsBtn} ${styles.paneCacheBtn}`}
           activeClassName={diagramStyles.cacheBtnActive}
-          onClick={() => {
-            setShowFindings((v) => !v);
-            setShowCachePanel(false);
-            setShowWaterfall(false);
-          }}
+          onClick={() => toggleDrawer("findings")}
         />
         <WaterfallButton
-          active={showWaterfall}
+          active={drawer === "waterfall"}
+          drawer="waterfall"
           className={diagramStyles.waterfallBtn}
           activeClassName={diagramStyles.cacheBtnActive}
-          onClick={() => {
-            setShowWaterfall((v) => !v);
-            setShowFindings(false);
-            setShowCachePanel(false);
-          }}
+          onClick={() => toggleDrawer("waterfall")}
         />
         <button
-          className={`${diagramStyles.cacheBtn} ${showCachePanel ? diagramStyles.cacheBtnActive : ""}`}
-          onClick={() => {
-            setShowCachePanel((v) => !v);
-            setShowFindings(false);
-            setShowWaterfall(false);
-          }}
+          className={`${diagramStyles.cacheBtn} ${drawer === "cache" ? diagramStyles.cacheBtnActive : ""}`}
+          onClick={() => toggleDrawer("cache")}
+          data-drawer="cache"
           aria-label={messages.diagram.toggleCache}
-          aria-expanded={showCachePanel}
+          aria-expanded={drawer === "cache"}
           title={messages.diagram.cacheTitle}
         >
           {messages.diagram.cache}
@@ -120,6 +122,8 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           pathDirections={step.pathDirections}
           historicalPaths={historicalPaths}
           idPrefix={`${side}-`}
+          label={`${TAG[side]} · ${name}: ${step.title}`}
+          description={step.description}
         />
         <BadgeRow
           steps={flow.steps}
@@ -127,27 +131,27 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           stepIndex={stepIndex}
           className={styles.badges}
         />
-        {showCachePanel && (
+        {drawer === "cache" && (
           <CachePanel
             report={analysis.cacheReport}
             network={analysis.networkReport}
             pageLabel={`${TAG[side]} · ${name}`}
-            onClose={() => setShowCachePanel(false)}
+            onClose={closeDrawer}
           />
         )}
-        {showFindings && (
+        {drawer === "findings" && (
           <FindingsPanel
             findings={findings}
             pageLabel={`${TAG[side]} · ${name}`}
-            onClose={() => setShowFindings(false)}
+            onClose={closeDrawer}
           />
         )}
-        {showWaterfall && (
+        {drawer === "waterfall" && (
           <WaterfallPanel
             har={page.har}
             trace={page.trace}
             pageLabel={`${TAG[side]} · ${name}`}
-            onClose={() => setShowWaterfall(false)}
+            onClose={closeDrawer}
           />
         )}
       </div>
@@ -170,6 +174,7 @@ function PairInfo({
 }) {
   const messages = useMessages();
   const t = messages.compare;
+  const lang = useCoreLang();
   const stepA = stepOf(views.a);
   const stepB = stepOf(views.b);
   const rows = compareStepMetrics(stepA, stepB);
@@ -190,7 +195,9 @@ function PairInfo({
             <div key={side} className={styles.sideTitle}>
               <span className={`${styles.sideTag} ${styles[`sideTag_${side}`]}`}>{TAG[side]}</span>
               {step ? (
-                <span className={stepStyles.title}>{step.title}</span>
+                <span className={stepStyles.title} lang={lang}>
+                  {step.title}
+                </span>
               ) : (
                 <span className={styles.missing}>
                   {t.missing(view.flow.steps[view.stepIndex].title)}
@@ -200,7 +207,11 @@ function PairInfo({
           );
         })}
       </div>
-      {description && <p className={styles.description}>{description}</p>}
+      {description && (
+        <p className={styles.description} lang={lang}>
+          {description}
+        </p>
+      )}
       {rows.length > 0 && (
         <table className={styles.metrics}>
           <caption className={styles.srOnly}>{t.stepMetrics}</caption>
@@ -215,7 +226,9 @@ function PairInfo({
           <tbody>
             {rows.map((row) => (
               <tr key={row.label}>
-                <th scope="row">{row.label}</th>
+                <th scope="row" lang={lang}>
+                  {row.label}
+                </th>
                 <td>{row.a ?? "—"}</td>
                 <td>{row.b ?? "—"}</td>
                 <DeltaCell
@@ -240,6 +253,7 @@ function PairInfo({
 
 function Headline({ comparison }: { comparison: FlowComparison }) {
   const t = useMessages().compare;
+  const lang = useCoreLang();
   const items = HEADLINE.map((key) => comparison.metrics.find((m) => m.key === key)!).filter(
     (m) => m.delta !== null
   );
@@ -247,7 +261,9 @@ function Headline({ comparison }: { comparison: FlowComparison }) {
     <ul className={styles.headline} aria-label={t.keyDeltas}>
       {items.map((m) => (
         <li key={m.key} className={styles.headlineItem}>
-          <span className={styles.headlineLabel}>{m.label}</span>
+          <span className={styles.headlineLabel} lang={lang}>
+            {m.label}
+          </span>
           <span className={DELTA_CLASS[m.rating]}>
             {formatDelta(m.delta, HEADLINE_UNIT[m.key as keyof typeof HEADLINE_UNIT])}
           </span>
@@ -274,6 +290,16 @@ export function CompareView({ a, b }: Props) {
   const viewRef = useRef<HTMLDivElement>(null);
   useStepKeyboard(viewRef, nav);
   const [showDeltas, setShowDeltas] = useState(false);
+  const deltasButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const deltasRef = useRef<HTMLDivElement>(null);
+  const closeDeltas = useCallback(() => {
+    deltasButtonRef.current?.focus();
+    setShowDeltas(false);
+  }, []);
+  // Escape closes the deltas from them or from the step panel; inside a pane it is the pane's.
+  const outsidePanes = useCallback(() => [panelRef.current, deltasRef.current], []);
+  useEscapeToClose(showDeltas, closeDeltas, outsidePanes);
   const pairIndex = nav.stepIndex;
   const labels = useMemo(() => pairs.map((p) => pairLabel(p, a, b)), [pairs, a, b]);
 
@@ -294,16 +320,18 @@ export function CompareView({ a, b }: Props) {
           ))}
           {showDeltas && (
             <DeltasPanel
+              ref={deltasRef}
               comparison={comparison}
               names={{ a: views.a.name, b: views.b.name }}
-              onClose={() => setShowDeltas(false)}
+              onClose={closeDeltas}
             />
           )}
         </div>
-        <div className={styles.panel}>
+        <div ref={panelRef} className={styles.panel}>
           <div className={styles.summary}>
             <Headline comparison={comparison} />
             <button
+              ref={deltasButtonRef}
               className={`${styles.deltasBtn} ${showDeltas ? styles.deltasBtnActive : ""}`}
               onClick={() => setShowDeltas((v) => !v)}
               aria-label={t.toggleDeltas}

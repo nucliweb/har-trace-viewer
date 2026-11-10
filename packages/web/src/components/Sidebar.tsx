@@ -37,7 +37,11 @@ export function Sidebar({
           </button>
         )}
       </div>
-      <div className={styles.body}>{children}</div>
+      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className={styles.body} role="region" aria-label={title} tabIndex={0}>
+        {children}
+      </div>
     </div>
   );
 }

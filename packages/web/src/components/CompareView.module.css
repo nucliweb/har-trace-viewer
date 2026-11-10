@@ -321,3 +321,15 @@
     padding: var(--space-sm) var(--space-md) var(--space-md);
   }
 }
+
+/* Forced colors (Windows contrast themes) flatten fills to the Canvas: the selected state is
+   drawn with the system's highlight instead. */
+@media (forced-colors: active) {
+  .deltasBtnActive,
+  .deltasBtnActive:hover {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}

@@ -23,7 +23,7 @@ import type {
   WaterfallPhases,
   WaterfallRow,
 } from "@htv/core";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -402,10 +402,13 @@ function Table({
 /** The fields of the filter language, behind a disclosure. */
 function FilterHelp() {
   const t = useMessages().waterfall;
+  const lang = useCoreLang();
   return (
     <details className={styles.help}>
       <summary className={styles.helpSummary}>{t.filterSyntax}</summary>
-      <div className={styles.helpBody}>
+      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className={styles.helpBody} role="region" aria-label={t.filterSyntax} tabIndex={0}>
         <p className={styles.helpText}>
           {t.helpWords} <code>field:value</code> {t.helpField} <code>-</code> {t.helpNegate}
         </p>
@@ -423,7 +426,7 @@ function FilterHelp() {
                 <td>
                   <code>{help.field}</code>
                 </td>
-                <td>{help.values}</td>
+                <td lang={lang}>{help.values}</td>
                 <td>
                   <code>{help.example}</code>
                 </td>
@@ -501,6 +504,7 @@ function Ruler({
  */
 export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const t = useMessages().waterfall;
+  const lang = useCoreLang();
   const waterfall = useMemo(() => buildWaterfall(har, trace), [har, trace]);
   const [filter, setFilterState] = useState<WaterfallFilter>({});
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -633,7 +637,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
           <FilterHelp />
         </div>
         {problems.length > 0 && (
-          <p className={styles.problems} role="status">
+          <p className={styles.problems} role="status" lang={lang}>
             {problems.join(" · ")}
           </p>
         )}
@@ -727,11 +731,14 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
 /** The toolbar button that opens the waterfall. */
 export function WaterfallButton({
   active,
+  drawer,
   onClick,
   className,
   activeClassName,
 }: {
   active: boolean;
+  /** Marks the button as the toggle of this drawer, which hands the focus back to it on close. */
+  drawer?: string;
   onClick: () => void;
   className: string;
   activeClassName: string;
@@ -741,6 +748,7 @@ export function WaterfallButton({
     <button
       className={`${className} ${active ? activeClassName : ""}`}
       onClick={onClick}
+      data-drawer={drawer}
       aria-label={t.toggle}
       aria-expanded={active}
       title={t.buttonTitle}

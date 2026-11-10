@@ -22,6 +22,14 @@ interface Props {
   historicalPaths?: Partial<Record<PathId, HistoricalPath>>;
   /** Prefixes every element id, so several diagrams can share a document ("" keeps "diagram-svg"). */
   idPrefix?: string;
+  /**
+   * The diagram is one image of the step it shows: its name (the step title) and description.
+   * As an image, its labels and paths stay out of the accessibility tree.
+   */
+  label?: string;
+  description?: string;
+  /** The language of the label and description, when it is not the page's. */
+  lang?: string;
 }
 
 function NodeRendererView({
@@ -33,6 +41,9 @@ function NodeRendererView({
   pathDirections,
   historicalPaths,
   idPrefix = "",
+  label,
+  description,
+  lang,
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   const options = useMemo(() => layoutOptions(nodes), [nodes]);
@@ -58,7 +69,12 @@ function NodeRendererView({
       width="100%"
       height="100%"
       className={styles.svg}
+      role="img"
+      aria-label={label}
+      aria-describedby={description ? `${idPrefix}diagram-desc` : undefined}
+      lang={lang}
     >
+      {description && <desc id={`${idPrefix}diagram-desc`}>{description}</desc>}
       <defs>
         <GlowFilter idPrefix={idPrefix} />
       </defs>

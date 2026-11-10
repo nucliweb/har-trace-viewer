@@ -11,7 +11,7 @@ import {
 } from "@htv/core";
 import type { Flow, MainThreadReport, MetricRating, PageMetricsSummary } from "@htv/core";
 import { useMemo } from "react";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import styles from "./MetricsSummary.module.css";
 
@@ -25,6 +25,8 @@ const formatCls = (value: number | null | undefined, na: string) =>
 
 interface Row {
   label: string;
+  /** The label comes from @htv/core, in English whatever the interface language. */
+  core?: boolean;
   /** Metric key for rating; omitted rows render neutral. */
   metric?: string;
   value: (page: PageMetricsSummary) => number | null | undefined;
@@ -33,9 +35,16 @@ interface Row {
 
 // Metric names stay as @htv/core and the exports write them; the plain words follow the language.
 const rows = (t: Messages["metrics"]): Row[] => [
-  { label: TTFB_LABEL, metric: "ttfb", value: (p) => p.ttfb, format: (p) => formatMs(p.ttfb) },
+  {
+    label: TTFB_LABEL,
+    core: true,
+    metric: "ttfb",
+    value: (p) => p.ttfb,
+    format: (p) => formatMs(p.ttfb),
+  },
   {
     label: SERVER_WAIT_LABEL,
+    core: true,
     value: (p) => p.serverWait,
     format: (p) => formatMs(p.serverWait),
   },
@@ -73,6 +82,7 @@ const TOP_SCRIPTS = 8;
 /** The main thread of one page: its busy time, the TBT window and the scripts that took the time. */
 function MainThreadSection({ report, label }: { report: MainThreadReport; label: string }) {
   const t = useMessages().metrics;
+  const lang = useCoreLang();
   const categories = (Object.entries(report.byCategory) as [string, number][])
     .filter(([, ms]) => ms > 0)
     .sort((a, b) => b[1] - a[1])
@@ -108,7 +118,7 @@ function MainThreadSection({ report, label }: { report: MainThreadReport; label:
                 <th scope="row" title={s.url}>
                   {shortUrl(s.url)}
                 </th>
-                <td>{SCRIPT_PARTY_LABEL[s.party]}</td>
+                <td lang={lang}>{SCRIPT_PARTY_LABEL[s.party]}</td>
                 <td>{s.entity}</td>
                 <td className={styles.num}>{formatMs(s.ms)}</td>
                 <td className={styles.num}>{formatMs(s.blockingMs)}</td>
@@ -125,6 +135,7 @@ export function MetricsSummary({ flow, onClose }: Props) {
   const messages = useMessages();
   const t = messages.metrics;
   const pageLabel = messages.diagram.pageLabel;
+  const lang = useCoreLang();
   const pages = useMemo(() => summarizeFlowMetrics(flow), [flow]);
   const mainThreads = flow.pageAnalyses.flatMap((analysis, i) =>
     analysis.mainThreadReport
@@ -158,7 +169,9 @@ export function MetricsSummary({ flow, onClose }: Props) {
           <tbody>
             {rows(t).map((row) => (
               <tr key={row.label}>
-                <th scope="row">{row.label}</th>
+                <th scope="row" lang={row.core ? lang : undefined}>
+                  {row.label}
+                </th>
                 {pages.map((p, i) => {
                   const rating = row.metric ? rateMetric(row.metric, row.value(p)) : "none";
                   return (

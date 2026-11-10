@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useMessages } from "../../i18n/context.js";
+import { useCoreLang, useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
 import { describeEntryError, describeProgress } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
@@ -27,6 +27,10 @@ export function FileZones({
   const t = useMessages().builder;
   const harError = entry.harError && describeEntryError(entry.harError, t);
   const traceError = entry.traceError && describeEntryError(entry.traceError, t);
+  // A parser's own message is English; the ones the interface words follow its language.
+  const coreLang = useCoreLang();
+  const harErrorLang = entry.harError?.kind === "message" ? coreLang : undefined;
+  const traceErrorLang = entry.traceError?.kind === "message" ? coreLang : undefined;
   const harInputRef = useRef<HTMLInputElement>(null);
   const traceInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,7 +67,9 @@ export function FileZones({
               {entry.har.length > 1 ? t.harPages(entry.har.length) : ""}
             </span>
           ) : harError ? (
-            <span className={styles.errorText}>{harError}</span>
+            <span className={styles.errorText} lang={harErrorLang}>
+              {harError}
+            </span>
           ) : (
             <>
               <span className={styles.harIcon}>⬇</span> {dropLabel ?? t.dropHar}
@@ -101,7 +107,7 @@ export function FileZones({
           </span>
         )}
         {traceError && (
-          <span className={styles.traceErrorText} title={traceError}>
+          <span className={styles.traceErrorText} title={traceError} lang={traceErrorLang}>
             {traceError}
           </span>
         )}

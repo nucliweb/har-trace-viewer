@@ -215,3 +215,121 @@ test("l switches the interface language, kept across reloads", async ({ page }) 
   await expect(page.getByText(/^Pas 1 \/ \d+$/)).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+// The contrast of a form field's border against what surrounds it (WCAG 1.4.11 asks 3:1).
+function fieldBorderContrasts(page: Page): Promise<{ field: string; ratio: number }[]> {
+  return page.evaluate(() => {
+    const rgb = (c: string) => {
+      const canvas = document.createElement("canvas").getContext("2d")!;
+      canvas.fillStyle = c;
+      canvas.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = canvas.getImageData(0, 0, 1, 1).data;
+      return { r, g, b, a: a / 255 };
+    };
+    const lum = ({ r, g, b }: { r: number; g: number; b: number }) => {
+      const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const background = (el: Element | null) => {
+      for (let n = el; n; n = n.parentElement) {
+        const c = rgb(getComputedStyle(n).backgroundColor);
+        if (c.a === 1) return c;
+      }
+      return rgb("white");
+    };
+    return [...document.querySelectorAll("input[type=text], input[type=search], select")]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => {
+        const [x, y] = [
+          lum(rgb(getComputedStyle(el).borderTopColor)),
+          lum(background(el.parentElement)),
+        ].sort((p, q) => q - p);
+        const label = el.getAttribute("aria-label") ?? el.id ?? el.tagName;
+        return {
+          field: `${el.tagName.toLowerCase()} ${label}`,
+          ratio: Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100,
+        };
+      });
+  });
+}
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`form fields stand out at 3:1 and show the focus: ${scheme} theme`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto(baseUrl);
+    const fields = [...(await fieldBorderContrasts(page))];
+    await page.getByRole("button", { name: "Load demo flow →" }).click();
+    await page.getByRole("button", { name: "Toggle waterfall" }).click();
+    fields.push(...(await fieldBorderContrasts(page)));
+
+    expect(fields.length).toBeGreaterThanOrEqual(5);
+    expect(fields.filter((f) => f.ratio < 3)).toEqual([]);
+
+    await page.getByRole("button", { name: "↩ Reset" }).click();
+    await page.getByLabel("Page 1 name").focus();
+    await page.keyboard.press("End");
+    const outline = await page
+      .getByLabel("Page 1 name")
+      .evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe("none");
+  });
+}
+
+// What an element looks like on screen: the share of near-white pixels (the forced Canvas) and
+// of saturated ones (a color the forced palette would have flattened). Computed styles keep the
+// author's colors under forced colors, so only the pixels tell.
+async function pixels(page: Page, locator: ReturnType<Page["locator"]>) {
+  const png = (await locator.screenshot()).toString("base64");
+  return page.evaluate(async (src) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${src}`;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = [img.width, img.height];
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, img.width, img.height).data;
+    let white = 0;
+    let saturated = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+      if (r > 235 && g > 235 && b > 235) white++;
+      if (Math.max(r, g, b) - Math.min(r, g, b) > 60) saturated++;
+    }
+    const total = data.length / 4;
+    return { white: white / total, saturated: saturated / total };
+  }, png);
+}
+
+test("forced colors keep the waterfall bars and the selected states", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active", colorScheme: "light" });
+  await page.goto(baseUrl);
+  await page.getByRole("button", { name: "Load demo flow →" }).click();
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  // Selected reads as filled: far less of the forced Canvas than its unselected sibling.
+  const selectedStandsOut = async (
+    selected: ReturnType<Page["locator"]>,
+    other: ReturnType<Page["locator"]>
+  ) => {
+    const [a, b] = [await pixels(page, selected), await pixels(page, other)];
+    expect(b.white - a.white).toBeGreaterThan(0.3);
+  };
+
+  const dots = page.getByRole("tab");
+  await selectedStandsOut(dots.nth(0), dots.nth(1));
+  await page.getByRole("button", { name: "Toggle waterfall" }).click();
+  await selectedStandsOut(
+    page.getByRole("button", { name: "Toggle waterfall" }),
+    page.getByRole("button", { name: "Toggle hops" })
+  );
+  const chips = page.getByRole("group", { name: "Resource types" }).getByRole("button");
+  await chips.nth(0).click();
+  await selectedStandsOut(chips.nth(0), chips.nth(1));
+  const views = page.getByRole("group", { name: "View" }).getByRole("button");
+  await selectedStandsOut(views.nth(0), views.nth(1));
+
+  // The bars keep their phase colors: zoomed on the page load, they fill part of the list.
+  await page.getByLabel("Axis").selectOption("load");
+  const bars = await pixels(page, page.locator("ol"));
+  expect(bars.saturated).toBeGreaterThan(0.01);
+});

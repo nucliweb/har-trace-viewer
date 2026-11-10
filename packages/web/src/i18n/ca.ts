@@ -3,6 +3,7 @@ import type { Messages } from "./en.js";
 const plural = (n: number, one: string, other: string) => `${n} ${n === 1 ? one : other}`;
 
 export const ca: Messages = {
+  lang: "ca",
   app: {
     versionTitle: "Versió d'HTV",
     reset: "↩ Reinicia",
@@ -150,7 +151,7 @@ export const ca: Messages = {
     next: "Següent →",
     pause: "Posa en pausa",
     pauseText: "⏸ Pausa",
-    autoPlay: "Reproducció automàtica",
+    autoPlay: "Reprodueix automàticament",
     autoPlayText: "▶ Reprodueix",
     reset: "Torna al primer pas",
     resetTitle: "Torna al pas 1",

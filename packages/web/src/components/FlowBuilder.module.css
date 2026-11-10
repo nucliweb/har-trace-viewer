@@ -148,7 +148,7 @@
   font-size: var(--fs-body);
   color: var(--color-text);
   background: var(--color-surface);
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-field-border);
   border-radius: 4px;
   padding: 0 var(--space-sm);
   height: 34px;
@@ -157,8 +157,9 @@
   transition: border-color var(--transition-fast);
 }
 
-.nameInput:focus {
-  outline: none;
+.nameInput:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
   border-color: var(--color-cyan);
 }
 
@@ -352,7 +353,7 @@
   font-size: var(--fs-meta);
   color: var(--color-text);
   background: var(--color-panel);
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-field-border);
   border-radius: 4px;
   padding: 0 var(--space-sm);
   height: 34px;

@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import {
   COMPARED_METRICS,
   THIRD_PARTY_CATEGORY_LABEL,
@@ -19,13 +20,14 @@ import type {
   HopPair,
   ThirdPartyComparison,
 } from "@htv/core";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import { RATING_CLASS } from "./MetricsSummary.js";
 import metricsStyles from "./MetricsSummary.module.css";
 import hopsStyles from "./HopsPanel.module.css";
 import styles from "./DeltasPanel.module.css";
 
 interface Props {
+  ref?: Ref<HTMLDivElement>;
   comparison: FlowComparison;
   /** Names of flow A and flow B, shown in the column headers. */
   names: { a: string; b: string };
@@ -115,6 +117,7 @@ function NoteRefs({
 /** The third parties of both flows by entity, what B added first; a consent comparison reads here. */
 function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison }) {
   const t = useMessages().deltas;
+  const lang = useCoreLang();
   const { a, b, entities } = thirdParties;
   if (entities.length === 0) {
     return <p className={styles.sectionNote}>{t.noThirdParties}</p>;
@@ -153,7 +156,9 @@ function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison
           {entities.map((pair) => (
             <tr key={`${pair.category}:${pair.name}`}>
               <th scope="row">{pair.name}</th>
-              <td className={styles.left}>{THIRD_PARTY_CATEGORY_LABEL[pair.category]}</td>
+              <td className={styles.left} lang={lang}>
+                {THIRD_PARTY_CATEGORY_LABEL[pair.category]}
+              </td>
               <td className={hopsStyles.num}>{pair.a?.requests ?? 0}</td>
               <td className={hopsStyles.num}>{pair.b?.requests ?? 0}</td>
               <DeltaCell
@@ -172,12 +177,13 @@ function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison
 }
 
 /** Metrics summary, hosts and third parties of two flows side by side, with B − A for each. */
-export function DeltasPanel({ comparison, names, onClose }: Props) {
+export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
   const messages = useMessages();
   const t = messages.deltas;
+  const lang = useCoreLang();
   const { metrics, hops, thirdParties, caveats } = comparison;
   return (
-    <div className={`${metricsStyles.panel} ${styles.panel}`}>
+    <div ref={ref} className={`${metricsStyles.panel} ${styles.panel}`}>
       <div className={metricsStyles.header}>
         <span className={metricsStyles.title}>{t.title}</span>
         <button className={metricsStyles.closeBtn} onClick={onClose} aria-label={t.close}>
@@ -204,7 +210,7 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
               const unit = UNITS[m.key];
               return (
                 <tr key={m.key}>
-                  <th scope="row">
+                  <th scope="row" lang={lang}>
                     {m.label}
                     <NoteRefs caveats={caveats} target={m.key} />
                   </th>
@@ -237,7 +243,9 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
         {caveats.length > 0 && (
           <ol className={styles.notes} aria-label={t.notes}>
             {caveats.map((c) => (
-              <li key={c.id + c.text}>{c.text}</li>
+              <li key={c.id + c.text} lang={lang}>
+                {c.text}
+              </li>
             ))}
           </ol>
         )}

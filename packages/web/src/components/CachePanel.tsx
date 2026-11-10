@@ -7,7 +7,7 @@ import type {
   Recommendation,
   RecommendationResource,
 } from "@htv/core";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {
@@ -76,6 +76,7 @@ function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "c
 /** The resources a recommendation names, collapsed behind their count and total size. */
 function RecResources({ resources }: { resources: RecommendationResource[] }) {
   const t = useMessages().cache;
+  const lang = useCoreLang();
   const total = resources.reduce((sum, r) => sum + r.transferSize, 0);
   return (
     <details className={styles.recResources}>
@@ -89,7 +90,9 @@ function RecResources({ resources }: { resources: RecommendationResource[] }) {
               {fileName(r.url)}
             </span>
             <span className={styles.recResourceSize}>{formatBytes(r.transferSize)}</span>
-            <span className={styles.recResourceCc}>{r.detail ?? r.cacheControl}</span>
+            <span className={styles.recResourceCc} lang={lang}>
+              {r.detail ?? r.cacheControl}
+            </span>
           </li>
         ))}
       </ul>
@@ -98,14 +101,19 @@ function RecResources({ resources }: { resources: RecommendationResource[] }) {
 }
 
 function RecommendationList({ recommendations }: { recommendations: Recommendation[] }) {
+  const lang = useCoreLang();
   return (
     <div className={styles.recs}>
       {recommendations.map((rec, i) => (
         <div key={i} className={`${styles.rec} ${styles[`rec_${rec.severity}`]}`}>
           <SeverityIcon severity={rec.severity} />
           <div className={styles.recContent}>
-            <div className={styles.recLabel}>{rec.label}</div>
-            <div className={styles.recDesc}>{rec.description}</div>
+            <div className={styles.recLabel} lang={lang}>
+              {rec.label}
+            </div>
+            <div className={styles.recDesc} lang={lang}>
+              {rec.description}
+            </div>
             {rec.resources && rec.resources.length > 0 && (
               <RecResources resources={rec.resources} />
             )}

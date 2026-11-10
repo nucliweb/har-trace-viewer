@@ -2,7 +2,7 @@ import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { HarEntry } from "@htv/core";
 import type { DiagramState, Speed, StepNavigation } from "../hooks/useDiagramState.js";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./StepPanel.module.css";
 
 interface Props {
@@ -165,6 +165,7 @@ export function StepControls({ nav, className }: { nav: StepNavigation; classNam
 
 export function StepPanel({ state, resources, resourcesOpen, onToggleResources }: Props) {
   const t = useMessages().steps;
+  const lang = useCoreLang();
   const { flow, stepIndex, goTo } = state;
   const step = flow.steps[stepIndex];
   const total = flow.steps.length;
@@ -186,14 +187,18 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
       >
         <div className={styles.infoMain}>
           <div className={styles.stepCounter}>{t.counter(stepIndex + 1, total)}</div>
-          <div className={styles.title}>{step.title}</div>
-          <div className={styles.description}>{step.description}</div>
+          <div className={styles.title} lang={lang}>
+            {step.title}
+          </div>
+          <div className={styles.description} lang={lang}>
+            {step.description}
+          </div>
         </div>
 
         {step.metrics.length > 0 && (
           <div className={styles.metrics}>
             {step.metrics.map((m) => (
-              <div key={m.label} className={styles.metric}>
+              <div key={m.label} className={styles.metric} lang={lang}>
                 <span className={styles.metricLabel}>{m.label}</span>
                 <span className={styles.metricValue}>{m.value}</span>
               </div>
@@ -202,6 +207,7 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
               <button
                 className={`${styles.resourcesBtn} ${resourcesOpen ? styles.resourcesBtnActive : ""}`}
                 onClick={onToggleResources}
+                data-drawer="resources"
                 aria-label={t.viewResources}
                 aria-expanded={resourcesOpen}
                 title={t.viewResources}

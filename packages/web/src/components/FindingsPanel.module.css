@@ -199,7 +199,7 @@
 
 .meta {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-muted);
 }
@@ -297,5 +297,12 @@
 @media (prefers-reduced-motion: reduce) {
   .panel {
     animation: none;
+  }
+}
+
+/* The count keeps its severity color under forced colors. */
+@media (forced-colors: active) {
+  .count {
+    forced-color-adjust: none;
   }
 }

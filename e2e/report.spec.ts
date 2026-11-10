@@ -250,13 +250,9 @@ test("theme toggle flips data-theme and the body background", async ({ page }) =
   expect(await theme()).toEqual(initialTheme);
 });
 
-test("no text is rendered smaller than 12px at 1280x800", async ({ page }) => {
-  await open(page, bundleUrl);
-  await page.getByRole("button", { name: "Toggle cache analysis" }).click();
-
-  expect(await page.locator("svg text").count()).toBeGreaterThan(0);
-
-  const violations = await page.evaluate(() => {
+// Every text the page shows, HTML and SVG as rendered, below 12px.
+function textsBelow12px(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
     const MIN = 12;
     const found: string[] = [];
     const describe = (el: Element) =>
@@ -289,7 +285,35 @@ test("no text is rendered smaller than 12px at 1280x800", async ({ page }) => {
     }
     return found;
   });
-  expect(violations).toEqual([]);
+}
+
+test("no text is rendered smaller than 12px at 1280x800, in every drawer", async ({ page }) => {
+  await open(page, bundleUrl);
+  expect(await page.locator("svg text").count()).toBeGreaterThan(0);
+  const found: string[] = [...(await textsBelow12px(page))];
+
+  for (const [toggle, close] of [
+    [/^Toggle findings/, "Close findings"],
+    [/^Toggle hops$/, "Close hops"],
+    [/^Toggle metrics summary$/, "Close metrics summary"],
+    [/^Toggle cache analysis$/, "Close cache analysis"],
+  ] as const) {
+    await page.getByRole("button", { name: toggle }).click();
+    // The findings' "more" disclosures and the cache's resource lists, opened.
+    for (const summary of await page.locator("details:not([open]) > summary").all()) {
+      await summary.click();
+    }
+    found.push(...(await textsBelow12px(page)));
+    await page.getByRole("button", { name: close }).click();
+  }
+
+  await page.getByRole("button", { name: "Toggle waterfall" }).click();
+  await page.locator("li button").first().hover();
+  found.push(...(await textsBelow12px(page)));
+  await page.getByRole("button", { name: "Table", exact: true }).click();
+  await page.getByText("Filter syntax").click();
+  found.push(...(await textsBelow12px(page)));
+  expect([...new Set(found)]).toEqual([]);
 });
 
 for (const scheme of ["light", "dark"] as const) {

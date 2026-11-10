@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { fileName, formatBytes, formatMs } from "@htv/core";
 import type { Finding, FindingEvidence, FindingSeverity } from "@htv/core";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import styles from "./FindingsPanel.module.css";
 
@@ -36,6 +36,7 @@ function findingMeta(finding: Finding, t: Messages["findings"]): string {
 }
 
 function EvidenceRow({ evidence }: { evidence: FindingEvidence }) {
+  const lang = useCoreLang();
   const numbers = [
     evidence.bytes === undefined ? null : formatBytes(evidence.bytes),
     evidence.ms === undefined ? null : formatMs(evidence.ms),
@@ -48,7 +49,11 @@ function EvidenceRow({ evidence }: { evidence: FindingEvidence }) {
         {fileName(evidence.url)}
       </span>
       <span className={styles.evidenceNumbers}>{numbers}</span>
-      {evidence.detail && <span className={styles.evidenceDetail}>{evidence.detail}</span>}
+      {evidence.detail && (
+        <span className={styles.evidenceDetail} lang={lang}>
+          {evidence.detail}
+        </span>
+      )}
     </li>
   );
 }
@@ -81,16 +86,25 @@ function Evidence({ evidence }: { evidence: FindingEvidence[] }) {
 
 function FindingItem({ finding }: { finding: Finding }) {
   const t = useMessages().findings;
+  const lang = useCoreLang();
   return (
     <li className={`${styles.finding} ${styles[`finding_${finding.severity}`]}`}>
       <span className={`${styles.icon} ${styles[`icon_${finding.severity}`]}`} aria-hidden="true">
         {SEVERITY_ICON[finding.severity]}
       </span>
       <div className={styles.content}>
-        <div className={styles.title}>{finding.title}</div>
+        <div className={styles.title} lang={lang}>
+          {finding.title}
+        </div>
         <div className={styles.meta}>{findingMeta(finding, t)}</div>
-        <p className={styles.summary}>{finding.summary}</p>
-        {finding.recommendation && <p className={styles.fix}>{finding.recommendation}</p>}
+        <p className={styles.summary} lang={lang}>
+          {finding.summary}
+        </p>
+        {finding.recommendation && (
+          <p className={styles.fix} lang={lang}>
+            {finding.recommendation}
+          </p>
+        )}
         <Evidence evidence={finding.evidence} />
       </div>
     </li>
@@ -154,12 +168,15 @@ export function FindingsPanel({ findings, pageLabel, onClose }: Props) {
 export function FindingsButton({
   findings,
   active,
+  drawer,
   onClick,
   className,
   activeClassName,
 }: {
   findings: Finding[];
   active: boolean;
+  /** Marks the button as the toggle of this drawer, which hands the focus back to it on close. */
+  drawer?: string;
   onClick: () => void;
   className: string;
   activeClassName: string;
@@ -178,6 +195,7 @@ export function FindingsButton({
     <button
       className={`${className} ${active ? activeClassName : ""}`}
       onClick={onClick}
+      data-drawer={drawer}
       aria-label={t.toggle(urgent)}
       aria-expanded={active}
       title={t.counts(counts)}

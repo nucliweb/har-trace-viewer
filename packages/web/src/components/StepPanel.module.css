@@ -203,7 +203,7 @@
 
 .speedSelect {
   background: var(--color-panel);
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-field-border);
   border-radius: 4px;
   color: var(--color-text2);
   padding: 4px 8px;
@@ -293,5 +293,19 @@
   .speedSelect {
     min-height: 44px;
     min-width: 120px;
+  }
+}
+
+/* Forced colors (Windows contrast themes) flatten fills to the Canvas: the selected state is
+   drawn with the system's highlight instead. */
+@media (forced-colors: active) {
+  .trackDot.active,
+  .trackDot.active:hover,
+  .resourcesBtnActive,
+  .resourcesBtnActive:hover {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
   }
 }

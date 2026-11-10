@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   analyzeHops,
   collectFindings,
@@ -8,6 +8,7 @@ import {
 } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { useDiagramState } from "../hooks/useDiagramState.js";
+import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { NodeRenderer } from "./NodeRenderer.js";
@@ -21,7 +22,7 @@ import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
 import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
-import { useMessages } from "../i18n/context.js";
+import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -32,6 +33,7 @@ type Drawer = "findings" | "waterfall" | "hops" | "metrics" | "cache" | "resourc
 
 export function DiagramView({ flow }: Props) {
   const t = useMessages().diagram;
+  const coreLang = useCoreLang();
   const state = useDiagramState(flow);
   const viewRef = useRef<HTMLDivElement>(null);
   useStepKeyboard(viewRef, state);
@@ -55,7 +57,15 @@ export function DiagramView({ flow }: Props) {
   // Every drawer docks on the right, so only one is open at a time: none hides behind another.
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const toggleDrawer = (name: Drawer) => setDrawer((open) => (open === name ? null : name));
-  const closeDrawer = () => setDrawer(null);
+  // Closing hands the focus back to the drawer's toggle, or to the diagram when the toggle is
+  // gone (the resource list stays open on a step that requests nothing, without its button).
+  const closeDrawer = useCallback(() => {
+    const view = viewRef.current;
+    const toggle = view?.querySelector<HTMLElement>(`[data-drawer="${drawer}"]`);
+    (toggle ?? view)?.focus();
+    setDrawer(null);
+  }, [drawer]);
+  useEscapeToClose(drawer !== null, closeDrawer);
   // The resource list follows the steps that request something. Milestone steps (FCP, LCP)
   // request nothing, so the list stays on the last step that did, under that step's title.
   const [listedIndex, setListedIndex] = useState(stepIndex);
@@ -91,12 +101,14 @@ export function DiagramView({ flow }: Props) {
         <FindingsButton
           findings={findings}
           active={drawer === "findings"}
+          drawer="findings"
           className={styles.findingsBtn}
           activeClassName={styles.cacheBtnActive}
           onClick={() => toggleDrawer("findings")}
         />
         <WaterfallButton
           active={drawer === "waterfall"}
+          drawer="waterfall"
           className={styles.waterfallBtn}
           activeClassName={styles.cacheBtnActive}
           onClick={() => toggleDrawer("waterfall")}
@@ -104,6 +116,7 @@ export function DiagramView({ flow }: Props) {
         <button
           className={`${styles.hopsBtn} ${drawer === "hops" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("hops")}
+          data-drawer="hops"
           aria-label={t.toggleHops}
           aria-expanded={drawer === "hops"}
           title={t.hopsTitle}
@@ -114,6 +127,7 @@ export function DiagramView({ flow }: Props) {
         <button
           className={`${styles.metricsBtn} ${drawer === "metrics" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("metrics")}
+          data-drawer="metrics"
           aria-label={t.toggleMetrics}
           aria-expanded={drawer === "metrics"}
           title={t.metricsTitle}
@@ -123,7 +137,9 @@ export function DiagramView({ flow }: Props) {
         <button
           className={`${styles.cacheBtn} ${drawer === "cache" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("cache")}
+          data-drawer="cache"
           aria-label={t.toggleCache}
+          aria-expanded={drawer === "cache"}
           title={t.cacheTitle}
         >
           {t.cache}
@@ -141,6 +157,9 @@ export function DiagramView({ flow }: Props) {
             pathTimings={step.pathTimings}
             pathDirections={step.pathDirections}
             historicalPaths={historicalPaths}
+            label={step.title}
+            description={step.description}
+            lang={coreLang}
           />
         </div>
         {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}

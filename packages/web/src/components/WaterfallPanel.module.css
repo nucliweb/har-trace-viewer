@@ -164,7 +164,7 @@
 .search {
   height: 26px;
   padding: 0 6px;
-  border: 1px solid var(--color-border2);
+  border: 1px solid var(--color-field-border);
   border-radius: 4px;
   background: var(--color-surface);
   color: var(--color-text);
@@ -192,7 +192,7 @@
 
 .legend {
   gap: var(--space-sm);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
 }
 
@@ -281,7 +281,7 @@
 }
 
 .helpTable th {
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -331,7 +331,7 @@
 
 .headCell {
   padding-bottom: 4px;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -383,7 +383,7 @@
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   text-align: left;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -424,7 +424,7 @@
   bottom: 0;
   padding: 0 0 3px 3px;
   border-left: 1px solid var(--color-border2);
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-muted);
   white-space: nowrap;
@@ -436,7 +436,7 @@
   top: calc(var(--lane, 0) * 15px);
   padding-left: 3px;
   border-left: 2px solid currentColor;
-  font-size: 11px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   font-family: var(--font-mono);
   line-height: 14px;
@@ -551,7 +551,7 @@
   padding: 0 4px;
   border: 1px solid currentColor;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   line-height: 14px;
 }
@@ -732,5 +732,26 @@
   .chip,
   .closeBtn {
     transition: none;
+  }
+}
+
+/* Forced colors (Windows contrast themes) flatten fills to the Canvas: the selected state is
+   drawn with the system's highlight instead. */
+@media (forced-colors: active) {
+  .chipActive,
+  .chipActive:hover {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}
+
+/* The bars and the legend are data in color: they keep their phase colors, outlined. */
+@media (forced-colors: active) {
+  .bar,
+  .swatch {
+    forced-color-adjust: none;
+    outline: 1px solid CanvasText;
   }
 }

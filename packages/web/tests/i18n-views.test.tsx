@@ -23,7 +23,7 @@ describe("DiagramView in Spanish", () => {
     expect(screen.getByRole("tablist", { name: "Pasos" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /^Paso 1: / })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Siguiente →" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reproducción automática" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reproducir automáticamente" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Velocidad de reproducción" })).toBeInTheDocument();
   });
 

@@ -6,6 +6,8 @@
 const plural = (n: number, one: string, other: string) => `${n} ${n === 1 ? one : other}`;
 
 export const en = {
+  // The language of these texts, as <html lang> and the lang attribute name it.
+  lang: "en",
   app: {
     versionTitle: "HTV version",
     reset: "↩ Reset",
