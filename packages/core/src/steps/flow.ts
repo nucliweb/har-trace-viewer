@@ -11,6 +11,7 @@ import { generatePageSteps, generateTransitionStep } from "./page-steps.js";
 import { pageTopology } from "./topology.js";
 import type {
   ClientRegion,
+  ClientRegionSuggestion,
   DiagramStep,
   Flow,
   FlowOptions,
@@ -59,6 +60,19 @@ function analyzePage(ctx: PageContext, pageFlow: PageFlow): PageAnalysis {
   };
 }
 
+// The region the first page whose latencies suggest one does: a recording that navigated
+// several times shows them on any of its loads. The reason names that page in a multi-page flow.
+function suggestFlowRegion(pages: PageFlow[]): ClientRegionSuggestion | null {
+  for (const page of pages) {
+    const suggestion = suggestClientRegion(page.har);
+    if (!suggestion) continue;
+    return pages.length > 1
+      ? { ...suggestion, reason: `${page.name}: ${suggestion.reason}` }
+      : suggestion;
+  }
+  return null;
+}
+
 export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow {
   if (pages.length === 0) {
     throw new Error("Flow requires at least one page");
@@ -67,7 +81,7 @@ export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow
   // Without a region of its own the flow takes the suggested one: latencies alone cannot tell
   // China routing apart from a slow or mobile network, so the hint keeps the reason and an
   // explicit "default" draws the default topology.
-  const suggestion = suggestClientRegion(pages[0].har);
+  const suggestion = suggestFlowRegion(pages);
   const clientRegion: ClientRegion = options.clientRegion ?? suggestion?.region ?? "default";
   const hasGfw = clientRegion === "cn";
   const contexts = pages.map((page) => describePage(page, hasGfw));

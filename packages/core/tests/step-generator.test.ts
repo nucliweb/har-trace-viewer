@@ -787,6 +787,19 @@ describe("generateFlow — client region", () => {
     });
   });
 
+  it("takes the suggestion of any page and names that page in the reason", () => {
+    const flow = generateFlow([
+      { name: "Home", har: loadHar() },
+      { name: "Login", har: slowHar(CLOUDFLARE_HEADERS) },
+    ]);
+
+    expect(flow.clientRegion).toBe("cn");
+    expect(flow.pageAnalyses.map((a) => a.nodes.some((n) => n.id === "gfw"))).toEqual([true, true]);
+    expect(flow.hints.suggestedClientRegion?.reason).toBe(
+      "Login: document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms"
+    );
+  });
+
   it("slow HAR with clientRegion default: no GFW topology, only the suggestion", () => {
     const flow = generateFlow([{ name: "Home", har: slowHar(CLOUDFLARE_HEADERS) }], {
       clientRegion: "default",

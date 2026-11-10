@@ -1,4 +1,5 @@
 import { getHostname } from "../utils/domain.js";
+import { tcpConnectMs } from "../utils/timing.js";
 import { detectPop, detectVercelFunctionRegion } from "./pops.js";
 import type {
   CdnProvider,
@@ -70,6 +71,24 @@ export function detectCdnPopCity(
 
 const GFW_DNS_THRESHOLD_MS = 300;
 const GFW_CONNECT_THRESHOLD_MS = 500;
+// A TLS handshake takes one round trip (TLS 1.3) or two (TLS 1.2), about as long as the TCP
+// handshake or twice it however slow the network. One that lasts 3× its TCP handshake, and
+// long enough to matter, stalled: the inspection and the packet loss of the GFW stall several,
+// on more than one host.
+const TLS_STALL_MIN_MS = 350;
+const TLS_STALL_RATIO = 3;
+const TLS_STALLS = 3;
+const TLS_STALL_HOSTS = 2;
+
+function tlsStalls(har: ParsedHar): string | null {
+  const stalled = har.entries.filter((e) => {
+    const tcp = tcpConnectMs(e.timing);
+    return tcp > 0 && e.timing.ssl >= TLS_STALL_MIN_MS && e.timing.ssl >= TLS_STALL_RATIO * tcp;
+  });
+  const hosts = new Set(stalled.map((e) => getHostname(e.url) ?? e.url)).size;
+  if (stalled.length < TLS_STALLS || hosts < TLS_STALL_HOSTS) return null;
+  return `${stalled.length} TLS handshakes on ${hosts} hosts ≥ ${TLS_STALL_MIN_MS}ms and ≥ ${TLS_STALL_RATIO}× their TCP connect`;
+}
 
 // Signs that the page was loaded from China, whatever its latencies: a document host
 // under .cn, or a CDN that served it from a PoP in mainland China.
@@ -84,9 +103,9 @@ function chinaSignals(har: ParsedHar): string[] {
 }
 
 // Suggests the "cn" client region when the page looks loaded through China / GFW-mediated
-// routing: a slow uncached DNS lookup of the document (≥ 300ms) together with a slow TCP
-// connect (≥ 500ms, cross-border from China), or one of them with a sign of China (see
-// chinaSignals). A slow or mobile network (WebPageTest 3G profiles) slows down one or both
+// routing: two of a slow uncached DNS lookup of the document (≥ 300ms), a slow TCP connect
+// (≥ 500ms, cross-border from China) and stalled TLS handshakes (see tlsStalls), or one of
+// them with a sign of China (see chinaSignals). A slow or mobile network (WebPageTest 3G profiles) slows down one or both
 // moderately, so the latencies alone take thresholds above those profiles. The result is
 // only a hint for the user; it never switches the topology on its own.
 export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | null {
@@ -100,6 +119,8 @@ export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | nu
   if (maxConnectMs >= GFW_CONNECT_THRESHOLD_MS) {
     latencies.push(`max TCP connect ${Math.round(maxConnectMs)}ms ≥ ${GFW_CONNECT_THRESHOLD_MS}ms`);
   }
+  const stalls = tlsStalls(har);
+  if (stalls) latencies.push(stalls);
   if (latencies.length === 0) return null;
 
   const signals = [...latencies, ...chinaSignals(har)];

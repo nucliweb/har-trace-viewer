@@ -178,6 +178,62 @@ function latencyHar(documentDnsMs: number, connectMs: number[]): ParsedHar {
   };
 }
 
+// A page whose document resolved in `documentDnsMs` over a fast connection, then opened one
+// TLS connection per entry of `connections`: its host, TCP and TLS handshake times.
+function tlsHar(
+  documentDnsMs: number,
+  connections: { host: string; tcp: number; tls: number }[]
+): ParsedHar {
+  const har = latencyHar(documentDnsMs, [0, ...connections.map(() => 0)]);
+  const entries = har.entries.map((entry, i) => {
+    const connection = connections[i - 1];
+    if (!connection) return entry;
+    const { host, tcp, tls } = connection;
+    return {
+      ...entry,
+      url: `https://${host}/${i}.js`,
+      timing: { ...entry.timing, connect: tcp + tls, ssl: tls },
+    };
+  });
+  return { ...har, entries, documentEntry: entries[0] };
+}
+
+describe("suggestClientRegion — stalled TLS handshakes", () => {
+  const stalled = (host: string) => ({ host, tcp: 150, tls: 600 });
+
+  it("counts TLS handshakes far longer than their TCP connect on several hosts as a signal", () => {
+    const suggestion = suggestClientRegion(
+      tlsHar(20, [stalled("a.example.com"), stalled("b.example.net"), stalled("b.example.net")])
+    );
+
+    expect(suggestion?.reason).toBe(
+      "max TCP connect 750ms ≥ 500ms, 3 TLS handshakes on 2 hosts ≥ 350ms and ≥ 3× their TCP connect"
+    );
+  });
+
+  it("does not take the two round trips of TLS 1.2 on a slow network for a stall", () => {
+    const slow = { tcp: 300, tls: 600 };
+    const hosts = ["a.example.com", "b.example.net", "c.example.org", "d.example.io"];
+
+    expect(
+      suggestClientRegion(
+        tlsHar(
+          20,
+          hosts.map((host) => ({ host, ...slow }))
+        )
+      )
+    ).toBeNull();
+  });
+
+  it("does not count stalls on a single host", () => {
+    const host = "a.example.com";
+
+    expect(
+      suggestClientRegion(tlsHar(20, [stalled(host), stalled(host), stalled(host)]))
+    ).toBeNull();
+  });
+});
+
 describe("suggestClientRegion", () => {
   // The same HAR with its document at `url`, carrying `headers`.
   const withDocument = (har: ParsedHar, url: string, headers: Record<string, string> = {}) => {

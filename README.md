@@ -265,7 +265,7 @@ htv \
   --output report/
 ```
 
-Client in China (adds the Great Firewall to the diagram). Without `--region`, htv draws it when the latencies of the first page look compatible with China/GFW routing (a document DNS lookup of 300 ms or more together with a TCP connect of 500 ms or more, or one of them with a `.cn` document host or a CDN PoP in mainland China) and prints a note saying why; a slow or mobile network shows the same latencies, so `--region default` draws the default topology. A comparison draws both sides with the region of A:
+Client in China (adds the Great Firewall to the diagram). Without `--region`, htv draws it when the latencies of any page look compatible with China/GFW routing (two of a document DNS lookup of 300 ms or more, a TCP connect of 500 ms or more, and three TLS handshakes or more, on two hosts or more, that take 350 ms and three times their TCP connect; or one of them with a `.cn` document host or a CDN PoP in mainland China) and prints a note saying why; a slow or mobile network shows the same latencies, so `--region default` draws the default topology. A comparison draws both sides with the region of A:
 
 ```bash
 htv --page "Home" --har home.har --output report/ --region cn
