@@ -13,14 +13,16 @@ import type {
   ServerTimingMetric,
 } from "../types.js";
 
+// HAR 1.2 makes blocked, dns, connect and ssl optional; exporters such as Playwright leave
+// them out instead of writing -1.
 interface RawHarTiming {
-  blocked: number;
-  dns: number;
-  connect: number;
-  ssl: number;
-  send: number;
-  wait: number;
-  receive: number;
+  blocked?: number;
+  dns?: number;
+  connect?: number;
+  ssl?: number;
+  send?: number;
+  wait?: number;
+  receive?: number;
 }
 
 interface RawHarEntry {
@@ -104,15 +106,17 @@ const ZERO_TIMING: RawHarTiming = {
 const OPTIONAL_PHASES: readonly OptionalTimingPhase[] = ["blocked", "dns", "connect", "ssl"];
 
 function parseTiming(raw: RawHarTiming): HarTiming {
-  const notApplicable = OPTIONAL_PHASES.filter((phase) => raw[phase] < 0);
+  // An optional phase left out did not happen, as -1 says; a required one left out took 0 ms.
+  const optional = (phase: OptionalTimingPhase) => raw[phase] ?? -1;
+  const notApplicable = OPTIONAL_PHASES.filter((phase) => optional(phase) < 0);
   return {
-    blocked: normalizeMs(raw.blocked),
-    dns: normalizeMs(raw.dns),
-    connect: normalizeMs(raw.connect),
-    ssl: normalizeMs(raw.ssl),
-    send: normalizeMs(raw.send),
-    wait: normalizeMs(raw.wait),
-    receive: normalizeMs(raw.receive),
+    blocked: normalizeMs(optional("blocked")),
+    dns: normalizeMs(optional("dns")),
+    connect: normalizeMs(optional("connect")),
+    ssl: normalizeMs(optional("ssl")),
+    send: normalizeMs(raw.send ?? 0),
+    wait: normalizeMs(raw.wait ?? 0),
+    receive: normalizeMs(raw.receive ?? 0),
     ...(notApplicable.length > 0 ? { notApplicable } : {}),
   };
 }
@@ -641,7 +645,7 @@ function buildParsedHar(rawPages: RawHarPage[], entries: RawHarEntry[]): ParsedH
   const parsedEntries: HarEntry[] = entries.map((e) => {
     const rawTimings = e.timings ?? ZERO_TIMING;
     const timing = parseTiming(rawTimings);
-    const ttfb = normalizeMs(rawTimings.wait);
+    const ttfb = timing.wait;
     const startTime = new Date(e.startedDateTime).getTime() - pageOrigin;
     const response = e.response ?? {};
     const allResponseHeaders = headersToRecord(response.headers ?? []);

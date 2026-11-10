@@ -9,6 +9,7 @@ import {
   parseHarPagesJson,
   defaultPageName,
 } from "../src/parsers/har-parser.js";
+import { generateFlow } from "../src/steps/flow.js";
 import { firefoxEntry, firefoxHar, twoPageHar } from "./helpers/firefox-har.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -247,6 +248,57 @@ describe("parseHar — timings that do not apply", () => {
 
   it("leaves the marker out when every phase happened", () => {
     expect(withTimings({ dns: 0, connect: 0, ssl: 0 }).timing.notApplicable).toBeUndefined();
+  });
+
+  // HAR 1.2 makes blocked, dns, connect and ssl optional: some exporters (Playwright) leave
+  // blocked out of every entry, and all four out of a request that failed.
+  it("reads an optional phase the HAR leaves out as one that did not happen", () => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/c.js", "text/javascript", {
+        timings: { send: 1, wait: 10, receive: 2 },
+      })
+    );
+    const { timing, ttfb } = parseHar(raw).entries.at(-1)!;
+
+    expect(timing.notApplicable).toEqual(["blocked", "dns", "connect", "ssl"]);
+    expect(timing).toMatchObject({ blocked: 0, dns: 0, connect: 0, ssl: 0, wait: 10 });
+    expect(ttfb).toBe(10);
+  });
+
+  it("keeps the TTFB and the latency checks of a HAR without blocked and a failed request", () => {
+    const raw = firefoxHar();
+    raw.log.entries[0].timings = {
+      dns: 350,
+      connect: 620,
+      ssl: 300,
+      send: 0,
+      wait: 40,
+      receive: 5,
+    } as (typeof raw.log.entries)[0]["timings"];
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/failed.js", "text/javascript", {
+        timings: { send: -1, wait: -1, receive: -1 },
+      })
+    );
+    const flow = generateFlow([{ name: "Home", har: parseHar(raw) }]);
+    const ttfb = flow.steps.find((s) => s.kind === "ttfb")!;
+
+    expect(ttfb.timestamp).toBe(1010);
+    expect(ttfb.metrics[0]).toMatchObject({ label: "TTFB (from navigation)", raw: 1010 });
+    expect(flow.hints.suggestedClientRegion?.reason).toBe(
+      "document DNS 350ms ≥ 300ms, max TCP connect 620ms ≥ 500ms"
+    );
+  });
+
+  it("reads a required phase the HAR leaves out as 0 ms", () => {
+    const raw = firefoxHar();
+    raw.log.entries.push(
+      firefoxEntry("https://example.com/c.js", "text/javascript", { timings: { send: 1 } })
+    );
+    const { timing, ttfb } = parseHar(raw).entries.at(-1)!;
+
+    expect([timing.wait, timing.receive, ttfb]).toEqual([0, 0, 0]);
   });
 });
 
