@@ -157,6 +157,7 @@ export const en = {
     playbackSpeed: "Playback speed",
     live: (n: number, total: number, title: string) => `Step ${n} of ${total}: ${title}`,
     counter: (n: number, total: number) => `Step ${n} / ${total}`,
+    page: (n: number, total: number) => `Page ${n} of ${total}`,
     viewResources: "View resource list",
   },
   sidebar: {

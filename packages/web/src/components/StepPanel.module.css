@@ -67,6 +67,19 @@
   min-width: 0;
 }
 
+/* The page of the step, in a flow of several: a long address wraps rather than lose its end,
+   the part that tells two pages of a site apart. */
+.page {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+  margin-bottom: 2px;
+}
+
+.pageAddress {
+  color: var(--color-cyan);
+}
+
 .stepCounter {
   font-size: var(--fs-meta);
   color: var(--color-muted);

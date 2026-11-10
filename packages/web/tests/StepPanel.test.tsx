@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
-import { makeFlow } from "./fixtures.js";
+import { MessagesContext } from "../src/i18n/context.js";
+import { es } from "../src/i18n/es.js";
+import { makeFlow, makeTwoPageFlow } from "./fixtures.js";
 
 const flow = makeFlow();
 const total = flow.steps.length;
@@ -133,5 +135,36 @@ describe("tab semantics", () => {
     expect(live()).toHaveTextContent(`Step 1 of ${total}: ${flow.steps[0].title}`);
     await user.keyboard("{ArrowRight}");
     expect(live()).toHaveTextContent(`Step 2 of ${total}: ${flow.steps[1].title}`);
+  });
+});
+
+describe("StepPanel — the page of the step in a flow of several pages", () => {
+  const twoPages = makeTwoPageFlow();
+  const firstOfPage2 = twoPages.steps.findIndex((s) => s.pageIndex === 1);
+  const pageLine = () => screen.getByTestId("step-page");
+
+  it("names the page and its address, and follows the steps into the next page", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={twoPages} />);
+    expect(pageLine()).toHaveTextContent("Page 1 of 2 · Example Home · example.com/");
+
+    await user.click(screen.getByRole("tab", { name: new RegExp(`^Step ${firstOfPage2 + 1}:`) }));
+    // A page named after its address shows the address once; the full URL is on hover.
+    expect(pageLine()).toHaveTextContent(/^Page 2 of 2 · example\.com\/login\/$/);
+    expect(within(pageLine()).getByTitle("https://example.com/login/?next=%2Fship")).toBeVisible();
+  });
+
+  it("speaks the language of the interface", () => {
+    render(
+      <MessagesContext.Provider value={es}>
+        <DiagramView flow={twoPages} />
+      </MessagesContext.Provider>
+    );
+    expect(pageLine()).toHaveTextContent(/^Página 1 de 2 · /);
+  });
+
+  it("stays out of a flow of one page", () => {
+    render(<DiagramView flow={makeFlow()} />);
+    expect(screen.queryByTestId("step-page")).not.toBeInTheDocument();
   });
 });

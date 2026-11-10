@@ -156,6 +156,7 @@ export const es: Messages = {
     playbackSpeed: "Velocidad de reproducción",
     live: (n, total, title) => `Paso ${n} de ${total}: ${title}`,
     counter: (n, total) => `Paso ${n} / ${total}`,
+    page: (n, total) => `Página ${n} de ${total}`,
     viewResources: "Ver la lista de recursos",
   },
   sidebar: {

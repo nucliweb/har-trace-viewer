@@ -159,6 +159,7 @@ export const ca: Messages = {
     playbackSpeed: "Velocitat de reproducció",
     live: (n, total, title) => `Pas ${n} de ${total}: ${title}`,
     counter: (n, total) => `Pas ${n} / ${total}`,
+    page: (n, total) => `Pàgina ${n} de ${total}`,
     viewResources: "Mostra la llista de recursos",
   },
   sidebar: {

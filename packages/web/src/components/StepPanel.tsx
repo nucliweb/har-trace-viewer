@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
-import type { HarEntry } from "@htv/core";
+import type { Flow, HarEntry } from "@htv/core";
 import type { DiagramState, Speed, StepNavigation } from "../hooks/useDiagramState.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import styles from "./StepPanel.module.css";
@@ -163,6 +163,38 @@ export function StepControls({ nav, className }: { nav: StepNavigation; classNam
   );
 }
 
+/** A document URL as people read it: host and path, without the scheme or the query. */
+function pageAddress(url: string): string {
+  try {
+    const { hostname, pathname } = new URL(url);
+    return `${hostname}${pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Which page of a flow of several pages the step belongs to: each page has its own TTFB and
+ * load, so a new value reads as another URL's. The address shows once when the page is named
+ * after it; the full URL is on hover.
+ */
+function StepPage({ flow, pageIndex }: { flow: Flow; pageIndex: number }) {
+  const t = useMessages().steps;
+  const page = flow.pages[pageIndex];
+  const url = page.har.documentEntry.url;
+  const address = pageAddress(url);
+  return (
+    <div className={styles.page} data-testid="step-page">
+      {t.page(pageIndex + 1, flow.pages.length)}
+      {page.name !== address && ` · ${page.name}`}
+      {" · "}
+      <span className={styles.pageAddress} title={url}>
+        {address}
+      </span>
+    </div>
+  );
+}
+
 export function StepPanel({ state, resources, resourcesOpen, onToggleResources }: Props) {
   const t = useMessages().steps;
   const lang = useCoreLang();
@@ -186,6 +218,7 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
         aria-labelledby={`step-tab-${stepIndex}`}
       >
         <div className={styles.infoMain}>
+          {flow.pages.length > 1 && <StepPage flow={flow} pageIndex={step.pageIndex} />}
           <div className={styles.stepCounter}>{t.counter(stepIndex + 1, total)}</div>
           <div className={styles.title} lang={lang}>
             {step.title}

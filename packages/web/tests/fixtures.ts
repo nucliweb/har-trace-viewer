@@ -73,3 +73,25 @@ export function makeCompareFlows(): [Flow, Flow] {
     generateFlow([{ name: "Repeat view", har: b, trace: makeTrace(110, 250) }]),
   ];
 }
+
+/**
+ * Two navigations of one site, as a HAR with several pages gives them: a home page and a
+ * login page, each with its own document URL and TTFB. The login page is named after its
+ * address, as htv names a page without a title.
+ */
+export function makeTwoPageFlow(): Flow {
+  const home = makeHar([criticalCss(100)]);
+  const login = makeHar([secondaryImage(200)]);
+  const loginDocument = { ...login.documentEntry, url: "https://example.com/login/?next=%2Fship" };
+  return generateFlow([
+    { name: "Example Home", har: home },
+    {
+      name: "example.com/login/",
+      har: {
+        ...login,
+        documentEntry: loginDocument,
+        entries: [loginDocument, ...login.entries.slice(1)],
+      },
+    },
+  ]);
+}
