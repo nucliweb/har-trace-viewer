@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
   RESOURCE_QUERY_HELP,
@@ -509,6 +509,18 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const [filter, setFilterState] = useState<WaterfallFilter>({});
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [activeRow, setActiveRow] = useState<number | null>(null);
+  // Escape hides a shown tooltip, wherever the focus is (WCAG 1.4.13, dismissible). It listens
+  // in the capture phase and marks the key handled, so the same press leaves the drawer open.
+  useEffect(() => {
+    if (activeRow === null) return;
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      setActiveRow(null);
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [activeRow]);
   const [sort, setSort] = useState<ResourceSort>(START_ORDER);
   const [view, setView] = useState<View>("waterfall");
   const searchId = useId();

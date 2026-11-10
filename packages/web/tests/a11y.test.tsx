@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { getStepResources } from "@htv/core";
@@ -211,5 +211,34 @@ describe("toolbar toggles report their state (A-09)", () => {
       expect(button).toHaveAttribute("aria-expanded", "true");
       await user.click(button);
     }
+  });
+});
+
+describe("the waterfall tooltip can be dismissed (A-08)", () => {
+  it("Escape hides the tooltip first, then closes the drawer", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+    await user.click(screen.getByRole("button", { name: "Toggle waterfall" }));
+    const rows = within(screen.getByRole("list", { name: /^Requests, / })).getAllByRole("button");
+
+    // A tooltip shown by the pointer, with the focus elsewhere.
+    await user.hover(rows[1]);
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close waterfall" })).toBeInTheDocument();
+    await user.unhover(rows[1]);
+
+    // A tooltip shown by the focus: it hides and the row keeps the focus.
+    act(() => rows[2].focus());
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(rows[2]).toHaveFocus();
+    expect(rows[2]).not.toHaveAttribute("aria-describedby");
+
+    // With no tooltip left, Escape closes the drawer.
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: "Close waterfall" })).not.toBeInTheDocument();
   });
 });
