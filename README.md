@@ -193,7 +193,7 @@ htv --har wpt.har --compare -o compare.html     # median first view (A) vs media
 
 ### Playwright recordings
 
-A HAR recorded with Playwright keeps a whole session under one page. htv splits it at each navigation of the main frame (the frame of the first document; a redirect chain stays one navigation), so every load gets its own steps, TTFB and cache, and the load event Playwright stores goes to the navigation it fired in. Playwright marks no browser-cache hit: a successful response with no bytes on the wire (`_transferSize` 0) and a body counts as one, from a store the HAR does not record ("Store not recorded" in the cache report, a `cache` badge in the cache list).
+A HAR recorded with Playwright keeps a whole session under one page. htv splits it at each navigation of the main frame (the frame of the first document; a redirect chain stays one navigation), so every load gets its own steps, TTFB and cache, and the load event Playwright stores goes to the navigation it fired in. Playwright starts its HAR page when the browser page opens, before the first navigation, so htv times that navigation from its document request: the time spent before it (the test's own setup) counts in neither the TTFB nor the load event. Playwright marks no browser-cache hit: a successful response with no bytes on the wire (`_transferSize` 0) and a body counts as one, from a store the HAR does not record ("Store not recorded" in the cache report, a `cache` badge in the cache list).
 
 ### CI budgets
 

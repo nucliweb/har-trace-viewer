@@ -10,6 +10,8 @@ import {
   defaultPageName,
 } from "../src/parsers/har-parser.js";
 import { generateFlow } from "../src/steps/flow.js";
+import { TTFB_LABEL } from "../src/analysis/metrics-summary.js";
+import { formatMs } from "../src/utils/format.js";
 import { firefoxEntry, firefoxHar, twoPageHar } from "./helpers/firefox-har.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -243,6 +245,58 @@ describe("parseHarPages — navigations of one HAR page", () => {
     // The page title is the last document's: the earlier pages go by their URL.
     expect(pages.map((p) => p.pages[0].title)).toEqual(["", "", "Checkout"]);
     expect(new Set(pages.map((p) => p.pages[0].id)).size).toBe(3);
+  });
+
+  // Playwright opens the HAR page with the browser page, before page.goto(): its start is not
+  // the navigation's. The navigation starts with its document request.
+  it("times a Playwright navigation from its document request, not from the page opening", () => {
+    const [page] = parseHarPages(
+      session([doc("https://example.com/", 2.5), asset("https://example.com/app.js", 3)], 4000)
+    );
+
+    expect(page.documentEntry.startTime).toBe(0);
+    expect(page.entries.map((e) => e.startTime)).toEqual([0, 500]);
+    expect(page.pages[0].onLoad).toBe(1500);
+    expect(page.pages[0].onContentLoad).toBe(1400);
+  });
+
+  it("times the first of several navigations from its document request too", () => {
+    const pages = parseHarPages(
+      session(
+        [
+          doc("https://example.com/", 2.5),
+          asset("https://example.com/app.js", 3),
+          doc("https://example.com/login", 10),
+        ],
+        3500
+      )
+    );
+
+    expect(pages.map((p) => p.documentEntry.startTime)).toEqual([0, 0]);
+    expect(pages.map((p) => p.pages[0].onLoad)).toEqual([1000, null]);
+  });
+
+  it("parseHar times a Playwright page the same way", () => {
+    const parsed = parseHar(session([doc("https://example.com/", 2.5)], 4000));
+
+    expect(parsed.documentEntry.startTime).toBe(0);
+    expect(parsed.pages[0].onLoad).toBe(1500);
+  });
+
+  it("counts the TTFB of a Playwright page from its document request", () => {
+    const [har] = parseHarPages(session([doc("https://example.com/", 2.5)], 4000));
+    const flow = generateFlow([{ name: "Home", har }]);
+    const ttfb = flow.steps.find((step) => step.badge?.type === "ttfb")!;
+
+    // send 1 ms + wait 10 ms, with no time before the request.
+    expect(ttfb.metrics.find((m) => m.label === TTFB_LABEL)?.value).toBe(formatMs(11));
+  });
+
+  it("keeps the page start of another exporter as its navigation start", () => {
+    const raw = session([doc("https://example.com/", 2.5)], 4000);
+    raw.log.creator.name = "WebInspector";
+
+    expect(parseHarPages(raw)[0].documentEntry.startTime).toBe(2500);
   });
 
   it("keeps a page whose entries name no frame in one piece", () => {

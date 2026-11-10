@@ -723,7 +723,13 @@ const NO_DOCUMENT_ERROR = "HAR contains no HTML document entry";
 
 export function parseHar(raw: RawHar): ParsedHar {
   const { pages, entries } = assertHasContent(raw);
-  const parsed = buildParsedHar(pages, entries, harSource(raw));
+  const source = harSource(raw);
+  const [first, ...rest] = pages;
+  const parsed = buildParsedHar(
+    [anchorAtNavigation(first, entries, source), ...rest],
+    entries,
+    source
+  );
   if (!parsed) throw new Error(NO_DOCUMENT_ERROR);
   return parsed;
 }
@@ -798,6 +804,33 @@ interface RawPageGroup {
 }
 
 const startMs = (e: { startedDateTime: string }) => new Date(e.startedDateTime).getTime();
+
+/**
+ * A HAR page started at its first navigation. Chrome DevTools starts a page there, but
+ * Playwright opens it with the browser page, before page.goto(): the wait until the first
+ * document request (seconds of test setup) would count as TTFB and shift every time of the
+ * page. For Playwright the page starts with its first document request, the page timings
+ * moved by the same amount; a page with no document stays as it is.
+ */
+function anchorAtNavigation(page: RawHarPage, entries: RawHarEntry[], source: HarSource) {
+  if (!source.playwright) return page;
+  const documents = entries.filter((e) => e._resourceType === "document");
+  if (documents.length === 0) return page;
+  const navigationStart = Math.min(...documents.map(startMs));
+  const offset = navigationStart - startMs(page);
+  if (offset <= 0) return page;
+  const shift = (value: number | undefined) =>
+    value !== undefined && value >= 0 ? Math.max(0, value - offset) : value;
+  return {
+    ...page,
+    startedDateTime: new Date(navigationStart).toISOString(),
+    pageTimings: {
+      ...page.pageTimings,
+      onContentLoad: shift(page.pageTimings?.onContentLoad),
+      onLoad: shift(page.pageTimings?.onLoad),
+    },
+  };
+}
 
 // A page time (ms from the page start) moved to a navigation that starts `offset` ms later;
 // -1 when the event did not fire during that navigation.
@@ -874,12 +907,14 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
     (a, b) => new Date(a.startedDateTime).getTime() - new Date(b.startedDateTime).getTime()
   );
   const firstId = ordered[0].id;
+  const source = harSource(raw);
 
   const parsedPages = new Map<string, ParsedPage>();
   for (const harPage of ordered) {
     const harPageEntries = entries.filter((e) => (e.pageref ?? firstId) === harPage.id);
-    for (const { page, entries: pageEntries } of splitNavigations(harPage, harPageEntries)) {
-      const parsed = buildParsedHar([page], pageEntries, harSource(raw));
+    const navigated = anchorAtNavigation(harPage, harPageEntries, source);
+    for (const { page, entries: pageEntries } of splitNavigations(navigated, harPageEntries)) {
+      const parsed = buildParsedHar([page], pageEntries, source);
       if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
     }
   }
