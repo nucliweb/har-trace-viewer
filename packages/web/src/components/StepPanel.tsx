@@ -2,6 +2,7 @@ import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { HarEntry } from "@htv/core";
 import type { DiagramState, Speed, StepNavigation } from "../hooks/useDiagramState.js";
+import { useMessages } from "../i18n/context.js";
 import styles from "./StepPanel.module.css";
 
 interface Props {
@@ -64,6 +65,7 @@ interface StepTrackProps {
 
 /** One numbered tab per step; arrow keys, Home and End move the selection inside the tablist. */
 export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
+  const t = useMessages().steps;
   const total = labels.length;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -88,7 +90,7 @@ export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
   return (
     // The focusable elements are the tabs; key events bubble up to the tablist.
     // eslint-disable-next-line jsx-a11y/interactive-supports-focus
-    <div className={styles.track} role="tablist" aria-label="Steps" onKeyDown={onTabKeyDown}>
+    <div className={styles.track} role="tablist" aria-label={t.track} onKeyDown={onTabKeyDown}>
       {labels.map((label, i) => {
         const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
         return (
@@ -102,7 +104,7 @@ export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
             aria-selected={i === stepIndex}
             aria-controls="step-panel"
             tabIndex={i === stepIndex ? 0 : -1}
-            aria-label={`Step ${i + 1}: ${label}`}
+            aria-label={t.tab(i + 1, label)}
             className={`${styles.trackDot} ${styles[status]}`}
             onClick={() => goTo(i)}
           >
@@ -116,38 +118,39 @@ export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
 
 /** Prev, Next, Auto play, back to the first step and playback speed. */
 export function StepControls({ nav, className }: { nav: StepNavigation; className?: string }) {
+  const t = useMessages().steps;
   const { stepIndex, total, isPlaying, speed, goTo, prev, next, togglePlay, setSpeed } = nav;
   return (
     <div className={className ? `${styles.controls} ${className}` : styles.controls}>
       <button className={styles.btn} onClick={prev} disabled={stepIndex === 0}>
-        ← Prev
+        {t.prev}
       </button>
       <button className={styles.btn} onClick={next} disabled={stepIndex === total - 1}>
-        Next →
+        {t.next}
       </button>
       <button
         className={`${styles.btn} ${styles.btnPlay} ${isPlaying ? styles.playing : ""}`}
         onClick={togglePlay}
-        aria-label={isPlaying ? "Pause" : "Auto play"}
+        aria-label={isPlaying ? t.pause : t.autoPlay}
       >
-        {isPlaying ? "⏸ Pause" : "▶ Auto Play"}
+        {isPlaying ? t.pauseText : t.autoPlayText}
       </button>
       <button
         className={styles.btn}
         onClick={() => goTo(0)}
         disabled={stepIndex === 0}
-        aria-label="Reset to first step"
-        title="Reset to step 1"
+        aria-label={t.reset}
+        title={t.resetTitle}
       >
         ↺
       </button>
       <div className={styles.speedWrap}>
-        <span className={styles.speedLabel}>SPEED</span>
+        <span className={styles.speedLabel}>{t.speed}</span>
         <select
           className={styles.speedSelect}
           value={speed}
           onChange={(e) => setSpeed(Number(e.target.value) as Speed)}
-          aria-label="Playback speed"
+          aria-label={t.playbackSpeed}
         >
           {SPEEDS.map((s) => (
             <option key={s.value} value={s.value}>
@@ -161,6 +164,7 @@ export function StepControls({ nav, className }: { nav: StepNavigation; classNam
 }
 
 export function StepPanel({ state, resources, resourcesOpen, onToggleResources }: Props) {
+  const t = useMessages().steps;
   const { flow, stepIndex, goTo } = state;
   const step = flow.steps[stepIndex];
   const total = flow.steps.length;
@@ -168,7 +172,7 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
   return (
     <div className={styles.panel}>
       <div className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
-        Step {stepIndex + 1} of {total}: {step.title}
+        {t.live(stepIndex + 1, total, step.title)}
       </div>
 
       <StepTrack labels={flow.steps.map((s) => s.title)} stepIndex={stepIndex} goTo={goTo} />
@@ -181,9 +185,7 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
         aria-labelledby={`step-tab-${stepIndex}`}
       >
         <div className={styles.infoMain}>
-          <div className={styles.stepCounter}>
-            Step {stepIndex + 1} / {total}
-          </div>
+          <div className={styles.stepCounter}>{t.counter(stepIndex + 1, total)}</div>
           <div className={styles.title}>{step.title}</div>
           <div className={styles.description}>{step.description}</div>
         </div>
@@ -200,9 +202,9 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
               <button
                 className={`${styles.resourcesBtn} ${resourcesOpen ? styles.resourcesBtnActive : ""}`}
                 onClick={onToggleResources}
-                aria-label="View resource list"
+                aria-label={t.viewResources}
                 aria-expanded={resourcesOpen}
-                title="View resource list"
+                title={t.viewResources}
               >
                 <ResourceListIcon />
               </button>

@@ -21,6 +21,7 @@ import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
 import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
+import { useMessages } from "../i18n/context.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -30,6 +31,7 @@ interface Props {
 type Drawer = "findings" | "waterfall" | "hops" | "metrics" | "cache" | "resources";
 
 export function DiagramView({ flow }: Props) {
+  const t = useMessages().diagram;
   const state = useDiagramState(flow);
   const viewRef = useRef<HTMLDivElement>(null);
   useStepKeyboard(viewRef, state);
@@ -83,7 +85,7 @@ export function DiagramView({ flow }: Props) {
   return (
     // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <div ref={viewRef} className={styles.view} role="region" aria-label="Diagram" tabIndex={0}>
+    <div ref={viewRef} className={styles.view} role="region" aria-label={t.region} tabIndex={0}>
       {/* A band of its own above the diagram, so it never covers the zone captions. */}
       <div className={styles.toolbar}>
         <FindingsButton
@@ -102,29 +104,29 @@ export function DiagramView({ flow }: Props) {
         <button
           className={`${styles.hopsBtn} ${drawer === "hops" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("hops")}
-          aria-label="Toggle hops"
+          aria-label={t.toggleHops}
           aria-expanded={drawer === "hops"}
-          title="Hops per host"
+          title={t.hopsTitle}
         >
-          Hops
+          {t.hops}
         </button>
         <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
         <button
           className={`${styles.metricsBtn} ${drawer === "metrics" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("metrics")}
-          aria-label="Toggle metrics summary"
+          aria-label={t.toggleMetrics}
           aria-expanded={drawer === "metrics"}
-          title="Metrics summary"
+          title={t.metricsTitle}
         >
-          Metrics
+          {t.metrics}
         </button>
         <button
           className={`${styles.cacheBtn} ${drawer === "cache" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("cache")}
-          aria-label="Toggle cache analysis"
-          title="Cache Analysis"
+          aria-label={t.toggleCache}
+          title={t.cacheTitle}
         >
-          Cache
+          {t.cache}
         </button>
       </div>
       <div className={styles.canvas}>
@@ -147,7 +149,7 @@ export function DiagramView({ flow }: Props) {
         {drawer === "resources" && (
           <ResourceSidebar
             resources={listedResources}
-            title={listedIsOverview ? "All resources" : listedStep.title}
+            title={listedIsOverview ? t.allResources : listedStep.title}
             overview={listedIsOverview}
             onClose={closeDrawer}
             preconnectHints={listedPage.har.preconnectHints}
@@ -159,7 +161,7 @@ export function DiagramView({ flow }: Props) {
           <CachePanel
             report={analysis.cacheReport}
             network={analysis.networkReport}
-            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
             onClose={closeDrawer}
           />
         )}
@@ -167,7 +169,7 @@ export function DiagramView({ flow }: Props) {
         {drawer === "findings" && (
           <FindingsPanel
             findings={findings}
-            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
             onClose={closeDrawer}
           />
         )}
@@ -175,7 +177,7 @@ export function DiagramView({ flow }: Props) {
           <WaterfallPanel
             har={page.har}
             trace={page.trace}
-            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
             onClose={closeDrawer}
           />
         )}
@@ -183,7 +185,7 @@ export function DiagramView({ flow }: Props) {
           <HopsPanel
             hops={hops}
             thirdParties={analysis.thirdPartyReport}
-            pageLabel={`Page ${pageIndex + 1} · ${page.name}`}
+            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
             onClose={closeDrawer}
           />
         )}

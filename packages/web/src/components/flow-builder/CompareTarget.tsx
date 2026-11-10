@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { listHarPages } from "@htv/core";
+import { useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
 import { FileZones } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
@@ -15,16 +16,14 @@ interface Props {
 
 /** Optional second recording: the report then compares it (B) with the flow above (A). */
 export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onRemove }: Props) {
+  const t = useMessages().builder;
   const [dragging, setDragging] = useState(false);
   const pageSelectId = useId();
   const pages = entry.har && entry.har.length > 1 ? listHarPages(entry.har) : null;
   return (
     <fieldset className={styles.compare}>
-      <legend className={styles.compareLegend}>Compare with…</legend>
-      <p className={styles.compareHint}>
-        Optional: a second recording of the same page, e.g. with a warm cache. The first page of
-        each side is compared step by step.
-      </p>
+      <legend className={styles.compareLegend}>{t.compareLegend}</legend>
+      <p className={styles.compareHint}>{t.compareHint}</p>
       <div
         className={`${styles.row} ${dragging ? styles.rowDragging : ""}`}
         onDragOver={(e) => {
@@ -44,16 +43,16 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
           entry={entry}
           onHarFile={onHarFile}
           onTraceFile={onTraceFile}
-          dropLabel="Drop .har to compare"
-          harInputLabel="HAR file to compare with"
-          traceInputLabel="Trace to compare with"
+          dropLabel={t.dropToCompare}
+          harInputLabel={t.harToCompare}
+          traceInputLabel={t.traceToCompare}
         />
         <button
           className={styles.removeBtn}
           onClick={onRemove}
           disabled={!entry.har && !entry.harError}
-          title="Remove comparison"
-          aria-label="Remove comparison"
+          title={t.removeComparison}
+          aria-label={t.removeComparison}
         >
           ×
         </button>
@@ -61,7 +60,7 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
       {pages && (
         <span className={styles.pairField}>
           <label className={styles.pairLabel} htmlFor={pageSelectId}>
-            Page
+            {t.page}
           </label>
           <select
             id={pageSelectId}
@@ -71,7 +70,7 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
           >
             {pages.map((page) => (
               <option key={page.id} value={page.id}>
-                {pageOptionLabel(page)}
+                {pageOptionLabel(page, t)}
               </option>
             ))}
           </select>

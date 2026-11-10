@@ -23,6 +23,7 @@ import type {
   WaterfallPhases,
   WaterfallRow,
 } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -51,14 +52,14 @@ const TYPE_ORDER: ResourceType[] = [
   "other",
 ];
 
-const PHASES: { key: keyof WaterfallPhases; label: string }[] = [
-  { key: "blocked", label: "Blocked" },
-  { key: "dns", label: "DNS" },
-  { key: "connect", label: "Connect" },
-  { key: "ssl", label: "TLS" },
-  { key: "send", label: "Send" },
-  { key: "wait", label: "Wait" },
-  { key: "receive", label: "Receive" },
+const PHASES: (keyof WaterfallPhases)[] = [
+  "blocked",
+  "dns",
+  "connect",
+  "ssl",
+  "send",
+  "wait",
+  "receive",
 ];
 
 const MARKS: { key: keyof WaterfallMarks; label: string; name: string }[] = [
@@ -71,17 +72,17 @@ const MARKS: { key: keyof WaterfallMarks; label: string; name: string }[] = [
 
 // The columns of the table view, which also name the sorts: the measures start largest
 // first, the names and categories in their order.
-const COLUMNS: { key: ResourceSortKey; label: string; numeric: boolean }[] = [
-  { key: "name", label: "Name", numeric: false },
-  { key: "type", label: "Type", numeric: false },
-  { key: "status", label: "Status", numeric: false },
-  { key: "priority", label: "Priority", numeric: false },
-  { key: "protocol", label: "Protocol", numeric: false },
-  { key: "encoding", label: "Encoding", numeric: false },
-  { key: "size", label: "Size", numeric: true },
-  { key: "ttfb", label: "TTFB", numeric: true },
-  { key: "time", label: "Time", numeric: true },
-  { key: "start", label: "Start", numeric: true },
+const COLUMNS: { key: ResourceSortKey; numeric: boolean }[] = [
+  { key: "name", numeric: false },
+  { key: "type", numeric: false },
+  { key: "status", numeric: false },
+  { key: "priority", numeric: false },
+  { key: "protocol", numeric: false },
+  { key: "encoding", numeric: false },
+  { key: "size", numeric: true },
+  { key: "ttfb", numeric: true },
+  { key: "time", numeric: true },
+  { key: "start", numeric: true },
 ];
 const DEFAULT_DIRECTION: Record<ResourceSortKey, ResourceSort["direction"]> = {
   start: "asc",
@@ -97,7 +98,6 @@ const DEFAULT_DIRECTION: Record<ResourceSortKey, ResourceSort["direction"]> = {
   time: "desc",
 };
 const START_ORDER: ResourceSort = { key: "start", direction: "asc" };
-const labelOf = (key: ResourceSortKey) => COLUMNS.find((c) => c.key === key)?.label ?? key;
 
 /**
  * The sort after a click on a column: the column in its starting direction, reversed on a
@@ -182,7 +182,7 @@ function Bar({ row, totalMs }: { row: WaterfallRow; totalMs: number }) {
   if (row.fromCache) return <span className={`${styles.bar} ${styles.barCached}`} style={style} />;
   return (
     <span className={styles.bar} style={style}>
-      {PHASES.map(({ key }) => {
+      {PHASES.map((key) => {
         const ms = row.phases[key];
         return ms ? (
           <span key={key} className={styles[`phase_${key}`]} style={{ flexGrow: ms }} />
@@ -193,15 +193,16 @@ function Bar({ row, totalMs }: { row: WaterfallRow; totalMs: number }) {
 }
 
 function Tooltip({ row, id }: { row: WaterfallRow; id: string }) {
+  const t = useMessages().waterfall;
   const facts = [
     row.status > 0 ? String(row.status) : null,
     row.resourceType,
-    row.priority ? `${row.priority} priority` : null,
-    row.fromCache ? `${row.fromCache} cache` : formatBytes(row.transferSize),
+    row.priority ? t.priority(row.priority) : null,
+    row.fromCache ? t.cachedFrom(row.fromCache) : formatBytes(row.transferSize),
   ].filter(Boolean);
   const notes = [
-    row.isLcpResource ? "LCP resource" : null,
-    row.renderBlocking ? "Render-blocking" : null,
+    row.isLcpResource ? t.lcpResource : null,
+    row.renderBlocking ? t.renderBlocking : null,
   ].filter(Boolean);
   return (
     <span className={styles.tooltip} role="tooltip" id={id}>
@@ -209,14 +210,14 @@ function Tooltip({ row, id }: { row: WaterfallRow; id: string }) {
       {row.redirectURL && <span className={styles.tooltipMeta}>→ {row.redirectURL}</span>}
       <span className={styles.tooltipMeta}>{facts.join(" · ")}</span>
       <span className={styles.tooltipMeta}>
-        Starts at {formatMs(row.startMs)} · takes {formatMs(row.endMs - row.startMs)}
+        {t.timing(formatMs(row.startMs), formatMs(row.endMs - row.startMs))}
       </span>
       {notes.length > 0 && <span className={styles.tooltipNote}>{notes.join(" · ")}</span>}
       <span className={styles.tooltipPhases}>
-        {PHASES.map(({ key, label }) => (
+        {PHASES.map((key) => (
           <span key={key} className={styles.tooltipPhase}>
             <span className={`${styles.swatch} ${styles[`phase_${key}`]}`} aria-hidden="true" />
-            <span>{label}</span>
+            <span>{t.phases[key]}</span>
             <span className={styles.tooltipValue}>{formatMs(row.phases[key])}</span>
           </span>
         ))}
@@ -300,30 +301,33 @@ function SortButton({
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
 }) {
+  const t = useMessages().waterfall;
   const active = sort.key === column;
+  const label = t.columns[column];
   return (
     <button
       type="button"
       className={`${styles.sortBtn} ${active ? styles.sortBtnActive : ""}`}
-      aria-label={`Sort by ${labelOf(column).toLowerCase()}`}
+      aria-label={t.sortBy(label)}
       onClick={() => onSort(column)}
     >
-      {labelOf(column)}
+      {label}
       {active && <span aria-hidden="true">{sort.direction === "asc" ? " ↑" : " ↓"}</span>}
     </button>
   );
 }
 
 function Badges({ row }: { row: WaterfallRow }) {
+  const t = useMessages().waterfall;
   return (
     <>
       {row.isLcpResource && (
-        <span className={`${styles.badge} ${styles.badgeLcp}`} title="LCP resource">
+        <span className={`${styles.badge} ${styles.badgeLcp}`} title={t.lcpResource}>
           LCP
         </span>
       )}
       {row.renderBlocking && (
-        <span className={`${styles.badge} ${styles.badgeBlocking}`} title="Render-blocking">
+        <span className={`${styles.badge} ${styles.badgeBlocking}`} title={t.renderBlocking}>
           RB
         </span>
       )}
@@ -343,8 +347,9 @@ function Table({
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
 }) {
+  const t = useMessages().waterfall;
   return (
-    <table className={styles.grid} aria-label={`Requests, ${count}`}>
+    <table className={styles.grid} aria-label={t.requests(count)}>
       <thead>
         <tr>
           {COLUMNS.map((column) => (
@@ -396,21 +401,20 @@ function Table({
 
 /** The fields of the filter language, behind a disclosure. */
 function FilterHelp() {
+  const t = useMessages().waterfall;
   return (
     <details className={styles.help}>
-      <summary className={styles.helpSummary}>Filter syntax</summary>
+      <summary className={styles.helpSummary}>{t.filterSyntax}</summary>
       <div className={styles.helpBody}>
         <p className={styles.helpText}>
-          Terms separated by spaces, all of which a request must match. A bare word matches the URL,{" "}
-          <code>field:value</code> narrows by a field, a leading <code>-</code> keeps what does not
-          match, and double quotes keep spaces in a value.
+          {t.helpWords} <code>field:value</code> {t.helpField} <code>-</code> {t.helpNegate}
         </p>
         <table className={styles.helpTable}>
           <thead>
             <tr>
-              <th scope="col">Field</th>
-              <th scope="col">Values</th>
-              <th scope="col">Example</th>
+              <th scope="col">{t.field}</th>
+              <th scope="col">{t.values}</th>
+              <th scope="col">{t.example}</th>
             </tr>
           </thead>
           <tbody>
@@ -443,11 +447,14 @@ function Ruler({
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
 }) {
+  const t = useMessages().waterfall;
   const lanes = Math.max(1, ...marks.map((m) => m.lane + 1));
-  const name = `Time ruler: ${MARKS.flatMap(({ key, name }) => {
-    const mark = marks.find((m) => m.key === key);
-    return mark ? [`${name} ${formatMs(mark.ms)}`] : [];
-  }).join(", ")}`;
+  const name = t.ruler(
+    MARKS.flatMap(({ key, name }) => {
+      const mark = marks.find((m) => m.key === key);
+      return mark ? [`${name} ${formatMs(mark.ms)}`] : [];
+    }).join(", ")
+  );
   return (
     <div className={styles.rulerRow}>
       {(["name", "type", "status", "size"] as const).map((key) => (
@@ -462,10 +469,10 @@ function Ruler({
         style={{ "--lanes": lanes } as CSSProperties}
       >
         {ticks(totalMs)
-          .filter((t) => pct(t, totalMs) <= AXIS_END_PCT)
-          .map((t) => (
-            <span key={t} className={styles.tick} style={{ left: `${pct(t, totalMs)}%` }}>
-              {formatMs(t)}
+          .filter((tick) => pct(tick, totalMs) <= AXIS_END_PCT)
+          .map((tick) => (
+            <span key={tick} className={styles.tick} style={{ left: `${pct(tick, totalMs)}%` }}>
+              {formatMs(tick)}
             </span>
           ))}
         {marks.map((mark) =>
@@ -493,6 +500,7 @@ function Ruler({
  * time.
  */
 export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
+  const t = useMessages().waterfall;
   const waterfall = useMemo(() => buildWaterfall(har, trace), [har, trace]);
   const [filter, setFilterState] = useState<WaterfallFilter>({});
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -510,7 +518,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const totalMs = waterfallAxisMs(waterfall, axis);
   const types = useMemo(() => {
     const present = new Set(allRows.map((r) => r.resourceType));
-    return TYPE_ORDER.filter((t) => present.has(t));
+    return TYPE_ORDER.filter((type) => present.has(type));
   }, [allRows]);
   const hosts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -533,7 +541,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const sortText =
     sort.key === START_ORDER.key && sort.direction === START_ORDER.direction
       ? ""
-      : ` · by ${labelOf(sort.key).toLowerCase()} ${sort.direction === "asc" ? "↑" : "↓"}`;
+      : t.sortedBy(t.columns[sort.key], sort.direction === "asc" ? "↑" : "↓");
   const toggleType = (type: ResourceType) => {
     const selected = new Set(filter.types ?? []);
     if (selected.has(type)) selected.delete(type);
@@ -545,15 +553,15 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <span className={styles.headerTitle}>Waterfall</span>
+          <span className={styles.headerTitle}>{t.title}</span>
           <h2 className={styles.pageLabel}>{pageLabel}</h2>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close waterfall">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </div>
       <div className={styles.filters}>
-        <div className={styles.chips} role="group" aria-label="Resource types">
+        <div className={styles.chips} role="group" aria-label={t.types}>
           {types.map((type) => {
             const pressed = filter.types?.includes(type) ?? false;
             return (
@@ -571,7 +579,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
         </div>
         <div className={styles.fields}>
           <label className={styles.field} htmlFor={partyId}>
-            <span className={styles.fieldLabel}>Party</span>
+            <span className={styles.fieldLabel}>{t.party}</span>
             <select
               id={partyId}
               className={styles.select}
@@ -580,20 +588,20 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
                 setFilter({ party: (e.target.value || undefined) as WaterfallParty | undefined })
               }
             >
-              <option value="">All</option>
-              <option value="first">First party</option>
-              <option value="third">Third party</option>
+              <option value="">{t.allParties}</option>
+              <option value="first">{t.firstParty}</option>
+              <option value="third">{t.thirdParty}</option>
             </select>
           </label>
           <label className={styles.field} htmlFor={hostId}>
-            <span className={styles.fieldLabel}>Host</span>
+            <span className={styles.fieldLabel}>{t.host}</span>
             <select
               id={hostId}
               className={styles.select}
               value={filter.host ?? ""}
               onChange={(e) => setFilter({ host: e.target.value || undefined })}
             >
-              <option value="">All hosts</option>
+              <option value="">{t.allHosts}</option>
               {hosts.map((host) => (
                 <option key={host} value={host}>
                   {host}
@@ -602,23 +610,23 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
             </select>
           </label>
           <label className={styles.field} htmlFor={axisId}>
-            <span className={styles.fieldLabel}>Axis</span>
+            <span className={styles.fieldLabel}>{t.axis}</span>
             <select
               id={axisId}
               className={styles.select}
               value={axis}
               onChange={(e) => setAxis(e.target.value as WaterfallAxis)}
             >
-              <option value="end">Whole recording</option>
-              <option value="load">Page load</option>
+              <option value="end">{t.wholeRecording}</option>
+              <option value="load">{t.pageLoad}</option>
             </select>
           </label>
           <input
             id={searchId}
             className={styles.search}
             type="search"
-            aria-label="Filter requests"
-            placeholder="Filter: text, domain:cdn.*, status:4xx, larger-than:100k…"
+            aria-label={t.filter}
+            placeholder={t.filterPlaceholder}
             value={filter.search ?? ""}
             onChange={(e) => setFilter({ search: e.target.value })}
           />
@@ -630,24 +638,22 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
           </p>
         )}
         <div className={styles.legend} aria-hidden="true">
-          {PHASES.map(({ key, label }) => (
+          {PHASES.map((key) => (
             <span key={key} className={styles.legendItem}>
               <span className={`${styles.swatch} ${styles[`phase_${key}`]}`} />
-              {label}
+              {t.phases[key]}
             </span>
           ))}
           <span className={styles.legendItem}>
             <span className={`${styles.swatch} ${styles.swatchCached}`} />
-            Cache hit
+            {t.cacheHit}
           </span>
         </div>
         <div className={styles.status}>
           <p className={styles.count} aria-live="polite">
-            {rows.length === allRows.length
-              ? `${allRows.length} requests${sortText}`
-              : `${rows.length} of ${allRows.length} requests${sortText}`}
+            {`${t.count(rows.length, allRows.length)}${sortText}`}
           </p>
-          <div className={styles.chips} role="group" aria-label="View">
+          <div className={styles.chips} role="group" aria-label={t.view}>
             {(["waterfall", "table"] as const).map((name) => (
               <button
                 key={name}
@@ -656,7 +662,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
                 aria-pressed={view === name}
                 onClick={() => setView(name)}
               >
-                {name === "waterfall" ? "Waterfall" : "Table"}
+                {name === "waterfall" ? t.waterfallView : t.tableView}
               </button>
             ))}
           </div>
@@ -664,7 +670,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
       </div>
       {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label="Waterfall details" tabIndex={0}>
+      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
         <div className={view === "table" ? styles.tableView : styles.table}>
           {view === "waterfall" && (
             <>
@@ -681,11 +687,11 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
             </>
           )}
           {rows.length === 0 ? (
-            <p className={styles.empty}>No request matches the filters.</p>
+            <p className={styles.empty}>{t.empty}</p>
           ) : view === "table" ? (
             <Table rows={shown} count={rows.length} sort={sort} onSort={onSort} />
           ) : (
-            <ol className={styles.rows} aria-label={`Requests, ${rows.length}`}>
+            <ol className={styles.rows} aria-label={t.requests(rows.length)}>
               {shown.map((row) => (
                 <Row
                   key={row.entryIndex}
@@ -706,7 +712,10 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
               className={styles.more}
               onClick={() => setLimit((l) => l + PAGE_SIZE)}
             >
-              {`Show ${Math.min(PAGE_SIZE, rows.length - shown.length)} more (${rows.length - shown.length} left)`}
+              {t.showMore(
+                Math.min(PAGE_SIZE, rows.length - shown.length),
+                rows.length - shown.length
+              )}
             </button>
           )}
         </div>
@@ -727,15 +736,16 @@ export function WaterfallButton({
   className: string;
   activeClassName: string;
 }) {
+  const t = useMessages().waterfall;
   return (
     <button
       className={`${className} ${active ? activeClassName : ""}`}
       onClick={onClick}
-      aria-label="Toggle waterfall"
+      aria-label={t.toggle}
       aria-expanded={active}
-      title="Request waterfall"
+      title={t.buttonTitle}
     >
-      Waterfall
+      {t.title}
     </button>
   );
 }

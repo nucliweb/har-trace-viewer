@@ -9,6 +9,8 @@ import { RegionNotice } from "./components/RegionNotice.js";
 import { SettingsModal } from "./components/SettingsModal.js";
 import { useAppShortcuts } from "./hooks/useAppShortcuts.js";
 import { useTheme } from "./hooks/useTheme.js";
+import { MessagesContext } from "./i18n/context.js";
+import { useLocale } from "./i18n/useLocale.js";
 import { toggleFullscreen } from "./lib/keyboard.js";
 import styles from "./App.module.css";
 
@@ -33,13 +35,20 @@ export function App() {
   const [comparePages, setComparePages] = useState<PageFlow[] | null>(null);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const { theme, choice: themeChoice, toggleTheme, setChoice: setThemeChoice } = useTheme();
+  const { locale, t, setLocale, cycleLocale } = useLocale();
   // One dialog at a time: opening one replaces the other, its own key closes it.
   const [dialog, setDialog] = useState<"settings" | "help" | null>(null);
   const shortcuts = useMemo(() => {
     const toggle = (name: "settings" | "help") => () =>
       setDialog((open) => (open === name ? null : name));
-    return { t: toggleTheme, c: toggle("settings"), "?": toggle("help"), f: toggleFullscreen };
-  }, [toggleTheme]);
+    return {
+      t: toggleTheme,
+      c: toggle("settings"),
+      l: cycleLocale,
+      "?": toggle("help"),
+      f: toggleFullscreen,
+    };
+  }, [toggleTheme, cycleLocale]);
   useAppShortcuts(shortcuts);
 
   const handleGenerate = (
@@ -89,80 +98,80 @@ export function App() {
   };
 
   return (
-    <div className={styles.app}>
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <div className={styles.logo}>
-            htv <span>HAR TRACE VIEWER</span>
-          </div>
-          <span className={styles.version} title="HTV version">
-            v{__HTV_VERSION__}
-          </span>
-        </div>
-        <div className={styles.headerActions}>
-          {flow && (
-            <button
-              className={styles.resetButton}
-              onClick={handleReset}
-              title="Reset — load a new flow"
-            >
-              ↩ Reset
-            </button>
-          )}
-          <button
-            className={styles.themeToggle}
-            onClick={toggleTheme}
-            aria-label={`Toggle theme (current: ${theme})`}
-            title="Toggle theme (t)"
-          >
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
-          <button
-            className={styles.themeToggle}
-            onClick={() => setDialog("settings")}
-            aria-label="Settings"
-            title="Settings (c)"
-          >
-            <SettingsIcon />
-          </button>
-        </div>
-      </header>
-
-      <main className={styles.main}>
-        {flow ? (
-          <div className={styles.flowLayout}>
-            {regionSuggestion && (
-              <RegionNotice
-                suggestion={regionSuggestion}
-                applied={regionApplied}
-                onSwitch={handleSwitchRegion}
-                onDismiss={() => setNoticeDismissed(true)}
-              />
-            )}
-            <div className={styles.flowArea}>
-              {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
+    <MessagesContext.Provider value={t}>
+      <div className={styles.app}>
+        <header className={styles.header}>
+          <div className={styles.brand}>
+            <div className={styles.logo}>
+              htv <span>HAR TRACE VIEWER</span>
             </div>
+            <span className={styles.version} title={t.app.versionTitle}>
+              v{__HTV_VERSION__}
+            </span>
           </div>
-        ) : (
-          <div className={styles.builderWrapper}>
-            <FlowBuilder
-              onGenerate={handleGenerate}
-              // The demo chunk is not shipped inside generated reports.
-              onLoadFlow={embedded ? undefined : handleLoadFlow}
-            />
+          <div className={styles.headerActions}>
+            {flow && (
+              <button className={styles.resetButton} onClick={handleReset} title={t.app.resetTitle}>
+                {t.app.reset}
+              </button>
+            )}
+            <button
+              className={styles.themeToggle}
+              onClick={toggleTheme}
+              aria-label={t.app.toggleTheme(theme)}
+              title={t.app.toggleThemeTitle}
+            >
+              {theme === "dark" ? "☀" : "🌙"}
+            </button>
+            <button
+              className={styles.themeToggle}
+              onClick={() => setDialog("settings")}
+              aria-label={t.app.settings}
+              title={t.app.settingsTitle}
+            >
+              <SettingsIcon />
+            </button>
           </div>
+        </header>
+
+        <main className={styles.main}>
+          {flow ? (
+            <div className={styles.flowLayout}>
+              {regionSuggestion && (
+                <RegionNotice
+                  suggestion={regionSuggestion}
+                  applied={regionApplied}
+                  onSwitch={handleSwitchRegion}
+                  onDismiss={() => setNoticeDismissed(true)}
+                />
+              )}
+              <div className={styles.flowArea}>
+                {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
+              </div>
+            </div>
+          ) : (
+            <div className={styles.builderWrapper}>
+              <FlowBuilder
+                onGenerate={handleGenerate}
+                // The demo chunk is not shipped inside generated reports.
+                onLoadFlow={embedded ? undefined : handleLoadFlow}
+              />
+            </div>
+          )}
+        </main>
+        {dialog === "settings" && (
+          <SettingsModal
+            themeChoice={themeChoice}
+            onThemeChoice={setThemeChoice}
+            locale={locale}
+            onLocale={setLocale}
+            onShowHelp={() => setDialog("help")}
+            onClose={() => setDialog(null)}
+          />
         )}
-      </main>
-      {dialog === "settings" && (
-        <SettingsModal
-          themeChoice={themeChoice}
-          onThemeChoice={setThemeChoice}
-          onShowHelp={() => setDialog("help")}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog === "help" && <HelpModal onClose={() => setDialog(null)} />}
-    </div>
+        {dialog === "help" && <HelpModal onClose={() => setDialog(null)} />}
+      </div>
+    </MessagesContext.Provider>
   );
 }
 

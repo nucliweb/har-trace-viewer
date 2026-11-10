@@ -1,5 +1,7 @@
 import { formatBytes, shortUrl } from "@htv/core";
 import type { HarEntry, InferredCacheHit, ResourceType } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
+import type { Messages } from "../i18n/en.js";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./CacheSidebar.module.css";
 import {
@@ -25,22 +27,19 @@ interface CacheRow {
   store: Store;
 }
 
-const BADGES: Record<Store, { label: string; className: string | undefined; title?: string }> = {
-  memory: { label: "mem", className: styles.badgeMemory },
-  disk: { label: "disk", className: styles.badgeDisk },
-  unknown: {
-    label: "cache",
-    className: styles.badgeUnknown,
-    title: "The HAR marks it as a cache hit only by size, not by store",
-  },
-  inferred: {
-    label: "inferred",
-    className: styles.badgeInferred,
-    title: "Left out of the repeat view's HAR; still fresh from the first view",
-  },
-};
+const badges = (
+  t: Messages["cacheSidebar"]
+): Record<Store, { label: string; className: string | undefined; title?: string }> => ({
+  memory: { label: t.memory, className: styles.badgeMemory },
+  disk: { label: t.disk, className: styles.badgeDisk },
+  unknown: { label: t.unknown, className: styles.badgeUnknown, title: t.unknownTitle },
+  inferred: { label: t.inferred, className: styles.badgeInferred, title: t.inferredTitle },
+});
 
 export function CacheSidebar({ resources, inferred = [] }: Props) {
+  const messages = useMessages();
+  const t = messages.cacheSidebar;
+  const badgeOf = badges(t);
   const rows: CacheRow[] = [
     ...resources.map((e) => ({
       url: e.url,
@@ -51,14 +50,19 @@ export function CacheSidebar({ resources, inferred = [] }: Props) {
     ...inferred.map((hit) => ({ ...hit, store: "inferred" as const })),
   ];
   return (
-    <Sidebar title="Cache" subtitle={`${rows.length} resources`} side="left" width={280}>
+    <Sidebar
+      title={t.title}
+      subtitle={messages.sidebar.resources(rows.length)}
+      side="left"
+      width={280}
+    >
       {[...groupByType(rows)].map(([type, group]) => (
         <SidebarGroup as="details" key={type} open={group.length <= 6}>
           <SidebarTypeHeader as="summary" type={type} count={group.length} />
           <SidebarPagedRows
             items={group}
             render={(row, i) => {
-              const badge = BADGES[row.store];
+              const badge = badgeOf[row.store];
               return (
                 <SidebarRow
                   key={i}

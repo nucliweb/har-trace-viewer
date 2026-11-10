@@ -1,3 +1,4 @@
+import { en } from "../i18n/en.js";
 import { readRecordingFile } from "./parse-recording.js";
 import type { ParsedHar, ParsedTrace } from "@htv/core";
 import type {
@@ -65,13 +66,16 @@ async function parseOnMainThread(
   return readRecordingFile(kind, file);
 }
 
+/** The worker died mid-parse (out of memory, most likely); the interface words the message. */
+export class ParserCrashError extends Error {
+  constructor(readonly detail: string | undefined) {
+    super(en.builder.parserCrash(detail));
+    this.name = "ParserCrashError";
+  }
+}
+
 function reportCrash(message: string | undefined): void {
-  const detail = message ? ` (${message})` : "";
-  shutdown(
-    new Error(
-      `The parser crashed in the browser${detail}. The file may be too large for this tab: try the htv command line, or a HAR without response bodies.`
-    )
-  );
+  shutdown(new ParserCrashError(message));
 }
 
 function fallBackToMainThread(): void {

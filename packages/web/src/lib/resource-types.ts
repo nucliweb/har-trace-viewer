@@ -14,16 +14,6 @@ const TYPE_ORDER: ResourceType[] = [
   "other",
 ];
 
-export const TYPE_LABELS: Record<ResourceType, string> = {
-  document: "Document",
-  stylesheet: "CSS",
-  script: "JS",
-  font: "Fonts",
-  image: "Images",
-  fetch: "Fetch / XHR",
-  other: "Other",
-};
-
 export function groupByType<T extends { resourceType: ResourceType }>(
   entries: T[]
 ): Map<ResourceType, T[]> {

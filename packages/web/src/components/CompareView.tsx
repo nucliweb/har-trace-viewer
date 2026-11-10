@@ -19,6 +19,7 @@ import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
 import stepStyles from "./StepPanel.module.css";
 import diagramStyles from "./DiagramView.module.css";
+import { useMessages } from "../i18n/context.js";
 import styles from "./CompareView.module.css";
 
 interface Props {
@@ -45,6 +46,8 @@ interface SideView {
 }
 
 function DiagramPane({ side, view }: { side: Side; view: SideView }) {
+  const messages = useMessages();
+  const t = messages.compare;
   const { flow, name, stepIndex, current } = view;
   const [showCachePanel, setShowCachePanel] = useState(false);
   const [showFindings, setShowFindings] = useState(false);
@@ -71,7 +74,7 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           </span>
           {name}
         </h2>
-        {!current && <span className={styles.paneNote}>Holds step: {step.title}</span>}
+        {!current && <span className={styles.paneNote}>{t.holds(step.title)}</span>}
         <FindingsButton
           findings={findings}
           active={showFindings}
@@ -100,11 +103,11 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
             setShowFindings(false);
             setShowWaterfall(false);
           }}
-          aria-label="Toggle cache analysis"
+          aria-label={messages.diagram.toggleCache}
           aria-expanded={showCachePanel}
-          title="Cache Analysis"
+          title={messages.diagram.cacheTitle}
         >
-          Cache
+          {messages.diagram.cache}
         </button>
       </div>
       <div className={styles.paneCanvas}>
@@ -165,6 +168,8 @@ function PairInfo({
   pairIndex: number;
   total: number;
 }) {
+  const messages = useMessages();
+  const t = messages.compare;
   const stepA = stepOf(views.a);
   const stepB = stepOf(views.b);
   const rows = compareStepMetrics(stepA, stepB);
@@ -176,9 +181,7 @@ function PairInfo({
       role="tabpanel"
       aria-labelledby={`step-tab-${pairIndex}`}
     >
-      <div className={stepStyles.stepCounter}>
-        Step {pairIndex + 1} / {total}
-      </div>
+      <div className={stepStyles.stepCounter}>{messages.steps.counter(pairIndex + 1, total)}</div>
       <div className={styles.titles}>
         {SIDES.map((side) => {
           const view = views[side];
@@ -190,7 +193,7 @@ function PairInfo({
                 <span className={stepStyles.title}>{step.title}</span>
               ) : (
                 <span className={styles.missing}>
-                  No such step: stays on {view.flow.steps[view.stepIndex].title}
+                  {t.missing(view.flow.steps[view.stepIndex].title)}
                 </span>
               )}
             </div>
@@ -200,10 +203,10 @@ function PairInfo({
       {description && <p className={styles.description}>{description}</p>}
       {rows.length > 0 && (
         <table className={styles.metrics}>
-          <caption className={styles.srOnly}>Step metrics, A and B</caption>
+          <caption className={styles.srOnly}>{t.stepMetrics}</caption>
           <thead>
             <tr>
-              <th scope="col">Metric</th>
+              <th scope="col">{t.metric}</th>
               <th scope="col">A</th>
               <th scope="col">B</th>
               <th scope="col">Δ</th>
@@ -236,11 +239,12 @@ function PairInfo({
 }
 
 function Headline({ comparison }: { comparison: FlowComparison }) {
+  const t = useMessages().compare;
   const items = HEADLINE.map((key) => comparison.metrics.find((m) => m.key === key)!).filter(
     (m) => m.delta !== null
   );
   return (
-    <ul className={styles.headline} aria-label="Key deltas, B − A">
+    <ul className={styles.headline} aria-label={t.keyDeltas}>
       {items.map((m) => (
         <li key={m.key} className={styles.headlineItem}>
           <span className={styles.headlineLabel}>{m.label}</span>
@@ -262,6 +266,8 @@ const pairLabel = (pair: StepPair, a: Flow, b: Flow) =>
  * dimmed. The Deltas panel compares their metrics and hosts.
  */
 export function CompareView({ a, b }: Props) {
+  const messages = useMessages();
+  const t = messages.compare;
   const comparison = useMemo(() => compareFlows(a, b), [a, b]);
   const { pairs } = comparison;
   const nav = useStepNavigation(pairs.length);
@@ -280,7 +286,7 @@ export function CompareView({ a, b }: Props) {
   return (
     // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <div ref={viewRef} className={styles.view} role="region" aria-label="Comparison" tabIndex={0}>
+    <div ref={viewRef} className={styles.view} role="region" aria-label={t.region} tabIndex={0}>
       <div className={styles.body}>
         <div className={styles.diagrams}>
           {SIDES.map((side) => (
@@ -300,15 +306,15 @@ export function CompareView({ a, b }: Props) {
             <button
               className={`${styles.deltasBtn} ${showDeltas ? styles.deltasBtnActive : ""}`}
               onClick={() => setShowDeltas((v) => !v)}
-              aria-label="Toggle deltas"
+              aria-label={t.toggleDeltas}
               aria-expanded={showDeltas}
-              title="Metric and host deltas"
+              title={t.deltasTitle}
             >
-              Deltas
+              {t.deltas}
             </button>
           </div>
           <div className={stepStyles.visuallyHidden} aria-live="polite" aria-atomic="true">
-            Step {pairIndex + 1} of {pairs.length}: {labels[pairIndex]}
+            {messages.steps.live(pairIndex + 1, pairs.length, labels[pairIndex])}
           </div>
           <StepTrack labels={labels} stepIndex={pairIndex} goTo={nav.goTo} />
           <PairInfo views={views} pairIndex={pairIndex} total={pairs.length} />

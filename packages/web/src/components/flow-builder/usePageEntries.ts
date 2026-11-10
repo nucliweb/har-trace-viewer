@@ -1,4 +1,5 @@
 import { useCallback, useReducer } from "react";
+import { useMessages } from "../../i18n/context.js";
 import { loadHarFile, loadTraceFile, makeEntry } from "./page-entry.js";
 import type { EntryPatch, PageEntry } from "./page-entry.js";
 
@@ -46,8 +47,10 @@ export function pageEntriesReducer(
 
 /** The builder's entries with the actions on them, the files parsed in the worker. */
 export function usePageEntries() {
+  // The default names take the language of the moment; once given, a name is the user's.
+  const { pageName } = useMessages().builder;
   const [state, dispatch] = useReducer(pageEntriesReducer, null, () => ({
-    pages: [makeEntry("Page 1")],
+    pages: [makeEntry(pageName(1))],
     compare: makeEntry(),
   }));
 
@@ -77,8 +80,8 @@ export function usePageEntries() {
       []
     ),
     add: useCallback(
-      () => dispatch({ type: "add", entry: makeEntry(`Page ${state.pages.length + 1}`) }),
-      [state.pages.length]
+      () => dispatch({ type: "add", entry: makeEntry(pageName(state.pages.length + 1)) }),
+      [state.pages.length, pageName]
     ),
     remove: useCallback((id: string) => dispatch({ type: "remove", id }), []),
     updateCompare,

@@ -1,5 +1,6 @@
 import { formatBytes, formatMs, getRootDomain, shortUrl } from "@htv/core";
 import type { HarEntry, PreconnectSource } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
 import { preconnectCandidates } from "../lib/preconnect-candidates.js";
 import { groupByType } from "../lib/resource-types.js";
 import styles from "./ResourceSidebar.module.css";
@@ -60,14 +61,11 @@ interface Props {
 }
 
 function PreconnectBadge({ source }: { source: PreconnectSource }) {
+  const t = useMessages().resources;
   return (
     <span
       className={`${styles.preconnectBadge} ${source === "early-hints" ? styles.preconnectBadgeEH : ""}`}
-      title={
-        source === "link-header"
-          ? "preconnect via HTML Link header"
-          : "preconnect via 103 Early Hints"
-      }
+      title={source === "link-header" ? t.viaLinkHeader : t.viaEarlyHints}
     >
       {source === "link-header" ? "Link" : "103 EH"}
     </span>
@@ -81,9 +79,10 @@ function DomainsSection({
   domains: DomainInfo[];
   tipCandidates: string[];
 }) {
+  const t = useMessages().resources;
   return (
     <SidebarGroup>
-      <SidebarGroupHeader label="Domains" count={domains.length} />
+      <SidebarGroupHeader label={t.domains} count={domains.length} />
       <SidebarPagedRows
         items={domains}
         render={(d) => (
@@ -99,15 +98,14 @@ function DomainsSection({
         <div className={styles.preconnectTip}>
           <span className={styles.tipIcon}>💡</span>
           <span className={styles.tipText}>
-            Consider preconnecting{" "}
+            {t.tipBefore}{" "}
             {tipCandidates.map((hostname, i) => (
               <span key={hostname}>
                 {i > 0 && ", "}
                 <strong>{hostname}</strong>
               </span>
             ))}
-            : {tipCandidates.length === 1 ? "it serves" : "they serve"} resources the first render
-            waits for.
+            {t.tipAfter(tipCandidates.length)}
           </span>
         </div>
       )}
@@ -129,16 +127,17 @@ function OverviewDomainsSection({
   domains: DomainInfo[];
   documentHostname: string | undefined;
 }) {
+  const t = useMessages().resources;
   const documentRoot = documentHostname ? getRootDomain(`https://${documentHostname}/`) : null;
   const isFirstParty = (d: DomainInfo) => getRootDomain(`https://${d.hostname}/`) === documentRoot;
   const parties = [
-    { label: "First-party", list: domains.filter(isFirstParty) },
-    { label: "Third-party", list: domains.filter((d) => !isFirstParty(d)) },
+    { label: t.firstParty, list: domains.filter(isFirstParty) },
+    { label: t.thirdParty, list: domains.filter((d) => !isFirstParty(d)) },
   ];
 
   return (
     <SidebarGroup>
-      <SidebarGroupHeader label="Domains" count={domains.length} />
+      <SidebarGroupHeader label={t.domains} count={domains.length} />
       {parties.map(({ label, list }) => {
         const total = summarize(list);
         return (
@@ -146,7 +145,7 @@ function OverviewDomainsSection({
             <div className={styles.partyRow}>
               <span className={styles.partyName}>{label}</span>
               <span className={styles.domainStats}>
-                {list.length} domains · {total.requests} req · {formatBytes(total.bytes)}
+                {t.partyStats(list.length, total.requests, formatBytes(total.bytes))}
               </span>
             </div>
             {list.map((d) => (
@@ -176,6 +175,7 @@ export function ResourceSidebar({
   renderDeadline = null,
   overview = false,
 }: Props) {
+  const t = useMessages().sidebar;
   const grouped = groupByType(resources);
   const domains = extractDomains(resources, preconnectHints);
   const tipCandidates = documentHostname
@@ -185,7 +185,7 @@ export function ResourceSidebar({
   return (
     <Sidebar
       title={title}
-      subtitle={`${resources.length} resources`}
+      subtitle={t.resources(resources.length)}
       side="right"
       width={480}
       onClose={onClose}

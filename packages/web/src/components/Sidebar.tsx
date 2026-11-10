@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties, ElementType, ReactNode } from "react";
 import type { ResourceType } from "@htv/core";
-import { TYPE_LABELS } from "../lib/resource-types.js";
+import { useMessages } from "../i18n/context.js";
 import { ResourceTypeIcon } from "./ResourceTypeIcon.js";
 import styles from "./Sidebar.module.css";
 
@@ -22,6 +22,7 @@ export function Sidebar({
   onClose,
   children,
 }: SidebarProps) {
+  const t = useMessages().sidebar;
   return (
     <div
       className={`${styles.sidebar} ${side === "left" ? styles.left : styles.right}`}
@@ -31,7 +32,7 @@ export function Sidebar({
         <span className={styles.headerTitle}>{title}</span>
         {subtitle && <span className={styles.headerCount}>{subtitle}</span>}
         {onClose && (
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
             ✕
           </button>
         )}
@@ -88,7 +89,8 @@ export function SidebarTypeHeader({
   type: ResourceType;
   count: number;
 }) {
-  return <SidebarGroupHeader as={as} type={type} label={TYPE_LABELS[type]} count={count} />;
+  const t = useMessages().sidebar;
+  return <SidebarGroupHeader as={as} type={type} label={t.types[type]} count={count} />;
 }
 
 export function SidebarRows({ children }: { children: ReactNode }) {
@@ -106,6 +108,7 @@ interface PagedRowsProps<T> {
 
 /** The first rows of a list, with a button for the next page; a new list starts over. */
 export function SidebarPagedRows<T>({ items, render }: PagedRowsProps<T>) {
+  const t = useMessages().sidebar;
   const [paging, setPaging] = useState({ items, limit: PAGE_SIZE });
   const limit = paging.items === items ? paging.limit : PAGE_SIZE;
   const left = items.length - limit;
@@ -118,7 +121,7 @@ export function SidebarPagedRows<T>({ items, render }: PagedRowsProps<T>) {
           className={styles.more}
           onClick={() => setPaging({ items, limit: limit + PAGE_SIZE })}
         >
-          {`Show ${Math.min(PAGE_SIZE, left)} more (${left} left)`}
+          {t.showMore(Math.min(PAGE_SIZE, left), left)}
         </button>
       )}
     </div>

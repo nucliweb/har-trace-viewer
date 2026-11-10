@@ -1,6 +1,7 @@
 import { useCallback, useId, useState } from "react";
 import { isClientRegion } from "@htv/core";
 import type { ClientRegion, Flow, FlowOptions, PageFlow } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
 import styles from "./FlowBuilder.module.css";
 import { CompareTarget } from "./flow-builder/CompareTarget.js";
 import { DemoGlyph, Guide } from "./flow-builder/Guide.js";
@@ -26,6 +27,7 @@ interface Props {
  * offers a demo flow.
  */
 export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
+  const t = useMessages().builder;
   const entries = usePageEntries();
   const { pages, compare } = entries;
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
@@ -52,34 +54,31 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
     const generation = buildGeneration(
       pages,
       compare,
-      clientRegion === "auto" ? undefined : clientRegion
+      clientRegion === "auto" ? undefined : clientRegion,
+      t.page
     );
     onGenerate(generation.pages, generation.options, generation.comparePages);
   };
 
   return (
     <div className={styles.builder}>
-      <h2 className={styles.heading}>Build your flow</h2>
-      <p className={styles.hint}>
-        Add one page for a single-page trace, or multiple pages to visualise a user journey.
-      </p>
+      <h2 className={styles.heading}>{t.heading}</h2>
+      <p className={styles.hint}>{t.hint}</p>
 
       {onLoadFlow && (
         <div className={styles.demo}>
           <DemoGlyph />
           <div className={styles.demoText}>
-            <p className={styles.demoTitle}>No files at hand?</p>
-            <p className={styles.demoCopy}>
-              Step through a real page load, captured as a HAR file and a Chrome trace.
-            </p>
+            <p className={styles.demoTitle}>{t.demoTitle}</p>
+            <p className={styles.demoCopy}>{t.demoCopy}</p>
             {demoStatus === "error" && (
               <p className={styles.demoError} role="alert">
-                Could not load the demo flow.
+                {t.demoError}
               </p>
             )}
           </div>
           <button className={styles.demoBtn} onClick={loadDemo} disabled={demoStatus === "loading"}>
-            {demoStatus === "loading" ? "Loading…" : "Load demo flow →"}
+            {demoStatus === "loading" ? t.loading : t.loadDemo}
           </button>
         </div>
       )}
@@ -121,12 +120,12 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
 
       <div className={styles.footer}>
         <button className={styles.addBtn} onClick={entries.add}>
-          + Add page
+          {t.addPage}
         </button>
         <div className={styles.footerActions}>
           <div className={styles.regionField}>
             <label className={styles.regionLabel} htmlFor={regionSelectId}>
-              Client region
+              {t.clientRegion}
             </label>
             <select
               id={regionSelectId}
@@ -137,13 +136,13 @@ export function FlowBuilder({ onGenerate, onLoadFlow }: Props) {
                 if (value === "auto" || isClientRegion(value)) setClientRegion(value);
               }}
             >
-              <option value="auto">Auto (from the latencies)</option>
-              <option value="default">Default</option>
-              <option value="cn">China (behind the Great Firewall)</option>
+              <option value="auto">{t.regionAuto}</option>
+              <option value="default">{t.regionDefault}</option>
+              <option value="cn">{t.regionCn}</option>
             </select>
           </div>
           <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate}>
-            {comparing ? "Generate comparison →" : "Generate diagram →"}
+            {comparing ? t.generateComparison : t.generateDiagram}
           </button>
         </div>
       </div>

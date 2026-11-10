@@ -1,4 +1,5 @@
 import type { ClientRegionSuggestion } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
 import styles from "./RegionNotice.module.css";
 
 interface Props {
@@ -12,31 +13,28 @@ interface Props {
 }
 
 export function RegionNotice({ suggestion, applied, onSwitch, onDismiss }: Props) {
+  const t = useMessages().region;
   const otherRegion = applied ? "default" : suggestion.region;
-  const otherTopology = applied ? "default topology" : "GFW topology";
   return (
     <div className={styles.notice} role="status">
       <p className={styles.text}>
-        <span className={styles.title}>China / GFW routing{applied ? "" : "?"}</span> Latencies look
-        compatible with a client behind the Great Firewall ({suggestion.reason})
-        {applied
-          ? ", so the diagram draws it. A slow or mobile network shows the same latencies."
-          : ". A slow or mobile network shows the same latencies, so the diagram keeps the default topology."}
+        <span className={styles.title}>{t.title(applied)}</span>{" "}
+        {t.text(suggestion.reason, applied)}
         {!onSwitch && (
           <>
             {" "}
-            Generate the report with <code className={styles.code}>--region {otherRegion}</code> to
-            draw the {otherTopology}.
+            {t.cliBefore} <code className={styles.code}>--region {otherRegion}</code>{" "}
+            {t.cliAfter(applied)}
           </>
         )}
       </p>
       <div className={styles.actions}>
         {onSwitch && (
           <button className={styles.applyBtn} onClick={onSwitch}>
-            {applied ? "Show default topology" : "Show GFW topology"}
+            {applied ? t.showDefault : t.showGfw}
           </button>
         )}
-        <button className={styles.dismissBtn} onClick={onDismiss} aria-label="Dismiss notice">
+        <button className={styles.dismissBtn} onClick={onDismiss} aria-label={t.dismiss}>
           ×
         </button>
       </div>

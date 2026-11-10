@@ -7,6 +7,7 @@ import type {
   Recommendation,
   RecommendationResource,
 } from "@htv/core";
+import { useMessages } from "../i18n/context.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {
@@ -54,11 +55,6 @@ function formatAge(seconds: number): string {
   return formatDuration(seconds);
 }
 
-function formatMaxAge(seconds: number): string {
-  if (seconds === 0) return "0 (no browser cache)";
-  return formatDuration(seconds);
-}
-
 function CdnStatusBadge({ status }: { status: CdnCacheStatus }) {
   const label = status === "unknown" ? "—" : status.toUpperCase();
   return <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>{label}</span>;
@@ -79,12 +75,12 @@ function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "c
 
 /** The resources a recommendation names, collapsed behind their count and total size. */
 function RecResources({ resources }: { resources: RecommendationResource[] }) {
+  const t = useMessages().cache;
   const total = resources.reduce((sum, r) => sum + r.transferSize, 0);
   return (
     <details className={styles.recResources}>
       <summary className={styles.recResourcesSummary}>
-        {resources.length} {resources.length === 1 ? "resource" : "resources"} ·{" "}
-        {formatBytes(total)}
+        {t.resources(resources.length)} · {formatBytes(total)}
       </summary>
       <ul className={styles.recResourceList}>
         {resources.map((r, i) => (
@@ -121,6 +117,7 @@ function RecommendationList({ recommendations }: { recommendations: Recommendati
 }
 
 export function CachePanel({ report, network, pageLabel, onClose }: Props) {
+  const t = useMessages().cache;
   const networkTitleId = useId();
   const { document: doc, ownResources, browser, recommendations } = report;
   // Browser-cache hits never reach the CDN: the ratio covers the own network requests.
@@ -141,39 +138,43 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <span className={styles.headerTitle}>Cache & Network</span>
+          <span className={styles.headerTitle}>{t.title}</span>
           <h2 className={styles.pageLabel}>{pageLabel}</h2>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close cache analysis">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </div>
 
       {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label="Cache analysis details" tabIndex={0}>
+      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
         {/* Document */}
         <section className={styles.section}>
-          <div className={styles.sectionTitle}>Document</div>
+          <div className={styles.sectionTitle}>{t.document}</div>
           <div className={styles.rows}>
             <div className={styles.row}>
-              <span className={styles.rowLabel}>CDN Cache</span>
+              <span className={styles.rowLabel}>{t.cdnCache}</span>
               <CdnStatusBadge status={doc.cdnStatus} />
             </div>
             <div className={styles.row}>
               <span className={styles.rowLabel}>max-age</span>
               <span className={styles.rowValue}>
-                {doc.maxAge !== null ? formatMaxAge(doc.maxAge) : "—"}
+                {doc.maxAge === null
+                  ? "—"
+                  : doc.maxAge === 0
+                    ? t.noBrowserCache
+                    : formatDuration(doc.maxAge)}
               </span>
             </div>
             {docCacheControl && (
               <div className={styles.row}>
-                <span className={styles.rowLabel}>Directives</span>
+                <span className={styles.rowLabel}>{t.directives}</span>
                 <span className={`${styles.rowValue} ${styles.mono}`}>{docCacheControl}</span>
               </div>
             )}
             <div className={styles.row}>
-              <span className={styles.rowLabel}>CDN Age</span>
+              <span className={styles.rowLabel}>{t.cdnAge}</span>
               <span
                 className={styles.rowValue}
                 title={doc.age !== null ? `${doc.age}s` : undefined}
@@ -188,11 +189,11 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
         {ownResources.total > 0 && (
           <section className={styles.section}>
             <div className={styles.sectionTitle}>
-              Static Assets <span className={styles.sectionCount}>{ownResources.total}</span>
+              {t.staticAssets} <span className={styles.sectionCount}>{ownResources.total}</span>
             </div>
             <div className={styles.rows}>
               <div className={styles.row}>
-                <span className={styles.rowLabel}>CDN hits</span>
+                <span className={styles.rowLabel}>{t.cdnHits}</span>
                 <span className={styles.rowValue}>
                   {cdnJudged > 0 ? (
                     <>
@@ -205,7 +206,7 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
                 </span>
               </div>
               <div className={styles.row}>
-                <span className={styles.rowLabel}>Immutable</span>
+                <span className={styles.rowLabel}>{t.immutable}</span>
                 <span className={styles.rowValue}>
                   {ownResources.immutableCount}/{ownResources.total}
                   <span className={styles.pct}> {pct(ownResources.immutableRatio)}</span>
@@ -217,10 +218,10 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
 
         {/* Browser cache */}
         <section className={styles.section}>
-          <div className={styles.sectionTitle}>Browser Cache</div>
+          <div className={styles.sectionTitle}>{t.browserCache}</div>
           <div className={styles.rows}>
             <div className={styles.row}>
-              <span className={styles.rowLabel}>Hit ratio</span>
+              <span className={styles.rowLabel}>{t.hitRatio}</span>
               <span className={styles.rowValue}>
                 {pct(browser.hitRatio)}
                 <span className={styles.pct}>
@@ -231,34 +232,31 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
             </div>
             {(browser.fromDisk > 0 || browser.fromMemory > 0) && (
               <div className={styles.row}>
-                <span className={styles.rowLabel}>From disk</span>
+                <span className={styles.rowLabel}>{t.fromDisk}</span>
                 <span className={styles.rowValue}>{browser.fromDisk}</span>
               </div>
             )}
             {browser.fromMemory > 0 && (
               <div className={styles.row}>
-                <span className={styles.rowLabel}>From memory</span>
+                <span className={styles.rowLabel}>{t.fromMemory}</span>
                 <span className={styles.rowValue}>{browser.fromMemory}</span>
               </div>
             )}
             {(browser.fromUnknownStore ?? 0) > 0 && (
-              <div
-                className={styles.row}
-                title="The HAR marks these responses as cache hits only by size, not by store"
-              >
-                <span className={styles.rowLabel}>Store not recorded</span>
+              <div className={styles.row} title={t.storeNotRecordedTitle}>
+                <span className={styles.rowLabel}>{t.storeNotRecorded}</span>
                 <span className={styles.rowValue}>{browser.fromUnknownStore}</span>
               </div>
             )}
             {inferred > 0 && (
               <div className={styles.row}>
-                <span className={styles.rowLabel}>Inferred (WebPageTest)</span>
+                <span className={styles.rowLabel}>{t.inferred}</span>
                 <span className={styles.rowValue}>{inferred}</span>
               </div>
             )}
             {revalidated > 0 && (
               <div className={styles.row}>
-                <span className={styles.rowLabel}>Revalidated (304)</span>
+                <span className={styles.rowLabel}>{t.revalidated}</span>
                 <span className={styles.rowValue}>{revalidated}</span>
               </div>
             )}
@@ -268,7 +266,7 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
         {/* Recommendations */}
         {recommendations.length > 0 && (
           <section className={styles.section}>
-            <div className={styles.sectionTitle}>Recommendations</div>
+            <div className={styles.sectionTitle}>{t.recommendations}</div>
             <RecommendationList recommendations={recommendations} />
           </section>
         )}
@@ -277,14 +275,12 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
         {network && (
           <section className={styles.section} aria-labelledby={networkTitleId}>
             <div className={styles.sectionTitle} id={networkTitleId}>
-              Network
+              {t.network}
             </div>
             {network.recommendations.length > 0 ? (
               <RecommendationList recommendations={network.recommendations} />
             ) : (
-              <p className={styles.recDesc}>
-                No duplicate requests, redirects, errors or mixed content.
-              </p>
+              <p className={styles.recDesc}>{t.networkClean}</p>
             )}
           </section>
         )}

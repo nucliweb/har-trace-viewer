@@ -8,7 +8,8 @@ import {
 } from "@htv/core";
 import type { HostHop, ThirdPartyReport } from "@htv/core";
 import { useMemo } from "react";
-import { regionLabel } from "../lib/region-label.js";
+import { useMessages } from "../i18n/context.js";
+import type { Messages } from "../i18n/en.js";
 import styles from "./HopsPanel.module.css";
 
 interface Props {
@@ -19,59 +20,55 @@ interface Props {
   onClose: () => void;
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-function formatConnection(hop: HostHop): string {
+function formatConnection(hop: HostHop, t: Messages["hops"]): string {
   const c = hop.connection;
-  if (!c) return "reused";
+  if (!c) return t.reused;
   return [c.dns, c.connect, c.ssl].map(formatMs).join(" / ");
 }
 
 const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${formatBytes(c.bytes)})`;
 
 function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
+  const t = useMessages().hops;
   const count = report.entities.length;
   const summary =
     count === 0
-      ? "No third-party requests."
-      : [
-          `${count} third ${count === 1 ? "party" : "parties"}`,
-          `${pct(report.byteShare)} of the bytes`,
-          `${pct(report.requestShare)} of the requests`,
-          `${report.totals.renderBlocking} render-blocking`,
-          ...(report.consentManager ? [`consent manager: ${report.consentManager}`] : []),
-        ].join(" · ");
+      ? t.noThirdParties
+      : t.thirdPartySummary(
+          count,
+          pct(report.byteShare),
+          pct(report.requestShare),
+          report.totals.renderBlocking,
+          report.consentManager
+        );
   return (
     <>
-      <h3 className={styles.sectionTitle}>Third parties</h3>
+      <h3 className={styles.sectionTitle}>{t.thirdParties}</h3>
       <p className={styles.sectionSummary}>{summary}</p>
       {count > 0 && (
         <table className={styles.table}>
-          <caption className={styles.caption}>Third parties per entity</caption>
+          <caption className={styles.caption}>{t.perEntity}</caption>
           <thead>
             <tr>
-              <th scope="col">Third party</th>
-              <th scope="col">Category</th>
-              <th scope="col">Hosts</th>
-              <th scope="col">Requests</th>
-              <th scope="col" title="Served from the browser cache, without a request">
-                Cached
+              <th scope="col">{t.thirdParty}</th>
+              <th scope="col">{t.category}</th>
+              <th scope="col">{t.hosts}</th>
+              <th scope="col">{t.requests}</th>
+              <th scope="col" title={t.cachedTitle}>
+                {t.cached}
               </th>
-              <th scope="col">Bytes</th>
-              <th scope="col" title="Network requests sent up to the load event, and their bytes">
-                Before onLoad
+              <th scope="col">{t.bytes}</th>
+              <th scope="col" title={t.beforeOnLoadTitle}>
+                {t.beforeOnLoad}
               </th>
-              <th scope="col" title="Network requests sent after the load event, and their bytes">
-                After onLoad
+              <th scope="col" title={t.afterOnLoadCostTitle}>
+                {t.afterOnLoad}
               </th>
-              <th scope="col" title="Requests that held the first paint">
-                Render-blocking
+              <th scope="col" title={t.renderBlockingTitle}>
+                {t.renderBlocking}
               </th>
-              <th
-                scope="col"
-                title="Median TTFB of the requests sent before onLoad, beacons and 304 revalidations aside"
-              >
-                Median TTFB
+              <th scope="col" title={t.entityMedianTtfbTitle}>
+                {t.medianTtfb}
               </th>
             </tr>
           </thead>
@@ -98,6 +95,7 @@ function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
 }
 
 export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
+  const t = useMessages().hops;
   const summary = useMemo(() => summarizeHops(hops), [hops]);
   // Stable sort keeps the requests order inside each party.
   const ordered = useMemo(
@@ -109,50 +107,44 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <span className={styles.title}>Hops</span>
+          <span className={styles.title}>{t.title}</span>
           <h2 className={styles.pageLabel}>{pageLabel}</h2>
         </div>
-        <button className={styles.closeBtn} onClick={onClose} aria-label="Close hops">
+        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </div>
       <p className={styles.summary}>
-        {`${plural(hops.length, "host")} · ${plural(summary.providers.length, "provider")} · ${plural(summary.regions.length, "region")}`}
+        {t.summary(hops.length, summary.providers.length, summary.regions.length)}
       </p>
       {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label="Hops details" tabIndex={0}>
+      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
         <table className={styles.table}>
-          <caption className={styles.caption}>Hops per host</caption>
+          <caption className={styles.caption}>{t.caption}</caption>
           <thead>
             <tr>
-              <th scope="col">Host</th>
-              <th scope="col">Party</th>
-              <th scope="col">Provider</th>
-              <th scope="col">PoP</th>
-              <th scope="col">Requests</th>
-              <th scope="col" title="Served from the browser cache, without a request">
-                Cached
+              <th scope="col">{t.host}</th>
+              <th scope="col">{t.party}</th>
+              <th scope="col">{t.provider}</th>
+              <th scope="col">{t.pop}</th>
+              <th scope="col">{t.requests}</th>
+              <th scope="col" title={t.cachedTitle}>
+                {t.cached}
               </th>
-              <th scope="col">Bytes</th>
-              <th scope="col">Hit ratio</th>
-              <th
-                scope="col"
-                title="Median TTFB of the requests sent before onLoad, beacons (POST, ping, 204/205) and 304 revalidations aside"
-              >
-                Median TTFB
+              <th scope="col">{t.bytes}</th>
+              <th scope="col">{t.hitRatio}</th>
+              <th scope="col" title={t.medianTtfbTitle}>
+                {t.medianTtfb}
               </th>
-              <th scope="col" title="Median TTFB of the requests sent after onLoad, beacons aside">
-                After onLoad
+              <th scope="col" title={t.afterOnLoadTitle}>
+                {t.afterOnLoad}
               </th>
-              <th scope="col" title="First new connection; n/a for a phase that did not happen">
-                DNS / TCP / TLS
+              <th scope="col" title={t.connectionTitle}>
+                {t.connection}
               </th>
-              <th
-                scope="col"
-                title="HTTP version of the requests that reached the host, and the connections they used"
-              >
-                Protocol
+              <th scope="col" title={t.protocolTitle}>
+                {t.protocol}
               </th>
             </tr>
           </thead>
@@ -168,16 +160,16 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
                     />
                     {hop.host}
                   </th>
-                  <td>{hop.party === "first" ? "First" : "Third"}</td>
+                  <td>{hop.party === "first" ? t.first : t.third}</td>
                   <td>{hop.providerName}</td>
-                  <td>{hop.pop ? `${hop.pop.city} · ${regionLabel(hop.pop.region)}` : "n/a"}</td>
+                  <td>{hop.pop ? `${hop.pop.city} · ${t.regions[hop.pop.region]}` : t.na}</td>
                   <td className={styles.num}>{hop.requests}</td>
                   <td className={styles.num}>{hop.browserCacheHits}</td>
                   <td className={styles.num}>{formatBytes(hop.bytes)}</td>
-                  <td className={styles.num}>{judged ? pct(hop.hitRatio) : "n/a"}</td>
+                  <td className={styles.num}>{judged ? pct(hop.hitRatio) : t.na}</td>
                   <td className={styles.num}>{formatMs(hop.medianTtfbMs)}</td>
                   <td className={styles.num}>{formatMs(hop.afterLoadMedianTtfbMs)}</td>
-                  <td className={styles.num}>{formatConnection(hop)}</td>
+                  <td className={styles.num}>{formatConnection(hop, t)}</td>
                   <td>{protocolLabel(hop)}</td>
                 </tr>
               );

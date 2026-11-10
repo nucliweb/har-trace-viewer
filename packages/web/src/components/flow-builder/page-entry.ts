@@ -6,7 +6,8 @@ import {
   webPageTestLabel,
 } from "@htv/core";
 import type { ClientRegion, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
-import { parseInWorker } from "../../lib/parse-client.js";
+import type { Messages } from "../../i18n/en.js";
+import { ParserCrashError, parseInWorker } from "../../lib/parse-client.js";
 import type { ParseProgress } from "../../lib/parse-protocol.js";
 
 /** One recording of the builder: its HAR, its optional trace and what loading them is up to. */
@@ -19,8 +20,8 @@ export interface PageEntry {
   harFileName: string;
   trace: ParsedTrace | null;
   traceFileName: string;
-  harError: string | null;
-  traceError: string | null;
+  harError: EntryError | null;
+  traceError: EntryError | null;
   harProgress: ParseProgress | null;
   traceProgress: ParseProgress | null;
   /** Two page ids of a multi-page HAR proposed for a comparison (first vs repeat view). */
@@ -30,6 +31,29 @@ export interface PageEntry {
 }
 
 export type EntryPatch = Partial<PageEntry>;
+
+/** Why a file did not load: the parsers' own messages, or one the interface words itself. */
+export type EntryError =
+  | { kind: "har-extension" }
+  | { kind: "trace-extension" }
+  | { kind: "parser-crash"; detail?: string }
+  // The parsers' messages are written for the user: they are shown as they are.
+  | { kind: "message"; message: string };
+
+type BuilderMessages = Messages["builder"];
+
+export function describeEntryError(error: EntryError, t: BuilderMessages): string {
+  switch (error.kind) {
+    case "har-extension":
+      return t.harExtension;
+    case "trace-extension":
+      return t.traceExtension;
+    case "parser-crash":
+      return t.parserCrash(error.detail);
+    case "message":
+      return error.message;
+  }
+}
 
 export function makeEntry(name = ""): PageEntry {
   return {
@@ -49,10 +73,11 @@ export function makeEntry(name = ""): PageEntry {
   };
 }
 
-const PHASE_LABEL = { reading: "Reading", decompressing: "Decompressing", parsing: "Parsing" };
-
-export function describeProgress({ phase, loaded, total }: ParseProgress): string {
-  const label = `${PHASE_LABEL[phase]}…`;
+export function describeProgress(
+  { phase, loaded, total }: ParseProgress,
+  t: BuilderMessages
+): string {
+  const label = `${t.progress[phase]}…`;
   return phase === "parsing" || total === 0
     ? label
     : `${label} ${Math.min(100, Math.round((loaded / total) * 100))} %`;
@@ -65,14 +90,15 @@ export function hasFlowPages(p: PageEntry): boolean {
 
 export const isEntryParsing = (p: PageEntry) => p.harProgress !== null || p.traceProgress !== null;
 
-// The parsers' messages are written for the user: they are shown as they are.
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+const toEntryError = (error: unknown): EntryError =>
+  error instanceof ParserCrashError
+    ? { kind: "parser-crash", detail: error.detail }
+    : { kind: "message", message: error instanceof Error ? error.message : String(error) };
 
 /** Parses a dropped HAR in the worker, reporting progress and the result through `apply`. */
 export function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
   if (!/\.har(\.gz)?$/i.test(file.name)) {
-    apply({ harError: "Only .har and .har.gz files are supported." });
+    apply({ harError: { kind: "har-extension" } });
     return;
   }
   apply({ harProgress: { phase: "reading", loaded: 0, total: file.size }, harError: null });
@@ -87,13 +113,13 @@ export function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
         harProgress: null,
       })
     )
-    .catch((error: unknown) => apply({ harError: errorMessage(error), harProgress: null }));
+    .catch((error: unknown) => apply({ harError: toEntryError(error), harProgress: null }));
 }
 
 /** Parses a dropped Chrome trace in the worker, reporting progress and the result through `apply`. */
 export async function loadTraceFile(file: File, apply: (patch: EntryPatch) => void) {
   if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
-    apply({ traceError: "Expected .json or .json.gz trace file." });
+    apply({ traceError: { kind: "trace-extension" } });
     return;
   }
   apply({ traceProgress: { phase: "reading", loaded: 0, total: file.size }, traceError: null });
@@ -101,12 +127,14 @@ export async function loadTraceFile(file: File, apply: (patch: EntryPatch) => vo
     const trace = await parseInWorker("trace", file, (traceProgress) => apply({ traceProgress }));
     apply({ trace, traceFileName: file.name, traceError: null, traceProgress: null });
   } catch (error) {
-    apply({ traceError: errorMessage(error), traceProgress: null });
+    apply({ traceError: toEntryError(error), traceProgress: null });
   }
 }
 
-export const pageOptionLabel = (page: ReturnType<typeof listHarPages>[number]) =>
-  `${webPageTestLabel(page.title) ?? (page.title || page.url)} (${page.entries} req)`;
+export const pageOptionLabel = (
+  page: ReturnType<typeof listHarPages>[number],
+  t: BuilderMessages
+) => t.pageOption(webPageTestLabel(page.title) ?? (page.title || page.url), page.entries);
 
 /** What the Generate button builds: the flow's pages, its options and the pages of B, if any. */
 interface Generation {
@@ -126,7 +154,9 @@ export function pagePairOf(pages: PageEntry[]): [string, string] | null {
 export function buildGeneration(
   pages: PageEntry[],
   compareEntry: PageEntry,
-  clientRegion: ClientRegion | undefined
+  clientRegion: ClientRegion | undefined,
+  // The name of a page left unnamed.
+  fallbackName = "Page"
 ): Generation {
   // Without a region the flow takes the one its latencies suggest.
   const options: FlowOptions = clientRegion ? { clientRegion } : {};
@@ -135,7 +165,7 @@ export function buildGeneration(
     const [first] = pages;
     const side = (id: string) =>
       expandPageFlows({
-        name: first.name.trim() || "Page",
+        name: first.name.trim() || fallbackName,
         har: first.har!,
         select: { pageIds: [id] },
         // The trace belongs to one recording: it stays with A.
@@ -145,7 +175,7 @@ export function buildGeneration(
   }
   const pageFlows: PageFlow[] = pages.filter(hasFlowPages).flatMap((p) =>
     expandPageFlows({
-      name: p.name.trim() || "Page",
+      name: p.name.trim() || fallbackName,
       har: p.har!,
       ...(p.har!.length > 1 ? { select: { pageIds: p.selectedPageIds } } : {}),
       ...(p.trace ? { trace: p.trace } : {}),

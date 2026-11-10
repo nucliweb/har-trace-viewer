@@ -1,6 +1,7 @@
 import { useRef } from "react";
+import { useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
-import { describeProgress } from "./page-entry.js";
+import { describeEntryError, describeProgress } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
 
 interface Props {
@@ -19,10 +20,13 @@ export function FileZones({
   entry,
   onHarFile,
   onTraceFile,
-  dropLabel = "Drop .har",
+  dropLabel,
   harInputLabel,
   traceInputLabel,
 }: Props) {
+  const t = useMessages().builder;
+  const harError = entry.harError && describeEntryError(entry.harError, t);
+  const traceError = entry.traceError && describeEntryError(entry.traceError, t);
   const harInputRef = useRef<HTMLInputElement>(null);
   const traceInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,26 +51,22 @@ export function FileZones({
           className={`${styles.harBtn} ${entry.har ? styles.harLoaded : ""} ${entry.harError ? styles.harError : ""}`}
           onClick={() => harInputRef.current?.click()}
           disabled={entry.harProgress !== null}
-          title={
-            entry.har
-              ? entry.harFileName
-              : (entry.harError ?? "Click or drop a .har or .har.gz file")
-          }
+          title={entry.har ? entry.harFileName : (harError ?? t.harTitle)}
         >
           {entry.harProgress ? (
             <span className={styles.progressText} role="status">
-              {describeProgress(entry.harProgress)}
+              {describeProgress(entry.harProgress, t)}
             </span>
           ) : entry.har ? (
             <span className={styles.harName}>
               {entry.harFileName}
-              {entry.har.length > 1 ? ` · ${entry.har.length} pages` : ""}
+              {entry.har.length > 1 ? t.harPages(entry.har.length) : ""}
             </span>
-          ) : entry.harError ? (
-            <span className={styles.errorText}>{entry.harError}</span>
+          ) : harError ? (
+            <span className={styles.errorText}>{harError}</span>
           ) : (
             <>
-              <span className={styles.harIcon}>⬇</span> {dropLabel}
+              <span className={styles.harIcon}>⬇</span> {dropLabel ?? t.dropHar}
             </>
           )}
         </button>
@@ -91,18 +91,18 @@ export function FileZones({
           className={`${styles.traceBtn} ${entry.trace ? styles.traceLoaded : ""}`}
           onClick={() => traceInputRef.current?.click()}
           disabled={!entry.har || entry.traceProgress !== null}
-          title={entry.trace ? entry.traceFileName : "Load a Chrome DevTools trace (optional)"}
+          title={entry.trace ? entry.traceFileName : t.traceTitle}
         >
-          {entry.trace ? "Trace ✓" : "Trace"}
+          {entry.trace ? t.traceLoaded : t.trace}
         </button>
         {entry.traceProgress && (
           <span className={styles.progressText} role="status">
-            {describeProgress(entry.traceProgress)}
+            {describeProgress(entry.traceProgress, t)}
           </span>
         )}
-        {entry.traceError && (
-          <span className={styles.traceErrorText} title={entry.traceError}>
-            {entry.traceError}
+        {traceError && (
+          <span className={styles.traceErrorText} title={traceError}>
+            {traceError}
           </span>
         )}
       </div>

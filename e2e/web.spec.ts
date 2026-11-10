@@ -188,3 +188,30 @@ test("the keyboard opens the shortcuts and the settings as accessible modal dial
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect(errors).toEqual([]);
 });
+
+test("l switches the interface language, kept across reloads", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(baseUrl);
+  await expect(page.getByRole("heading", { name: "Build your flow" })).toBeVisible();
+
+  await page.keyboard.press("l");
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  await expect(page.getByRole("heading", { name: "Construye tu flujo" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Construye tu flujo" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Cargar el flujo de demostración →" }).click();
+  await expect(page.getByText(/^Paso 1 \/ \d+$/)).toBeVisible();
+  await page.keyboard.press("c");
+  const settings = page.getByRole("dialog", { name: "Configuración" });
+  await settings.getByRole("radio", { name: "Català" }).check();
+  await expect(page.locator("html")).toHaveAttribute("lang", "ca");
+  await expect(page.getByRole("dialog", { name: "Configuració" })).toBeVisible();
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((v) => v.id)).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByText(/^Pas 1 \/ \d+$/)).toBeVisible();
+  expect(errors).toEqual([]);
+});

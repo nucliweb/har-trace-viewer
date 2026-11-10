@@ -7,6 +7,7 @@ import {
   readBadges,
   serializeDiagramSvg,
 } from "../lib/export-diagram.js";
+import { useMessages } from "../i18n/context.js";
 import styles from "./ExportMenu.module.css";
 
 interface Props {
@@ -28,9 +29,10 @@ export function ExportMenu({
   download = downloadBlob,
   collectFonts = collectFontFaceCss,
 }: Props) {
+  const t = useMessages().export;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
@@ -59,7 +61,7 @@ export function ExportMenu({
     setOpen(false);
     if (!container || !svg) return;
     setBusy(true);
-    setError(null);
+    setFailed(false);
     try {
       const svgString = serializeDiagramSvg(svg, {
         theme: currentTheme(),
@@ -69,7 +71,7 @@ export function ExportMenu({
       const blob = extension === "svg" ? svgBlob(svgString) : await svgToPngBlob(svgString, 2);
       download(blob, exportFilename(pageName, stepNumber, extension));
     } catch {
-      setError("Export failed");
+      setFailed(true);
     } finally {
       setBusy(false);
       buttonRef.current?.focus();
@@ -102,33 +104,28 @@ export function ExportMenu({
         disabled={disabled || busy}
         onClick={() => setOpen((v) => !v)}
       >
-        Export
+        {t.button}
       </button>
       {open && (
         // The menu container handles Escape and arrow keys on behalf of its menuitems.
         // eslint-disable-next-line jsx-a11y/interactive-supports-focus
-        <div
-          role="menu"
-          aria-label="Export diagram"
-          className={styles.menu}
-          onKeyDown={onMenuKeyDown}
-        >
+        <div role="menu" aria-label={t.menu} className={styles.menu} onKeyDown={onMenuKeyDown}>
           <button
             ref={firstItemRef}
             role="menuitem"
             className={styles.item}
             onClick={() => run("svg")}
           >
-            Download SVG
+            {t.svg}
           </button>
           <button role="menuitem" className={styles.item} onClick={() => run("png")}>
-            Download PNG (2x)
+            {t.png}
           </button>
         </div>
       )}
-      {error && (
+      {failed && (
         <span role="alert" className={styles.error}>
-          {error}
+          {t.failed}
         </span>
       )}
     </div>

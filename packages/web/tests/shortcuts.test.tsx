@@ -114,3 +114,48 @@ describe("App — settings", () => {
     expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
   });
 });
+
+describe("App — language", () => {
+  it("l cycles the interface through English, Spanish and Catalan", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Build your flow" })).toBeInTheDocument();
+
+    await user.keyboard("l");
+    expect(html).toHaveAttribute("lang", "es");
+    expect(screen.getByRole("heading", { name: "Construye tu flujo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Configuración" })).toBeInTheDocument();
+
+    await user.keyboard("l");
+    expect(html).toHaveAttribute("lang", "ca");
+    expect(screen.getByRole("heading", { name: "Construeix el teu flux" })).toBeInTheDocument();
+
+    await user.keyboard("l");
+    expect(html).toHaveAttribute("lang", "en");
+  });
+
+  it("the settings choose the language, each named in its own", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.keyboard("c");
+
+    const english = screen.getByRole("radio", { name: "English" });
+    expect(english).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "Català" }));
+    expect(html).toHaveAttribute("lang", "ca");
+    const settings = screen.getByRole("dialog", { name: "Configuració" });
+    expect(within(settings).getByRole("group", { name: "Idioma" })).toBeInTheDocument();
+    expect(within(settings).getByText("Español")).toHaveAttribute("lang", "es");
+  });
+
+  it("the help lists the language key, in the active language", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.keyboard("l");
+    await user.keyboard("?");
+
+    const help = screen.getByRole("dialog", { name: "Atajos de teclado" });
+    expect(within(help).getByText("Cambiar el idioma")).toBeInTheDocument();
+    expect(within(help).getByText("Espacio")).toBeInTheDocument();
+  });
+});

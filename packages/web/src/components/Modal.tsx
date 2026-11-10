@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
+import { useMessages } from "../i18n/context.js";
 import styles from "./Modal.module.css";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 export function Modal({ title, onClose, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const t = useMessages().modal;
 
   useEffect(() => {
     const dialog = ref.current;
@@ -38,7 +40,7 @@ export function Modal({ title, onClose, children }: Props) {
         <h2 id={titleId} className={styles.title}>
           {title}
         </h2>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
+        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </div>

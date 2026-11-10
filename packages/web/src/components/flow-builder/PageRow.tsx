@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { listHarPages } from "@htv/core";
 import type { ParsedHar } from "@htv/core";
+import { useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
 import { FileZones } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
@@ -43,6 +44,7 @@ export function PageRow({
   onDragOver,
   onDragLeave,
 }: Props) {
+  const t = useMessages().builder;
   const handleHarDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDragLeave();
@@ -67,8 +69,8 @@ export function PageRow({
             className={styles.orderBtn}
             onClick={onMoveUp}
             disabled={idx === 0}
-            title="Move up"
-            aria-label="Move page up"
+            title={t.moveUp}
+            aria-label={t.moveUpLabel}
           >
             ↑
           </button>
@@ -76,8 +78,8 @@ export function PageRow({
             className={styles.orderBtn}
             onClick={onMoveDown}
             disabled={idx === total - 1}
-            title="Move down"
-            aria-label="Move page down"
+            title={t.moveDown}
+            aria-label={t.moveDownLabel}
           >
             ↓
           </button>
@@ -88,8 +90,8 @@ export function PageRow({
           type="text"
           value={page.name}
           onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Page name"
-          aria-label={`Page ${idx + 1} name`}
+          placeholder={t.namePlaceholder}
+          aria-label={t.nameLabel(idx + 1)}
         />
 
         <FileZones entry={page} onHarFile={onHarFile} onTraceFile={onTraceFile} />
@@ -98,8 +100,8 @@ export function PageRow({
           className={styles.removeBtn}
           onClick={onRemove}
           disabled={total === 1}
-          title="Remove page"
-          aria-label="Remove page"
+          title={t.removePage}
+          aria-label={t.removePage}
         >
           ×
         </button>
@@ -108,7 +110,7 @@ export function PageRow({
         <PageChecklist
           har={page.har}
           selected={page.selectedPageIds}
-          name={page.name || `Page ${idx + 1}`}
+          name={page.name || t.pageName(idx + 1)}
           onChange={onSelectedPagesChange}
         />
       )}
@@ -133,6 +135,7 @@ interface ComparePagesPickerProps {
 
 /** Compares two pages of one HAR, e.g. the first and the repeat view of a WebPageTest run. */
 function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPickerProps) {
+  const t = useMessages().builder;
   const pages = listHarPages(har);
   const idA = useId();
   const idB = useId();
@@ -143,14 +146,14 @@ function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPicker
   };
   return (
     <fieldset className={styles.checklist}>
-      <legend className={styles.checklistLegend}>Compare pages</legend>
+      <legend className={styles.checklistLegend}>{t.comparePages}</legend>
       <label className={styles.checklistItem}>
         <input
           type="checkbox"
           checked={enabled}
           onChange={(e) => onChange({ comparePair: pair, comparePages: e.target.checked })}
         />
-        <span>Compare two pages of this HAR</span>
+        <span>{t.compareTwoPages}</span>
       </label>
       {([0, 1] as const).map((side) => (
         <span key={side} className={styles.pairField}>
@@ -166,7 +169,7 @@ function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPicker
           >
             {pages.map((page) => (
               <option key={page.id} value={page.id}>
-                {pageOptionLabel(page)}
+                {pageOptionLabel(page, t)}
               </option>
             ))}
           </select>
@@ -185,19 +188,20 @@ interface PageChecklistProps {
 
 /** Which pages of a multi-page HAR (e.g. the runs and views of a WebPageTest export) join the flow. */
 function PageChecklist({ har, selected, name, onChange }: PageChecklistProps) {
+  const t = useMessages().builder;
   const pages = listHarPages(har);
   const allSelected = selected.length === pages.length;
   const toggle = (id: string) =>
     onChange(pages.map((p) => p.id).filter((pid) => (pid === id) !== selected.includes(pid)));
   return (
     <fieldset className={styles.checklist}>
-      <legend className={styles.checklistLegend}>Pages to include from {name}</legend>
+      <legend className={styles.checklistLegend}>{t.pagesToInclude(name)}</legend>
       <button
         type="button"
         className={styles.checklistToggle}
         onClick={() => onChange(allSelected ? [] : pages.map((p) => p.id))}
       >
-        {allSelected ? "Select none" : "Select all"}
+        {allSelected ? t.selectNone : t.selectAll}
       </button>
       <ul className={styles.checklistItems}>
         {pages.map((page) => (
@@ -208,7 +212,7 @@ function PageChecklist({ har, selected, name, onChange }: PageChecklistProps) {
                 checked={selected.includes(page.id)}
                 onChange={() => toggle(page.id)}
               />
-              <span>{pageOptionLabel(page)}</span>
+              <span>{pageOptionLabel(page, t)}</span>
             </label>
           </li>
         ))}

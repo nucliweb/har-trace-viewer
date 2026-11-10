@@ -19,7 +19,8 @@ import type {
   HopPair,
   ThirdPartyComparison,
 } from "@htv/core";
-import { RATING_CLASS, RATING_TEXT } from "./MetricsSummary.js";
+import { useMessages } from "../i18n/context.js";
+import { RATING_CLASS } from "./MetricsSummary.js";
 import metricsStyles from "./MetricsSummary.module.css";
 import hopsStyles from "./HopsPanel.module.css";
 import styles from "./DeltasPanel.module.css";
@@ -44,26 +45,21 @@ export const DELTA_CLASS: Record<DeltaRating, string> = {
   none: "",
 };
 
-const DELTA_TEXT: Record<DeltaRating, string> = {
-  better: "better",
-  worse: "worse",
-  same: "no change",
-  none: "",
-};
-
 /** A delta cell: the signed value, its rating colour and the rating in words for screen readers. */
 export function DeltaCell({ text, rating }: { text: string; rating: DeltaRating }) {
+  const t = useMessages().deltas;
   return (
     <td className={`${hopsStyles.num} ${DELTA_CLASS[rating]}`} data-rating={rating}>
       {text}
       {rating !== "none" && rating !== "same" && (
-        <span className={metricsStyles.srOnly}>{` (${DELTA_TEXT[rating]})`}</span>
+        <span className={metricsStyles.srOnly}>{` (${t.rating[rating]})`}</span>
       )}
     </td>
   );
 }
 
 function HopRow({ pair }: { pair: HopPair }) {
+  const t = useMessages().deltas;
   const { a, b, sameUrls } = pair;
   const requests = (b?.requests ?? 0) - (a?.requests ?? 0);
   // Over the URLs both flows requested: averages over all requests mix different resources.
@@ -86,9 +82,7 @@ function HopRow({ pair }: { pair: HopPair }) {
       <td
         className={hopsStyles.num}
         title={
-          sameUrls
-            ? `Avg TTFB over these requests: ${formatMs(sameUrls.avgTtfbA)} → ${formatMs(sameUrls.avgTtfbB)}`
-            : undefined
+          sameUrls ? t.avgTtfb(formatMs(sameUrls.avgTtfbA), formatMs(sameUrls.avgTtfbB)) : undefined
         }
       >
         {sameUrls?.count ?? 0}
@@ -107,11 +101,12 @@ function NoteRefs({
   caveats: ComparisonCaveat[];
   target: ComparisonCaveat["affects"][number];
 }) {
+  const t = useMessages().deltas;
   const numbers = caveats.flatMap((c, i) => (c.affects.includes(target) ? [i + 1] : []));
   if (numbers.length === 0) return null;
   return (
     <sup className={styles.noteRef}>
-      <span className={metricsStyles.srOnly}> see note </span>
+      <span className={metricsStyles.srOnly}>{t.seeNote}</span>
       {numbers.join(",")}
     </sup>
   );
@@ -119,32 +114,39 @@ function NoteRefs({
 
 /** The third parties of both flows by entity, what B added first; a consent comparison reads here. */
 function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison }) {
+  const t = useMessages().deltas;
   const { a, b, entities } = thirdParties;
   if (entities.length === 0) {
-    return <p className={styles.sectionNote}>No third-party requests on either side.</p>;
+    return <p className={styles.sectionNote}>{t.noThirdParties}</p>;
   }
   const consent = [a.consentManager, b.consentManager].some(Boolean)
-    ? ` · consent manager: A ${a.consentManager ?? "none"}, B ${b.consentManager ?? "none"}`
+    ? t.consent(a.consentManager ?? t.none, b.consentManager ?? t.none)
     : "";
   return (
     <>
       <p className={styles.sectionNote}>
-        {`Third-party bytes: A ${formatBytes(a.totals.bytes)} (${pct(a.byteShare)}) → B ${formatBytes(b.totals.bytes)} (${pct(b.byteShare)})${consent}`}
+        {t.thirdPartyBytes(
+          formatBytes(a.totals.bytes),
+          pct(a.byteShare),
+          formatBytes(b.totals.bytes),
+          pct(b.byteShare),
+          consent
+        )}
       </p>
       <table className={`${hopsStyles.table} ${styles.table}`}>
-        <caption className={hopsStyles.caption}>Third-party deltas</caption>
+        <caption className={hopsStyles.caption}>{t.thirdPartyCaption}</caption>
         <thead>
           <tr>
-            <th scope="col">Third party</th>
+            <th scope="col">{t.thirdParty}</th>
             <th scope="col" className={styles.left}>
-              Category
+              {t.category}
             </th>
-            <th scope="col">Requests A</th>
-            <th scope="col">Requests B</th>
+            <th scope="col">{t.requestsA}</th>
+            <th scope="col">{t.requestsB}</th>
             <th scope="col">Δ</th>
-            <th scope="col">Bytes A</th>
-            <th scope="col">Bytes B</th>
-            <th scope="col">Δ bytes</th>
+            <th scope="col">{t.bytesA}</th>
+            <th scope="col">{t.bytesB}</th>
+            <th scope="col">{t.bytesDelta}</th>
           </tr>
         </thead>
         <tbody>
@@ -171,24 +173,26 @@ function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison
 
 /** Metrics summary, hosts and third parties of two flows side by side, with B − A for each. */
 export function DeltasPanel({ comparison, names, onClose }: Props) {
+  const messages = useMessages();
+  const t = messages.deltas;
   const { metrics, hops, thirdParties, caveats } = comparison;
   return (
     <div className={`${metricsStyles.panel} ${styles.panel}`}>
       <div className={metricsStyles.header}>
-        <span className={metricsStyles.title}>Deltas · B − A</span>
-        <button className={metricsStyles.closeBtn} onClick={onClose} aria-label="Close deltas">
+        <span className={metricsStyles.title}>{t.title}</span>
+        <button className={metricsStyles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>
       </div>
       {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={metricsStyles.body} role="region" aria-label="Deltas" tabIndex={0}>
-        <h3 className={styles.sectionTitle}>Metrics</h3>
+      <div className={metricsStyles.body} role="region" aria-label={t.details} tabIndex={0}>
+        <h3 className={styles.sectionTitle}>{t.metrics}</h3>
         <table className={`${metricsStyles.table} ${styles.table} ${styles.metricsTable}`}>
-          <caption className={metricsStyles.caption}>Metric deltas</caption>
+          <caption className={metricsStyles.caption}>{t.metricsCaption}</caption>
           <thead>
             <tr>
-              <th scope="col">Metric</th>
+              <th scope="col">{t.metric}</th>
               <th scope="col">A · {names.a}</th>
               <th scope="col">B · {names.b}</th>
               <th scope="col">Δ</th>
@@ -216,7 +220,7 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
                         {rating !== "none" && (
                           <span
                             className={metricsStyles.srOnly}
-                          >{` (${RATING_TEXT[rating]})`}</span>
+                          >{` (${messages.metrics.rating[rating]})`}</span>
                         )}
                       </td>
                     );
@@ -231,7 +235,7 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
           </tbody>
         </table>
         {caveats.length > 0 && (
-          <ol className={styles.notes} aria-label="Notes on the deltas">
+          <ol className={styles.notes} aria-label={t.notes}>
             {caveats.map((c) => (
               <li key={c.id + c.text}>{c.text}</li>
             ))}
@@ -239,27 +243,27 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
         )}
 
         <h3 className={styles.sectionTitle}>
-          Hosts
+          {t.hosts}
           <NoteRefs caveats={caveats} target="hosts" />
         </h3>
         <table className={`${hopsStyles.table} ${styles.table}`}>
-          <caption className={hopsStyles.caption}>Host deltas</caption>
+          <caption className={hopsStyles.caption}>{t.hostsCaption}</caption>
           <thead>
             <tr>
-              <th scope="col">Host</th>
-              <th scope="col">Requests A</th>
-              <th scope="col">Requests B</th>
+              <th scope="col">{t.host}</th>
+              <th scope="col">{t.requestsA}</th>
+              <th scope="col">{t.requestsB}</th>
               <th scope="col">Δ</th>
-              <th scope="col">Median TTFB A</th>
-              <th scope="col">Median TTFB B</th>
-              <th scope="col" title="Requests both flows made to the same URL">
-                Same URLs
+              <th scope="col">{t.medianTtfbA}</th>
+              <th scope="col">{t.medianTtfbB}</th>
+              <th scope="col" title={t.sameUrlsTitle}>
+                {t.sameUrls}
               </th>
-              <th scope="col" title="B − A average TTFB over the same URLs">
-                Δ TTFB
+              <th scope="col" title={t.ttfbDeltaTitle}>
+                {t.ttfbDelta}
               </th>
               <th scope="col" className={styles.left}>
-                Provider
+                {t.provider}
               </th>
             </tr>
           </thead>
@@ -270,7 +274,7 @@ export function DeltasPanel({ comparison, names, onClose }: Props) {
           </tbody>
         </table>
 
-        <h3 className={styles.sectionTitle}>Third parties</h3>
+        <h3 className={styles.sectionTitle}>{t.thirdParties}</h3>
         <ThirdPartyDeltas thirdParties={thirdParties} />
       </div>
     </div>

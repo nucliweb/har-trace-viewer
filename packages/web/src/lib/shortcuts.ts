@@ -1,28 +1,34 @@
+import type { Messages } from "../i18n/en.js";
+
+type Action = keyof Messages["help"]["actions"];
+
 interface Shortcut {
   keys: string[];
-  action: string;
+  action: Action;
 }
 
-/** Every keyboard shortcut of the app, as the help lists them. */
-export const SHORTCUT_GROUPS: { title: string; shortcuts: Shortcut[] }[] = [
-  {
-    title: "General",
-    shortcuts: [
-      { keys: ["t"], action: "Toggle theme" },
-      { keys: ["c"], action: "Settings" },
-      { keys: ["?"], action: "Keyboard shortcuts and about" },
-      { keys: ["f"], action: "Fullscreen" },
-      { keys: ["Esc"], action: "Close the dialog" },
-    ],
-  },
-  {
-    title: "Steps",
-    shortcuts: [
-      { keys: ["→"], action: "Next step" },
-      { keys: ["←"], action: "Previous step" },
-      { keys: ["Home"], action: "First step" },
-      { keys: ["End"], action: "Last step" },
-      { keys: ["Space"], action: "Play or pause" },
-    ],
-  },
-];
+/** Every keyboard shortcut of the app, as the help lists them; the texts come from the messages. */
+export const SHORTCUT_GROUPS: { title: keyof Messages["help"]["groups"]; shortcuts: Shortcut[] }[] =
+  [
+    {
+      title: "general",
+      shortcuts: [
+        { keys: ["t"], action: "theme" },
+        { keys: ["c"], action: "settings" },
+        { keys: ["l"], action: "language" },
+        { keys: ["?"], action: "help" },
+        { keys: ["f"], action: "fullscreen" },
+        { keys: ["Esc"], action: "close" },
+      ],
+    },
+    {
+      title: "steps",
+      shortcuts: [
+        { keys: ["→"], action: "next" },
+        { keys: ["←"], action: "prev" },
+        { keys: ["Home"], action: "first" },
+        { keys: ["End"], action: "last" },
+        { keys: ["Space"], action: "play" },
+      ],
+    },
+  ];
