@@ -187,7 +187,7 @@ export function ResourceSidebar({
       title={title}
       subtitle={`${resources.length} resources`}
       side="right"
-      width={320}
+      width={480}
       onClose={onClose}
     >
       {overview ? (

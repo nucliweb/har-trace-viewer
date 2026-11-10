@@ -519,6 +519,39 @@ test("bundled report falls back to main-thread parsing when the worker chunk is 
   expect(unexpected).toEqual([]);
 });
 
+// The drawers dock on the right; the ones with most to read open widest.
+const drawerTitled = (page: Page, title: string | RegExp) =>
+  page
+    .locator('[class*="_panel_"], [class*="_sidebar_"]')
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .last();
+
+async function drawerWidths(page: Page) {
+  const width = async (title: string | RegExp) =>
+    (await drawerTitled(page, title).boundingBox())!.width;
+  await page.getByRole("button", { name: /^Toggle findings/ }).click();
+  const findings = await width("Findings");
+  await page.getByRole("button", { name: "Toggle cache analysis" }).click();
+  const cache = await width("Cache & Network");
+  await page.getByRole("button", { name: "View resource list" }).first().click();
+  const resources = await width(/^\d+ resources$/);
+  return { findings, cache, resources };
+}
+
+async function goToStepWithResources(page: Page) {
+  const tabs = page.getByRole("tab");
+  for (let i = 0; i < (await tabs.count()); i++) {
+    await tabs.nth(i).click();
+    if (await page.getByRole("button", { name: "View resource list" }).count()) return;
+  }
+}
+
+test("the findings, cache and resource drawers open wide enough to read", async ({ page }) => {
+  await open(page, bundleUrl);
+  await goToStepWithResources(page);
+  expect(await drawerWidths(page)).toEqual({ findings: 560, cache: 520, resources: 480 });
+});
+
 test.describe("mobile layout at 360x740", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
 
@@ -549,6 +582,15 @@ test.describe("mobile layout at 360x740", () => {
     const svg = await page.locator("#diagram-svg").boundingBox();
     expect(svg!.width).toBeLessThanOrEqual(360);
     expect(collected.errors).toEqual([]);
+  });
+
+  test("the findings, cache and resource drawers fit the phone", async ({ page }) => {
+    await open(page, bundleUrl);
+    await goToStepWithResources(page);
+    expect(await drawerWidths(page)).toEqual({ findings: 360, cache: 360, resources: 360 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      360
+    );
   });
 
   test("HTML text stays at 12px or larger and the step controls wrap inside the viewport", async ({
