@@ -37,6 +37,13 @@ select {
   font-size: inherit;
 }
 
+/* One focus ring for every control (WCAG 2.4.7): the cyan outline, 2px. A component may only move
+   it inward, where an overflow would clip it, or onto a wrapper. */
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 2px;
+}
+
 /* Scanline overlay — dark mode only */
 :root:not([data-theme="light"]) body::after,
 [data-theme="dark"] body::after {

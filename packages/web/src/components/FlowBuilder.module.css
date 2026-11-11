@@ -158,8 +158,6 @@
 }
 
 .nameInput:focus-visible {
-  outline: 2px solid var(--color-cyan);
-  outline-offset: 2px;
   border-color: var(--color-cyan);
 }
 
@@ -365,11 +363,6 @@
 .regionSelect:hover,
 .regionSelect:focus-visible {
   border-color: var(--color-cyan);
-}
-
-.regionSelect:focus-visible {
-  outline: 2px solid var(--color-cyan);
-  outline-offset: 2px;
 }
 
 .addBtn {

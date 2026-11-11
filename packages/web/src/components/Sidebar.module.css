@@ -220,6 +220,5 @@
 }
 
 .more:focus-visible {
-  outline: 2px solid var(--color-cyan);
   outline-offset: 1px;
 }

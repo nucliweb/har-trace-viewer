@@ -52,6 +52,10 @@
   margin: 0;
 }
 
+.option input:focus-visible {
+  outline: none;
+}
+
 .linkButton {
   align-self: flex-start;
   padding: 0;
@@ -62,12 +66,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-}
-
-.linkButton:focus-visible,
-.links a:focus-visible {
-  outline: 2px solid var(--color-cyan);
-  outline-offset: 2px;
 }
 
 .shortcuts {

@@ -310,6 +310,51 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
+// Tabs through the page and lists every focused element whose ring is not the app's 2px cyan one.
+async function foreignFocusRings(page: Page, presses: number): Promise<string[]> {
+  const found = new Set<string>();
+  for (let i = 0; i < presses; i++) {
+    await page.keyboard.press("Tab");
+    const ring = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-cyan)";
+      document.body.append(probe);
+      const cyan = getComputedStyle(probe).color;
+      probe.remove();
+      const style = getComputedStyle(el);
+      const ok =
+        style.outlineStyle === "solid" &&
+        style.outlineWidth === "2px" &&
+        style.outlineColor === cyan;
+      const name = el.getAttribute("aria-label") ?? el.textContent?.trim().slice(0, 30);
+      return ok ? null : `${el.tagName.toLowerCase()} "${name}": ${style.outline}`;
+    });
+    if (ring) found.add(ring);
+  }
+  return [...found];
+}
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`every control shows the same focus ring: ${scheme} theme`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto(baseUrl);
+    const found = await foreignFocusRings(page, 12);
+
+    // The diagram: header, toolbar, the diagram region, the step track and the step controls.
+    await page.getByRole("button", { name: "Load demo flow →" }).click();
+    await page.locator("body").click({ position: { x: 1, y: 1 } });
+    found.push(...(await foreignFocusRings(page, 25)));
+
+    // A drawer: its ✕ and what it holds.
+    await page.getByRole("button", { name: /^Toggle findings/ }).click();
+    await page.locator("body").click({ position: { x: 1, y: 1 } });
+    found.push(...(await foreignFocusRings(page, 16)));
+    expect(found).toEqual([]);
+  });
+}
+
 // What an element looks like on screen: the share of near-white pixels (the forced Canvas) and
 // of saturated ones (a color the forced palette would have flattened). Computed styles keep the
 // author's colors under forced colors, so only the pixels tell.

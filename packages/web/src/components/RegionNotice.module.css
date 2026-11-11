@@ -66,9 +66,3 @@
   border-color: var(--color-cyan);
   color: var(--color-cyan);
 }
-
-.applyBtn:focus-visible,
-.dismissBtn:focus-visible {
-  outline: 2px solid var(--color-cyan);
-  outline-offset: 2px;
-}

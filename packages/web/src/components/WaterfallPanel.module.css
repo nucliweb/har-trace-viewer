@@ -189,7 +189,6 @@
 .chip:focus-visible,
 .more:focus-visible,
 .body:focus-visible {
-  outline: 2px solid var(--color-cyan);
   outline-offset: 1px;
 }
 
@@ -256,7 +255,6 @@
 }
 
 .helpSummary:focus-visible {
-  outline: 2px solid var(--color-cyan);
   outline-offset: 1px;
 }
 
@@ -361,7 +359,6 @@
 }
 
 .sortBtn:focus-visible {
-  outline: 2px solid var(--color-cyan);
   outline-offset: 1px;
 }
 
@@ -517,7 +514,6 @@
 }
 
 .row:focus-visible {
-  outline: 2px solid var(--color-cyan);
   outline-offset: -2px;
 }
 

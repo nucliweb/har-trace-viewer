@@ -61,11 +61,6 @@
   color: var(--color-red);
 }
 
-.closeBtn:focus-visible {
-  outline: 2px solid var(--color-cyan);
-  outline-offset: 2px;
-}
-
 .body {
   overflow-y: auto;
   padding: var(--space-md);
