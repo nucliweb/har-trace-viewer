@@ -1,6 +1,6 @@
 {
   "name": "har-trace-viewer",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "HAR analyzer and viewer that shows how a page load travels through CDN, origin and third parties, with cache analysis and Core Web Vitals, as terminal, HTML or JSON output",
   "license": "MIT",
   "repository": {
