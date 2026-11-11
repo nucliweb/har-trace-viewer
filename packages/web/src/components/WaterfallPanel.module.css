@@ -692,15 +692,16 @@
   color: var(--color-cyan);
 }
 
-/* Phones: the diagram's canvas is too short for the rows, so the waterfall takes the whole
-   screen, and the type chips scroll sideways on one line. */
+/* Phones: the diagram's canvas is too short for the rows, so the waterfall takes the screen
+   below the toolbar (the whole screen where the view sets no --toolbar-bottom), and the type
+   chips scroll sideways on one line. */
 @media (max-width: 640px) {
   .panel {
     --col-name: 140px;
     --col-type: 64px;
 
     position: fixed;
-    inset: 0;
+    inset: var(--toolbar-bottom, 0px) 0 0;
     width: 100%;
     border-left: none;
     z-index: 50;

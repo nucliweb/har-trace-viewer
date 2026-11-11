@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   analyzeHops,
   collectFindings,
@@ -7,6 +8,7 @@ import {
   getStepResources,
 } from "@htv/core";
 import type { Flow } from "@htv/core";
+import { useBottomEdge } from "../hooks/useBottomEdge.js";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
@@ -37,6 +39,9 @@ export function DiagramView({ flow }: Props) {
   const state = useDiagramState(flow);
   const viewRef = useRef<HTMLDivElement>(null);
   useStepKeyboard(viewRef, state);
+  // On a phone the waterfall takes the screen below the toolbar, which stays in reach.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarBottom = useBottomEdge(toolbarRef);
   const { stepIndex } = state;
   const step = flow.steps[stepIndex];
   const { pageIndex } = step;
@@ -93,11 +98,18 @@ export function DiagramView({ flow }: Props) {
   const listedIsOverview = flow.steps[listedIndex + 1]?.pageIndex !== listedStep.pageIndex;
 
   return (
-    // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <div ref={viewRef} className={styles.view} role="region" aria-label={t.region} tabIndex={0}>
+    <div
+      ref={viewRef}
+      className={styles.view}
+      role="region"
+      aria-label={t.region}
+      // The region is focusable on purpose: it is the keyboard entry point for the step shortcuts.
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      style={{ "--toolbar-bottom": `${toolbarBottom}px` } as CSSProperties}
+    >
       {/* A band of its own above the diagram, so it never covers the zone captions. */}
-      <div className={styles.toolbar}>
+      <div ref={toolbarRef} className={styles.toolbar}>
         <FindingsButton
           findings={findings}
           active={drawer === "findings"}

@@ -470,6 +470,47 @@ test("waterfall panel fits a phone screen and scrolls inside itself", async ({ b
   await context.close();
 });
 
+test("on a phone the waterfall opens below the toolbar, one tap from another drawer", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 360, height: 740 },
+    reducedMotion: "reduce",
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await open(page, bundleUrl);
+  const toggle = page.getByRole("button", { name: "Toggle waterfall" });
+  await toggle.click();
+  const panel = page.getByRole("heading", { name: /^Waterfall / }).locator("xpath=../..");
+
+  // The toolbar wraps on a phone: its bottom is that of its lowest button.
+  const toolbar = [
+    /^Toggle findings/,
+    "Toggle waterfall",
+    "Toggle hops",
+    "Export",
+    "Toggle cache analysis",
+  ];
+  let toolbarBottom = 0;
+  for (const name of toolbar) {
+    const button = (await page.getByRole("button", { name }).boundingBox())!;
+    toolbarBottom = Math.max(toolbarBottom, button.y + button.height);
+  }
+  const box = (await panel.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(toolbarBottom);
+  expect(box.y + box.height).toBeLessThanOrEqual(740 + 1);
+
+  // The toggle closes it, and another toggle switches drawers, each in one tap.
+  await toggle.tap();
+  await expect(panel).toBeHidden();
+  await toggle.tap();
+  await page.getByRole("button", { name: /^Toggle findings/ }).tap();
+  await expect(page.getByRole("heading", { name: /^Findings / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Waterfall / })).toBeHidden();
+  await context.close();
+});
+
 // Browsers block <script type="module" crossorigin> over file://, so the non-bundled report needs
 // an HTTP server. The README documents this and points to --bundle for double-click use.
 test("non-bundled report is blocked over file:// (documented: use --bundle or serve it)", async ({
