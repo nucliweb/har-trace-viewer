@@ -44,6 +44,11 @@ jobs:
     name: e2e
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Playwright's image carries Chromium and the system packages it needs, so the job never
+    # waits on an Ubuntu mirror. Keep its tag at the installed @playwright/test version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v7
 
@@ -55,18 +60,8 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - name: Install Playwright system dependencies (cache hit)
-        run: npx playwright install-deps chromium
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      # A no-op while the tag matches; after a @playwright/test bump it fetches the new Chromium.
+      - run: npx playwright install chromium
       - run: npm run e2e
 
       - name: Upload Playwright report and traces
