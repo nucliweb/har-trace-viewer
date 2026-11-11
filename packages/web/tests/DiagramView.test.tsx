@@ -57,6 +57,22 @@ describe("DiagramView", () => {
     expect(screen.getByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
   });
 
+  it("leaves Space and the arrows to a focused checkbox", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <DiagramView flow={flow} />
+        <input type="checkbox" aria-label="Option" />
+      </>
+    );
+    const option = screen.getByRole("checkbox", { name: "Option" });
+    option.focus();
+
+    await user.keyboard(" {ArrowRight}");
+    expect(option).toBeChecked();
+    expect(screen.getByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
+  });
+
   it("updates the step label with Next and Prev", async () => {
     const user = userEvent.setup();
     const total = flow.steps.length;

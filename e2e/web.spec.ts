@@ -189,6 +189,25 @@ test("the keyboard opens the shortcuts and the settings as accessible modal dial
   expect(errors).toEqual([]);
 });
 
+test("the shortcuts still answer after a checkbox is ticked, which keeps Space", async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto(baseUrl);
+  await page.keyboard.press("c");
+  const journeys = page.getByRole("checkbox", { name: "Multi-page journeys" });
+  await journeys.click();
+  await expect(journeys).toBeFocused();
+
+  await page.keyboard.press("t");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.keyboard.press(" ");
+  await expect(journeys).not.toBeChecked();
+  await page.keyboard.press("?");
+  await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("l switches the interface language, kept across reloads", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(baseUrl);

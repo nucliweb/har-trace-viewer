@@ -11,13 +11,13 @@ type Actions = Pick<StepNavigation, "next" | "prev" | "goTo" | "togglePlay" | "t
  * The same handler listens on the diagram container (so it works while the region is focused) and
  * on the document (so it works after a click on the canvas). It never acts when the event was
  * already handled (defaultPrevented, which also prevents double handling between the two
- * listeners), when a modifier key is held, when the focus is in an input, select, textarea or
- * contenteditable element (typing in the FlowBuilder), or while a modal dialog is open. Space is
- * also left alone on buttons, where it activates the button.
+ * listeners), when a modifier key is held, when the focus is in a text field or any input (a
+ * checkbox or radio takes Space and the arrows), or while a modal dialog is open. Space is also
+ * left alone on buttons, where it activates the button.
  */
 function stepKeyAction(event: KeyboardEvent, actions: Actions): boolean {
-  if (!isShortcutEvent(event) || isModalOpen()) return false;
   const target = event.target instanceof Element ? event.target : null;
+  if (!isShortcutEvent(event) || isModalOpen() || target?.closest("input")) return false;
   switch (event.key) {
     case "ArrowRight":
       actions.next();

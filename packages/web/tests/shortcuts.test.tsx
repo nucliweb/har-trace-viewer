@@ -89,6 +89,20 @@ describe("App — keyboard shortcuts", () => {
     expect(html).toHaveAttribute("data-theme", "light");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("still answers once a checkbox or a radio has the focus", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.keyboard("c");
+
+    await user.click(screen.getByRole("radio", { name: "Dark" }));
+    await user.keyboard("t");
+    expect(html).toHaveAttribute("data-theme", "light");
+
+    await user.click(screen.getByRole("checkbox", { name: "Multi-page journeys" }));
+    await user.keyboard("l");
+    expect(html).toHaveAttribute("lang", "es");
+  });
 });
 
 describe("App — settings", () => {

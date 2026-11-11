@@ -1,4 +1,10 @@
-const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditable='false'])";
+/** Fields that take printable keys as text; a checkbox, radio, button or range input does not. */
+const TEXT_FIELD = [
+  "input:not([type=checkbox], [type=radio], [type=button], [type=submit], [type=reset], [type=range], [type=color], [type=file], [type=image])",
+  "select",
+  "textarea",
+  "[contenteditable]:not([contenteditable='false'])",
+].join(", ");
 
 /**
  * Whether a key press may run a shortcut: nothing handled it yet, no Ctrl, Cmd or Alt is held
@@ -7,7 +13,7 @@ const EDITABLE = "input, select, textarea, [contenteditable]:not([contenteditabl
 export function isShortcutEvent(event: KeyboardEvent): boolean {
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return false;
   const target = event.target instanceof Element ? event.target : null;
-  return !target?.closest(EDITABLE);
+  return !target?.closest(TEXT_FIELD);
 }
 
 /** A modal dialog is open: its keys are its own. */
