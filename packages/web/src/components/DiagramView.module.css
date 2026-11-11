@@ -83,8 +83,32 @@
   }
 }
 
-/* Mobile: toolbar buttons become 44 px targets. */
+/* Mobile: toolbar buttons become 44 px targets. The canvas is too short for the drawing, its
+   labels and the metric badges at once: the drawing keeps its own ratio, the badges leave it for
+   a row of their own below, and the view scrolls when the step panel no longer fits. */
 @media (max-width: 640px) {
+  .view {
+    overflow-y: auto;
+  }
+
+  .canvas {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .diagram {
+    height: auto;
+    aspect-ratio: 900 / 480;
+  }
+
+  .canvas > .badges {
+    position: static;
+    transform: none;
+    width: auto;
+    padding: var(--space-xs) var(--space-sm);
+  }
+
   .toolbar {
     gap: var(--space-xs);
   }

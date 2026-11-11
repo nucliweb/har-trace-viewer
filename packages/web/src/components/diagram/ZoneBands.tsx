@@ -1,3 +1,4 @@
+import { fitText } from "./labels.js";
 import { GFW_ZONE_CAPTION_OFFSET, type Zone } from "./layout.js";
 
 const LABEL_Y = 22;
@@ -6,11 +7,9 @@ const LABEL_Y = 22;
 const CORNER_INSET = 8;
 const GFW_CAPTION_TOP_Y = LABEL_Y + 16;
 
-const zoneText = {
-  fontSize: 12,
-  fontFamily: "var(--font-mono)",
-  textAnchor: "middle",
-} as const;
+const FONT_SIZE = 12;
+const ZONE_SPACING = 0.06;
+const GFW_SPACING = 0.08;
 
 interface Props {
   zones: Zone[];
@@ -18,13 +17,29 @@ interface Props {
   hasGfw: boolean;
   cacheSubzoneY: number;
   hasCacheNode?: boolean;
+  /** How much the labels grow on a small screen (1: drawn as designed). */
+  labelScale?: number;
 }
 
-export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY, hasCacheNode = false }: Props) {
+export function ZoneBands({
+  zones,
+  height,
+  hasGfw,
+  cacheSubzoneY,
+  hasCacheNode = false,
+  labelScale = 1,
+}: Props) {
   // The client zone (China behind the GFW) hosts the browser cache sub-zone.
   const client = zones[0];
   const clientWidth = client.x1 - client.x0;
   const clientCentre = client.x0 + clientWidth / 2;
+  const fontSize = FONT_SIZE * labelScale;
+  const zoneText = { fontSize, fontFamily: "var(--font-mono)", textAnchor: "middle" } as const;
+  // Grown captions keep their top edge: the baseline moves down by what the letters gained.
+  const labelY = LABEL_Y + (fontSize - FONT_SIZE) * 0.75;
+  // Grown captions are cut to their zone, with a little room on each side.
+  const fit = (text: string, width: number, spacing: number) =>
+    labelScale > 1 ? fitText(text, width - 2 * CORNER_INSET, fontSize, spacing) : text;
 
   return (
     <g>
@@ -50,13 +65,13 @@ export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY, hasCacheNode =
           />
           <text
             x={(zone.x0 + zone.x1) / 2}
-            y={LABEL_Y}
+            y={labelY}
             {...zoneText}
             fill={zone.color}
             opacity={0.5}
-            letterSpacing="0.06em"
+            letterSpacing={`${ZONE_SPACING}em`}
           >
-            {zone.label}
+            {fit(zone.label, zone.x1 - zone.x0, ZONE_SPACING)}
           </text>
         </g>
       ))}
@@ -99,7 +114,7 @@ export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY, hasCacheNode =
         {...(hasCacheNode ? { textAnchor: "start" } : {})}
         fill="var(--color-cyan)"
         opacity={0.35}
-        letterSpacing="0.06em"
+        letterSpacing={`${ZONE_SPACING}em`}
       >
         CACHE
       </text>
@@ -107,13 +122,17 @@ export function ZoneBands({ zones, height, hasGfw, cacheSubzoneY, hasCacheNode =
       {hasGfw && (
         <text
           x={clientCentre}
-          y={hasCacheNode ? GFW_CAPTION_TOP_Y : cacheSubzoneY - GFW_ZONE_CAPTION_OFFSET}
+          y={
+            hasCacheNode
+              ? GFW_CAPTION_TOP_Y + (labelY - LABEL_Y) + (labelScale - 1) * 16
+              : cacheSubzoneY - GFW_ZONE_CAPTION_OFFSET
+          }
           {...zoneText}
           fill="var(--color-red)"
           opacity={0.5}
-          letterSpacing="0.08em"
+          letterSpacing={`${GFW_SPACING}em`}
         >
-          GREAT FIREWALL ZONE
+          {fit("GREAT FIREWALL ZONE", clientWidth, GFW_SPACING)}
         </text>
       )}
     </g>

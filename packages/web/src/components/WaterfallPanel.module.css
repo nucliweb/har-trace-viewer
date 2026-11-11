@@ -701,7 +701,8 @@
     --col-type: 64px;
 
     position: fixed;
-    inset: var(--toolbar-bottom, 0px) 0 0;
+    /* Never above the screen, once the view has scrolled the toolbar out of it. */
+    inset: max(var(--toolbar-bottom, 0px), 0px) 0 0;
     width: 100%;
     border-left: none;
     z-index: 50;

@@ -3,6 +3,7 @@ import type { DiagramNode, DiagramPath, NodeId, PathId } from "@htv/core";
 import { useElementSize } from "../hooks/useElementSize.js";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion.js";
 import type { HistoricalPath } from "../types.js";
+import { labelScale } from "./diagram/labels.js";
 import { HEIGHT, MAX_WIDTH, WIDTH, layout, layoutOptions } from "./diagram/layout.js";
 import { NodeLayer } from "./diagram/NodeLayer.js";
 import { GlowFilter, PathLayer } from "./diagram/PathLayer.js";
@@ -60,6 +61,11 @@ function NodeRendererView({
     () => layout(nodes, paths, options, { width }),
     [nodes, paths, options, width]
   );
+  // The drawing keeps its ratio inside the box: it shows as wide as the tighter side allows.
+  const scale = labelScale(
+    Math.min(size.width, (size.height * geometry.width) / geometry.height),
+    geometry.width
+  );
 
   return (
     <svg
@@ -84,6 +90,7 @@ function NodeRendererView({
         hasGfw={options.hasGfw}
         cacheSubzoneY={geometry.cacheSubzoneY}
         hasCacheNode={geometry.nodes.cache?.present ?? false}
+        labelScale={scale}
       />
       <PathLayer
         paths={paths}
@@ -94,8 +101,15 @@ function NodeRendererView({
         historicalPaths={historicalPaths}
         reducedMotion={reducedMotion}
         idPrefix={idPrefix}
+        labelScale={scale}
       />
-      <NodeLayer nodes={nodes} positions={geometry.nodes} activeNodes={new Set(activeNodes)} />
+      <NodeLayer
+        nodes={nodes}
+        positions={geometry.nodes}
+        activeNodes={new Set(activeNodes)}
+        zones={geometry.zones}
+        labelScale={scale}
+      />
     </svg>
   );
 }

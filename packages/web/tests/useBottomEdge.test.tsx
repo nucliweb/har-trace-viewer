@@ -58,6 +58,17 @@ describe("useBottomEdge", () => {
     expect(seen.at(-1)).toBe(209);
   });
 
+  it("follows a scroll anywhere on the page, a scrolling view's included", () => {
+    const seen: number[] = [];
+    const { container } = render(<Probe onBottom={(b) => seen.push(b)} />);
+
+    bottom = 53;
+    act(() => {
+      container.dispatchEvent(new Event("scroll"));
+    });
+    expect(seen.at(-1)).toBe(53);
+  });
+
   it("stops following once unmounted", () => {
     const seen: number[] = [];
     const { unmount } = render(<Probe onBottom={(b) => seen.push(b)} />);
@@ -67,6 +78,7 @@ describe("useBottomEdge", () => {
     const count = seen.length;
     bottom = 300;
     window.dispatchEvent(new Event("resize"));
+    document.body.dispatchEvent(new Event("scroll"));
     expect(seen).toHaveLength(count);
   });
 

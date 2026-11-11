@@ -704,6 +704,56 @@ test.describe("mobile layout at 360x740", () => {
     );
   });
 
+  test("every step's diagram labels render at 10px or more, inside the drawing, uncovered", async ({
+    page,
+  }) => {
+    await open(page, bundleUrl);
+    const problems = new Set<string>();
+    const total = await totalSteps(page);
+    for (let step = 0; step < total; step++) {
+      const found = await page.evaluate(() => {
+        const svg = document.getElementById("diagram-svg") as unknown as SVGSVGElement;
+        const frame = svg.getBoundingClientRect();
+        const scale = frame.width / svg.viewBox.baseVal.width;
+        const texts = [...svg.querySelectorAll("text")]
+          .map((el) => ({ el, box: el.getBoundingClientRect() }))
+          .filter(({ box }) => box.width > 0);
+        const out: string[] = [];
+        for (const { el, box } of texts) {
+          const px = parseFloat(el.getAttribute("font-size") ?? "0") * scale;
+          if (px < 10 - 0.01) out.push(`"${el.textContent}" ${px.toFixed(1)}px`);
+          if (box.left < frame.left - 0.5 || box.right > frame.right + 0.5)
+            out.push(`"${el.textContent}" leaves the drawing`);
+        }
+        for (let i = 0; i < texts.length; i++) {
+          for (let j = i + 1; j < texts.length; j++) {
+            const [a, b] = [texts[i].box, texts[j].box];
+            const overlap =
+              Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+            if (overlap) out.push(`"${texts[i].el.textContent}" over "${texts[j].el.textContent}"`);
+          }
+        }
+        // The metric badges lie over the drawing: none may cover a label.
+        const badges = [...document.querySelectorAll('[class*="_badge_"]')]
+          .filter((el) => getComputedStyle(el).visibility === "visible")
+          .map((el) => ({ el, box: el.getBoundingClientRect() }));
+        for (const badge of badges) {
+          for (const { el, box } of texts) {
+            const covered =
+              Math.min(badge.box.right, box.right) - Math.max(badge.box.left, box.left) > 1 &&
+              Math.min(badge.box.bottom, box.bottom) - Math.max(badge.box.top, box.top) > 1;
+            if (covered) out.push(`badge "${badge.el.textContent}" over "${el.textContent}"`);
+          }
+        }
+        return out;
+      });
+      for (const problem of found) problems.add(problem);
+      if (step < total - 1) await page.getByRole("button", { name: "Next →" }).click();
+    }
+    expect([...problems]).toEqual([]);
+  });
+
   test("HTML text stays at 12px or larger and the step controls wrap inside the viewport", async ({
     page,
   }) => {

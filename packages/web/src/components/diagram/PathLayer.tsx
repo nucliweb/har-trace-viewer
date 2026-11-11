@@ -29,6 +29,8 @@ interface Props {
   reducedMotion: boolean;
   /** Prefixes the path and filter ids when several diagrams share a document. */
   idPrefix?: string;
+  /** How much the labels grow on a small screen (1: drawn as designed). */
+  labelScale?: number;
 }
 
 /**
@@ -90,17 +92,18 @@ interface LabelProps {
   color: string;
   below?: boolean;
   faded?: boolean;
+  scale?: number;
 }
 
-function TimingLabel({ x, y, timing, color, below = false, faded = false }: LabelProps) {
-  const width = timing.length * 5.8 + 8;
+function TimingLabel({ x, y, timing, color, below = false, faded = false, scale = 1 }: LabelProps) {
+  const width = (timing.length * 5.8 + 8) * scale;
   return (
     <g>
       <rect
-        x={x - width / 2 - 4}
-        y={below ? y - 11 : y - 14}
+        x={x - width / 2 - 4 * scale}
+        y={below ? y - 11 * scale : y - 14 * scale}
         width={width}
-        height={14}
+        height={14 * scale}
         rx={3}
         fill="var(--color-bg)"
         opacity={faded ? 0.7 : 0.85}
@@ -109,7 +112,7 @@ function TimingLabel({ x, y, timing, color, below = false, faded = false }: Labe
         x={x}
         y={y}
         textAnchor="middle"
-        fontSize={12}
+        fontSize={12 * scale}
         fontFamily="var(--font-mono)"
         fill={color}
         opacity={faded ? 0.5 : 0.9}
@@ -160,6 +163,7 @@ function PathGroup({
   historicalPaths,
   reducedMotion,
   idPrefix = "",
+  labelScale = 1,
 }: PathGroupProps) {
   // Every path to a third-party cluster takes the third-parties colour.
   const color =
@@ -187,6 +191,7 @@ function PathGroup({
               timing={historical.timing}
               color={color}
               faded
+              scale={labelScale}
             />
           )}
         </g>
@@ -232,6 +237,7 @@ function PathGroup({
             timing={timing}
             color={color}
             below={g.labelBelow}
+            scale={labelScale}
           />
         )}
       </g>
@@ -267,7 +273,13 @@ function PathGroup({
           <ReturnPacket pathRef={ref} color={color} />
         ))}
       {timing && (
-        <TimingLabel x={g.labelX} y={laneLabelY(g, direction)} timing={timing} color={color} />
+        <TimingLabel
+          x={g.labelX}
+          y={laneLabelY(g, direction)}
+          timing={timing}
+          color={color}
+          scale={labelScale}
+        />
       )}
     </g>
   );

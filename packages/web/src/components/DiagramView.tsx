@@ -175,7 +175,12 @@ export function DiagramView({ flow }: Props) {
           />
         </div>
         {/* Badges belong to the active page: each page has its own TTFB, FCP, LCP and onLoad. */}
-        <BadgeRow steps={flow.steps} pageIndex={pageIndex} stepIndex={stepIndex} />
+        <BadgeRow
+          steps={flow.steps}
+          pageIndex={pageIndex}
+          stepIndex={stepIndex}
+          className={styles.badges}
+        />
         {hasCacheList && <CacheSidebar resources={cacheResources} inferred={inferredCacheHits} />}
         {drawer === "resources" && (
           <ResourceSidebar
