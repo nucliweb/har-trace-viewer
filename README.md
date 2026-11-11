@@ -6,7 +6,7 @@ Offline HAR + Chrome trace analyzer that shows how a page load travels through C
 
 ![HTV report in light mode: the page load diagram with the browser, a Vercel CDN edge, the origin and third parties, and the TTFB, FCP, LCP and onLoad metrics](docs/screenshot-light.png)
 
-Try it in the browser at [har-trace-viewer-web.vercel.app](https://har-trace-viewer-web.vercel.app) with your own HAR and trace files or the built-in demo flow.
+Try it in the browser at [perf.reviews/har-trace-viewer](https://perf.reviews/har-trace-viewer) with your own HAR and trace files or the built-in demo flow.
 
 Analyzes HAR and Chrome trace files and shows the page load step by step, with its network requests, hosts, CDN and cache behavior and performance metrics: in the terminal, as a self-contained HTML report to share, or as JSON for other tools and AI agents.
 
@@ -358,6 +358,12 @@ Real recordings live in `fixtures/` (see its README for what each one is); small
 ### Demo flow
 
 The web app's empty state offers a "Load demo flow" button. The flow it loads is pre-generated from the core test fixtures (`webperf-snippets.har.fixture.json` and `webperf-snippets.trace.fixture.json`) and stored in `packages/web/src/demo/demo-flow.json`. It is a separate chunk fetched on click, so it does not weigh on the main bundle, and it is not offered inside generated reports. Regenerate it after changing the flow format or the fixtures with `npm run demo:build -w @htv/web`.
+
+### Public site
+
+The web app is public at `https://perf.reviews/har-trace-viewer`. perf.reviews runs a reverse proxy that forwards `/har-trace-viewer` and `/har-trace-viewer/...`, path unchanged, to this app's Vercel deployment (`har-trace-viewer-web.vercel.app`), which builds it with `npm run build:site -w @htv/web` and serves `packages/web/dist-site`.
+
+The site build differs from the one the CLI bundles into its reports: every URL sits under `/har-trace-viewer/` (the proxy requests the page with no trailing slash, against which relative URLs would resolve to perf.reviews' root), and the head names `https://perf.reviews/har-trace-viewer` as the canonical address and the social image's. The deployment's own root sends visitors to perf.reviews and its `robots.txt` keeps search engines off the vercel.app address. `e2e/site.spec.ts` serves the build as Vercel does and checks all three.
 
 ## Releasing
 

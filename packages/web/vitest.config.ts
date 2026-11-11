@@ -1,8 +1,9 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.js";
 
+// The app's Vite config, as the tests see it: the relative build, not the public site's.
 export default mergeConfig(
-  viteConfig,
+  viteConfig({ command: "serve", mode: "test" }),
   defineConfig({
     test: {
       environment: "jsdom",
