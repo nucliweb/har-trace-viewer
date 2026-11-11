@@ -39,7 +39,7 @@ export type { NodePosition } from "./geometry.js";
  * derived from the node centres.
  */
 
-export type ZoneId = "client" | "edge" | "intermediate" | "origin" | "third-parties";
+type ZoneId = "client" | "edge" | "intermediate" | "origin" | "third-parties";
 
 interface LayoutOptions {
   // The client sits behind the Great Firewall: China zone with a GFW checkpoint column.

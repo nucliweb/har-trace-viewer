@@ -18,7 +18,7 @@ export const BUDGET_METRICS = [
   "cache-hit-ratio",
 ] as const;
 
-export type BudgetMetric = (typeof BUDGET_METRICS)[number];
+type BudgetMetric = (typeof BUDGET_METRICS)[number];
 
 type BudgetUnit = "ms" | "score" | "count" | "bytes" | "ratio";
 
@@ -115,7 +115,7 @@ export function parseBudgets(value: string): Budget[] {
   });
 }
 
-export type Severity = FindingSeverity;
+type Severity = FindingSeverity;
 export type FailOnSeverity = Extract<Severity, "critical" | "warning">;
 
 const FAIL_ON: readonly FailOnSeverity[] = ["critical", "warning"];

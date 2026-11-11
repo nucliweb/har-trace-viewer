@@ -1,7 +1,7 @@
 import type { ParsedHar, ParsedTrace } from "@htv/core";
 
 export type ParseKind = "har" | "trace";
-export type ParsePhase = "reading" | "decompressing" | "parsing";
+type ParsePhase = "reading" | "decompressing" | "parsing";
 
 export interface ParseProgress {
   phase: ParsePhase;
