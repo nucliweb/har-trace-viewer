@@ -577,6 +577,51 @@ test("the findings, cache and resource drawers open wide enough to read", async 
   expect(await drawerWidths(page)).toEqual({ findings: 560, cache: 520, resources: 480 });
 });
 
+// WCAG 2.5.8 asks 24 by 24 CSS pixels of a pointer target.
+async function targetsBelow24px(page: Page, name: string | RegExp): Promise<string[]> {
+  const found: string[] = [];
+  for (const target of await page.getByRole("button", { name }).all()) {
+    const box = (await target.boundingBox())!;
+    if (box.width < 24 || box.height < 24) {
+      const label = await target.getAttribute("aria-label");
+      found.push(`${label ?? (await target.textContent())}: ${box.width}×${box.height}`);
+    }
+  }
+  return found;
+}
+
+test("the drawer controls are at least 24px each way", async ({ page }) => {
+  await open(page, bundleUrl);
+  const found: string[] = [];
+  for (const [toggle, close] of [
+    [/^Toggle findings/, "Close findings"],
+    [/^Toggle hops$/, "Close hops"],
+    [/^Toggle metrics summary$/, "Close metrics summary"],
+    [/^Toggle cache analysis$/, "Close cache analysis"],
+  ] as const) {
+    await page.getByRole("button", { name: toggle }).click();
+    found.push(...(await targetsBelow24px(page, close)));
+  }
+
+  await page.getByRole("button", { name: "Toggle waterfall" }).click();
+  found.push(...(await targetsBelow24px(page, "Close waterfall")));
+  const types = page.getByRole("group", { name: "Resource types" });
+  expect(await types.getByRole("button").count()).toBeGreaterThan(0);
+  found.push(...(await targetsBelow24px(page, /^Sort by /)));
+  for (const chip of await types.getByRole("button").all()) {
+    const box = (await chip.boundingBox())!;
+    if (box.height < 24) found.push(`${await chip.textContent()} chip: ${box.height}px high`);
+  }
+  await page.getByRole("button", { name: "Table", exact: true }).click();
+  found.push(...(await targetsBelow24px(page, /^Sort by /)));
+  await page.getByRole("button", { name: "Close waterfall" }).click();
+
+  await goToStepWithResources(page);
+  await page.getByRole("button", { name: "View resource list" }).click();
+  found.push(...(await targetsBelow24px(page, "Close")));
+  expect(found).toEqual([]);
+});
+
 test.describe("mobile layout at 360x740", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
 

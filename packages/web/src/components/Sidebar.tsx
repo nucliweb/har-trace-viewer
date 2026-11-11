@@ -29,7 +29,7 @@ export function Sidebar({
       style={{ "--sidebar-width": `${width}px` } as CSSProperties}
     >
       <div className={styles.header}>
-        <span className={styles.headerTitle}>{title}</span>
+        <h2 className={styles.headerTitle}>{title}</h2>
         {subtitle && <span className={styles.headerCount}>{subtitle}</span>}
         {onClose && (
           <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>

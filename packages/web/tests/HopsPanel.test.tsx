@@ -226,7 +226,7 @@ describe("HopsPanel", () => {
 
   it("shows the page label and the summary line", () => {
     panel();
-    expect(screen.getByRole("heading", { name: "Page 1 · Home" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hops Page 1 · Home" })).toBeInTheDocument();
     expect(screen.getByText("3 hosts · 3 providers · 1 region")).toBeInTheDocument();
   });
 });

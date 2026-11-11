@@ -107,10 +107,10 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <div className={styles.headerText}>
-          <span className={styles.title}>{t.title}</span>
-          <h2 className={styles.pageLabel}>{pageLabel}</h2>
-        </div>
+        <h2 className={styles.headerText}>
+          <span className={styles.title}>{t.title}</span>{" "}
+          <span className={styles.pageLabel}>{pageLabel}</span>
+        </h2>
         <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>

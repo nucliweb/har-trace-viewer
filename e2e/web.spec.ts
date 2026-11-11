@@ -208,6 +208,22 @@ test("the shortcuts still answer after a checkbox is ticked, which keeps Space",
   expect(errors).toEqual([]);
 });
 
+test("the page order arrows of a journey are at least 24px each way", async ({ page }) => {
+  await page.goto(baseUrl);
+  await page.keyboard.press("c");
+  await page.getByRole("checkbox", { name: "Multi-page journeys" }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "+ Add page" }).click();
+
+  const arrows = page.getByRole("button", { name: /^Move page (up|down)$/ });
+  expect(await arrows.count()).toBe(4);
+  for (const arrow of await arrows.all()) {
+    const box = (await arrow.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(24);
+    expect(box.height).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("l switches the interface language, kept across reloads", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(baseUrl);

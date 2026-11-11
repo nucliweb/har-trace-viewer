@@ -146,7 +146,7 @@ export function MetricsSummary({ flow, onClose }: Props) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.title}>{t.title}</span>
+        <h2 className={styles.title}>{t.title}</h2>
         <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>

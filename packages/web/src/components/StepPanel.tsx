@@ -220,9 +220,9 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
         <div className={styles.infoMain}>
           {flow.pages.length > 1 && <StepPage flow={flow} pageIndex={step.pageIndex} />}
           <div className={styles.stepCounter}>{t.counter(stepIndex + 1, total)}</div>
-          <div className={styles.title} lang={lang}>
+          <h2 className={styles.title} lang={lang}>
             {step.title}
-          </div>
+          </h2>
           <div className={styles.description} lang={lang}>
             {step.description}
           </div>

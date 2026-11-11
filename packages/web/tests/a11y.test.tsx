@@ -2,7 +2,8 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { getStepResources } from "@htv/core";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { App } from "../src/App.js";
 import { CompareView } from "../src/components/CompareView.js";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { ca } from "../src/i18n/ca.js";
@@ -240,5 +241,65 @@ describe("the waterfall tooltip can be dismissed (A-08)", () => {
     // With no tooltip left, Escape closes the drawer.
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("button", { name: "Close waterfall" })).not.toBeInTheDocument();
+  });
+});
+
+describe("headings to navigate by (A-12)", () => {
+  afterEach(() => {
+    delete window.__HTV_FLOW__;
+  });
+
+  const page1 = en.diagram.pageLabel(1, flow.pages[0].name);
+  const headingsAt = (level: number) =>
+    screen.getAllByRole("heading", { level }).map((h) => h.textContent);
+
+  it("the app's name is the one h1, in the builder and over a flow", () => {
+    const { unmount } = render(<App />);
+    expect(screen.getByRole("heading", { level: 1, name: "htv HAR TRACE VIEWER" })).toBeVisible();
+    unmount();
+
+    window.__HTV_FLOW__ = JSON.parse(JSON.stringify(flow));
+    render(<App />);
+    expect(headingsAt(1)).toEqual(["htv HAR TRACE VIEWER"]);
+  });
+
+  it("the step title is the diagram's h2, and follows the step", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+    expect(headingsAt(2)).toEqual([flow.steps[0].title]);
+
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    expect(headingsAt(2)).toEqual([flow.steps[1].title]);
+  });
+
+  it("each drawer's h2 names the drawer, then the page it is about", async () => {
+    const user = userEvent.setup();
+    render(<DiagramView flow={flow} />);
+    const expected: [RegExp, string][] = [
+      [/^Toggle findings/, `${en.findings.title} ${page1}`],
+      [/^Toggle waterfall$/, `${en.waterfall.title} ${page1}`],
+      [/^Toggle hops$/, `${en.hops.title} ${page1}`],
+      [/^Toggle metrics summary$/, en.metrics.title],
+      [/^Toggle cache analysis$/, `${en.cache.title} ${page1}`],
+    ];
+    for (const [toggle, heading] of expected) {
+      await user.click(screen.getByRole("button", { name: toggle }));
+      expect(screen.getByRole("heading", { level: 2, name: heading })).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+    }
+  });
+
+  it("the resource list and the deltas open with a heading of their own", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<DiagramView flow={flow} />);
+    const step = flow.steps.findIndex((s) => getStepResources(flow, s).length > 0);
+    await user.click(screen.getByRole("tab", { name: new RegExp(`^Step ${step + 1}:`) }));
+    await user.click(screen.getByRole("button", { name: "View resource list" }));
+    expect(headingsAt(2)).toEqual([flow.steps[step].title, flow.steps[step].title]);
+    unmount();
+
+    render(<CompareView a={a} b={b} />);
+    await user.click(screen.getByRole("button", { name: "Toggle deltas" }));
+    expect(screen.getByRole("heading", { level: 2, name: en.deltas.title })).toBeInTheDocument();
   });
 });

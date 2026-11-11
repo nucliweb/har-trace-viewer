@@ -56,6 +56,8 @@
 }
 
 .headerText {
+  font-size: inherit;
+  font-weight: inherit;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -81,8 +83,8 @@
 }
 
 .closeBtn {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,6 +126,7 @@
 }
 
 .chip {
+  min-height: 24px;
   padding: 2px 8px;
   border: 1px solid var(--color-border2);
   border-radius: 10px;
@@ -344,6 +347,7 @@
   border: none;
   background: transparent;
   font: inherit;
+  min-height: 24px;
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;

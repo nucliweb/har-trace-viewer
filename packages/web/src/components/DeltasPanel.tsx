@@ -185,7 +185,7 @@ export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
   return (
     <div ref={ref} className={`${metricsStyles.panel} ${styles.panel}`}>
       <div className={metricsStyles.header}>
-        <span className={metricsStyles.title}>{t.title}</span>
+        <h2 className={metricsStyles.title}>{t.title}</h2>
         <button className={metricsStyles.closeBtn} onClick={onClose} aria-label={t.close}>
           ✕
         </button>

@@ -104,9 +104,9 @@ export function App() {
       <div className={styles.app}>
         <header className={styles.header}>
           <div className={styles.brand}>
-            <div className={styles.logo}>
+            <h1 className={styles.logo}>
               htv <span>HAR TRACE VIEWER</span>
-            </div>
+            </h1>
             <span className={styles.version} title={t.app.versionTitle}>
               v{__HTV_VERSION__}
             </span>
