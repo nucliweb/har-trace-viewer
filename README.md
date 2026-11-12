@@ -36,7 +36,7 @@ The destination picks the format:
 | `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                                         |
 | `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                                              |
 
-In the terminal, `1`–`7` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` scroll, `a`/`b` pick the side whose findings, waterfall, resources or cache a comparison shows, `/` and `f` filter the waterfall and the resources, `z` zooms the waterfall, `s`/`S` sort the resources, `?` shows the keys and the filter syntax, and `q` quits.
+In the terminal, `1`–`7` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` (or `Space`) scroll, `a`/`b` pick the side whose findings, waterfall, resources or cache a comparison shows, `/` and `f` filter the waterfall and the resources, `z` zooms the waterfall, `s`/`S` sort the resources, `?` shows the keys and the filter syntax, and `q` (or `Ctrl+C`) quits.
 
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
 
@@ -64,23 +64,24 @@ The findings come from the recommendations of every report of a page (cache, net
 ```bash
 $ htv page.har trace.json.gz --format findings
 {
-  "schema": "https://unpkg.com/har-trace-viewer@0.1.1/dist/findings.schema.json",
-  "htvVersion": "0.1.1",
-  "generatedAt": "2026-11-01T13:42:15.887Z",
+  "schema": "https://unpkg.com/har-trace-viewer@0.7.0/dist/findings.schema.json",
+  "htvVersion": "0.7.0",
+  "generatedAt": "2026-11-12T20:06:11.410Z",
   "pages": [
     {
       "name": "Page 1",
-      "metrics": { "ttfb": 50.6, "serverWait": 48.7, "fcp": 181.5, "lcp": 181.5, "cls": null, "inp": null, "requests": 34, "transferBytes": 799947, ... },
+      "metrics": { "ttfb": 50.6, "serverWait": 48.7, "fcp": 181.5, "lcp": 181.5, "cls": null, "inp": null, "requests": 34, "transferBytes": 2077364, ... },
       "findings": [
+        ...
         {
           "id": "duplicate-requests",
           "title": "9 resources downloaded more than once",
           "severity": "info",
           "metric": "transfer",
-          "summary": "The page fetched these URLs over the network more than once, downloading 153 KB again.",
+          "summary": "The page fetched these URLs over the network more than once, downloading 563 KB again.",
           "recommendation": "A <link rel=preload> or prefetch whose as, crossorigin or credentials does not match the request that uses it is fetched twice, ...",
           "confidence": "low",
-          "evidence": [{ "url": "https://example.com/_next/static/chunks/169-7c4f23f868dd8b78.js", "detail": "fetched 2×", "bytes": 55658 }, ...],
+          "evidence": [{ "url": "https://example.com/_next/static/chunks/169-7c4f23f868dd8b78.js", "detail": "fetched 2×", "bytes": 168825 }, ...],
           "page": { "index": 0, "name": "Page 1" },
           "source": "network"
         },
@@ -216,11 +217,11 @@ Exit codes: `0` every check passed, `2` a budget or `--fail-on` failed (the repo
 $ htv page.har trace.json.gz --budget lcp=2.5s,transfer=500kb,cdn-hit-ratio=95% --fail-on warning
 Budgets:
   pass  Page 1  lcp            181 ms  <= 2500 ms
-  FAIL  Page 1  transfer       800 KB  <= 500 KB
+  FAIL  Page 1  transfer       2.1 MB  <= 500 KB
   pass  Page 1  cdn-hit-ratio  100.0%  >= 95.0%
 Findings at warning or worse:
-  pass  no warning or critical findings
-Checks failed: 1 of 3 budgets failed.
+  FAIL  Page 1  warning  thirdParty: Third-party requests before the load event
+Checks failed: 1 of 3 budgets failed; 1 finding at warning or worse.
 $ echo $?
 2
 ```
@@ -377,7 +378,7 @@ The site build differs from the one the CLI bundles into its reports: every URL 
 
 ## Releasing
 
-The CLI is published to npm as `har-trace-viewer` by `.github/workflows/release.yml` when a `v*` tag is pushed. The tag must equal `v` plus the version in `packages/cli/package.json`, otherwise the workflow fails.
+The CLI is published to npm as `har-trace-viewer` by `.github/workflows/release.yml` when a `v*` tag is pushed. The README npm shows, `packages/cli/README.md`, is written by the CLI build from this one, up to [Why htv](#why-htv) and with absolute links: edit this README, and a test fails until the build has written it again. The tag must equal `v` plus the version in `packages/cli/package.json`, otherwise the workflow fails.
 
 ```bash
 npm version <patch|minor|major> -w har-trace-viewer
