@@ -68,6 +68,22 @@
   cursor: pointer;
 }
 
+.groupTitle {
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-text2);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 2em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  color: var(--color-text);
+}
+
 .shortcuts {
   display: grid;
   /* A key column as wide in every group, so that the actions line up. */

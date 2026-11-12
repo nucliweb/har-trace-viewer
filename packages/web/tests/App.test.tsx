@@ -25,7 +25,7 @@ describe("App", () => {
   it("shows the builder when no flow is embedded", () => {
     render(<App />);
     expect(screen.getByText("Build your flow")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^↩ Reset$/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument();
   });
 
   it("renders the embedded flow directly and Reset returns to the builder", async () => {
@@ -36,7 +36,7 @@ describe("App", () => {
     expect(screen.getByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
     expect(screen.queryByText("Build your flow")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /^↩ Reset$/ }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
     expect(screen.getByText("Build your flow")).toBeInTheDocument();
   });
 

@@ -186,3 +186,26 @@
     padding: var(--space-md);
   }
 }
+
+/* Four header buttons and the version share a 320px screen: Reset keeps its icon, and its word
+   stays in the accessible name. */
+@media (max-width: 400px) {
+  .headerActions {
+    gap: var(--space-xs);
+  }
+
+  .resetButton {
+    width: 44px;
+    padding: 0;
+    font-size: 16px;
+  }
+
+  .resetLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

@@ -41,12 +41,12 @@ describe("App — keyboard shortcuts", () => {
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
   });
 
-  it("? opens the keyboard shortcuts and about, one dialog at a time", async () => {
+  it("? opens the help, the keyboard shortcuts and about, one dialog at a time", async () => {
     const user = userEvent.setup();
     render(<App />);
 
     await user.keyboard("?");
-    const help = screen.getByRole("dialog", { name: "Keyboard shortcuts" });
+    const help = screen.getByRole("dialog", { name: "Help" });
     for (const action of ["Toggle theme", "Settings", "Fullscreen", "Next step"]) {
       expect(within(help).getByText(action)).toBeInTheDocument();
     }
@@ -55,6 +55,22 @@ describe("App — keyboard shortcuts", () => {
     await user.keyboard("c");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("the header Help button opens the getting started steps, the HAR first", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Help" }));
+    const help = screen.getByRole("dialog", { name: "Help" });
+    const start = within(help).getByRole("region", { name: "Getting started" });
+    const steps = within(start).getAllByRole("listitem");
+    expect(steps).toHaveLength(4);
+    expect(steps[0]).toHaveTextContent(/HAR.*required/);
+    expect(steps[1]).toHaveTextContent(/Optionally.*trace/);
+    expect(steps[2]).toHaveTextContent(/in any order.*Generate diagram/);
+    expect(within(start).getByText(/Multi-page journeys/)).toBeInTheDocument();
+    expect(within(start).getByText(/Compare with…/)).toBeInTheDocument();
   });
 
   it("closes the open dialog on Escape", async () => {
@@ -144,8 +160,8 @@ describe("App — settings", () => {
     render(<App />);
     await user.keyboard("c");
 
-    await user.click(screen.getByRole("button", { name: "Keyboard shortcuts and about" }));
-    expect(screen.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Help and keyboard shortcuts" }));
+    expect(screen.getByRole("dialog", { name: "Help" })).toBeInTheDocument();
   });
 });
 
@@ -188,7 +204,8 @@ describe("App — language", () => {
     await user.keyboard("l");
     await user.keyboard("?");
 
-    const help = screen.getByRole("dialog", { name: "Atajos de teclado" });
+    const help = screen.getByRole("dialog", { name: "Ayuda" });
+    expect(within(help).getByRole("region", { name: "Primeros pasos" })).toBeInTheDocument();
     expect(within(help).getByText("Cambiar el idioma")).toBeInTheDocument();
     expect(within(help).getByText("Espacio")).toBeInTheDocument();
   });

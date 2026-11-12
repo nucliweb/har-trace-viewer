@@ -557,7 +557,7 @@ test("bundled report falls back to main-thread parsing when the worker chunk is 
   page,
 }) => {
   const collected = await open(page, bundleUrl);
-  await page.getByRole("button", { name: "↩ Reset" }).click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await page
     .locator('input[type="file"]')
     .first()
@@ -786,7 +786,7 @@ test.describe("mobile layout at 360x740", () => {
 
   test("the builder stacks without horizontal scroll after Reset", async ({ page }) => {
     await open(page, bundleUrl);
-    await page.getByRole("button", { name: "↩ Reset" }).click();
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Build your flow" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       360

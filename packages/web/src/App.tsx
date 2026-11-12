@@ -122,7 +122,8 @@ export function App() {
           <div className={styles.headerActions}>
             {flow && (
               <button className={styles.resetButton} onClick={handleReset} title={t.app.resetTitle}>
-                {t.app.reset}
+                <span aria-hidden="true">↩</span>{" "}
+                <span className={styles.resetLabel}>{t.app.reset}</span>
               </button>
             )}
             <button
@@ -132,6 +133,14 @@ export function App() {
               title={t.app.toggleThemeTitle}
             >
               {theme === "dark" ? "☀" : "🌙"}
+            </button>
+            <button
+              className={styles.themeToggle}
+              onClick={() => setDialog("help")}
+              aria-label={t.app.help}
+              title={t.app.helpTitle}
+            >
+              ?
             </button>
             <button
               className={styles.themeToggle}

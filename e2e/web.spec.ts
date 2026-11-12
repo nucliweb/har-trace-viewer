@@ -155,6 +155,25 @@ test.describe("mobile 360x740", () => {
     const svg = await page.locator("#diagram-svg").boundingBox();
     expect(svg!.width).toBeLessThanOrEqual(360);
   });
+
+  test("every header button fits a 320px screen, in each language", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(baseUrl);
+    await page.getByRole("button", { name: "Load demo flow →" }).click();
+    await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+    for (const lang of ["en", "es", "ca"]) {
+      await expect(page.locator("html")).toHaveAttribute("lang", lang);
+      const buttons = page.locator("header button");
+      await expect(buttons).toHaveCount(4);
+      for (const button of await buttons.all()) {
+        const box = (await button.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(320);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      await page.keyboard.press("l");
+    }
+  });
 });
 
 test("the keyboard opens the shortcuts and the settings as accessible modal dialogs", async ({
@@ -166,7 +185,7 @@ test("the keyboard opens the shortcuts and the settings as accessible modal dial
   await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
 
   await page.keyboard.press("?");
-  const help = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  const help = page.getByRole("dialog", { name: "Help" });
   await expect(help).toBeVisible();
   // The dialog holds the focus and the step keys leave it alone.
   await expect(help.locator(":focus")).toHaveCount(1);
@@ -204,7 +223,7 @@ test("the shortcuts still answer after a checkbox is ticked, which keeps Space",
   await page.keyboard.press(" ");
   await expect(journeys).not.toBeChecked();
   await page.keyboard.press("?");
-  await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Help" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -300,7 +319,7 @@ for (const scheme of ["light", "dark"] as const) {
     expect(fields.length).toBeGreaterThanOrEqual(5);
     expect(fields.filter((f) => f.ratio < 3)).toEqual([]);
 
-    await page.getByRole("button", { name: "↩ Reset" }).click();
+    await page.getByRole("button", { name: "Reset", exact: true }).click();
     await page.getByLabel("Page 1 name").focus();
     await page.keyboard.press("End");
     const outline = await page
