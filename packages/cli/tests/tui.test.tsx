@@ -360,7 +360,8 @@ describe("TuiApp — a flow", () => {
 
     await press(stdin, "7");
     expect(lastFrame()).toContain("Document");
-    await press(stdin, ...Array(60).fill(KEYS.down));
+    // 16 rows down reach the last resource; each key is a render, so no more than a margin.
+    await press(stdin, ...Array(24).fill(KEYS.down));
     expect(lastFrame()).not.toContain("Document");
     expect(lastFrame()).toContain("chunk-47TTPNLV.js");
   });
@@ -460,14 +461,16 @@ describe("TuiApp — the waterfall", () => {
     const { lastFrame, stdin } = render(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", "/", ..."type:js -party:first", "\r");
+    // Each query arrives in one write, as a paste does: one render per query, not per letter.
+    await press(stdin, "2", "/", "type:js -party:first", "\r");
+    expect(lastFrame()).toContain("Filter: type:js -party:first");
     expect(lastFrame()).toContain("Waterfall · 1 of 5 requests");
     expect(names(lastFrame()!)).toEqual(["tag-300.js"]);
 
-    await press(stdin, ESC, "/", ..."larger-than:10k", "\r");
+    await press(stdin, ESC, "/", "larger-than:10k", "\r");
     expect(names(lastFrame()!)).toEqual(["chunk-47TTPNLV.js"]);
 
-    await press(stdin, ESC, "/", ..."party:first status:2xx -type:doc", "\r");
+    await press(stdin, ESC, "/", "party:first status:2xx -type:doc", "\r");
     expect(names(lastFrame()!)).toEqual(["critical-100.css", "chunk-47TTPNLV.js", "image-200.png"]);
   });
 
