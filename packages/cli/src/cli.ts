@@ -100,6 +100,8 @@ export interface Args {
   compareWith?: CompareArg;
   listPages?: boolean;
   region?: ClientRegion; // undefined when --region is absent
+  /** B's region in a comparison; undefined when --compare-region is absent. */
+  compareRegion?: ClientRegion;
   /** Every --budget, in the order given. */
   budgets?: Budget[];
   failOn?: FailOnSeverity;
@@ -131,9 +133,9 @@ function parseRuns(value: string | undefined): RunsChoice {
   );
 }
 
-function parseRegion(value: string | undefined): ClientRegion {
+function parseRegion(value: string | undefined, flag = "--region"): ClientRegion {
   if (isClientRegion(value)) return value;
-  throw new Error(`Invalid --region "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
+  throw new Error(`Invalid ${flag} "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
 }
 
 // --redact takes an optional level, which node:util's parser cannot express: "=mask-hosts".
@@ -169,6 +171,7 @@ export function parseArgs(argv: string[]): Args {
       format: { type: "string" },
       bundle: { type: "boolean" },
       region: { type: "string" },
+      "compare-region": { type: "string" },
       budget: { type: "string", multiple: true },
       "fail-on": { type: "string" },
       "budget-strict": { type: "boolean" },
@@ -189,6 +192,7 @@ export function parseArgs(argv: string[]): Args {
   let help = false;
   let version = false;
   let region: ClientRegion | undefined;
+  let compareRegion: ClientRegion | undefined;
   let compare = false;
   let compareWith: CompareArg | undefined;
   const budgets: Budget[] = [];
@@ -260,6 +264,9 @@ export function parseArgs(argv: string[]): Args {
       case "region":
         region = parseRegion(value);
         break;
+      case "compare-region":
+        compareRegion = parseRegion(value, "--compare-region");
+        break;
       case "budget":
         budgets.push(...parseBudgets(value));
         break;
@@ -290,6 +297,7 @@ export function parseArgs(argv: string[]): Args {
     ...(compare ? { compare } : {}),
     ...(compareWith ? { compareWith } : {}),
     ...(region ? { region } : {}),
+    ...(compareRegion ? { compareRegion } : {}),
     ...(budgets.length > 0 ? { budgets } : {}),
     ...(failOn ? { failOn } : {}),
     ...(budgetStrict ? { budgetStrict } : {}),
@@ -508,6 +516,10 @@ Comparison:
                       Chrome trace for the --compare-with HAR.
   --compare-select <value>
                       Page of a multi-page --compare-with HAR, as --select.
+  --compare-region <id>
+                      Client network region of B, as --region is A's. Each side
+                      without one takes the region its own latencies suggest, so a
+                      load from China can be compared with one from elsewhere.
 
 CI checks (each page, both sides of a comparison; the result goes to stderr after
 the report, or to stdout without --output instead of the terminal report):
@@ -531,6 +543,7 @@ Other:
   --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")}. "cn" draws the
                       Great Firewall before the first server. Without --region, cn when
                       the latencies look compatible with China/GFW routing, else default.
+                      In a comparison it is A's region (--compare-region is B's).
   -h, --help          Show this help.
   -v, --version       Show the version.
 
@@ -568,6 +581,9 @@ export function validateArgs(args: Args): string | null {
   if (args.compare && args.compareWith) return "Use either --compare or --compare-with, not both";
   if (args.compareWith && !args.compareWith.har) {
     return "--compare-trace and --compare-select need --compare-with";
+  }
+  if (args.compareRegion && !args.compare && !args.compareWith) {
+    return "--compare-region needs --compare or --compare-with";
   }
   for (const p of args.pages) {
     if (!p.har) return `Missing --har for page "${p.name}"`;
@@ -728,6 +744,21 @@ async function comparisonSides(
   return [pageFlows[0], other[0]];
 }
 
+/**
+ * Says on stderr why a flow drawn without an explicit region shows the Great Firewall, and which
+ * flag draws the default topology instead. In a comparison it names the side.
+ */
+function noteSuggestedRegion(flow: Flow, explicit: ClientRegion | undefined, side?: "A" | "B") {
+  const suggestion = flow.hints.suggestedClientRegion;
+  if (!suggestion || explicit !== undefined) return;
+  const flag = side === "B" ? "--compare-region" : "--region";
+  const whose = side ? `${side}'s latencies` : "latencies";
+  const drawn = side ? `${side} with the` : "the";
+  console.error(
+    `Note: ${whose} look compatible with China/GFW routing (${suggestion.reason}), so the report draws ${drawn} GFW topology. A slow or mobile network shows the same latencies: pass ${flag} default to draw ${drawn} default topology.`
+  );
+}
+
 /** The flow to report and, for a comparison, the second flow (B). */
 export interface Report {
   flow: Flow;
@@ -740,9 +771,11 @@ export async function buildReport(args: Args): Promise<Report> {
   for (const p of args.pages) pageFlows.push(...(await readPageFlows(p, spreads)));
 
   const sides = await comparisonSides(pageFlows, args);
+  // Each side of a comparison has its own region: two loads from different places differ.
   const flow = generateFlow(sides ? [sides[0]] : pageFlows, { clientRegion: args.region });
-  // Both sides of a comparison share a topology: B takes the region A was drawn with.
-  const compare = sides ? generateFlow([sides[1]], { clientRegion: flow.clientRegion }) : undefined;
+  const compare = sides
+    ? generateFlow([sides[1]], { clientRegion: args.compareRegion })
+    : undefined;
   for (const f of compare ? [flow, compare] : [flow]) {
     f.pages.forEach((page, i) => {
       const spread = spreads.get(page);
@@ -750,12 +783,8 @@ export async function buildReport(args: Args): Promise<Report> {
     });
   }
 
-  const suggestion = flow.hints.suggestedClientRegion;
-  if (suggestion && args.region === undefined) {
-    console.error(
-      `Note: latencies look compatible with China/GFW routing (${suggestion.reason}), so the report draws the GFW topology. A slow or mobile network shows the same latencies: pass --region default to draw the default topology.`
-    );
-  }
+  noteSuggestedRegion(flow, args.region, compare ? "A" : undefined);
+  if (compare) noteSuggestedRegion(compare, args.compareRegion, "B");
   return compare ? { flow, compare } : { flow };
 }
 

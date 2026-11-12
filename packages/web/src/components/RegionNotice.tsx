@@ -3,6 +3,8 @@ import { useMessages } from "../i18n/context.js";
 import styles from "./RegionNotice.module.css";
 
 interface Props {
+  // The side of a comparison the notice speaks for; absent for a single flow.
+  side?: "A" | "B";
   suggestion: ClientRegionSuggestion;
   // The diagram draws the suggested region (the Great Firewall), not the default topology.
   applied: boolean;
@@ -12,18 +14,26 @@ interface Props {
   onDismiss: () => void;
 }
 
-export function RegionNotice({ suggestion, applied, onSwitch, onDismiss }: Props) {
+export function RegionNotice({ side, suggestion, applied, onSwitch, onDismiss }: Props) {
   const t = useMessages().region;
   const otherRegion = applied ? "default" : suggestion.region;
+  // The CLI sets each side's region with its own flag: --region for A, --compare-region for B.
+  const flag = side === "B" ? "--compare-region" : "--region";
   return (
     <div className={styles.notice} role="status">
       <p className={styles.text}>
-        <span className={styles.title}>{t.title(applied)}</span>{" "}
+        <span className={styles.title}>
+          {side && `${side} · `}
+          {t.title(applied)}
+        </span>{" "}
         {t.text(suggestion.reason, applied)}
         {!onSwitch && (
           <>
             {" "}
-            {t.cliBefore} <code className={styles.code}>--region {otherRegion}</code>{" "}
+            {t.cliBefore}{" "}
+            <code className={styles.code}>
+              {flag} {otherRegion}
+            </code>{" "}
             {t.cliAfter(applied)}
           </>
         )}

@@ -23,6 +23,10 @@ declare global {
   }
 }
 
+type Side = "a" | "b";
+const NONE_DISMISSED: ReadonlySet<Side> = new Set();
+const SIDE_LABEL = { a: "A", b: "B" } as const;
+
 export function App() {
   // Reports embed the flow without the raw pages, so it cannot be regenerated.
   const embedded = window.__HTV_FLOW__;
@@ -34,7 +38,8 @@ export function App() {
   });
   const [pages, setPages] = useState<PageFlow[] | null>(null);
   const [comparePages, setComparePages] = useState<PageFlow[] | null>(null);
-  const [noticeDismissed, setNoticeDismissed] = useState(false);
+  // The sides whose region notice was dismissed: "a" is the flow, "b" the comparison's B.
+  const [dismissed, setDismissed] = useState<ReadonlySet<Side>>(NONE_DISMISSED);
   const { theme, choice: themeChoice, toggleTheme, setChoice: setThemeChoice } = useTheme();
   const { locale, t, setLocale, cycleLocale } = useLocale();
   const [journeys, setJourneys] = useJourneys();
@@ -62,13 +67,10 @@ export function App() {
     setPages(nextPages);
     setFlow(nextFlow);
     setComparePages(nextComparePages ?? null);
-    // Both sides of a comparison share a topology: B takes the region A was drawn with.
-    setCompare(
-      nextComparePages
-        ? generateFlow(nextComparePages, { clientRegion: nextFlow.clientRegion })
-        : null
-    );
-    setNoticeDismissed(false);
+    // Each side has its own region: two loads from different places differ. A region chosen in
+    // the builder applies to both; on Auto, each side takes the one its latencies suggest.
+    setCompare(nextComparePages ? generateFlow(nextComparePages, options) : null);
+    setDismissed(NONE_DISMISSED);
   };
 
   const handleLoadFlow = (loaded: Flow) => {
@@ -76,21 +78,27 @@ export function App() {
     setFlow(normalizeFlow(loaded));
     setComparePages(null);
     setCompare(null);
-    setNoticeDismissed(false);
+    setDismissed(NONE_DISMISSED);
   };
 
-  const regionSuggestion = !noticeDismissed ? flow?.hints.suggestedClientRegion : undefined;
-  const regionApplied = flow?.clientRegion !== "default";
-
-  // Draws the topology the notice offers: the default one, or the suggested region's.
-  const handleSwitchRegion =
-    pages && regionSuggestion
-      ? () => {
-          const clientRegion = regionApplied ? "default" : regionSuggestion.region;
-          setFlow(generateFlow(pages, { clientRegion }));
-          if (comparePages) setCompare(generateFlow(comparePages, { clientRegion }));
-        }
+  // A notice for each side whose latencies suggest a region: why it is drawn as it is, and a
+  // button that draws that side alone with the other topology (when its pages are at hand).
+  const sides = [
+    { side: "a", sideFlow: flow, sidePages: pages, setSideFlow: setFlow },
+    { side: "b", sideFlow: compare, sidePages: comparePages, setSideFlow: setCompare },
+  ] as const;
+  const regionNotices = sides.flatMap(({ side, sideFlow, sidePages, setSideFlow }) => {
+    const suggestion = sideFlow?.hints.suggestedClientRegion;
+    if (!sideFlow || !suggestion || dismissed.has(side)) return [];
+    const applied = sideFlow.clientRegion !== "default";
+    const onSwitch = sidePages
+      ? () =>
+          setSideFlow(
+            generateFlow(sidePages, { clientRegion: applied ? "default" : suggestion.region })
+          )
       : undefined;
+    return [{ side, suggestion, applied, onSwitch }];
+  });
 
   const handleReset = () => {
     setFlow(null);
@@ -139,14 +147,16 @@ export function App() {
         <main className={styles.main}>
           {flow ? (
             <div className={styles.flowLayout}>
-              {regionSuggestion && (
+              {regionNotices.map(({ side, suggestion, applied, onSwitch }) => (
                 <RegionNotice
-                  suggestion={regionSuggestion}
-                  applied={regionApplied}
-                  onSwitch={handleSwitchRegion}
-                  onDismiss={() => setNoticeDismissed(true)}
+                  key={side}
+                  side={compare ? SIDE_LABEL[side] : undefined}
+                  suggestion={suggestion}
+                  applied={applied}
+                  onSwitch={onSwitch}
+                  onDismiss={() => setDismissed((prev) => new Set(prev).add(side))}
                 />
-              )}
+              ))}
               <div className={styles.flowArea}>
                 {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
               </div>

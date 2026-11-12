@@ -14,7 +14,7 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 
 ```bash
 htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
-htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]]
+htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]] [--compare-region default|cn]
 htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
 ```
 
@@ -149,29 +149,30 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 
 ### Options
 
-| Flag                       | Description                                                                                                                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<file>`                   | A HAR (`.har`, `.har.gz`) or a Chrome trace (`.json`, `.json.gz`) given without its flag, attached to the preceding `--page`                                                |
-| `--page <name>`            | Page label (can be specified multiple times for multi-page reports)                                                                                                         |
-| `--har <file>`             | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                                                                                   |
-| `--trace <file>`           | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                                                                                        |
-| `--select <value>`         | For the preceding `--har` with several pages (WebPageTest runs and views): keep only the matching pages, by page id, comma-separated ids or text/regex on id, title and URL |
-| `--runs <value>`           | For the preceding `--har` with several WebPageTest runs: `median` (default without `--select`), `median:<metric>`, `all` or a run number. See [Several runs](#several-runs) |
-| `--list-pages`             | Print the pages (id, entries, title) of each `--har` and exit without generating                                                                                            |
-| `--compare`                | Compare the two pages of the flow instead of chaining them: the first is A (top), the second B (bottom); the flow must have exactly two pages                               |
-| `--compare-with <file>`    | Compare the flow (A, one page) with another HAR (B)                                                                                                                         |
-| `--compare-trace <file>`   | Chrome trace for the `--compare-with` HAR                                                                                                                                   |
-| `--compare-select <value>` | Page of a multi-page `--compare-with` HAR, as `--select`                                                                                                                    |
-| `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                  |
-| `--format <format>`        | `tui`, `html`, `json`, `findings`, `markdown`, `csv` or `mermaid`; every format but `tui` and `html` prints to stdout without `--output`                                    |
-| `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                        |
-| `--redact[=mask-hosts]`    | Redact the report before it is written or shown, in every format; `=mask-hosts` also masks third-party hostnames. See [Sharing a report safely](#sharing-a-report-safely)   |
-| `--region <id>`            | Client network region: `default`, or `cn` for the Great Firewall before the first server. Without the flag, `cn` when the latencies suggest China/GFW routing               |
-| `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                            |
-| `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                     |
-| `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                         |
-| `-h, --help`               | Print the usage and exit                                                                                                                                                    |
-| `-v, --version`            | Print the version and exit                                                                                                                                                  |
+| Flag                       | Description                                                                                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `<file>`                   | A HAR (`.har`, `.har.gz`) or a Chrome trace (`.json`, `.json.gz`) given without its flag, attached to the preceding `--page`                                                               |
+| `--page <name>`            | Page label (can be specified multiple times for multi-page reports)                                                                                                                        |
+| `--har <file>`             | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                                                                                                  |
+| `--trace <file>`           | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                                                                                                       |
+| `--select <value>`         | For the preceding `--har` with several pages (WebPageTest runs and views): keep only the matching pages, by page id, comma-separated ids or text/regex on id, title and URL                |
+| `--runs <value>`           | For the preceding `--har` with several WebPageTest runs: `median` (default without `--select`), `median:<metric>`, `all` or a run number. See [Several runs](#several-runs)                |
+| `--list-pages`             | Print the pages (id, entries, title) of each `--har` and exit without generating                                                                                                           |
+| `--compare`                | Compare the two pages of the flow instead of chaining them: the first is A (top), the second B (bottom); the flow must have exactly two pages                                              |
+| `--compare-with <file>`    | Compare the flow (A, one page) with another HAR (B)                                                                                                                                        |
+| `--compare-trace <file>`   | Chrome trace for the `--compare-with` HAR                                                                                                                                                  |
+| `--compare-select <value>` | Page of a multi-page `--compare-with` HAR, as `--select`                                                                                                                                   |
+| `--compare-region <id>`    | Client network region of B in a comparison, as `--region` is A's. Without it, B takes the region its own latencies suggest                                                                 |
+| `-o, --output <path>`      | Where the report is written: a `.html` file (self-contained), a `.json` file, or a directory; without it, the report opens in the terminal                                                 |
+| `--format <format>`        | `tui`, `html`, `json`, `findings`, `markdown`, `csv` or `mermaid`; every format but `tui` and `html` prints to stdout without `--output`                                                   |
+| `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                                       |
+| `--redact[=mask-hosts]`    | Redact the report before it is written or shown, in every format; `=mask-hosts` also masks third-party hostnames. See [Sharing a report safely](#sharing-a-report-safely)                  |
+| `--region <id>`            | Client network region: `default`, or `cn` for the Great Firewall before the first server. Without the flag, `cn` when the latencies suggest China/GFW routing. In a comparison, A's region |
+| `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                                           |
+| `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                                    |
+| `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                                        |
+| `-h, --help`               | Print the usage and exit                                                                                                                                                                   |
+| `-v, --version`            | Print the version and exit                                                                                                                                                                 |
 
 ### Several runs
 
@@ -265,12 +266,21 @@ htv \
   --output report/
 ```
 
-Client in China (adds the Great Firewall to the diagram). Without `--region`, htv draws it when the latencies of any page look compatible with China/GFW routing (two of a document DNS lookup of 300 ms or more, a TCP connect of 500 ms or more, and three TLS handshakes or more, on two hosts or more, that take 350 ms and three times their TCP connect; or one of them with a `.cn` document host or a CDN PoP in mainland China) and prints a note saying why; a slow or mobile network shows the same latencies, so `--region default` draws the default topology. A comparison draws both sides with the region of A:
+Client in China (adds the Great Firewall to the diagram). Without `--region`, htv draws it when the latencies of any page look compatible with China/GFW routing (two of a document DNS lookup of 300 ms or more, a TCP connect of 500 ms or more, and three TLS handshakes or more, on two hosts or more, that take 350 ms and three times their TCP connect; or one of them with a `.cn` document host or a CDN PoP in mainland China) and prints a note saying why; a slow or mobile network shows the same latencies, so `--region default` draws the default topology:
 
 ```bash
 htv --page "Home" --har home.har --output report/ --region cn
 htv --page "Home" --har home.har --output report/ --region default
 ```
+
+Each side of a comparison has its own region, so loads of the same page from different places compare as they were: one recorded in China draws the Great Firewall, one from Australia or the US does not. Each side takes the region its own latencies suggest; `--region` sets A's and `--compare-region` B's:
+
+```bash
+htv sydney.har --compare-with shanghai.har -o au-vs-cn.html
+htv sydney.har --compare-with shanghai.har --compare-region cn -o au-vs-cn.html
+```
+
+The web app does the same on Auto, with a notice for each side its latencies place behind the Great Firewall; a region chosen in the builder applies to both sides.
 
 Comparison of a WebPageTest first view and repeat view (without and with cache), both from the same HAR:
 

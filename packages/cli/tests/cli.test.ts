@@ -138,6 +138,12 @@ describe("parseArgs", () => {
     expect(parseArgs(["--har", "a.har"]).region).toBeUndefined();
   });
 
+  it("parses --compare-region, and rejects an unknown one", () => {
+    expect(parseArgs(["--compare-region", "cn"]).compareRegion).toBe("cn");
+    expect(parseArgs(["--har", "a.har"]).compareRegion).toBeUndefined();
+    expect(() => parseArgs(["--compare-region", "eu"])).toThrow(/default, cn/);
+  });
+
   it("rejects an unknown region listing the valid values", () => {
     expect(() => parseArgs(["--region", "eu"])).toThrow(/default, cn/);
     expect(() => parseArgs(["--region"])).toThrow(/region/);
@@ -397,14 +403,61 @@ describe("client region (built CLI)", () => {
     expect(flow.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
   });
 
-  it("draws both sides of a comparison with the region A suggests", () => {
+  const hasGfw = (flow: EmbeddedFlow) => flow.pageAnalyses[0].nodes.some((n) => n.id === "gfw");
+
+  it("draws each side of a comparison with the region its own latencies suggest", () => {
     const dir = makeTempDir();
-    const res = runCli(["--har", writeSlowHar(dir), "--compare-with", HAR, "--format", "json"]);
+    const chinaFirst = runCli([
+      "--har",
+      writeSlowHar(dir),
+      "--compare-with",
+      HAR,
+      "--format",
+      "json",
+    ]);
+    expect(chinaFirst.status, chinaFirst.stderr).toBe(0);
+    const first = JSON.parse(chinaFirst.stdout) as { a: EmbeddedFlow; b: EmbeddedFlow };
+    expect([first.a.clientRegion, hasGfw(first.a)]).toEqual(["cn", true]);
+    expect([first.b.clientRegion, hasGfw(first.b)]).toEqual(["default", false]);
+
+    const chinaSecond = runCli([
+      "--har",
+      HAR,
+      "--compare-with",
+      writeSlowHar(dir),
+      "--format",
+      "json",
+    ]);
+    expect(chinaSecond.status, chinaSecond.stderr).toBe(0);
+    const second = JSON.parse(chinaSecond.stdout) as { a: EmbeddedFlow; b: EmbeddedFlow };
+    expect([second.a.clientRegion, hasGfw(second.a)]).toEqual(["default", false]);
+    expect([second.b.clientRegion, hasGfw(second.b)]).toEqual(["cn", true]);
+    expect(chinaSecond.stderr).toContain(
+      "Note: B's latencies look compatible with China/GFW routing (document DNS 320ms ≥ 300ms, max TCP connect 650ms ≥ 500ms), so the report draws B with the GFW topology. A slow or mobile network shows the same latencies: pass --compare-region default to draw B with the default topology."
+    );
+    expect(chinaSecond.stderr).not.toContain("A's latencies");
+  });
+
+  it("takes A's region from --region and B's from --compare-region", () => {
+    const dir = makeTempDir();
+    const slow = writeSlowHar(dir);
+    const res = runCli([
+      "--har",
+      slow,
+      "--region",
+      "default",
+      "--compare-with",
+      HAR,
+      "--compare-region",
+      "cn",
+      "--format",
+      "json",
+    ]);
     expect(res.status, res.stderr).toBe(0);
+    expect(res.stderr).not.toContain("Note:");
     const { a, b } = JSON.parse(res.stdout) as { a: EmbeddedFlow; b: EmbeddedFlow };
-    expect(a.clientRegion).toBe("cn");
-    expect(b.clientRegion).toBe("cn");
-    expect(b.pageAnalyses[0].nodes.map((n) => n.id)).toContain("gfw");
+    expect([a.clientRegion, hasGfw(a)]).toEqual(["default", false]);
+    expect([b.clientRegion, hasGfw(b)]).toEqual(["cn", true]);
   });
 
   it("builds the GFW topology with --region cn and prints no note", () => {
@@ -1016,6 +1069,16 @@ describe("validateArgs — comparison", () => {
   it("rejects --compare together with --compare-with", () => {
     expect(validateArgs({ ...base, compare: true, compareWith: { har: "b.har" } })).toBe(
       "Use either --compare or --compare-with, not both"
+    );
+  });
+
+  it("takes --compare-region with either comparison, and rejects it without one", () => {
+    expect(validateArgs({ ...base, compare: true, compareRegion: "cn" })).toBeNull();
+    expect(
+      validateArgs({ ...base, compareWith: { har: "b.har" }, compareRegion: "cn" })
+    ).toBeNull();
+    expect(validateArgs({ ...base, compareRegion: "cn" })).toBe(
+      "--compare-region needs --compare or --compare-with"
     );
   });
 
