@@ -10,6 +10,7 @@ import {
   buildGeneration,
   hasFlowPages,
   isEntryParsing,
+  needsHar,
   pagePairOf,
 } from "./flow-builder/page-entry.js";
 import { usePageEntries } from "./flow-builder/usePageEntries.js";
@@ -52,7 +53,11 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props)
   const pickerAvailable = pages.length === 1 && (pages[0].har?.length ?? 0) > 1;
   const comparing = pagePair !== null || compare.har !== null;
   const isParsing = [...pages, compare].some(isEntryParsing);
-  const canGenerate = !isParsing && (pagePair !== null || pages.some(hasFlowPages));
+  // A trace waiting for its HAR would be dropped from the flow without a word: Generate waits.
+  const canGenerate =
+    !isParsing &&
+    ![...pages, compare].some(needsHar) &&
+    (pagePair !== null || pages.some(hasFlowPages));
 
   const handleGenerate = () => {
     const generation = buildGeneration(
@@ -97,7 +102,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props)
             isDraggingOver={draggingOver === page.id}
             journey={journeyControls}
             onNameChange={(name) => entries.update(page.id, { name })}
-            onHarFile={(file) => entries.loadHar(page.id, file)}
+            onHarFile={(file) => entries.loadFile(page.id, file)}
             onSelectedPagesChange={(selectedPageIds) =>
               entries.update(page.id, { selectedPageIds })
             }
@@ -116,7 +121,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props)
       {!pagePair && (
         <CompareTarget
           entry={compare}
-          onHarFile={entries.loadCompareHar}
+          onHarFile={entries.loadCompareFile}
           onTraceFile={entries.loadCompareTrace}
           onPageChange={(id) => entries.updateCompare({ selectedPageIds: [id] })}
           onRemove={entries.resetCompare}

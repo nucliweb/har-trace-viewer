@@ -571,11 +571,17 @@ export function printUsage() {
   console.error(USAGE);
 }
 
+// A trace adds detail to a HAR: given alone, the message names it rather than a missing flag.
+const missingHar = (page: PageArg) =>
+  page.trace
+    ? `${page.trace} is a Chrome trace: it needs the HAR of the same recording, e.g. htv page.har ${page.trace}`
+    : `Missing --har for page "${page.name}"`;
+
 export function validateArgs(args: Args): string | null {
   if (args.listPages) {
     if (args.pages.length === 0) return "";
     const missing = args.pages.find((p) => !p.har);
-    return missing ? `Missing --har for page "${missing.name}"` : null;
+    return missing ? missingHar(missing) : null;
   }
   if (args.pages.length === 0) return "";
   if (args.compare && args.compareWith) return "Use either --compare or --compare-with, not both";
@@ -586,7 +592,7 @@ export function validateArgs(args: Args): string | null {
     return "--compare-region needs --compare or --compare-with";
   }
   for (const p of args.pages) {
-    if (!p.har) return `Missing --har for page "${p.name}"`;
+    if (!p.har) return missingHar(p);
   }
   return null;
 }

@@ -87,6 +87,8 @@ export const ca: Messages = {
     },
     harExtension: "Només s'admeten fitxers .har i .har.gz.",
     traceExtension: "S'esperava una traça .json o .json.gz.",
+    needsHar:
+      "Afegeix l'HAR de la mateixa gravació: una traça afegeix detall del fil principal a un HAR i no es pot mostrar sola.",
     parserCrash: (detail) =>
       `L'analitzador ha fallat al navegador${detail ? ` (${detail})` : ""}. Pot ser que el fitxer sigui massa gran per a aquesta pestanya: prova la línia d'ordres d'htv, o un HAR sense els cossos de les respostes.`,
     moveUp: "Puja",
@@ -105,7 +107,7 @@ export const ca: Messages = {
     pageOption: (label, requests) => `${label} (${plural(requests, "petició", "peticions")})`,
     guide: {
       heading: "D'on surten els fitxers?",
-      har: "Fitxer HAR",
+      har: "Fitxer HAR (obligatori)",
       harSteps: [
         "Obre DevTools i ves al tauler Network.",
         "Marca «Preserve log» i torna a carregar la pàgina.",

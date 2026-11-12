@@ -86,6 +86,8 @@ export const en = {
     progress: { reading: "Reading", decompressing: "Decompressing", parsing: "Parsing" },
     harExtension: "Only .har and .har.gz files are supported.",
     traceExtension: "Expected .json or .json.gz trace file.",
+    needsHar:
+      "Add the HAR of the same recording: a trace adds main-thread detail to a HAR and can't be shown on its own.",
     parserCrash: (detail: string | undefined) =>
       `The parser crashed in the browser${detail ? ` (${detail})` : ""}. The file may be too large for this tab: try the htv command line, or a HAR without response bodies.`,
     moveUp: "Move up",
@@ -104,7 +106,7 @@ export const en = {
     pageOption: (label: string, requests: number) => `${label} (${requests} req)`,
     guide: {
       heading: "Where do the files come from?",
-      har: "HAR file",
+      har: "HAR file (required)",
       harSteps: [
         "Open DevTools and go to the Network panel.",
         "Tick “Preserve log” and reload the page.",

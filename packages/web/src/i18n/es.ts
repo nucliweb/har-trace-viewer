@@ -83,6 +83,8 @@ export const es: Messages = {
     progress: { reading: "Leyendo", decompressing: "Descomprimiendo", parsing: "Analizando" },
     harExtension: "Solo se admiten archivos .har y .har.gz.",
     traceExtension: "Se esperaba una traza .json o .json.gz.",
+    needsHar:
+      "Añade el HAR de la misma grabación: una traza añade detalle del hilo principal a un HAR y no se puede mostrar sola.",
     parserCrash: (detail) =>
       `El analizador ha fallado en el navegador${detail ? ` (${detail})` : ""}. Puede que el archivo sea demasiado grande para esta pestaña: prueba la línea de comandos de htv, o un HAR sin los cuerpos de las respuestas.`,
     moveUp: "Subir",
@@ -101,7 +103,7 @@ export const es: Messages = {
     pageOption: (label, requests) => `${label} (${plural(requests, "petición", "peticiones")})`,
     guide: {
       heading: "¿De dónde salen los archivos?",
-      har: "Archivo HAR",
+      har: "Archivo HAR (obligatorio)",
       harSteps: [
         "Abre DevTools y ve al panel Network.",
         "Marca «Preserve log» y recarga la página.",

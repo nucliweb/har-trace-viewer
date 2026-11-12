@@ -90,13 +90,24 @@ export function hasFlowPages(p: PageEntry): boolean {
 
 export const isEntryParsing = (p: PageEntry) => p.harProgress !== null || p.traceProgress !== null;
 
+/** A trace only adds detail to the HAR of its recording: without one, the entry is incomplete. */
+export const needsHar = (p: PageEntry) => p.har === null && p.trace !== null;
+
 const toEntryError = (error: unknown): EntryError =>
   error instanceof ParserCrashError
     ? { kind: "parser-crash", detail: error.detail }
     : { kind: "message", message: error instanceof Error ? error.message : String(error) };
 
+const TRACE_FILE = /\.json(\.gz)?$/i;
+
+/** Loads a file given as the recording's HAR: a trace, by its name, goes to the trace instead. */
+export function loadRecordingFile(file: File, apply: (patch: EntryPatch) => void) {
+  if (TRACE_FILE.test(file.name)) void loadTraceFile(file, apply);
+  else loadHarFile(file, apply);
+}
+
 /** Parses a dropped HAR in the worker, reporting progress and the result through `apply`. */
-export function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
+function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
   if (!/\.har(\.gz)?$/i.test(file.name)) {
     apply({ harError: { kind: "har-extension" } });
     return;
@@ -118,7 +129,7 @@ export function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
 
 /** Parses a dropped Chrome trace in the worker, reporting progress and the result through `apply`. */
 export async function loadTraceFile(file: File, apply: (patch: EntryPatch) => void) {
-  if (!file.name.endsWith(".json") && !file.name.endsWith(".gz")) {
+  if (!TRACE_FILE.test(file.name) && !file.name.endsWith(".gz")) {
     apply({ traceError: { kind: "trace-extension" } });
     return;
   }

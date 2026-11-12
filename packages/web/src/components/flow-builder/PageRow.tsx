@@ -3,7 +3,7 @@ import { listHarPages } from "@htv/core";
 import type { ParsedHar } from "@htv/core";
 import { useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
-import { FileZones } from "./FileZones.js";
+import { FileZones, NeedsHarNote } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
 
@@ -113,6 +113,7 @@ export function PageRow({
           </button>
         )}
       </div>
+      <NeedsHarNote entry={page} />
       {page.har && page.har.length > 1 && !(showComparePicker && page.comparePages) && (
         <PageChecklist
           har={page.har}

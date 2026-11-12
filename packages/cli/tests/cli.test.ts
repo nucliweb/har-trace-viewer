@@ -289,6 +289,28 @@ describe("usage errors (built CLI)", () => {
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('Missing --har for page "X"');
   });
+
+  it("exits 1 explaining that a trace given alone needs the HAR of its recording", () => {
+    const res = runCli([TRACE, "--output", join(makeTempDir(), "out")]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(
+      `${TRACE} is a Chrome trace: it needs the HAR of the same recording, e.g. htv page.har ${TRACE}`
+    );
+    expect(res.stderr).not.toContain("Missing --har");
+  });
+});
+
+describe("validateArgs — a trace without its HAR", () => {
+  const traceOnly = { name: "Home", har: "", trace: "home.json.gz" };
+  const hint =
+    "home.json.gz is a Chrome trace: it needs the HAR of the same recording, e.g. htv page.har home.json.gz";
+
+  it("names the trace instead of a missing --har, for a page and for --list-pages", () => {
+    expect(validateArgs({ pages: [traceOnly], output: "out", bundle: false })).toBe(hint);
+    expect(
+      validateArgs({ pages: [traceOnly], output: "out", bundle: false, listPages: true })
+    ).toBe(hint);
+  });
 });
 
 describe("end to end without --bundle (built CLI)", () => {

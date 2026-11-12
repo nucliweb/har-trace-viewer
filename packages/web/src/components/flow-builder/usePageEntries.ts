@@ -1,6 +1,6 @@
 import { useCallback, useReducer } from "react";
 import { useMessages } from "../../i18n/context.js";
-import { loadHarFile, loadTraceFile, makeEntry } from "./page-entry.js";
+import { loadRecordingFile, loadTraceFile, makeEntry } from "./page-entry.js";
 import type { EntryPatch, PageEntry } from "./page-entry.js";
 
 /** The pages of the flow and the optional recording to compare them with. */
@@ -67,8 +67,8 @@ export function usePageEntries() {
     pages: state.pages,
     compare: state.compare,
     update,
-    loadHar: useCallback(
-      (id: string, file: File) => loadHarFile(file, (patch) => update(id, patch)),
+    loadFile: useCallback(
+      (id: string, file: File) => loadRecordingFile(file, (patch) => update(id, patch)),
       [update]
     ),
     loadTrace: useCallback(
@@ -85,7 +85,10 @@ export function usePageEntries() {
     ),
     remove: useCallback((id: string) => dispatch({ type: "remove", id }), []),
     updateCompare,
-    loadCompareHar: useCallback((file: File) => loadHarFile(file, updateCompare), [updateCompare]),
+    loadCompareFile: useCallback(
+      (file: File) => loadRecordingFile(file, updateCompare),
+      [updateCompare]
+    ),
     loadCompareTrace: useCallback(
       (file: File) => loadTraceFile(file, updateCompare),
       [updateCompare]

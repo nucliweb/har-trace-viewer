@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { gzipSync } from "node:zlib";
 import { File as NodeFile } from "node:buffer";
@@ -26,6 +26,8 @@ describe("FlowBuilder", () => {
     expect(screen.getByText("Drop .har")).toBeInTheDocument();
     expect(generate()).toBeDisabled();
     expect(screen.getByText("Load a HAR file, and a Chrome trace if you have one.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "HAR file (required)" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Trace (optional)" })).toBeVisible();
     for (const name of ["+ Add page", "Move page up", "Move page down", "Remove page"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
@@ -60,8 +62,6 @@ describe("FlowBuilder", () => {
   it("loads a trace after the HAR", async () => {
     const user = userEvent.setup();
     render(<FlowBuilder onGenerate={vi.fn()} />);
-    // The first Trace button belongs to the page; the second one to the optional comparison.
-    expect(screen.getAllByRole("button", { name: "Trace" })[0]).toBeDisabled();
     await loadHar(user);
     await screen.findByText("site.har");
     await user.upload(
@@ -69,6 +69,63 @@ describe("FlowBuilder", () => {
       makeFile(traceJson, "trace.json")
     );
     expect(await screen.findByRole("button", { name: "Trace ✓" })).toBeInTheDocument();
+  });
+
+  describe("a trace before its HAR", () => {
+    const NEEDS_HAR =
+      "Add the HAR of the same recording: a trace adds main-thread detail to a HAR and can't be shown on its own.";
+    const traceInput = () => fileInputs().find((i) => i.accept === ".json,.gz")!;
+
+    it("keeps the trace, asks for the HAR, and generates once it arrives", async () => {
+      const user = userEvent.setup();
+      const onGenerate = vi.fn();
+      render(<FlowBuilder onGenerate={onGenerate} />);
+      expect(screen.getAllByRole("button", { name: "Trace" })[0]).toBeEnabled();
+      await user.upload(traceInput(), makeFile(traceJson, "trace.json"));
+      expect(await screen.findByRole("button", { name: "Trace ✓" })).toBeInTheDocument();
+      expect(screen.getByText(NEEDS_HAR)).toBeVisible();
+      expect(generate()).toBeDisabled();
+
+      await loadHar(user);
+      await screen.findByText("site.har");
+      expect(screen.queryByText(NEEDS_HAR)).not.toBeInTheDocument();
+      await user.click(generate());
+      expect(onGenerate.mock.calls[0][0][0].trace).toBeDefined();
+    });
+
+    it("takes a trace picked with the HAR button as the trace", async () => {
+      const user = userEvent.setup({ applyAccept: false });
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await user.upload(fileInputs()[0], makeFile(traceJson, "trace.json"));
+      expect(await screen.findByRole("button", { name: "Trace ✓" })).toBeInTheDocument();
+      expect(screen.queryByText("Only .har and .har.gz files are supported.")).toBeNull();
+      expect(screen.getByText(NEEDS_HAR)).toBeVisible();
+    });
+
+    it("takes a trace dropped on the row as the trace", async () => {
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      const row = screen.getByLabelText("Page 1 name").parentElement!;
+      fireEvent.drop(row, { dataTransfer: { files: [makeFile(traceJson, "trace.json")] } });
+      expect(await screen.findByRole("button", { name: "Trace ✓" })).toBeInTheDocument();
+      expect(screen.getByText(NEEDS_HAR)).toBeVisible();
+    });
+
+    it("holds Generate while the recording to compare with has a trace and no HAR", async () => {
+      const user = userEvent.setup();
+      render(<FlowBuilder onGenerate={vi.fn()} />);
+      await loadHar(user);
+      await screen.findByText("site.har");
+      const compareTarget = screen.getByRole("group", { name: "Compare with…" });
+      await user.upload(
+        within(compareTarget).getByLabelText("Trace to compare with", { selector: "input" }),
+        makeFile(traceJson, "trace.json")
+      );
+      expect(await within(compareTarget).findByText(NEEDS_HAR)).toBeVisible();
+      expect(generate()).toBeDisabled();
+
+      await user.click(within(compareTarget).getByRole("button", { name: "Remove comparison" }));
+      expect(generate()).toBeEnabled();
+    });
   });
 
   it("shows an inline error for a corrupt HAR", async () => {

@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useCoreLang, useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
-import { describeEntryError, describeProgress } from "./page-entry.js";
+import { describeEntryError, describeProgress, needsHar } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
 
 interface Props {
@@ -13,6 +13,12 @@ interface Props {
   /** Accessible names of the file inputs, when they need one of their own. */
   harInputLabel?: string;
   traceInputLabel?: string;
+}
+
+/** Asks for the HAR of a recording whose trace came first: a trace is never shown alone. */
+export function NeedsHarNote({ entry }: { entry: PageEntry }) {
+  const t = useMessages().builder;
+  return needsHar(entry) ? <p className={styles.needsHar}>{t.needsHar}</p> : null;
 }
 
 /** The HAR button (click or drop) and the optional trace button of one recording. */
@@ -96,7 +102,7 @@ export function FileZones({
         <button
           className={`${styles.traceBtn} ${entry.trace ? styles.traceLoaded : ""}`}
           onClick={() => traceInputRef.current?.click()}
-          disabled={!entry.har || entry.traceProgress !== null}
+          disabled={entry.traceProgress !== null}
           title={entry.trace ? entry.traceFileName : t.traceTitle}
         >
           {entry.trace ? t.traceLoaded : t.trace}

@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { listHarPages } from "@htv/core";
 import { useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
-import { FileZones } from "./FileZones.js";
+import { FileZones, NeedsHarNote } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
 
@@ -50,13 +50,14 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
         <button
           className={styles.removeBtn}
           onClick={onRemove}
-          disabled={!entry.har && !entry.harError}
+          disabled={!entry.har && !entry.harError && !entry.trace && !entry.traceError}
           title={t.removeComparison}
           aria-label={t.removeComparison}
         >
           ×
         </button>
       </div>
+      <NeedsHarNote entry={entry} />
       {pages && (
         <span className={styles.pairField}>
           <label className={styles.pairLabel} htmlFor={pageSelectId}>
