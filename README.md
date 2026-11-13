@@ -36,9 +36,38 @@ The destination picks the format:
 | `htv page.har --format mermaid`  | A Mermaid sequence diagram of the document request per page, on stdout (or `-o diagram.md`)                                                         |
 | `htv page.har -o report/`        | A directory with `index.html` and its assets (`--bundle` inlines them)                                                                              |
 
-In the terminal, `1`–`7` or `Tab` switch tabs, `←`/`→` walk the steps on the Steps tab and the pages of a multi-page flow elsewhere (`p`/`P` next and previous page too), `↑`/`↓` and `PgUp`/`PgDn` (or `Space`) scroll, `a`/`b` pick the side whose findings, waterfall, resources or cache a comparison shows, `/` and `f` filter the waterfall and the resources, `z` zooms the waterfall, `s`/`S` sort the resources, `?` shows the keys and the filter syntax, and `q` (or `Ctrl+C`) quits.
-
 The JSON holds the version of htv that wrote it and the flow the HTML report draws: `{ "htvVersion", "kind": "flow", "flow" }`, or `{ "htvVersion", "kind": "comparison", "a", "b" }` for a comparison. Each flow carries its data-model `version`, its pages with their parsed HAR entries and trace metrics, the topology and cache report of every page (`pageAnalyses`) and the steps of the diagram.
+
+### Terminal report
+
+`htv page.har` opens the report in the terminal, in seven tabs:
+
+![The terminal report of a page load: the findings, the waterfall filtered to the third parties and zoomed on the page load, the resources sorted by size, the overview, the steps, the hosts, the cache and the help](docs/tui-tour.gif)
+
+| Key | Tab             | What it shows                                                                                                                                                   |
+| --- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `1` | Findings        | What to fix first: the [findings](#findings) of the page by severity, each with its metric, what to do and its evidence                                         |
+| `2` | Waterfall       | Every request on one time axis, with the TTFB, FCP, LCP, DCL and onLoad marks, to filter, narrow to a party and zoom on the page load ([waterfall](#waterfall)) |
+| `3` | Resources       | The same requests as a table (type, status, priority, protocol, encoding, size, TTFB, time and start), sorted by any column                                     |
+| `4` | Overview        | The metrics rated against the web.dev thresholds, the network nodes (CDN, origin, third parties) and, with a trace, the [main thread](#main-thread)             |
+| `5` | Steps           | The page load step by step, from the connection to the load event, with the route, the metrics and the requests of each step                                    |
+| `6` | Hosts           | The requests, transfer, TTFB and connection reuse of each host, and the [third parties](#third-parties) by service                                              |
+| `7` | Cache & network | How the CDN and the browser cache the document and the static assets, and the network recommendations                                                           |
+
+A first session, as in the recording above:
+
+1. `htv page.har trace.json.gz` opens the report. The trace adds the FCP, the LCP, the render-blocking requests and the main-thread work; without it they read `n/a`.
+2. The Findings tab (`1`) comes first: the critical findings and the warnings at the top, each with what to do. `↑`/`↓` and `PgUp`/`PgDn` (or `Space`) scroll.
+3. The Waterfall (`2`) shows when each request ran. `/` then `-party:first` keeps the third parties (`Enter` keeps the filter, `Esc` clears it), and `z` zooms the axis on the page load, so the requests before onLoad take the whole width.
+4. On Resources (`3`), `s` cycles the column the table sorts by (start, size, time, TTFB, then the others) to find the heaviest or the slowest requests, and `S` reverses it.
+5. Overview (`4`) gathers the metrics, Steps (`5`) walks the load with `←`/`→`, and Hosts (`6`) and Cache & network (`7`) show where the time and the bytes went.
+6. `?` lists every key and the filter syntax on any tab, and `q` (or `Ctrl+C`) quits.
+
+A comparison puts two recordings of the same page in one report, here with the browser cache off (`cold`) and on (`warm`):
+
+![The terminal report comparing a cold and a warm load: the waterfall of each side, the cache of each side and the hosts of both](docs/tui-compare.gif)
+
+The top edge names both sides (`A cold · B warm`); `a`/`b` pick the side the Findings, Waterfall, Resources and Cache & network tabs show, and the Hosts tab lists both with the difference per host and per third party. In a flow of several pages, `←`/`→` (or `p`/`P`) move between the pages on every tab but Steps.
 
 ### Findings
 
@@ -138,7 +167,7 @@ In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled t
 
 htv groups every request outside the document's registrable domain by the service it belongs to, from a built-in catalogue of the third parties most pages load (Google Tag Manager, Google Analytics, Meta Pixel, OneTrust, Cookiebot, Didomi, YouTube, Google Fonts, Intercom, HubSpot, Cloudinary, reCAPTCHA, Stripe…), each with a category: tag manager, analytics, advertising, consent, social, video, fonts, customer success, CDN or utility. A host the catalogue does not know is reported by its domain. For each third party it counts the network requests, the bytes on the wire and the browser-cache hits, splits the requests at the load event (what ran before onLoad competed with the page for connections and bandwidth), counts the requests that held the first paint and gives the median TTFB of its hosts, with the share of the page's requests and bytes that third parties take in all.
 
-The findings say when third parties dominate the page weight (40% of the bytes or more; critical past 60%), when many of them ran before the load event, when a consent manager (CMP) is on the page and whether it held the first paint, and, on the good side, when the page has no third party or they stay light. The Hosts tab of the terminal report (`5`), the Hops panel of the HTML report and the web app, the Markdown report and the JSON (`pageAnalyses[].thirdPartyReport`) carry the table.
+The findings say when third parties dominate the page weight (40% of the bytes or more; critical past 60%), when many of them ran before the load event, when a consent manager (CMP) is on the page and whether it held the first paint, and, on the good side, when the page has no third party or they stay light. The Hosts tab of the terminal report (`6`), the Hops panel of the HTML report and the web app, the Markdown report and the JSON (`pageAnalyses[].thirdPartyReport`) carry the table.
 
 A consent manager decides which other third parties load, so the cost of consent is best read as a comparison: record the page before accepting and again after, then compare them (`htv before-consent.har --compare-with after-consent.har`). The Deltas panel in the HTML report, the Hosts tab in the terminal and the Markdown report list the third parties of both recordings joined by service, what B added first, with the requests and bytes each one added.
 
@@ -369,6 +398,10 @@ Real recordings live in `fixtures/` (see its README for what each one is); small
 ### Demo flow
 
 The web app's empty state offers a "Load demo flow" button. The flow it loads is pre-generated from the core test fixtures (`webperf-snippets.har.fixture.json` and `webperf-snippets.trace.fixture.json`) and stored in `packages/web/src/demo/demo-flow.json`. It is a separate chunk fetched on click, so it does not weigh on the main bundle, and it is not offered inside generated reports. Regenerate it after changing the flow format or the fixtures with `npm run demo:build -w @htv/web`.
+
+### Terminal recordings
+
+`python3 packages/cli/scripts/record-tui.py` records the two animations of the [terminal report](#terminal-report), `docs/tui-tour.gif` and `docs/tui-compare.gif`: it runs the built CLI in a pseudo-terminal over the recordings in `fixtures/`, presses a fixed list of keys and renders each session with [agg](https://github.com/asciinema/agg). Run it after `npm run build` when the terminal report changes; `record-tui.py tour` records one of them.
 
 ### Public site
 
