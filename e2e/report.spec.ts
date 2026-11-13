@@ -256,7 +256,7 @@ function textsBelow12px(page: Page): Promise<string[]> {
     const MIN = 12;
     const found: string[] = [];
     const describe = (el: Element) =>
-      `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${String((el as HTMLElement).className?.baseVal ?? el.className).slice(0, 40)} "${(el.textContent ?? "").trim().slice(0, 30)}"`;
+      `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${String(el instanceof SVGElement ? el.className.baseVal : el.className).slice(0, 40)} "${(el.textContent ?? "").trim().slice(0, 30)}"`;
 
     const hasOwnText = (el: Element) =>
       [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
@@ -272,10 +272,10 @@ function textsBelow12px(page: Page): Promise<string[]> {
       if (size < MIN) found.push(`${describe(el)}: ${size}px`);
     }
 
-    for (const el of document.querySelectorAll("svg text, svg tspan")) {
+    for (const el of document.querySelectorAll<SVGGraphicsElement>("svg text, svg tspan")) {
       if (!hasOwnText(el)) continue;
       const svg = el.ownerSVGElement;
-      const ctm = (el as SVGGraphicsElement).getScreenCTM();
+      const ctm = el.getScreenCTM();
       if (!svg || !ctm) continue;
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) continue;
