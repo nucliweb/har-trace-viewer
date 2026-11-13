@@ -22,6 +22,8 @@ interface Props {
   onLoadFlow?: (flow: Flow) => void;
   /** Offers multi-page journeys: "+ Add page", the page order and removing a page. */
   journeys?: boolean;
+  /** Why the last attempt to generate failed, shown above the Generate button. */
+  error?: string | null;
 }
 
 /**
@@ -29,7 +31,7 @@ interface Props {
  * recording to compare with, the client region and the Generate button; the empty state
  * offers a demo flow.
  */
-export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props) {
+export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false, error = null }: Props) {
   const t = useMessages().builder;
   const entries = usePageEntries();
   const { pages, compare } = entries;
@@ -126,6 +128,12 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false }: Props)
           onPageChange={(id) => entries.updateCompare({ selectedPageIds: [id] })}
           onRemove={entries.resetCompare}
         />
+      )}
+
+      {error && (
+        <p className={styles.generateError} role="alert">
+          {error}
+        </p>
       )}
 
       <div className={styles.footer}>

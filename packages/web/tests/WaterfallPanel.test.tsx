@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ParsedTrace } from "@htv/core";
@@ -149,28 +149,20 @@ describe("WaterfallPanel", () => {
     expect(screen.getByText("1 of 5 requests")).toBeInTheDocument();
   });
 
-  it("filters with the field language", async () => {
-    const user = userEvent.setup();
+  it.each([
+    ["type:script status:3xx", ["tag.js?id=42"]],
+    ["-domain:example.com", ["tag.js?id=42"]],
+    ["larger-than:40k", ["hero.avif"]],
+    ["is:lcp", ["hero.avif"]],
+    ["is:cached", ["font.woff2"]],
+    ["party:first -is:cached slower-than:50ms", ["example.com", "hero.avif"]],
+  ])("filters with the field language: %s", async (query, expected) => {
     renderPanel();
-    const input = screen.getByLabelText("Filter requests");
 
-    await user.type(input, "type:script status:3xx");
-    expect(names()).toEqual(["tag.js?id=42"]);
-    await user.clear(input);
-    await user.type(input, "-domain:example.com");
-    expect(names()).toEqual(["tag.js?id=42"]);
-    await user.clear(input);
-    await user.type(input, "larger-than:40k");
-    expect(names()).toEqual(["hero.avif"]);
-    await user.clear(input);
-    await user.type(input, "is:lcp");
-    expect(names()).toEqual(["hero.avif"]);
-    await user.clear(input);
-    await user.type(input, "is:cached");
-    expect(names()).toEqual(["font.woff2"]);
-    await user.clear(input);
-    await user.type(input, "party:first -is:cached slower-than:50ms");
-    expect(names()).toEqual(["example.com", "hero.avif"]);
+    fireEvent.change(screen.getByLabelText("Filter requests"), { target: { value: query } });
+
+    // The filter settles after the field: React applies it once the input is rendered.
+    await waitFor(() => expect(names()).toEqual(expected));
   });
 
   it("says what it could not read in the filter", async () => {
@@ -178,7 +170,10 @@ describe("WaterfallPanel", () => {
     renderPanel();
 
     await user.type(screen.getByLabelText("Filter requests"), "type:video");
-    expect(screen.getByRole("status")).toHaveTextContent('type: unknown type "video"');
+    // The filter settles after the field: React applies it once the typing is rendered.
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent('type: unknown type "video"')
+    );
     expect(screen.getByText("No request matches the filters.")).toBeInTheDocument();
   });
 

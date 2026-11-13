@@ -82,3 +82,21 @@ describe("ResourceSidebar on a large page", () => {
     expect(screen.queryByRole("button", { name: /Show \d+ more/ })).toBeNull();
   });
 });
+
+describe("ResourceSidebar paging", () => {
+  it("keeps an expanded list expanded when the parent re-renders with the same data", async () => {
+    const resources = Array.from({ length: 250 }, (_, i) =>
+      entry(`https://cdn.example.com/${i}.js`)
+    );
+    const ui = (title: string) => (
+      <ResourceSidebar resources={resources} title={title} onClose={() => undefined} />
+    );
+    const { rerender } = render(ui("First"));
+    await userEvent.click(screen.getByRole("button", { name: /show \d+ more/i }));
+    expect(screen.queryByRole("button", { name: /show \d+ more/i })).toBeNull();
+
+    rerender(ui("Second"));
+
+    expect(screen.queryByRole("button", { name: /show \d+ more/i })).toBeNull();
+  });
+});

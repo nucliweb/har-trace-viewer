@@ -35,6 +35,7 @@ describe("useBottomEdge", () => {
     );
   });
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -59,14 +60,49 @@ describe("useBottomEdge", () => {
   });
 
   it("follows a scroll anywhere on the page, a scrolling view's included", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
     const seen: number[] = [];
     const { container } = render(<Probe onBottom={(b) => seen.push(b)} />);
 
     bottom = 53;
+    container.dispatchEvent(new Event("scroll"));
     act(() => {
-      container.dispatchEvent(new Event("scroll"));
+      vi.advanceTimersToNextFrame();
     });
     expect(seen.at(-1)).toBe(53);
+  });
+
+  it("measures once per frame however many scroll events arrive", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+    const { container } = render(<Probe onBottom={() => undefined} />);
+    const measure = vi.mocked(Element.prototype.getBoundingClientRect);
+    measure.mockClear();
+
+    for (let i = 0; i < 20; i++) container.dispatchEvent(new Event("scroll"));
+    expect(measure).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersToNextFrame();
+    });
+    expect(measure).toHaveBeenCalledTimes(1);
+
+    container.dispatchEvent(new Event("scroll"));
+    act(() => {
+      vi.advanceTimersToNextFrame();
+    });
+    expect(measure).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a pending measurement when unmounted", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+    const { container, unmount } = render(<Probe onBottom={() => undefined} />);
+    const measure = vi.mocked(Element.prototype.getBoundingClientRect);
+
+    container.dispatchEvent(new Event("scroll"));
+    measure.mockClear();
+    unmount();
+    vi.advanceTimersToNextFrame();
+    expect(measure).not.toHaveBeenCalled();
   });
 
   it("stops following once unmounted", () => {

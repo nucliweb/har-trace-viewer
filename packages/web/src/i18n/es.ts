@@ -16,6 +16,14 @@ export const es: Messages = {
     helpTitle: "Ayuda (?)",
   },
   modal: { close: "Cerrar" },
+  errors: {
+    generate:
+      "No se ha podido generar el diagrama con estos archivos. Comprueba que los HAR y las trazas estén completos e inténtalo de nuevo.",
+    viewTitle: "Algo ha salido mal",
+    viewMessage:
+      "No se ha podido dibujar esta vista. Tus archivos siguen intactos; vuelve al inicio para cargarlos otra vez.",
+    startOver: "Volver al inicio",
+  },
   settings: {
     title: "Configuración",
     theme: "Tema",

@@ -146,6 +146,13 @@
   min-height: 0;
 }
 
+.flowError {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--fs-body);
+  color: var(--color-red);
+  border-bottom: 1px solid var(--color-red);
+}
+
 .flowArea {
   flex: 1;
   min-height: 0;

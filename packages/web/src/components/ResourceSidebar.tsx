@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { formatBytes, formatMs, getRootDomain, shortUrl } from "@htv/core";
 import type { HarEntry, PreconnectSource } from "@htv/core";
 import { useMessages } from "../i18n/context.js";
@@ -166,21 +167,31 @@ function OverviewDomainsSection({
   );
 }
 
+const NO_HINTS: Record<string, PreconnectSource> = {};
+
 export function ResourceSidebar({
   resources,
   title,
   onClose,
-  preconnectHints = {},
+  preconnectHints = NO_HINTS,
   documentHostname,
   renderDeadline = null,
   overview = false,
 }: Props) {
   const t = useMessages().sidebar;
-  const grouped = groupByType(resources);
-  const domains = extractDomains(resources, preconnectHints);
-  const tipCandidates = documentHostname
-    ? preconnectCandidates(resources, { documentHostname, preconnectHints, renderDeadline })
-    : [];
+  // Memoized so "Show more" keeps its page: a new array per render would start every list over.
+  const grouped = useMemo(() => groupByType(resources), [resources]);
+  const domains = useMemo(
+    () => extractDomains(resources, preconnectHints),
+    [resources, preconnectHints]
+  );
+  const tipCandidates = useMemo(
+    () =>
+      documentHostname
+        ? preconnectCandidates(resources, { documentHostname, preconnectHints, renderDeadline })
+        : [],
+    [resources, documentHostname, preconnectHints, renderDeadline]
+  );
 
   return (
     <Sidebar

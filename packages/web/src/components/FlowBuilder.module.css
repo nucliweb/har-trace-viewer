@@ -537,6 +537,11 @@
   color: var(--color-red);
 }
 
+.generateError {
+  font-size: var(--fs-body);
+  color: var(--color-red);
+}
+
 .demoBtn {
   font-family: var(--font-mono);
   font-size: var(--fs-body);

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
   RESOURCE_QUERY_HELP,
@@ -242,7 +242,9 @@ function focusSibling(event: KeyboardEvent<HTMLButtonElement>) {
   target?.querySelector("button")?.focus();
 }
 
-function Row({
+// Memoized with stable callbacks: a hover re-renders the two rows whose active state changed,
+// not every row on the page.
+const Row = memo(function Row({
   row,
   totalMs,
   active,
@@ -252,10 +254,12 @@ function Row({
   row: WaterfallRow;
   totalMs: number;
   active: boolean;
-  onActivate: () => void;
-  onDeactivate: () => void;
+  onActivate: (entryIndex: number) => void;
+  onDeactivate: (entryIndex: number) => void;
 }) {
   const tooltipId = useId();
+  const activate = () => onActivate(row.entryIndex);
+  const deactivate = () => onDeactivate(row.entryIndex);
   // A button per row: the keyboard reaches the tooltip like the pointer does, and a tap shows
   // it on touch screens. The tooltip sits beside the button, out of its accessible name.
   return (
@@ -264,11 +268,11 @@ function Row({
         type="button"
         className={`${styles.row} ${active ? styles.rowActive : ""}`}
         aria-describedby={active ? tooltipId : undefined}
-        onMouseEnter={onActivate}
-        onMouseLeave={onDeactivate}
-        onFocus={onActivate}
-        onBlur={onDeactivate}
-        onClick={onActivate}
+        onMouseEnter={activate}
+        onMouseLeave={deactivate}
+        onFocus={activate}
+        onBlur={deactivate}
+        onClick={activate}
         onKeyDown={focusSibling}
       >
         <span className={styles.name}>
@@ -289,7 +293,7 @@ function Row({
       {active && <Tooltip row={row} id={tooltipId} />}
     </li>
   );
-}
+});
 
 /** A column header that sorts the rows: its label, and an arrow when it is the sort. */
 function SortButton({
@@ -509,6 +513,11 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
   const [filter, setFilterState] = useState<WaterfallFilter>({});
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [activeRow, setActiveRow] = useState<number | null>(null);
+  const activateRow = useCallback((entryIndex: number) => setActiveRow(entryIndex), []);
+  const deactivateRow = useCallback(
+    (entryIndex: number) => setActiveRow((current) => (current === entryIndex ? null : current)),
+    []
+  );
   // Escape hides a shown tooltip, wherever the focus is (WCAG 1.4.13, dismissible). It listens
   // in the capture phase and marks the key handled, so the same press leaves the drawer open.
   useEffect(() => {
@@ -541,11 +550,16 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
     for (const row of allRows) counts.set(row.host, (counts.get(row.host) ?? 0) + 1);
     return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
   }, [allRows]);
+  // Typing updates the field at once; filtering and sorting every row follows when React is idle.
+  const deferredFilter = useDeferredValue(filter);
   const rows = useMemo(
-    () => sortWaterfallRows(filterWaterfallRows(allRows, filter), sort),
-    [allRows, filter, sort]
+    () => sortWaterfallRows(filterWaterfallRows(allRows, deferredFilter), sort),
+    [allRows, deferredFilter, sort]
   );
-  const problems = useMemo(() => parseResourceQuery(filter.search ?? "").problems, [filter.search]);
+  const problems = useMemo(
+    () => parseResourceQuery(deferredFilter.search ?? "").problems,
+    [deferredFilter.search]
+  );
   const marks = useMemo(() => placeMarks(waterfall.marks, totalMs), [waterfall.marks, totalMs]);
   const shown = rows.slice(0, limit);
 
@@ -714,10 +728,8 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
                   row={row}
                   totalMs={totalMs}
                   active={activeRow === row.entryIndex}
-                  onActivate={() => setActiveRow(row.entryIndex)}
-                  onDeactivate={() =>
-                    setActiveRow((current) => (current === row.entryIndex ? null : current))
-                  }
+                  onActivate={activateRow}
+                  onDeactivate={deactivateRow}
                 />
               ))}
             </ol>

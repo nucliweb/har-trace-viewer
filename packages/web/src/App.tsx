@@ -3,6 +3,7 @@ import { generateFlow, normalizeFlow } from "@htv/core";
 import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { CompareView } from "./components/CompareView.js";
 import { DiagramView } from "./components/DiagramView.js";
+import { ViewErrorBoundary } from "./components/ViewErrorBoundary.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
 import { HelpModal } from "./components/HelpModal.js";
 import { RegionNotice } from "./components/RegionNotice.js";
@@ -58,20 +59,34 @@ export function App() {
   }, [toggleTheme, cycleLocale]);
   useAppShortcuts(shortcuts);
 
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  // An analysis that throws leaves the screen as it was, with the reason in view.
+  const attempt = (generate: () => void) => {
+    try {
+      generate();
+      setGenerateError(null);
+    } catch (error) {
+      console.error(error);
+      setGenerateError(t.errors.generate);
+    }
+  };
+
   const handleGenerate = (
     nextPages: PageFlow[],
     options: FlowOptions,
     nextComparePages?: PageFlow[]
-  ) => {
-    const nextFlow = generateFlow(nextPages, options);
-    setPages(nextPages);
-    setFlow(nextFlow);
-    setComparePages(nextComparePages ?? null);
-    // Each side has its own region: two loads from different places differ. A region chosen in
-    // the builder applies to both; on Auto, each side takes the one its latencies suggest.
-    setCompare(nextComparePages ? generateFlow(nextComparePages, options) : null);
-    setDismissed(NONE_DISMISSED);
-  };
+  ) =>
+    attempt(() => {
+      // Each side has its own region: two loads from different places differ. A region chosen in
+      // the builder applies to both; on Auto, each side takes the one its latencies suggest.
+      const nextFlow = generateFlow(nextPages, options);
+      const nextCompare = nextComparePages ? generateFlow(nextComparePages, options) : null;
+      setPages(nextPages);
+      setFlow(nextFlow);
+      setComparePages(nextComparePages ?? null);
+      setCompare(nextCompare);
+      setDismissed(NONE_DISMISSED);
+    });
 
   const handleLoadFlow = (loaded: Flow) => {
     setPages(null);
@@ -93,8 +108,10 @@ export function App() {
     const applied = sideFlow.clientRegion !== "default";
     const onSwitch = sidePages
       ? () =>
-          setSideFlow(
-            generateFlow(sidePages, { clientRegion: applied ? "default" : suggestion.region })
+          attempt(() =>
+            setSideFlow(
+              generateFlow(sidePages, { clientRegion: applied ? "default" : suggestion.region })
+            )
           )
       : undefined;
     return [{ side, suggestion, applied, onSwitch }];
@@ -105,6 +122,7 @@ export function App() {
     setPages(null);
     setCompare(null);
     setComparePages(null);
+    setGenerateError(null);
   };
 
   return (
@@ -166,14 +184,22 @@ export function App() {
                   onDismiss={() => setDismissed((prev) => new Set(prev).add(side))}
                 />
               ))}
+              {generateError && (
+                <p className={styles.flowError} role="alert">
+                  {generateError}
+                </p>
+              )}
               <div className={styles.flowArea}>
-                {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
+                <ViewErrorBoundary onReset={handleReset}>
+                  {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
+                </ViewErrorBoundary>
               </div>
             </div>
           ) : (
             <div className={styles.builderWrapper}>
               <FlowBuilder
                 journeys={journeys}
+                error={generateError}
                 onGenerate={handleGenerate}
                 // The demo chunk is not shipped inside generated reports.
                 onLoadFlow={embedded ? undefined : handleLoadFlow}

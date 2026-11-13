@@ -20,6 +20,14 @@ export const en = {
     helpTitle: "Help (?)",
   },
   modal: { close: "Close" },
+  errors: {
+    generate:
+      "Could not generate the diagram from these files. Check that they are complete HAR and trace files, then try again.",
+    viewTitle: "Something went wrong",
+    viewMessage:
+      "This view could not be drawn. Your files are untouched; start over to load them again.",
+    startOver: "Back to the start",
+  },
   settings: {
     title: "Settings",
     theme: "Theme",

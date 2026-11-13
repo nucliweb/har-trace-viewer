@@ -16,6 +16,14 @@ export const ca: Messages = {
     helpTitle: "Ajuda (?)",
   },
   modal: { close: "Tanca" },
+  errors: {
+    generate:
+      "No s'ha pogut generar el diagrama amb aquests fitxers. Comprova que els HAR i les traces estiguin complets i torna-ho a provar.",
+    viewTitle: "Alguna cosa ha anat malament",
+    viewMessage:
+      "No s'ha pogut dibuixar aquesta vista. Els teus fitxers continuen intactes; torna a l'inici per carregar-los de nou.",
+    startOver: "Torna a l'inici",
+  },
   settings: {
     title: "Configuració",
     theme: "Tema",
