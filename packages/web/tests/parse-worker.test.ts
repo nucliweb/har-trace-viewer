@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseInWorker } from "../src/lib/parse-client.js";
-import { UNRECOGNIZED_JSON } from "../src/lib/parse-recording.js";
+import { UNRECOGNIZED_JSON } from "@htv/core";
 import type { ParseRequest, ParseResponse } from "../src/lib/parse-protocol.js";
 import { harJson, makeFile } from "./fixtures.js";
 

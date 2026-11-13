@@ -12,7 +12,8 @@ import { resolve, dirname, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs as nodeParseArgs } from "node:util";
 import {
-  parseHarPagesJson,
+  parseRecording,
+  RecordingFormatError,
   expandPageFlows,
   listHarPages,
   parsePageSelection,
@@ -31,8 +32,17 @@ import {
   summarizeFlowMetrics,
   RUN_METRIC_CHOICES,
 } from "@htv/core";
-import type { ClientRegion, Flow, PageFlow, RedactOptions, RunMetric, RunSpread } from "@htv/core";
-import { parseTraceFile, readTextFile } from "@htv/core/node";
+import type {
+  ClientRegion,
+  Flow,
+  PageFlow,
+  RecordingKind,
+  RecordingResult,
+  RedactOptions,
+  RunMetric,
+  RunSpread,
+} from "@htv/core";
+import { readTextFile } from "@htv/core/node";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
 import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
@@ -383,7 +393,7 @@ export function checkOptions(args: Args): CheckOptions | null {
  * or only prints the check result with --budget or --fail-on; a .json path or --format json
  * writes JSON, any other path writes HTML.
  */
-export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarget {
+export function outputTarget(args: Args, isInteractive: boolean): OutputTarget {
   const { output } = args;
   // A .md or .csv path asks for that format when --format is absent, as .json does.
   const format =
@@ -428,7 +438,7 @@ export function outputTarget(args: Args, stdoutIsTerminal: boolean): OutputTarge
     return { kind: "html", path: output, singleFile, bundle: singleFile || args.bundle };
   }
   if (checks) return { kind: "check" };
-  if (!stdoutIsTerminal) {
+  if (!isInteractive) {
     throw new Error(
       "The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json."
     );
@@ -451,9 +461,11 @@ Output (where the report goes):
                       Needs an interactive terminal.
   -o, --output <path> file.html: a single self-contained HTML file that opens offline.
                       file.json: the full analysis as JSON.
+                      file.md, file.csv: the markdown or CSV text export (below).
                       Any other path: a directory with index.html and its assets.
-  --format <format>   tui | html | json | findings. --format json without --output
-                      prints the JSON to stdout, e.g. to pipe it into an agent.
+  --format <format>   tui | html | json | findings | markdown | csv | mermaid.
+                      --format json without --output prints the JSON to stdout,
+                      e.g. to pipe it into an agent.
                       --format findings writes only the findings of each page (rule
                       id, severity, metric, summary, recommendation, evidence) and its
                       metrics as compact JSON, to stdout or a .json --output.
@@ -597,11 +609,46 @@ export function validateArgs(args: Args): string | null {
   return null;
 }
 
+const RECORDING_NOUN: Record<RecordingKind, string> = { har: "a HAR", trace: "a Chrome trace" };
+const RECORDING_SHAPE: Record<RecordingKind, string> = {
+  har: "(log.entries)",
+  trace: "(traceEvents or an event array)",
+};
+
+/** Reads and parses a HAR or a trace; every failure is one line that starts with the file. */
+async function readRecording<K extends RecordingKind>(
+  kind: K,
+  file: string
+): Promise<RecordingResult<K>> {
+  try {
+    return parseRecording(kind, await readTextFile(resolve(file)));
+  } catch (error) {
+    const expected = RECORDING_NOUN[kind];
+    if (error instanceof RecordingFormatError) {
+      if (error.reason === "not-json") {
+        throw new Error(`${file}: expected ${expected}, but the file is not valid JSON`, {
+          cause: error,
+        });
+      }
+      const found = error.found
+        ? `this is ${RECORDING_NOUN[error.found]}`
+        : "found neither a HAR nor a Chrome trace";
+      const shape = error.found ? "" : ` ${RECORDING_SHAPE[kind]}`;
+      throw new Error(`${file}: expected ${expected}${shape} but ${found}`, { cause: error });
+    }
+    const code = (error as NodeJS.ErrnoException).code;
+    throw new Error(
+      `${file}: ${code === "ENOENT" ? "no such file or directory" : (error as Error).message}`,
+      { cause: error }
+    );
+  }
+}
+
 /** Describes the pages of each --har: id, entries and title. */
 export async function listPagesReport(args: Args): Promise<string> {
   const lines: string[] = [];
   for (const p of args.compareWith?.har ? [...args.pages, args.compareWith] : args.pages) {
-    const pages = listHarPages(parseHarPagesJson(await readTextFile(resolve(p.har))));
+    const pages = listHarPages(await readRecording("har", p.har));
     lines.push(`${p.har} (${pages.length} page${pages.length === 1 ? "" : "s"})`);
     for (const page of pages) {
       lines.push(`  ${page.id}  ${page.entries} entries  ${page.title || page.url}`);
@@ -619,14 +666,14 @@ async function readPageFlows(
   p: PageArg | CompareArg,
   spreads?: Map<PageFlow, RunSpread>
 ): Promise<PageFlow[]> {
-  const har = parseHarPagesJson(await readTextFile(resolve(p.har)));
+  const har = await readRecording("har", p.har);
   const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
   const fileName = basename(p.har).replace(/\.har(\.gz)?$/i, "");
   const pages = expandPageFlows({
     name: "name" in p ? p.name : har.length === 1 ? fileName : undefined,
     har,
     select,
-    trace: p.trace ? await parseTraceFile(resolve(p.trace)) : undefined,
+    trace: p.trace ? await readRecording("trace", p.trace) : undefined,
   });
   // --runs belongs to a --har: the --compare-with HAR keeps the pages --compare-select picks.
   const runs: RunsChoice =

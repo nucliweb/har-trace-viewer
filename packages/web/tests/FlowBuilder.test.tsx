@@ -4,7 +4,8 @@ import { gzipSync } from "node:zlib";
 import { File as NodeFile } from "node:buffer";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FlowBuilder } from "../src/components/FlowBuilder.js";
-import { GZIP_UNSUPPORTED, UNRECOGNIZED_JSON } from "../src/lib/parse-recording.js";
+import { UNRECOGNIZED_JSON } from "@htv/core";
+import { GZIP_UNSUPPORTED } from "../src/lib/parse-recording.js";
 import { wptHar } from "../../core/tests/helpers/wpt-har";
 import { harJson, makeFile, traceJson } from "./fixtures.js";
 

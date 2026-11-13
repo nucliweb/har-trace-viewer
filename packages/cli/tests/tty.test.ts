@@ -30,11 +30,46 @@ function scriptArgs(command: string[]): string[] {
 
 // Node hands a child a socket as stdin, and BSD script refuses sockets (tcgetattr fails). `cat`
 // relays our stdin into a real pipe, which script accepts everywhere.
-function spawnInPty(command: string[]) {
+function spawnInPty(command: string[], env: Record<string, string> = {}) {
+  const base = { ...process.env };
+  delete base.NO_COLOR;
   return spawn("sh", ["-c", `cat | script "$@"`, "sh", ...scriptArgs(command)], {
     stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, TERM: "xterm-256color", NO_COLOR: "1" },
+    env: { ...base, TERM: "xterm-256color", ...env },
   });
+}
+
+// The SGR codes that set a colour: 30-37, 90-97, 38 and 39, 40-47, 100-107, 48 and 49.
+// eslint-disable-next-line no-control-regex
+const COLOR_SGR = /\u001B\[(?:\d+;)*(?:3\d|9[0-7]|4\d|10[0-7])(?:;\d+)*m/;
+
+// Starts the TUI, runs `act` once the first frame is up and returns what it drew and how it ended.
+async function session(
+  env: Record<string, string>,
+  act: (child: ReturnType<typeof spawnInPty>, state: { closed: boolean }) => Promise<void> | void
+) {
+  const child = spawnInPty(["node", DIST_ENTRY, "--page", "Home", "--har", HAR], env);
+  let output = "";
+  let started = false;
+  const state = { closed: false };
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    output += chunk;
+    if (!started && output.includes("q quit")) {
+      started = true;
+      void Promise.resolve(act(child, state));
+    }
+    if (output.includes(LEAVE_ALT_SCREEN)) child.stdin.end();
+  });
+  const timer = setTimeout(() => child.kill("SIGKILL"), TIMEOUT_MS);
+  const code = await new Promise<number | null>((done) =>
+    child.on("close", (c) => {
+      state.closed = true;
+      done(c);
+    })
+  );
+  clearTimeout(timer);
+  return { output, code, started };
 }
 
 const runTty = hasScript() ? it : it.skip;
@@ -43,6 +78,27 @@ if (!hasScript()) {
 }
 
 describe("htv in a pseudo-terminal", () => {
+  runTty(
+    "explains that the terminal report needs an interactive terminal when stdin is not a TTY",
+    async () => {
+      const command = `node ${quote(DIST_ENTRY)} --har ${quote(HAR)} < /dev/null`;
+      const child = spawnInPty(["sh", "-c", command]);
+      child.stdin.end();
+
+      let output = "";
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk: string) => (output += chunk));
+      const timer = setTimeout(() => child.kill("SIGKILL"), TIMEOUT_MS);
+      const code = await new Promise<number | null>((done) => child.on("close", done));
+      clearTimeout(timer);
+
+      expect(output).toContain("The terminal report needs an interactive terminal");
+      expect(output).not.toMatch(/Raw mode|at .*\(/);
+      expect(code).toBe(1);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
   runTty(
     "draws the TUI, quits on q and leaves the alternate screen",
     async () => {
@@ -72,6 +128,39 @@ describe("htv in a pseudo-terminal", () => {
       for (const name of TAB_NAMES) expect(output).toContain(name);
       expect(output).toContain(LEAVE_ALT_SCREEN);
       expect(Date.now() - started).toBeLessThan(TIMEOUT_MS);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
+  runTty(
+    "colours the TUI, unless NO_COLOR is set to a non-empty value",
+    async () => {
+      const quit = (child: ReturnType<typeof spawnInPty>) => void child.stdin.write("q");
+      const coloured = await session({}, quit);
+      const plain = await session({ NO_COLOR: "1" }, quit);
+
+      expect(coloured.output).toMatch(COLOR_SGR);
+      expect(plain.started).toBe(true);
+      expect(plain.output).not.toMatch(COLOR_SGR);
+      expect(plain.output).toContain("Findings");
+    },
+    TIMEOUT_MS * 2 + 2_000
+  );
+
+  runTty(
+    "does not quit on a bare Esc, only on q",
+    async () => {
+      let closedAfterEsc: boolean | undefined;
+      const result = await session({}, async (child, state) => {
+        child.stdin.write("\u001B");
+        await new Promise((done) => setTimeout(done, 500));
+        closedAfterEsc = state.closed;
+        child.stdin.write("q");
+      });
+
+      expect(result.started).toBe(true);
+      expect(closedAfterEsc).toBe(false);
+      expect(result.code).toBe(0);
     },
     TIMEOUT_MS + 2_000
   );

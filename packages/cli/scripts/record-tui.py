@@ -36,7 +36,7 @@ ESC = "\x1b"
 RIGHT, DOWN = ESC + "[C", ESC + "[B"
 
 # Each key: (seconds to wait before it, the key, seconds between its characters when typed).
-# Keys are written whole: an escape sequence sent one character at a time reads as Esc, which quits.
+# Keys are written whole: an escape sequence sent one character at a time reads as a bare Esc.
 SCENES = {
     "tour": {
         "args": ["cold.har", "cold-trace.json.gz"],
@@ -63,7 +63,7 @@ SCENES = {
             (2.0, "6", 0),  # Hosts
             (3.0, "7", 0),  # Cache & network
             (3.0, "?", 0),  # the keys and the filter syntax
-            (3.5, "x", 0),
+            (3.5, "q", 0),  # closes the help
             (1.0, "q", 0),
         ],
     },

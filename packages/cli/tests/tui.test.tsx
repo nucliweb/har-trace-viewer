@@ -355,6 +355,37 @@ describe("TuiApp — a flow", () => {
     expect(lastFrame()).toContain("Step 1 /");
   });
 
+  it("ignores a bare Esc and quits on q", async () => {
+    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={20} />);
+
+    await press(stdin, ESC, "2");
+    expect(lastFrame()).toContain("Waterfall · 5 requests");
+    expect(lastFrame()).not.toContain("Esc quit");
+    await press(stdin, "q");
+    expect(lastFrame()).not.toContain("htv v1.0.0");
+  });
+
+  it("jumps to the start and the end with Home and End", async () => {
+    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
+
+    await press(stdin, "7", "\u001B[F");
+    expect(lastFrame()).not.toContain("Document");
+    expect(lastFrame()).toContain("chunk-47TTPNLV.js");
+    await press(stdin, "\u001B[H");
+    expect(lastFrame()).toContain("Document");
+  });
+
+  it("clamps the scroll when the terminal grows", async () => {
+    const flow = firstView();
+    const { lastFrame, stdin, rerender } = render(<TuiApp flow={flow} version="1.0.0" rows={10} />);
+
+    await press(stdin, "7", "\u001B[F");
+    rerender(<TuiApp flow={flow} version="1.0.0" rows={60} />);
+    await tick();
+    expect(lastFrame()).toContain("Document");
+    expect(lastFrame()).toContain("chunk-47TTPNLV.js");
+  });
+
   it("scrolls a tab taller than the terminal", async () => {
     const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
 
@@ -484,7 +515,7 @@ describe("TuiApp — the waterfall", () => {
     expect(lastFrame()).toContain('type: unknown type "video"');
   });
 
-  it("opens the help with ? and closes it with any key", async () => {
+  it("opens the help with ? and closes it with ?, q or Esc", async () => {
     const { lastFrame, stdin } = render(
       <TuiApp flow={firstView()} version="1.0.0" rows={60} columns={120} />
     );
@@ -492,10 +523,33 @@ describe("TuiApp — the waterfall", () => {
 
     expect(lastFrame()).toContain("Filter syntax");
     expect(lastFrame()).toMatch(/larger-than\s+bytes, k or M/);
-    expect(lastFrame()).toContain("any key closes the help");
+    expect(lastFrame()).toContain("close help");
     await press(stdin, "x");
+    expect(lastFrame()).toContain("Filter syntax");
+    await press(stdin, "?");
     expect(lastFrame()).not.toContain("Filter syntax");
-    expect(lastFrame()).toContain("Waterfall · 5 requests");
+    for (const key of ["q", ESC]) {
+      await press(stdin, "?", key);
+      expect(lastFrame()).not.toContain("Filter syntax");
+      expect(lastFrame()).toContain("Waterfall · 5 requests");
+    }
+  });
+
+  it("scrolls the help with the keys of the lists", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={14} columns={120} />
+    );
+    await press(stdin, "?");
+    expect(lastFrame()).toContain("─ Keys ─");
+    expect(lastFrame()).not.toContain("domain:*.cdn.com");
+
+    await press(stdin, "\u001B[F");
+    expect(lastFrame()).toContain("domain:*.cdn.com");
+    expect(lastFrame()).not.toContain("switch tabs");
+    await press(stdin, "\u001B[H");
+    expect(lastFrame()).toContain("switch tabs");
+    await press(stdin, KEYS.down);
+    expect(lastFrame()).not.toContain("─ Keys ─");
   });
 
   it("cycles the party shown with f: first, third, then all", async () => {

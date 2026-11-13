@@ -230,6 +230,43 @@ describe("--help, --version and --output (built CLI)", () => {
     expect(res.stdout).toContain("--runs <median|all|N>");
   });
 
+  it("lists every output format and the --output extensions that pick one", () => {
+    const { stdout } = runCli(["--help"]);
+    const flat = stdout.replace(/\s+/g, " ");
+    expect(flat).toContain("tui | html | json | findings | markdown | csv | mermaid.");
+    expect(flat).toContain("[--format tui|html|json|findings|markdown|csv|mermaid]");
+    expect(flat).toMatch(/file\.md, file\.csv/);
+  });
+
+  it("mentions every option parseArgs accepts", () => {
+    const { stdout } = runCli(["--help"]);
+    for (const flag of [
+      "--page",
+      "--har",
+      "--trace",
+      "--select",
+      "--runs",
+      "--list-pages",
+      "--compare",
+      "--compare-with",
+      "--compare-trace",
+      "--compare-select",
+      "--compare-region",
+      "--output",
+      "--format",
+      "--bundle",
+      "--region",
+      "--budget",
+      "--budget-strict",
+      "--fail-on",
+      "--redact",
+      "--help",
+      "--version",
+    ]) {
+      expect(stdout, flag).toContain(flag);
+    }
+  });
+
   it("prints the package.json version and exits 0 with --version", () => {
     const res = runCli(["--version"]);
     expect(res.status).toBe(0);
@@ -297,6 +334,73 @@ describe("usage errors (built CLI)", () => {
       `${TRACE} is a Chrome trace: it needs the HAR of the same recording, e.g. htv page.har ${TRACE}`
     );
     expect(res.stderr).not.toContain("Missing --har");
+  });
+});
+
+describe("unreadable recordings (built CLI)", () => {
+  const fail = (args: string[]) => {
+    const res = runCli(args);
+    expect(res.status).toBe(1);
+    expect(res.stdout).toBe("");
+    expect(res.stderr.trim().split("\n")).toHaveLength(1);
+    expect(res.stderr).not.toMatch(/TypeError|Cannot read|at .*\(/);
+    return res.stderr.trim();
+  };
+  const write = (name: string, content: string) => {
+    const path = join(makeTempDir(), name);
+    writeFileSync(path, content);
+    return path;
+  };
+
+  it("names a missing .har.gz file instead of crashing on an unhandled stream error", () => {
+    const path = join(makeTempDir(), "missing.har.gz");
+    const message = fail([path, "--format", "json"]);
+    expect(message).toContain(path);
+    expect(message).toMatch(/no such file/i);
+  });
+
+  it("names a missing plain HAR file", () => {
+    const path = join(makeTempDir(), "missing.har");
+    expect(fail([path, "--format", "json"])).toContain(path);
+  });
+
+  it("says a trace passed as the HAR is a trace", () => {
+    expect(fail(["--har", TRACE, "--format", "json"])).toBe(
+      `${TRACE}: expected a HAR but this is a Chrome trace`
+    );
+  });
+
+  it("says a HAR passed as the trace is a HAR", () => {
+    expect(fail(["--har", HAR, "--trace", HAR, "--format", "json"])).toBe(
+      `${HAR}: expected a Chrome trace but this is a HAR`
+    );
+  });
+
+  it("says a text file is not JSON", () => {
+    const path = write("notes.har", "this is not json");
+    expect(fail([path, "--format", "json"])).toContain(
+      `${path}: expected a HAR, but the file is not valid JSON`
+    );
+  });
+
+  it("says other JSON is neither a HAR nor a trace", () => {
+    const path = write("other.har", '{"foo":1}');
+    expect(fail([path, "--format", "json"])).toBe(
+      `${path}: expected a HAR (log.entries) but found neither a HAR nor a Chrome trace`
+    );
+  });
+
+  it("reads an array-format trace like a traceEvents one", () => {
+    const events = (JSON.parse(readFileSync(TRACE, "utf-8")) as { traceEvents: unknown[] })
+      .traceEvents;
+    const path = write("events.json", JSON.stringify(events));
+    const res = runCli(["--har", HAR, "--trace", path, "--format", "json"]);
+    expect(res.status).toBe(0);
+    expect(res.stderr).toBe("");
+  });
+
+  it("names the file for --list-pages too", () => {
+    expect(fail(["--har", TRACE, "--list-pages"])).toContain(TRACE);
   });
 });
 

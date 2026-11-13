@@ -1,6 +1,7 @@
 export * from "./types.js";
 export * from "./parsers/har-parser.js";
 export * from "./parsers/trace-parser.js";
+export * from "./parsers/recording.js";
 export * from "./inference/node-detector.js";
 export * from "./inference/cache-analyzer.js";
 export * from "./inference/pops.js";

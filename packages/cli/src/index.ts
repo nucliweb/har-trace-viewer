@@ -65,7 +65,7 @@ async function main() {
     return;
   }
 
-  const target = outputTarget(args, process.stdout.isTTY === true);
+  const target = outputTarget(args, process.stdout.isTTY === true && process.stdin.isTTY === true);
   let report = await buildReport(args);
   if (args.redact) {
     const redacted = redactReport(report, args.redact);

@@ -6,14 +6,14 @@ const KEYS: [string, string][] = [
   ["1-7, Tab, Shift+Tab", "switch tabs"],
   ["←/→", "walk the steps (Steps tab) or the pages of a multi-page flow"],
   ["p/P", "next and previous page"],
-  ["↑/↓, PgUp/PgDn, Space", "scroll"],
+  ["↑/↓, PgUp/PgDn, Home/End, Space", "scroll"],
   ["a/b", "the side of a comparison shown"],
   ["/", "filter the waterfall and the resources (Enter keeps it, Esc clears it)"],
   ["f", "cycle the party: first, third, all"],
   ["z", "zoom the waterfall's axis on the page load and back"],
   ["s/S", "the column the resources sort by, and its direction"],
-  ["?", "this help"],
-  ["q, Esc", "quit"],
+  ["?", "this help (scrolls like a list; ?, q or Esc closes it)"],
+  ["q, Ctrl+C", "quit"],
 ];
 
 /** The keys of the terminal report and the syntax of the request filter, one panel each. */

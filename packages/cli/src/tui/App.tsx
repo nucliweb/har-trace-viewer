@@ -132,13 +132,23 @@ function headerLines(
   return [top, mid, bottom];
 }
 
+// Any non-empty NO_COLOR turns the colours off (no-color.org); bold, dim and inverse stay.
+const noColor = () => (process.env.NO_COLOR ?? "") !== "";
+
 function LineView({ line }: { line: Line }) {
+  const colored = !noColor();
   return (
     <Text wrap="truncate-end">
       {line.length === 0
         ? " "
         : line.map((s, i) => (
-            <Text key={i} color={s.color} bold={s.bold} dimColor={s.dim} inverse={s.inverse}>
+            <Text
+              key={i}
+              color={colored ? s.color : undefined}
+              bold={s.bold}
+              dimColor={s.dim}
+              inverse={s.inverse}
+            >
               {s.text}
             </Text>
           ))}
@@ -265,7 +275,19 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const pinned = listing && !help ? (listView?.pinned ?? 0) : 0;
   const rowsViewport = Math.max(1, viewport - pinned);
   const maxScroll = Math.max(0, region.length - pinned - rowsViewport);
+  // A resize can leave the stored scroll past the new end, so the view clamps it.
+  const offset = Math.min(scroll, maxScroll);
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
+  const scrollKeys = (input: string, key: Key) => {
+    if (key.downArrow) scrollTo(offset + 1);
+    else if (key.upArrow) scrollTo(offset - 1);
+    else if (key.pageDown || input === " ") scrollTo(offset + rowsViewport);
+    else if (key.pageUp) scrollTo(offset - rowsViewport);
+    else if (key.home) scrollTo(0);
+    else if (key.end) scrollTo(maxScroll);
+    else return false;
+    return true;
+  };
   const showTab = (index: number) => {
     setTab((index + TABS.length) % TABS.length);
     setScroll(0);
@@ -295,7 +317,10 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       return;
     }
     if (help) {
-      setHelp(false);
+      if (input === "?" || input === "q" || key.escape) {
+        setHelp(false);
+        setScroll(0);
+      } else scrollKeys(input, key);
       return;
     }
     if (searching) {
@@ -307,7 +332,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       setScroll(0);
       return;
     }
-    if (input === "q" || key.escape) {
+    // Esc is not a quit key: an escape sequence split across reads arrives as a bare Esc.
+    if (input === "q") {
       exit();
       return;
     }
@@ -318,12 +344,11 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       const delta = key.rightArrow ? 1 : -1;
       if (current === "Steps") moveStep(delta);
       else if (!compare && pageCount > 1) movePage(delta);
-    } else if (key.downArrow) scrollTo(scroll + 1);
-    else if (key.upArrow) scrollTo(scroll - 1);
-    else if (key.pageDown || input === " ") scrollTo(scroll + rowsViewport);
-    else if (key.pageUp) scrollTo(scroll - rowsViewport);
-    else if (input === "?") setHelp(true);
-    else if (input === "/" && listing) {
+    } else if (scrollKeys(input, key)) return;
+    else if (input === "?") {
+      setHelp(true);
+      setScroll(0);
+    } else if (input === "/" && listing) {
       setSearching(true);
       setScroll(0);
     } else if (input === "f" && listing) {
@@ -354,7 +379,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     !compare && pageCount > 1 ? { names: flow.pages.map((p) => p.name), current: page } : null;
   const header = headerLines(width, version, context, tab, pages);
   const scrolled = region.slice(pinned);
-  const visible = [...region.slice(0, pinned), ...scrolled.slice(scroll, scroll + rowsViewport)];
+  const visible = [...region.slice(0, pinned), ...scrolled.slice(offset, offset + rowsViewport)];
 
   const listKeys = searching
     ? ["type to filter", "Enter keep", "Esc clear"]
@@ -364,13 +389,13 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         ? ["/ filter", "f party", "s sort", "S reverse", search ? "Esc clear filter" : null]
         : [];
   const keys = help
-    ? "any key closes the help"
+    ? `${width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll"}  ·  ? q Esc close help`
     : searching
       ? listKeys.join("  ·  ")
       : [
           `1-${TABS.length}/Tab tabs`,
           current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
-          maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn scroll") : null,
+          maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll") : null,
           compare && sided(current) ? "a/b side" : null,
           ...listKeys,
           "? help",
@@ -379,8 +404,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
           .filter(Boolean)
           // Narrow terminals get a tighter separator, so that the help fits beside the position.
           .join(width < 100 ? " · " : "  ·  ");
-  const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - scroll));
-  const position = maxScroll > 0 ? `${scroll + 1}-${scroll + shownRows}/${scrolled.length} ` : "";
+  const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - offset));
+  const position = maxScroll > 0 ? `${offset + 1}-${offset + shownRows}/${scrolled.length} ` : "";
   const statusText = ` ${keys}`;
   const statusGap = Math.max(1, width - statusText.length - position.length);
   const status: Line = [seg(`${statusText}${" ".repeat(statusGap)}${position}`, { inverse: true })];
@@ -391,7 +416,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         <LineView key={`h${i}`} line={line} />
       ))}
       {visible.map((line, i) => (
-        <LineView key={i < pinned ? `p${i}` : scroll + i} line={line} />
+        <LineView key={i < pinned ? `p${i}` : offset + i} line={line} />
       ))}
       {Array.from({ length: viewport - visible.length }, (_, i) => (
         <Text key={`pad-${i}`}> </Text>
