@@ -420,6 +420,8 @@ git tag -a v<version> -m "v<version>"
 git push --follow-tags
 ```
 
+[CHANGELOG.md](CHANGELOG.md) lists the changes of every version. A change adds its line under `Unreleased`; the release commit renames that section to the version with its date, and adds the compare link at the bottom of the file.
+
 The tag has to be annotated (`-a`): `--follow-tags` pushes annotated tags only, and a lightweight tag stays local without starting the workflow (push it with `git push origin v<version>`).
 
 The workflow publishes with npm trusted publishing: npm accepts the OIDC token of the run instead of a stored secret, and adds the provenance of the package. The package settings on npmjs.com name `nucliweb/har-trace-viewer`, the workflow `release.yml` and the environment `npm-publish` as its trusted publisher, and the `npm-publish` environment asks a maintainer to approve each run before it publishes.
