@@ -6,6 +6,29 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-14
+
+### Added
+
+- Read a Chrome trace saved as a bare array of events in the CLI.
+- Home and End in the scrollable views of the terminal report.
+- A scrollable help screen in the terminal report, closed with `?`, `q` or Esc.
+- Honour `NO_COLOR` in the terminal report.
+- A translated message in the web app when a flow cannot be generated, and a way back to the start screen when a view fails to render.
+
+### Changed
+
+- Esc no longer quits the terminal report, so an arrow key split across reads cannot exit it; `q` and Ctrl+C quit.
+- Re-render only the hovered waterfall rows, keep the filter field responsive on large recordings and measure the toolbar position once per frame while scrolling.
+
+### Fixed
+
+- Name the file and the expected format when the CLI cannot read a recording, and report a missing `.gz` file instead of crashing.
+- Explain that the terminal report needs an interactive terminal when stdin is not a TTY.
+- Clamp the scroll position of the terminal report when the terminal is resized.
+- Keep an expanded resource list expanded when the page re-renders.
+- List every output format and the `.md` and `.csv` output paths in `--help`.
+
 ## [0.8.1] - 2026-11-13
 
 ### Changed
@@ -196,7 +219,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/nucliweb/har-trace-viewer/compare/v0.7.1...v0.7.2
