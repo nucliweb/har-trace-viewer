@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*"]
 
+# One release at a time; a run in progress is left to finish, never cancelled halfway through a publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-24.04
@@ -18,10 +23,13 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, to tell whether the tagged commit is on main
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          cache: npm
+          # No dependency cache: this job holds the publishing token, and a cache is shared state
       # Trusted publishing needs npm 11.5.1 or later
       - name: Update npm
         run: npm install -g npm@^11.5.1
@@ -32,7 +40,18 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match packages/cli/package.json ($version)" >&2
             exit 1
           fi
+      - name: Check the tagged commit is on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main" >&2
+            exit 1
+          fi
       - run: npm ci
+      - run: npm run lint
+      - run: npm run knip
+      - run: npm run format:check
+      - run: npm run typecheck
       - run: npm run build
       - run: npm test
       # Installs the packed tarball into a fresh project and runs the installed htv
