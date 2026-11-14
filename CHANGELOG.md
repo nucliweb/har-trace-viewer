@@ -6,6 +6,21 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-14
+
+### Changed
+
+- Show the percent-encoded non-ASCII names of resources as text in the web app and in the terminal report. Reserved characters, malformed escapes and control or bidirectional characters stay encoded.
+- Match the request filter against the name shown as well as the URL.
+- Leave the page-load metrics out of the Markdown report and of the terminal Overview for a capture without an HTML document, and explain the `L` and `B` flags of the terminal legends only when the page can have them.
+- Publish the changelog section of a version as the notes of its GitHub Release.
+- Update the minor dependencies and align the Node types with Node 22.
+
+### Fixed
+
+- Keep the export menu, the redaction note and the export failure message inside the screen on narrow screens, without covering the toolbar.
+- Print a request phase shorter than a millisecond as `<1 ms` in the terminal report.
+
 ## [0.12.0] - 2026-11-14
 
 ### Changed
@@ -259,7 +274,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...v0.10.0
