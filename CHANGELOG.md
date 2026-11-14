@@ -6,6 +6,19 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-14
+
+### Added
+
+- A row cursor in the Waterfall and Resources tabs of the terminal report, which stays on its request through sorts and filters.
+- The details of a request in the terminal report with Enter: its full URL, its timing phases and its response headers, with `n` and `N` for the next and the previous request.
+- `e` in the terminal report shows all the evidence of every finding, and `<` and `>` scroll the columns of the Hosts and third-party tables.
+- Redaction in the web export menu: the CSV, Markdown and Mermaid downloads hide the secrets, or the secrets and the third-party hosts, with the same result as `--redact`.
+
+### Fixed
+
+- Name the cache profile of a page without an HTML document "Primary request" instead of "Document", in the web app and in the terminal report.
+
 ## [0.10.0] - 2026-11-14
 
 ### Added
@@ -239,7 +252,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.0...v0.8.1
