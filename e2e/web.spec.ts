@@ -1,13 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
-import { extname, resolve } from "node:path";
+import { extname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
-// Serves the built web app (packages/web/dist), as Vercel does, to test the public entry page.
-const root = resolve(import.meta.dirname, "../packages/web/dist");
+// Serves the public site's build (packages/web/dist-site) as Vercel does, under its base path,
+// with the views, drawers, dialogs and languages in chunks loaded on demand.
+const root = resolve(import.meta.dirname, "../packages/web/dist-site");
 
 const MIME: Record<string, string> = {
   ".html": "text/html",
@@ -26,8 +27,9 @@ test.beforeAll(async () => {
   server = createServer(async (req, res) => {
     try {
       const urlPath = new URL(req.url ?? "/", "http://localhost").pathname;
-      const file = resolve(root, "." + (urlPath === "/" ? "/index.html" : urlPath));
+      let file = resolve(root, "." + urlPath);
       if (!file.startsWith(root)) throw new Error("outside root");
+      if ((await stat(file)).isDirectory()) file = join(file, "index.html");
       const body = await readFile(file);
       res
         .writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" })
@@ -37,7 +39,7 @@ test.beforeAll(async () => {
     }
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
+  baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/har-trace-viewer/`;
 });
 
 test.afterAll(() => {
@@ -58,7 +60,7 @@ test("head carries the description, social card, theme color and icon", async ({
   const meta = (selector: string) => page.locator(`head ${selector}`).getAttribute("content");
   expect(await meta('meta[name="description"]')).toMatch(/HAR/);
   expect(await meta('meta[property="og:title"]')).toBe("HTV · HAR Trace Viewer");
-  expect(await meta('meta[property="og:image"]')).toMatch(/^\.?\/og\.png$/);
+  expect(await meta('meta[property="og:image"]')).toMatch(/\/og\.png$/);
   expect(await meta('meta[name="twitter:card"]')).toBe("summary_large_image");
   await expect(page.locator('head meta[name="theme-color"]')).toHaveCount(2);
   await expect(page.locator('head link[rel="icon"]')).toHaveAttribute("href", /^data:image\/svg/);

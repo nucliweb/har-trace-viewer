@@ -237,7 +237,7 @@ describe("Hops toggle in DiagramView", () => {
     render(<DiagramView flow={flow} />);
     expect(screen.queryByRole("table", { name: "Hops per host" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle hops" }));
-    expect(screen.getByRole("table", { name: "Hops per host" })).toBeInTheDocument();
+    expect(await screen.findByRole("table", { name: "Hops per host" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Third parties per entity" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Toggle metrics summary" }));
     expect(screen.queryByRole("table", { name: "Hops per host" })).not.toBeInTheDocument();

@@ -12,6 +12,7 @@ const { version } = JSON.parse(
 const BASE_PATH = "/har-trace-viewer";
 const PUBLIC_URL = `https://perf.reviews${BASE_PATH}`;
 const SITE_ROOT = new URL("./dist-site/", import.meta.url);
+const CORE_SOURCES = /[\\/]packages[\\/]core[\\/]src[\\/]/;
 
 /**
  * What the site build adds around the app. Its head names perf.reviews as the address to share,
@@ -57,15 +58,72 @@ function publicSite(): Plugin {
   };
 }
 
-// `vite build` makes the app the CLI bundles into its reports, opened from disk: relative URLs.
-// `vite build --mode site` makes the public site: every URL under the base path, as the proxy
-// requests the page with no trailing slash and a relative URL would resolve against perf.reviews' root.
-export default defineConfig(({ mode }) => {
-  const site = mode === "site";
+/**
+ * Reports never offer the demo flow (the app passes FlowBuilder no onLoadFlow when a flow is
+ * embedded), so their build reads the demo as empty JSON: its 48 kB stay out of every report.
+ */
+function withoutDemoFlow(): Plugin {
   return {
-    plugins: [react(), ...(site ? [publicSite()] : [])],
+    name: "htv-without-demo-flow",
+    apply: "build",
+    enforce: "pre",
+    load: (id) => (id.endsWith("/src/demo/demo-flow.json") ? "null" : undefined),
+  };
+}
+
+/**
+ * In the report build, each `import("./…")` of the app's own modules becomes a static import that
+ * resolves at once. Left to `codeSplitting: false`, Rolldown would inline them too, but wrapped in
+ * lazy module initializers (and Vite's preload helper) that add about 7 kB gzip to every report.
+ */
+function staticDynamicImports(): Plugin {
+  return {
+    name: "htv-static-dynamic-imports",
+    apply: "build",
+    enforce: "pre",
+    transform: {
+      filter: { id: /[\\/]packages[\\/]web[\\/]src[\\/].*\.tsx?$/ },
+      handler(code) {
+        const imports: string[] = [];
+        const rewritten = code.replace(
+          /\bimport\(\s*(["'])(\.{1,2}\/[^"']+)\1\s*\)/g,
+          (_, _quote, specifier: string) => {
+            const name = `__htvStatic${imports.length}`;
+            imports.push(`import * as ${name} from ${JSON.stringify(specifier)};`);
+            return `Promise.resolve(${name})`;
+          }
+        );
+        return imports.length > 0 ? `${imports.join("\n")}\n${rewritten}` : undefined;
+      },
+    },
+  };
+}
+
+// `vite build` makes the app the CLI bundles into its reports, opened from disk: relative URLs,
+// and a single entry script, since a single-file report inlines only that one. `codeSplitting:
+// false` inlines every dynamic import into it (the parse worker stays a file of its own).
+// `vite build --mode site` makes the public site: every URL under the base path, as the proxy
+// requests the page with no trailing slash and a relative URL would resolve against perf.reviews'
+// root, and the views, drawers, dialogs and languages a first visit does not need in chunks.
+export default defineConfig(({ command, mode }) => {
+  const site = mode === "site";
+  const report = command === "build" && !site;
+  return {
+    plugins: [
+      react(),
+      ...(site ? [publicSite()] : []),
+      ...(report ? [withoutDemoFlow(), staticDynamicImports()] : []),
+    ],
     base: site ? `${BASE_PATH}/` : "./",
     define: { __HTV_VERSION__: JSON.stringify(version) },
-    build: site ? { outDir: `dist-site${BASE_PATH}`, emptyOutDir: true } : {},
+    build: {
+      ...(site ? { outDir: `dist-site${BASE_PATH}`, emptyOutDir: true } : {}),
+      rolldownOptions: {
+        ...(site ? {} : { output: { codeSplitting: false } }),
+        // @htv/core runs nothing on import but fills module-local tables: what the app does not
+        // use of it is left out, so the start screen does not carry the analysis.
+        treeshake: { moduleSideEffects: (id) => (CORE_SOURCES.test(id) ? false : undefined) },
+      },
+    },
   };
 });

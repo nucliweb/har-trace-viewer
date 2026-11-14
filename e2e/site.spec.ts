@@ -95,3 +95,32 @@ test("the deployment's own root sends visitors to perf.reviews and stays out of 
   const robots = await (await request.get(`${baseUrl}/robots.txt`)).text();
   expect(robots).toMatch(/User-agent: \*\s+Disallow: \//);
 });
+
+test("the start screen leaves the views, the drawers and the other languages for later", async ({
+  page,
+}) => {
+  const { errors, requested } = watch(page);
+  const fetched = (chunk: RegExp) =>
+    requested.some((path) => chunk.test(path.split("/").pop() ?? ""));
+  await page.goto(`${baseUrl}/har-trace-viewer`);
+  await expect(page.getByRole("heading", { name: "Build your flow" })).toBeVisible();
+  expect(fetched(/^(?:DiagramView|CompareView|drawers|es|ca|demo-flow)[-.].*\.js$/)).toBe(false);
+
+  await page.getByRole("button", { name: "Load demo flow →" }).click();
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  expect(fetched(/^DiagramView-.*\.js$/)).toBe(true);
+  // Once the diagram shows, its drawers load in the background.
+  await expect.poll(() => fetched(/^drawers-.*\.js$/)).toBe(true);
+  const hops = page.getByRole("button", { name: "Toggle hops" });
+  await hops.click();
+  await expect(page.getByRole("table", { name: "Hops per host" })).toBeVisible();
+  await page.getByRole("button", { name: "Close hops" }).click();
+  await expect(hops).toBeFocused();
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("radio", { name: "Español" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "es");
+  expect(fetched(/^es-.*\.js$/)).toBe(true);
+  expect(fetched(/^ca-.*\.js$/)).toBe(false);
+  expect(errors).toEqual([]);
+});

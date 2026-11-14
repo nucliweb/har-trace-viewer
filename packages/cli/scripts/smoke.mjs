@@ -116,6 +116,10 @@ try {
     ...html.matchAll(/\b(?:src|href)="((?:\.{0,2}\/)[^"]*\.(?:js|css|png|ico|svg|woff2?|txt))"/g),
   ].map((m) => m[1]);
   assert(missing.length === 0, `the HTML references local files: ${missing.join(", ")}`);
+  // Nor load a chunk on demand: the app is the one inlined module script.
+  const modules = [...html.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)];
+  assert(modules.length === 1, `the HTML has ${modules.length} module scripts, expected 1`);
+  assert(!/\bimport\s*\(/.test(modules[0][1]), "the app script imports a module on demand");
   for (const name of ["og.png", "apple-touch-icon", "robots.txt"]) {
     assert(!html.includes(name), `the HTML references ${name}`);
   }

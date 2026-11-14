@@ -1,6 +1,6 @@
 // Builds the CLI: the web app first, then the esbuild bundle, then the slice of the web build
-// that a report needs. Site-only files (social images, icons, robots.txt) and the lazily loaded
-// demo chunk stay out of dist/web, so they are in neither the npm tarball nor any report.
+// that a report needs. Site-only files (social images, icons, robots.txt) stay out of dist/web,
+// so they are in neither the npm tarball nor any report; the demo flow is not in that web build.
 import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -82,8 +82,6 @@ writeFileSync(
   [...licenses.values()].sort().join(`\n\n${"-".repeat(80)}\n\n`) + "\n"
 );
 
-// Loaded only by the web app's "try the demo" button, never by a report.
-const SITE_ONLY_CHUNK = /^demo-flow-.*\.js$/;
 // Tags that point at files of the hosted site; they would not resolve under file://.
 const SITE_ONLY_TAGS = [
   /\s*<meta\s+(?:property|name)="(?:og|twitter):image[^"]*"[^>]*>/g,
@@ -92,11 +90,21 @@ const SITE_ONLY_TAGS = [
 
 const webOut = join(dist, "web");
 const webBuild = join(webDir, "dist");
-mkdirSync(join(webOut, "assets"), { recursive: true });
-for (const file of readdirSync(join(webBuild, "assets"))) {
-  if (SITE_ONLY_CHUNK.test(file)) continue;
-  cpSync(join(webBuild, "assets", file), join(webOut, "assets", file));
+
+// A single-file report inlines the entry script alone: the app must be that one script, with no
+// chunk to load on demand (the parse worker aside, which falls back to the main thread).
+const scripts = readdirSync(join(webBuild, "assets")).filter(
+  (file) => file.endsWith(".js") && !/\.worker-/.test(file)
+);
+const entry = scripts.length === 1 && readFileSync(join(webBuild, "assets", scripts[0]), "utf8");
+if (!entry || /\bimport\s*\(/.test(entry)) {
+  throw new Error(
+    `The web build for reports must be one script with no dynamic import, got: ${scripts.join(", ")}`
+  );
 }
+
+mkdirSync(join(webOut, "assets"), { recursive: true });
+cpSync(join(webBuild, "assets"), join(webOut, "assets"), { recursive: true });
 let html = readFileSync(join(webBuild, "index.html"), "utf8");
 for (const tag of SITE_ONLY_TAGS) html = html.replace(tag, "");
 writeFileSync(join(webOut, "index.html"), html);

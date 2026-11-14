@@ -35,7 +35,7 @@ describe("drawers and the keyboard (A-01)", () => {
     for (const [toggle, close] of DRAWERS) {
       const button = screen.getByRole("button", { name: toggle });
       await user.click(button);
-      await user.click(screen.getByRole("button", { name: close }));
+      await user.click(await screen.findByRole("button", { name: close }));
       expect(screen.queryByRole("button", { name: close })).not.toBeInTheDocument();
       expect(button).toHaveFocus();
     }
@@ -48,7 +48,7 @@ describe("drawers and the keyboard (A-01)", () => {
       const button = screen.getByRole("button", { name: toggle });
       await user.click(button);
       // From inside the drawer as well as from the toolbar.
-      screen.getByRole("button", { name: close }).focus();
+      (await screen.findByRole("button", { name: close })).focus();
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("button", { name: close })).not.toBeInTheDocument();
       expect(button).toHaveFocus();
@@ -75,7 +75,7 @@ describe("drawers and the keyboard (A-01)", () => {
     await user.click(screen.getByRole("button", { name: "Export" }));
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Close findings" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Close findings" })).toBeInTheDocument();
   });
 
   it("in a comparison, each pane's drawer and the deltas close back to their toggle", async () => {
@@ -85,7 +85,7 @@ describe("drawers and the keyboard (A-01)", () => {
     const cache = within(paneB).getByRole("button", { name: "Toggle cache analysis" });
 
     await user.click(cache);
-    await user.click(within(paneB).getByRole("button", { name: "Close cache analysis" }));
+    await user.click(await within(paneB).findByRole("button", { name: "Close cache analysis" }));
     expect(cache).toHaveFocus();
 
     await user.click(cache);

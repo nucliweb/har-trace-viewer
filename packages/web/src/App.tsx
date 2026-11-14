@@ -1,13 +1,10 @@
-import { useMemo, useState } from "react";
+import { Suspense, startTransition, useEffect, useMemo, useState } from "react";
 import { normalizeFlow } from "@htv/core";
 import type { Flow, FlowOptions, PageFlow } from "@htv/core";
-import { CompareView } from "./components/CompareView.js";
-import { DiagramView } from "./components/DiagramView.js";
+import { CompareView, DIALOGS, DiagramView, HelpModal, SettingsModal } from "./components/lazy.js";
 import { ViewErrorBoundary } from "./components/ViewErrorBoundary.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
-import { HelpModal } from "./components/HelpModal.js";
 import { RegionNotice } from "./components/RegionNotice.js";
-import { SettingsModal } from "./components/SettingsModal.js";
 import { useAppShortcuts } from "./hooks/useAppShortcuts.js";
 import { useJourneys } from "./hooks/useJourneys.js";
 import { useLatestTask } from "./hooks/useLatestTask.js";
@@ -16,6 +13,7 @@ import { MessagesContext } from "./i18n/context.js";
 import { useLocale } from "./i18n/useLocale.js";
 import { toggleFullscreen } from "./lib/keyboard.js";
 import { generateInWorker } from "./lib/parse-client.js";
+import { preloadWhenIdle } from "./lib/preloadable.js";
 import styles from "./App.module.css";
 
 declare global {
@@ -60,6 +58,7 @@ export function App() {
     };
   }, [toggleTheme, cycleLocale]);
   useAppShortcuts(shortcuts);
+  useEffect(() => preloadWhenIdle(DIALOGS), []);
 
   const [generateError, setGenerateError] = useState<string | null>(null);
   // The analysis runs in a worker. Only the latest one lands: Reset, the demo flow or a newer
@@ -89,10 +88,12 @@ export function App() {
     attempt(
       // Each side has its own region: two loads from different places differ. A region chosen in
       // the builder applies to both; on Auto, each side takes the one its latencies suggest.
+      // The view loads meanwhile; should it fail, the view's error boundary reports it.
       () =>
         Promise.all([
           generateInWorker(nextPages, options),
           nextComparePages ? generateInWorker(nextComparePages, options) : null,
+          (nextComparePages ? CompareView : DiagramView).preload().catch(() => undefined),
         ]),
       ([nextFlow, nextCompare]) => {
         setPages(nextPages);
@@ -105,11 +106,14 @@ export function App() {
 
   const handleLoadFlow = (loaded: Flow) => {
     generation.cancel();
-    setPages(null);
-    setFlow(normalizeFlow(loaded));
-    setComparePages(null);
-    setCompare(null);
-    setDismissed(NONE_DISMISSED);
+    // A transition: the builder stays on screen until the diagram view has loaded.
+    startTransition(() => {
+      setPages(null);
+      setFlow(normalizeFlow(loaded));
+      setComparePages(null);
+      setCompare(null);
+      setDismissed(NONE_DISMISSED);
+    });
   };
 
   // A notice for each side whose latencies suggest a region: why it is drawn as it is, and a
@@ -194,56 +198,60 @@ export function App() {
         </header>
 
         <main className={styles.main}>
-          {flow ? (
-            <div className={styles.flowLayout}>
-              {regionNotices.map(({ side, suggestion, applied, onSwitch, busy }) => (
-                <RegionNotice
-                  key={side}
-                  side={compare ? SIDE_LABEL[side] : undefined}
-                  suggestion={suggestion}
-                  applied={applied}
-                  onSwitch={onSwitch}
-                  busy={busy}
-                  onDismiss={() => setDismissed((prev) => new Set(prev).add(side))}
-                />
-              ))}
-              {generateError && (
-                <p className={styles.flowError} role="alert">
-                  {generateError}
-                </p>
-              )}
-              <div className={styles.flowArea}>
-                <ViewErrorBoundary onReset={handleReset}>
-                  {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
-                </ViewErrorBoundary>
+          <Suspense fallback={null}>
+            {flow ? (
+              <div className={styles.flowLayout}>
+                {regionNotices.map(({ side, suggestion, applied, onSwitch, busy }) => (
+                  <RegionNotice
+                    key={side}
+                    side={compare ? SIDE_LABEL[side] : undefined}
+                    suggestion={suggestion}
+                    applied={applied}
+                    onSwitch={onSwitch}
+                    busy={busy}
+                    onDismiss={() => setDismissed((prev) => new Set(prev).add(side))}
+                  />
+                ))}
+                {generateError && (
+                  <p className={styles.flowError} role="alert">
+                    {generateError}
+                  </p>
+                )}
+                <div className={styles.flowArea}>
+                  <ViewErrorBoundary onReset={handleReset}>
+                    {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
+                  </ViewErrorBoundary>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className={styles.builderWrapper}>
-              <FlowBuilder
-                journeys={journeys}
-                error={generateError}
-                generating={generation.running}
-                onGenerate={handleGenerate}
-                // The demo chunk is not shipped inside generated reports.
-                onLoadFlow={embedded ? undefined : handleLoadFlow}
-              />
-            </div>
-          )}
+            ) : (
+              <div className={styles.builderWrapper}>
+                <FlowBuilder
+                  journeys={journeys}
+                  error={generateError}
+                  generating={generation.running}
+                  onGenerate={handleGenerate}
+                  // The demo chunk is not shipped inside generated reports.
+                  onLoadFlow={embedded ? undefined : handleLoadFlow}
+                />
+              </div>
+            )}
+          </Suspense>
         </main>
-        {dialog === "settings" && (
-          <SettingsModal
-            themeChoice={themeChoice}
-            onThemeChoice={setThemeChoice}
-            locale={locale}
-            onLocale={setLocale}
-            journeys={journeys}
-            onJourneys={setJourneys}
-            onShowHelp={() => setDialog("help")}
-            onClose={() => setDialog(null)}
-          />
-        )}
-        {dialog === "help" && <HelpModal onClose={() => setDialog(null)} />}
+        <Suspense fallback={null}>
+          {dialog === "settings" && (
+            <SettingsModal
+              themeChoice={themeChoice}
+              onThemeChoice={setThemeChoice}
+              locale={locale}
+              onLocale={setLocale}
+              journeys={journeys}
+              onJourneys={setJourneys}
+              onShowHelp={() => setDialog("help")}
+              onClose={() => setDialog(null)}
+            />
+          )}
+          {dialog === "help" && <HelpModal onClose={() => setDialog(null)} />}
+        </Suspense>
         <div className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
           {generation.running ? t.app.generating : ""}
         </div>

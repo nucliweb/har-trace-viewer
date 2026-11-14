@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   analyzeHops,
@@ -14,15 +14,21 @@ import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
+import { preloadWhenIdle } from "../lib/preloadable.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepPanel } from "./StepPanel.js";
-import { ResourceSidebar } from "./ResourceSidebar.js";
 import { CacheSidebar } from "./CacheSidebar.js";
-import { CachePanel } from "./CachePanel.js";
-import { MetricsSummary } from "./MetricsSummary.js";
-import { HopsPanel } from "./HopsPanel.js";
-import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
-import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
+import { FindingsButton } from "./FindingsButton.js";
+import { WaterfallButton } from "./WaterfallButton.js";
+import {
+  CachePanel,
+  DRAWERS,
+  FindingsPanel,
+  HopsPanel,
+  MetricsSummary,
+  ResourceSidebar,
+  WaterfallPanel,
+} from "./lazy.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
@@ -72,6 +78,7 @@ export function DiagramView({ flow }: Props) {
     setDrawer(null);
   }, [drawer]);
   useEscapeToClose(drawer !== null, closeDrawer);
+  useEffect(() => preloadWhenIdle(DRAWERS), []);
   // The resource list follows the steps that request something. Milestone steps (FCP, LCP)
   // request nothing, so the list stays on the last step that did, under that step's title.
   const [listedIndex, setListedIndex] = useState(stepIndex);
@@ -188,50 +195,52 @@ export function DiagramView({ flow }: Props) {
           className={styles.badges}
         />
         {hasCacheList && <CacheSidebar resources={cacheResources} inferred={inferredCacheHits} />}
-        {drawer === "resources" && (
-          <ResourceSidebar
-            resources={listedResources}
-            title={listedIsOverview ? t.allResources : listedStep.title}
-            overview={listedIsOverview}
-            onClose={closeDrawer}
-            preconnectHints={listedPage.har.preconnectHints}
-            documentHostname={new URL(listedPage.har.documentEntry.url).hostname}
-            renderDeadline={listedPage.trace?.lcp ?? listedPage.trace?.fcp ?? null}
-          />
-        )}
-        {drawer === "cache" && (
-          <CachePanel
-            report={analysis.cacheReport}
-            network={analysis.networkReport}
-            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
-            hasDocument={pageDocument(page.har) !== null}
-            onClose={closeDrawer}
-          />
-        )}
-        {drawer === "metrics" && <MetricsSummary flow={flow} onClose={closeDrawer} />}
-        {drawer === "findings" && (
-          <FindingsPanel
-            findings={findings}
-            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
-            onClose={closeDrawer}
-          />
-        )}
-        {drawer === "waterfall" && (
-          <WaterfallPanel
-            har={page.har}
-            trace={page.trace}
-            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
-            onClose={closeDrawer}
-          />
-        )}
-        {drawer === "hops" && (
-          <HopsPanel
-            hops={hops}
-            thirdParties={analysis.thirdPartyReport}
-            pageLabel={t.pageLabel(pageIndex + 1, page.name)}
-            onClose={closeDrawer}
-          />
-        )}
+        <Suspense fallback={null}>
+          {drawer === "resources" && (
+            <ResourceSidebar
+              resources={listedResources}
+              title={listedIsOverview ? t.allResources : listedStep.title}
+              overview={listedIsOverview}
+              onClose={closeDrawer}
+              preconnectHints={listedPage.har.preconnectHints}
+              documentHostname={new URL(listedPage.har.documentEntry.url).hostname}
+              renderDeadline={listedPage.trace?.lcp ?? listedPage.trace?.fcp ?? null}
+            />
+          )}
+          {drawer === "cache" && (
+            <CachePanel
+              report={analysis.cacheReport}
+              network={analysis.networkReport}
+              pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+              hasDocument={pageDocument(page.har) !== null}
+              onClose={closeDrawer}
+            />
+          )}
+          {drawer === "metrics" && <MetricsSummary flow={flow} onClose={closeDrawer} />}
+          {drawer === "findings" && (
+            <FindingsPanel
+              findings={findings}
+              pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+              onClose={closeDrawer}
+            />
+          )}
+          {drawer === "waterfall" && (
+            <WaterfallPanel
+              har={page.har}
+              trace={page.trace}
+              pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+              onClose={closeDrawer}
+            />
+          )}
+          {drawer === "hops" && (
+            <HopsPanel
+              hops={hops}
+              thirdParties={analysis.thirdPartyReport}
+              pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+              onClose={closeDrawer}
+            />
+          )}
+        </Suspense>
       </div>
       <StepPanel
         state={state}

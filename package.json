@@ -11,6 +11,7 @@
     "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e -w @htv/web",
     "smoke": "npm run smoke -w har-trace-viewer",
+    "size": "npm run size -w @htv/web",
     "lint": "eslint .",
     "knip": "knip",
     "lint:fix": "eslint . --fix",

@@ -1,7 +1,5 @@
-import { generateFlow } from "@htv/core";
 import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { en } from "../i18n/en.js";
-import { readRecordingFile } from "./parse-recording.js";
 import type {
   FlowRequest,
   ParseKind,
@@ -11,6 +9,8 @@ import type {
   ParseResultFor,
   WorkerResult,
 } from "./parse-protocol.js";
+
+const mainThreadWork = () => import("./main-thread-work.js");
 
 /**
  * One shared worker, created on first use, parses the dropped files and generates the flow.
@@ -65,7 +65,10 @@ async function parseOnMainThread(
 ): Promise<WorkerResult> {
   onProgress?.({ phase: "parsing", loaded: 0, total: 0 });
   // Let the "Parsing…" state paint before the synchronous parse blocks the thread.
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  const [{ readRecordingFile }] = await Promise.all([
+    mainThreadWork(),
+    new Promise((resolve) => setTimeout(resolve, 0)),
+  ]);
   return readRecordingFile(kind, file);
 }
 
@@ -156,7 +159,10 @@ export function parseInWorker<K extends ParseKind>(
 
 async function generateOnMainThread(pages: PageFlow[], options: FlowOptions): Promise<Flow> {
   // Let the "Generating…" state paint before the synchronous analysis blocks the thread.
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  const [{ generateFlow }] = await Promise.all([
+    mainThreadWork(),
+    new Promise((resolve) => setTimeout(resolve, 0)),
+  ]);
   return generateFlow(pages, options);
 }
 

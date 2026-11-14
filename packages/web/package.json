@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "preview": "vite preview",
     "demo:build": "node scripts/build-demo.mjs",
+    "size": "node scripts/size.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck:e2e": "tsc --noEmit -p ../../e2e/tsconfig.json"

@@ -39,7 +39,7 @@ describe("DiagramView in Spanish", () => {
     ];
     for (const [toggle, close] of drawers) {
       await user.click(screen.getByRole("button", { name: new RegExp(`^${toggle}`) }));
-      await user.click(screen.getByRole("button", { name: close }));
+      await user.click(await screen.findByRole("button", { name: close }));
     }
   });
 
@@ -48,17 +48,19 @@ describe("DiagramView in Spanish", () => {
     render(inLanguage(es, <DiagramView flow={flow} />));
 
     await user.click(screen.getByRole("button", { name: "Mostrar u ocultar la cascada" }));
-    expect(screen.getByRole("searchbox", { name: "Filtrar las peticiones" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("searchbox", { name: "Filtrar las peticiones" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Tabla" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Mostrar u ocultar los saltos" }));
-    const hops = screen.getByRole("table", { name: "Saltos por host" });
+    const hops = await screen.findByRole("table", { name: "Saltos por host" });
     expect(within(hops).getByRole("columnheader", { name: "Proveedor" })).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Mostrar u ocultar el análisis de caché" })
     );
-    expect(screen.getByText("Caché del navegador")).toBeInTheDocument();
+    expect(await screen.findByText("Caché del navegador")).toBeInTheDocument();
   });
 });
 

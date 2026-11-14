@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/App.js";
@@ -33,12 +33,12 @@ describe("App — keyboard shortcuts", () => {
     render(<App />);
 
     await user.keyboard("c");
-    const settings = screen.getByRole("dialog", { name: "Settings" });
+    const settings = await screen.findByRole("dialog", { name: "Settings" });
     await user.click(within(settings).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
-    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
   });
 
   it("? opens the help, the keyboard shortcuts and about, one dialog at a time", async () => {
@@ -46,7 +46,7 @@ describe("App — keyboard shortcuts", () => {
     render(<App />);
 
     await user.keyboard("?");
-    const help = screen.getByRole("dialog", { name: "Help" });
+    const help = await screen.findByRole("dialog", { name: "Help" });
     for (const action of ["Toggle theme", "Settings", "Fullscreen", "Next step"]) {
       expect(within(help).getByText(action)).toBeInTheDocument();
     }
@@ -62,7 +62,7 @@ describe("App — keyboard shortcuts", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Help" }));
-    const help = screen.getByRole("dialog", { name: "Help" });
+    const help = await screen.findByRole("dialog", { name: "Help" });
     const start = within(help).getByRole("region", { name: "Getting started" });
     const steps = within(start).getAllByRole("listitem");
     expect(steps).toHaveLength(4);
@@ -78,7 +78,7 @@ describe("App — keyboard shortcuts", () => {
     render(<App />);
     await user.keyboard("?");
 
-    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    fireEvent(await screen.findByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -111,13 +111,13 @@ describe("App — keyboard shortcuts", () => {
     render(<App />);
     await user.keyboard("c");
 
-    await user.click(screen.getByRole("radio", { name: "Dark" }));
+    await user.click(await screen.findByRole("radio", { name: "Dark" }));
     await user.keyboard("t");
     expect(html).toHaveAttribute("data-theme", "light");
 
     await user.click(screen.getByRole("checkbox", { name: "Multi-page journeys" }));
     await user.keyboard("l");
-    expect(html).toHaveAttribute("lang", "es");
+    await waitFor(() => expect(html).toHaveAttribute("lang", "es"));
   });
 });
 
@@ -127,7 +127,7 @@ describe("App — settings", () => {
     render(<App />);
     await user.click(screen.getByRole("button", { name: "Settings" }));
 
-    await user.click(screen.getByRole("radio", { name: "Dark" }));
+    await user.click(await screen.findByRole("radio", { name: "Dark" }));
     expect(html).toHaveAttribute("data-theme", "dark");
     await user.click(screen.getByRole("radio", { name: "System" }));
     expect(html).toHaveAttribute("data-theme", "light");
@@ -141,7 +141,7 @@ describe("App — settings", () => {
     expect(screen.queryByRole("button", { name: "+ Add page" })).not.toBeInTheDocument();
     await user.keyboard("c");
 
-    const journeys = screen.getByRole("checkbox", { name: "Multi-page journeys" });
+    const journeys = await screen.findByRole("checkbox", { name: "Multi-page journeys" });
     expect(journeys).not.toBeChecked();
     expect(journeys).toHaveAccessibleDescription(
       "Build a flow from several HAR files, one per page."
@@ -160,8 +160,8 @@ describe("App — settings", () => {
     render(<App />);
     await user.keyboard("c");
 
-    await user.click(screen.getByRole("button", { name: "Help and keyboard shortcuts" }));
-    expect(screen.getByRole("dialog", { name: "Help" })).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Help and keyboard shortcuts" }));
+    expect(await screen.findByRole("dialog", { name: "Help" })).toBeInTheDocument();
   });
 });
 
@@ -172,12 +172,12 @@ describe("App — language", () => {
     expect(screen.getByRole("heading", { name: "Build your flow" })).toBeInTheDocument();
 
     await user.keyboard("l");
-    expect(html).toHaveAttribute("lang", "es");
+    await waitFor(() => expect(html).toHaveAttribute("lang", "es"));
     expect(screen.getByRole("heading", { name: "Construye tu flujo" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Configuración" })).toBeInTheDocument();
 
     await user.keyboard("l");
-    expect(html).toHaveAttribute("lang", "ca");
+    await waitFor(() => expect(html).toHaveAttribute("lang", "ca"));
     expect(screen.getByRole("heading", { name: "Construeix el teu flux" })).toBeInTheDocument();
 
     await user.keyboard("l");
@@ -189,10 +189,10 @@ describe("App — language", () => {
     render(<App />);
     await user.keyboard("c");
 
-    const english = screen.getByRole("radio", { name: "English" });
+    const english = await screen.findByRole("radio", { name: "English" });
     expect(english).toBeChecked();
     await user.click(screen.getByRole("radio", { name: "Català" }));
-    expect(html).toHaveAttribute("lang", "ca");
+    await waitFor(() => expect(html).toHaveAttribute("lang", "ca"));
     const settings = screen.getByRole("dialog", { name: "Configuració" });
     expect(within(settings).getByRole("group", { name: "Idioma" })).toBeInTheDocument();
     expect(within(settings).getByText("Español")).toHaveAttribute("lang", "es");
@@ -204,7 +204,7 @@ describe("App — language", () => {
     await user.keyboard("l");
     await user.keyboard("?");
 
-    const help = screen.getByRole("dialog", { name: "Ayuda" });
+    const help = await screen.findByRole("dialog", { name: "Ayuda" });
     expect(within(help).getByRole("region", { name: "Primeros pasos" })).toBeInTheDocument();
     expect(within(help).getByText("Cambiar el idioma")).toBeInTheDocument();
     expect(within(help).getByText("Espacio")).toBeInTheDocument();

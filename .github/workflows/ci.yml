@@ -35,6 +35,8 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run build
+      # Gzip size of the site and report builds against packages/web/scripts/size-budgets.json
+      - run: npm run size
       # Core and web tests with coverage, then the CLI tests (they run the built bundle)
       - run: npm run test:coverage
       - run: npm test -w har-trace-viewer

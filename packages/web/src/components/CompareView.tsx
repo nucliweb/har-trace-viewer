@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   collectFindings,
   compareFlows,
@@ -12,10 +12,11 @@ import { useStepNavigation } from "../hooks/useDiagramState.js";
 import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
+import { preloadWhenIdle } from "../lib/preloadable.js";
 import { BadgeRow } from "./BadgeRow.js";
-import { CachePanel } from "./CachePanel.js";
-import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
-import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
+import { FindingsButton } from "./FindingsButton.js";
+import { WaterfallButton } from "./WaterfallButton.js";
+import { CachePanel, DRAWERS, FindingsPanel, WaterfallPanel } from "./lazy.js";
 import { ExportMenu } from "./ExportMenu.js";
 import { DELTA_CLASS, DeltaCell, DeltasPanel } from "./DeltasPanel.js";
 import { NodeRenderer } from "./NodeRenderer.js";
@@ -133,30 +134,32 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
           stepIndex={stepIndex}
           className={styles.badges}
         />
-        {drawer === "cache" && (
-          <CachePanel
-            report={analysis.cacheReport}
-            network={analysis.networkReport}
-            pageLabel={`${TAG[side]} · ${name}`}
-            hasDocument={pageDocument(page.har) !== null}
-            onClose={closeDrawer}
-          />
-        )}
-        {drawer === "findings" && (
-          <FindingsPanel
-            findings={findings}
-            pageLabel={`${TAG[side]} · ${name}`}
-            onClose={closeDrawer}
-          />
-        )}
-        {drawer === "waterfall" && (
-          <WaterfallPanel
-            har={page.har}
-            trace={page.trace}
-            pageLabel={`${TAG[side]} · ${name}`}
-            onClose={closeDrawer}
-          />
-        )}
+        <Suspense fallback={null}>
+          {drawer === "cache" && (
+            <CachePanel
+              report={analysis.cacheReport}
+              network={analysis.networkReport}
+              pageLabel={`${TAG[side]} · ${name}`}
+              hasDocument={pageDocument(page.har) !== null}
+              onClose={closeDrawer}
+            />
+          )}
+          {drawer === "findings" && (
+            <FindingsPanel
+              findings={findings}
+              pageLabel={`${TAG[side]} · ${name}`}
+              onClose={closeDrawer}
+            />
+          )}
+          {drawer === "waterfall" && (
+            <WaterfallPanel
+              har={page.har}
+              trace={page.trace}
+              pageLabel={`${TAG[side]} · ${name}`}
+              onClose={closeDrawer}
+            />
+          )}
+        </Suspense>
       </div>
     </section>
   );
@@ -305,6 +308,7 @@ export function CompareView({ a, b }: Props) {
   useEscapeToClose(showDeltas, closeDeltas, outsidePanes);
   const pairIndex = nav.stepIndex;
   const labels = useMemo(() => pairs.map((p) => pairLabel(p, a, b)), [pairs, a, b]);
+  useEffect(() => preloadWhenIdle(DRAWERS), []);
 
   const sideView = (flow: Flow, side: Side): SideView => {
     const { index, current } = stepAtPair(pairs, pairIndex, side);

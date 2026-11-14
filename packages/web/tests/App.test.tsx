@@ -33,26 +33,26 @@ describe("App", () => {
     const flow = makeFlow();
     window.__HTV_FLOW__ = JSON.parse(JSON.stringify(flow));
     render(<App />);
-    expect(screen.getByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
+    expect(await screen.findByText(`Step 1 / ${flow.steps.length}`)).toBeInTheDocument();
     expect(screen.queryByText("Build your flow")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Reset" }));
     expect(screen.getByText("Build your flow")).toBeInTheDocument();
   });
 
-  it("renders an embedded comparison as two diagrams with one step track", () => {
+  it("renders an embedded comparison as two diagrams with one step track", async () => {
     const [a, b] = makeCompareFlows();
     window.__HTV_FLOW__ = JSON.parse(JSON.stringify(a));
     window.__HTV_COMPARE__ = JSON.parse(JSON.stringify(b));
     render(<App />);
 
-    expect(screen.getByRole("region", { name: "Comparison" })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Comparison" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "A · First view" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "B · Repeat view" })).toBeInTheDocument();
     expect(screen.getAllByRole("tablist")).toHaveLength(1);
   });
 
-  it("tells why an embedded flow draws the Great Firewall", () => {
+  it("tells why an embedded flow draws the Great Firewall", async () => {
     const flow = {
       ...makeFlow(),
       clientRegion: "cn" as const,
@@ -61,7 +61,7 @@ describe("App", () => {
     window.__HTV_FLOW__ = JSON.parse(JSON.stringify(flow));
     render(<App />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("so the diagram draws it");
+    expect(await screen.findByRole("status")).toHaveTextContent("so the diagram draws it");
   });
 
   it("toggles the theme from the header", async () => {

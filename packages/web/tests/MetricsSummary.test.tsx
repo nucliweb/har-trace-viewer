@@ -170,7 +170,7 @@ describe("DiagramView metrics toggle", () => {
     render(<DiagramView flow={twoPageFlow()} />);
     expect(screen.queryByRole("table", { name: "Metrics per page" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /toggle metrics summary/i }));
-    expect(screen.getByRole("table", { name: "Metrics per page" })).toBeInTheDocument();
+    expect(await screen.findByRole("table", { name: "Metrics per page" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /close metrics summary/i }));
     expect(screen.queryByRole("table", { name: "Metrics per page" })).not.toBeInTheDocument();
   });
