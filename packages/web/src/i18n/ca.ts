@@ -247,6 +247,7 @@ export const ca: Messages = {
     noBrowserCache: "0 (sense memòria cau del navegador)",
     resources: (n) => plural(n, "recurs", "recursos"),
     document: "Document",
+    primaryRequest: "Petició principal",
     cdnCache: "Memòria cau de la CDN",
     directives: "Directives",
     cdnAge: "Antiguitat a la CDN",

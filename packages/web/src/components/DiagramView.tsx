@@ -6,6 +6,7 @@ import {
   getStepCacheResources,
   getStepInferredCacheHits,
   getStepResources,
+  pageDocument,
 } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { useBottomEdge } from "../hooks/useBottomEdge.js";
@@ -203,6 +204,7 @@ export function DiagramView({ flow }: Props) {
             report={analysis.cacheReport}
             network={analysis.networkReport}
             pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+            hasDocument={pageDocument(page.har) !== null}
             onClose={closeDrawer}
           />
         )}

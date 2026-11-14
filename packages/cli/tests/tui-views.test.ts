@@ -7,7 +7,7 @@ import { findingsRegion } from "../src/tui/findings-view";
 import { helpRegion } from "../src/tui/help-view";
 import { requestRegion } from "../src/tui/request-view";
 import { resourcesRegion } from "../src/tui/resources-view";
-import { hostsRegion } from "../src/tui/views";
+import { cacheRegion, hostsRegion } from "../src/tui/views";
 import { waterfallRegion } from "../src/tui/waterfall-view";
 import {
   criticalCss,
@@ -248,5 +248,20 @@ describe("the help", () => {
     expect(all).toMatch(/e\s+all the evidence of the findings/);
     expect(all).toMatch(/< >\s+scroll the columns/);
     expect(all).toMatch(/q, Ctrl\+C\s+quit; q closes the help and the details first/);
+  });
+});
+
+describe("cacheRegion", () => {
+  const report = () =>
+    generateFlow([{ name: "Cache", har: makeHar([criticalCss(100)]) }]).pageAnalyses[0].cacheReport;
+
+  it("titles the first panel Document for a page with an HTML document", () => {
+    expect(text(cacheRegion(report(), 80))).toContain("─ Document ─");
+  });
+
+  it("calls it the primary request for a page without one, as an API capture", () => {
+    const shown = text(cacheRegion(report(), 80, undefined, { hasDocument: false }));
+    expect(shown).toContain("─ Primary request ─");
+    expect(shown).not.toContain("Document");
   });
 });

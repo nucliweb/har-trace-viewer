@@ -169,6 +169,59 @@ test("a dropped HAR's diagram is generated in the worker", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("an API capture without an HTML document reads honestly in every drawer", async ({ page }) => {
+  const errors = collectErrors(page);
+  const json = (path: string, ms: number) => ({
+    startedDateTime: new Date(Date.UTC(2026, 0, 1) + ms).toISOString(),
+    time: 120,
+    request: { url: `https://api.example.com${path}`, method: "GET" },
+    response: {
+      status: 200,
+      headers: [{ name: "Content-Type", value: "application/json" }],
+      content: { mimeType: "application/json", size: 4000 },
+      bodySize: 4000,
+      headersSize: 200,
+    },
+    timings: { blocked: 1, dns: 20, connect: 30, ssl: 0, send: 1, wait: 80, receive: 9 },
+  });
+  const har = Buffer.from(
+    JSON.stringify({
+      log: {
+        entries: [json("/v1/session", 0), json("/v1/items", 300), json("/v1/items?page=2", 450)],
+      },
+    })
+  );
+  await page.goto(baseUrl);
+
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({ name: "api.har", mimeType: "application/json", buffer: har });
+  await page.getByRole("button", { name: /Generate diagram/ }).click();
+  await expect(page.locator("#diagram-svg")).toBeVisible();
+
+  const nonsense = /\b(NaN|undefined|null|Invalid Date)\b/;
+  const readable = async () => expect(await page.locator("body").innerText()).not.toMatch(nonsense);
+  await readable();
+  await page.getByRole("button", { name: "Next →" }).click();
+  await page.getByRole("button", { name: "Next →" }).click();
+  await expect(page.getByText(/^Step 3 \/ 3$/)).toBeVisible();
+
+  for (const name of [/findings/i, /waterfall/i, /hops/i, /metrics/i, /cache/i]) {
+    await page.getByRole("button", { name }).first().click();
+    await readable();
+    await page.keyboard.press("Escape");
+  }
+  await page.getByRole("button", { name: /metrics/i }).click();
+  await expect(page.getByRole("row", { name: /^TTFB/ })).toContainText("n/a");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /cache/i }).click();
+  await expect(page.getByText("Primary request")).toBeVisible();
+  await expect(page.getByText("Document", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/something went wrong/i)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test.describe("mobile 360x740", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
 

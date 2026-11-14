@@ -15,6 +15,8 @@ interface Props {
   // Absent in flows generated before the network report existed: its section is left out.
   network?: NetworkReport;
   pageLabel: string;
+  /** False for a page without an HTML document: the report then profiles its primary request. */
+  hasDocument?: boolean;
   onClose: () => void;
 }
 
@@ -124,7 +126,7 @@ function RecommendationList({ recommendations }: { recommendations: Recommendati
   );
 }
 
-export function CachePanel({ report, network, pageLabel, onClose }: Props) {
+export function CachePanel({ report, network, pageLabel, hasDocument = true, onClose }: Props) {
   const t = useMessages().cache;
   const networkTitleId = useId();
   const { document: doc, ownResources, browser, recommendations } = report;
@@ -157,9 +159,9 @@ export function CachePanel({ report, network, pageLabel, onClose }: Props) {
       {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
-        {/* Document */}
+        {/* Document, or the primary request of a page without one */}
         <section className={styles.section}>
-          <div className={styles.sectionTitle}>{t.document}</div>
+          <div className={styles.sectionTitle}>{hasDocument ? t.document : t.primaryRequest}</div>
           <div className={styles.rows}>
             <div className={styles.row}>
               <span className={styles.rowLabel}>{t.cdnCache}</span>

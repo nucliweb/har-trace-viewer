@@ -4,6 +4,7 @@ import {
   compareFlows,
   compareStepMetrics,
   formatDelta,
+  pageDocument,
   stepAtPair,
 } from "@htv/core";
 import type { DiagramStep, Flow, FlowComparison, MetricDelta, StepPair } from "@htv/core";
@@ -137,6 +138,7 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
             report={analysis.cacheReport}
             network={analysis.networkReport}
             pageLabel={`${TAG[side]} · ${name}`}
+            hasDocument={pageDocument(page.har) !== null}
             onClose={closeDrawer}
           />
         )}

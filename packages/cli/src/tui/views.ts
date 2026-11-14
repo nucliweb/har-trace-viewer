@@ -775,9 +775,15 @@ const NO_NETWORK_FINDINGS = "No duplicate requests, redirects, errors or mixed c
 
 /**
  * The cache report of a page: document, static assets and browser cache, then the
- * recommendations, and the network report's findings below them.
+ * recommendations, and the network report's findings below them. A page without an HTML
+ * document (an API capture) shows the profile of its primary request under that name.
  */
-export function cacheRegion(report: CacheReport, width: number, network?: NetworkReport): Line[] {
+export function cacheRegion(
+  report: CacheReport,
+  width: number,
+  network?: NetworkReport,
+  options: { hasDocument?: boolean } = {}
+): Line[] {
   const { document: doc, ownResources: own, browser, recommendations } = report;
   const inferred = browser.inferred ?? 0;
   const revalidated = browser.revalidated ?? 0;
@@ -814,7 +820,7 @@ export function cacheRegion(report: CacheReport, width: number, network?: Networ
     ...(revalidated > 0 ? [kv("Revalidated (304)", String(revalidated))] : []),
   ];
   const panels = [
-    { title: "Document", body: document },
+    { title: options.hasDocument === false ? "Primary request" : "Document", body: document },
     { title: `Static assets · ${own.total}`, body: assets },
     { title: "Browser cache", body: cache },
   ];

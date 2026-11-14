@@ -6,6 +6,7 @@ import {
   collectFindings,
   compareFlows,
   filterWaterfallRows,
+  pageDocument,
   parseResourceQuery,
   sortWaterfallRows,
   stepAtPair,
@@ -307,7 +308,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         const shown = compare ? (side === "a" ? flow : compare) : flow;
         const pageIndex = compare ? 0 : page;
         const { cacheReport, networkReport } = shown.pageAnalyses[pageIndex];
-        return cacheRegion(cacheReport, width, networkReport);
+        const hasDocument = pageDocument(shown.pages[pageIndex].har) !== null;
+        return cacheRegion(cacheReport, width, networkReport, { hasDocument });
       }
     }
   }, [

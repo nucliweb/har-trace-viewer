@@ -243,6 +243,7 @@ export const es: Messages = {
     noBrowserCache: "0 (sin caché del navegador)",
     resources: (n) => plural(n, "recurso", "recursos"),
     document: "Documento",
+    primaryRequest: "Petición principal",
     cdnCache: "Caché de la CDN",
     directives: "Directivas",
     cdnAge: "Antigüedad en la CDN",

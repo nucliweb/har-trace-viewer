@@ -245,6 +245,7 @@ export const en = {
     noBrowserCache: "0 (no browser cache)",
     resources: (n: number) => plural(n, "resource", "resources"),
     document: "Document",
+    primaryRequest: "Primary request",
     cdnCache: "CDN Cache",
     directives: "Directives",
     cdnAge: "CDN Age",
