@@ -76,7 +76,7 @@ function headerLines(
 ): Line[] {
   const title = ` htv v${version} `;
   const ctx = context ? ` ${context} ` : "";
-  const fill = Math.max(1, width - 4 - title.length - ctx.length);
+  const fill = Math.max(1, width - 4 - lineWidth([seg(title + ctx)]));
   const top: Line = [
     frame("╭─"),
     seg(title, { bold: true, color: "cyan" }),

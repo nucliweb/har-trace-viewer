@@ -1,6 +1,6 @@
 import { formatBytes, formatMs } from "@htv/core";
 import type { ResourceSort, ResourceSortKey, WaterfallParty, WaterfallRow } from "@htv/core";
-import { BLANK, panel, seg, table } from "./lines.js";
+import { BLANK, fit, panel, seg, table } from "./lines.js";
 import type { Line } from "./lines.js";
 import { TYPE_LABEL, filterLine } from "./waterfall-view.js";
 import type { FilterState } from "./waterfall-view.js";
@@ -57,9 +57,6 @@ const OTHER_COLUMNS = 72;
 // Lines above the rows that stay in view while they scroll: the panel's top edge, the
 // filter line and the column header.
 const PINNED = 3;
-
-const fit = (text: string, width: number) =>
-  text.length > width ? `${text.slice(0, width - 1)}…` : text;
 
 const NONE = "—";
 

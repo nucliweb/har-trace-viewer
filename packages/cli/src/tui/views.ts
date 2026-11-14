@@ -41,6 +41,7 @@ import {
   BLANK,
   DELTA_COLOR,
   RATING_COLOR,
+  fit,
   heading,
   hstack,
   line,
@@ -275,7 +276,9 @@ function resourceRows(entries: HarEntry[]): Line[] {
 function stepListRows(titles: string[], selected: number, width: number, maxRows: number): Line[] {
   const row = (i: number): Line => {
     const text = `${i === selected ? "▸" : " "} ${String(i + 1).padStart(2)}  ${titles[i]}`;
-    return i === selected ? [seg(text.padEnd(width), { inverse: true, bold: true })] : [seg(text)];
+    return i === selected
+      ? [seg(fit(text, width, { pad: true }), { inverse: true, bold: true })]
+      : [seg(text)];
   };
   if (titles.length <= maxRows) return titles.map((_, i) => row(i));
   const visible = Math.max(1, maxRows - 2);

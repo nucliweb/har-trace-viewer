@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { hstack, lineText, panel, seg, truncateLine } from "../src/tui/lines";
+import stringWidth from "string-width";
+import { fit, hstack, lineText, panel, seg, table, truncateLine } from "../src/tui/lines";
 
 const texts = (lines: ReturnType<typeof panel>) => lines.map(lineText);
 
@@ -48,5 +49,45 @@ describe("truncateLine", () => {
   it("leaves a line that fits untouched", () => {
     const line = [seg("abc")];
     expect(truncateLine(line, 3)).toBe(line);
+  });
+});
+
+describe("display width", () => {
+  const widths = (lines: ReturnType<typeof panel>) =>
+    lines.map((line) => stringWidth(lineText(line)));
+
+  it("frames wide characters by the columns they take, not by their length", () => {
+    expect(widths(panel("标题", [[seg("页面加载")], [seg("ok 👍")]], 16))).toEqual([
+      16, 16, 16, 16,
+    ]);
+  });
+
+  it("truncates wide characters to the panel without splitting one", () => {
+    const [, row] = panel("", [[seg("页面加载页面加载")]], 10);
+    expect(lineText(row)).toBe("│ 页面…  │");
+    expect(stringWidth(lineText(row))).toBe(10);
+  });
+
+  it("never cuts an emoji in half", () => {
+    const cut = lineText(truncateLine([seg("ab👍👍👍")], 5));
+    expect(cut).toBe("ab👍…");
+  });
+
+  it("pads the columns of a table by display width", () => {
+    const [, first, second] = table(
+      ["name", "n"],
+      [
+        ["页面", "1"],
+        ["abcdef", "2"],
+      ]
+    );
+    expect(stringWidth(lineText(first))).toBe(stringWidth(lineText(second)));
+  });
+
+  it("fits a text to a width, padding it on request", () => {
+    expect(fit("页面加载", 5)).toBe("页面…");
+    expect(fit("ab", 4)).toBe("ab");
+    expect(fit("ab", 4, { pad: true })).toBe("ab  ");
+    expect(fit("页", 4, { pad: true })).toBe("页  ");
   });
 });

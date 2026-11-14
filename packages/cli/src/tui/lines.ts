@@ -1,3 +1,4 @@
+import stringWidth from "string-width";
 import type { DeltaRating, MetricRating } from "@htv/core";
 
 /** A run of text with one style. */
@@ -43,8 +44,33 @@ export const DELTA_COLOR: Record<DeltaRating, string | undefined> = {
 
 type Align = "left" | "right";
 
-const pad = (text: string, width: number, align: Align) =>
-  align === "right" ? text.padStart(width) : text.padEnd(width);
+/** The terminal columns a text takes: a CJK character or an emoji takes two. */
+const textWidth = (text: string): number => stringWidth(text);
+
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+/** The longest start of the text that fits in `width` columns, cut between characters. */
+function cut(text: string, width: number): string {
+  let out = "";
+  let used = 0;
+  for (const { segment } of graphemes.segment(text)) {
+    used += textWidth(segment);
+    if (used > width) break;
+    out += segment;
+  }
+  return out;
+}
+
+const pad = (text: string, width: number, align: Align) => {
+  const gap = " ".repeat(Math.max(0, width - textWidth(text)));
+  return align === "right" ? gap + text : text + gap;
+};
+
+/** The text cut to `width` columns with an ellipsis; `pad` fills a shorter one with spaces. */
+export function fit(text: string, width: number, options: { pad?: boolean } = {}): string {
+  if (textWidth(text) > width) return `${cut(text, width - 1)}…`;
+  return options.pad ? pad(text, width, "left") : text;
+}
 
 /**
  * A table: a dim header and one line per row, each column as wide as its widest cell and
@@ -52,7 +78,7 @@ const pad = (text: string, width: number, align: Align) =>
  */
 export function table(header: string[], rows: Cell[][], aligns: Align[] = []): Line[] {
   const widths = header.map((title, i) =>
-    Math.max(title.length, ...rows.map((row) => toSegment(row[i] ?? "").text.length))
+    Math.max(textWidth(title), ...rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth))
   );
   const render = (cells: Cell[]): Line =>
     cells.flatMap((cell, i) => {
@@ -68,7 +94,7 @@ export function wrap(text: string, width: number, indent = ""): Line[] {
   const lines: Line[] = [];
   let current = "";
   for (const word of text.split(/\s+/).filter(Boolean)) {
-    if (current && indent.length + current.length + 1 + word.length > width) {
+    if (current && textWidth(indent) + textWidth(current) + 1 + textWidth(word) > width) {
       lines.push([seg(indent + current)]);
       current = word;
     } else {
@@ -80,7 +106,7 @@ export function wrap(text: string, width: number, indent = ""): Line[] {
 }
 
 export const lineText = (line: Line): string => line.map((s) => s.text).join("");
-export const lineWidth = (line: Line): number => lineText(line).length;
+export const lineWidth = (line: Line): number => textWidth(lineText(line));
 
 /** Cuts a line to `width` characters, ending it with an ellipsis when something was cut. */
 export function truncateLine(line: Line, width: number): Line {
@@ -89,12 +115,13 @@ export function truncateLine(line: Line, width: number): Line {
   let used = 0;
   for (const segment of line) {
     const room = width - 1 - used;
-    if (segment.text.length < room) {
+    const taken = textWidth(segment.text);
+    if (taken < room) {
       out.push(segment);
-      used += segment.text.length;
+      used += taken;
       continue;
     }
-    out.push({ ...segment, text: `${segment.text.slice(0, Math.max(0, room))}…` });
+    out.push({ ...segment, text: `${cut(segment.text, Math.max(0, room))}…` });
     return out;
   }
   return out;
@@ -122,7 +149,7 @@ export function panel(
 ): Line[] {
   const inner = width - 4;
   const titleText = title ? ` ${title} ` : "";
-  const fill = Math.max(0, width - 3 - titleText.length);
+  const fill = Math.max(0, width - 3 - textWidth(titleText));
   const top: Line = [
     frame(`${FRAME.tl}${FRAME.h}`),
     ...(title ? [seg(titleText, { bold: true, color: "cyan" })] : []),

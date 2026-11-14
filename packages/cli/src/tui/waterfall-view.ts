@@ -7,7 +7,7 @@ import type {
   WaterfallParty,
   WaterfallRow,
 } from "@htv/core";
-import { BLANK, panel, seg } from "./lines.js";
+import { BLANK, fit, panel, seg } from "./lines.js";
 import type { Line, Segment } from "./lines.js";
 
 /** The filter of a request list: its query, whether its prompt is open, what it could not read. */
@@ -81,9 +81,6 @@ function layoutFor(inner: number, totalMs: number): Layout {
 
 const column = (ms: number, { bar, totalMs }: Layout) =>
   totalMs > 0 ? Math.min(bar - 1, Math.max(0, Math.floor((ms / totalMs) * bar))) : 0;
-
-const fit = (text: string, width: number) =>
-  text.length > width ? `${text.slice(0, width - 1)}…` : text.padEnd(width);
 
 interface Cell {
   char: string;
@@ -207,7 +204,7 @@ function rowLine(row: WaterfallRow, layout: Layout, marks: PlacedMark[]): Line {
   const size = row.fromCache ? row.fromCache : formatBytes(row.transferSize);
   return [
     seg(flags, { color: row.isLcpResource ? "yellow" : "red", bold: true }),
-    seg(` ${fit(row.shortName, layout.name)} `),
+    seg(` ${fit(row.shortName, layout.name, { pad: true })} `),
     seg(`${TYPE_LABEL[row.resourceType].padEnd(TYPE)} `, { dim: true }),
     seg(status.padEnd(STATUS), { color: statusColor }),
     seg(` ${size.padStart(SIZE)} `, { dim: row.fromCache !== false }),
