@@ -41,7 +41,7 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
       >
         <FileZones
           entry={entry}
-          onHarFile={onHarFile}
+          onHarFiles={([file]) => onHarFile(file)}
           onTraceFile={onTraceFile}
           dropLabel={t.dropToCompare}
           harInputLabel={t.harToCompare}

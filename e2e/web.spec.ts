@@ -251,7 +251,8 @@ test.describe("mobile 360x740", () => {
     for (const lang of ["en", "es", "ca"]) {
       await expect(page.locator("html")).toHaveAttribute("lang", lang);
       const buttons = page.locator("header button");
-      await expect(buttons).toHaveCount(4);
+      // Home, Reset, the theme, the help and the settings.
+      await expect(buttons).toHaveCount(5);
       for (const button of await buttons.all()) {
         const box = (await button.boundingBox())!;
         expect(box.x).toBeGreaterThanOrEqual(0);

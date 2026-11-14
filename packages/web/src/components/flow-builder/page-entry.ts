@@ -9,6 +9,7 @@ import type { ClientRegion, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from
 import type { Messages } from "../../i18n/en.js";
 import { ParserCrashError, parseInWorker } from "../../lib/parse-client.js";
 import type { ParseProgress } from "../../lib/parse-protocol.js";
+import { TRACE_FILE, classifyRecordingFile } from "./drop-plan.js";
 
 /** One recording of the builder: its HAR, its optional trace and what loading them is up to. */
 export interface PageEntry {
@@ -98,16 +99,14 @@ const toEntryError = (error: unknown): EntryError =>
     ? { kind: "parser-crash", detail: error.detail }
     : { kind: "message", message: error instanceof Error ? error.message : String(error) };
 
-const TRACE_FILE = /\.json(\.gz)?$/i;
-
 /** Loads a file given as the recording's HAR: a trace, by its name, goes to the trace instead. */
 export function loadRecordingFile(file: File, apply: (patch: EntryPatch) => void) {
-  if (TRACE_FILE.test(file.name)) void loadTraceFile(file, apply);
+  if (classifyRecordingFile(file) === "trace") void loadTraceFile(file, apply);
   else loadHarFile(file, apply);
 }
 
 /** Parses a dropped HAR in the worker, reporting progress and the result through `apply`. */
-function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
+export function loadHarFile(file: File, apply: (patch: EntryPatch) => void) {
   if (!/\.har(\.gz)?$/i.test(file.name)) {
     apply({ harError: { kind: "har-extension" } });
     return;

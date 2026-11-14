@@ -88,7 +88,7 @@ describe.each(languages)("translated strings in %s", (name, messages, locale) =>
     render(<App />);
     // The language loads on demand: wait for it before the file goes in.
     await screen.findByRole("button", { name: messages.app.help }, { timeout: 5000 });
-    const input = document.querySelector<HTMLInputElement>('input[accept=".har,.gz"]')!;
+    const input = document.querySelector<HTMLInputElement>('input[accept^=".har,.gz"]')!;
     await user.upload(input, makeFile(harJson, "site.har"));
     analysis.fail = true;
 

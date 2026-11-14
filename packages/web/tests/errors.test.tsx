@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 async function loadHar(user: ReturnType<typeof userEvent.setup>) {
-  const input = document.querySelector<HTMLInputElement>('input[accept=".har,.gz"]')!;
+  const input = document.querySelector<HTMLInputElement>('input[accept^=".har,.gz"]')!;
   await user.upload(input, makeFile(harJson, "site.har"));
   // The button is there, disabled, while the file is read: a click then would do nothing.
   await waitFor(() =>

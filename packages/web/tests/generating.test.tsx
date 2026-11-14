@@ -57,7 +57,7 @@ const announcement = () =>
   [...document.querySelectorAll('[aria-live="polite"]')].map((n) => n.textContent).join("");
 
 async function loadHar(user: ReturnType<typeof userEvent.setup>, json = harJson) {
-  const input = document.querySelector<HTMLInputElement>('input[accept=".har,.gz"]')!;
+  const input = document.querySelector<HTMLInputElement>('input[accept^=".har,.gz"]')!;
   await user.upload(input, makeFile(json, "site.har"));
   // The button is there, disabled, while the file is read: a click then would do nothing.
   const generate = await screen.findByRole("button", { name: /generate diagram/i });

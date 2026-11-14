@@ -11,6 +11,11 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Keep only the requests that match a waterfall query with `--filter <query>` (`type:js`, `domain:cdn.*`, `status:4xx`, `-is:cached`) in the `csv` and `json` formats. Any other format, or an invalid query, exits with an error.
 - Read the HAR from stdin when the input is `-` (`cat page.har | htv - --format csv`), gzipped or not.
 - Print the pages of each HAR as JSON with `--list-pages --format json`.
+- Load a HAR and its trace dropped or picked together in the web app, and accept files dropped anywhere on the start screen.
+
+### Changed
+
+- Go back from a flow to the start screen with the Home button of the web app, which keeps the loaded pages so one more can be added without reading the files again. Reset clears them, and is also offered on the start screen once a file is loaded.
 
 ### Fixed
 

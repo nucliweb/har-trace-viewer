@@ -755,3 +755,30 @@
     height: 48px;
   }
 }
+
+/* ── Drop anywhere ─────────────────────────────────────────────────────────── */
+
+.dropOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border: 3px dashed var(--color-cyan);
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  pointer-events: none;
+}
+
+.dropOverlayText {
+  margin: 0;
+  padding: 16px 24px;
+  border: 1.5px solid var(--color-cyan);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-step-title);
+  text-align: center;
+}

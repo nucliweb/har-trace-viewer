@@ -28,7 +28,7 @@ async function compare(a: string, b: string) {
   const user = userEvent.setup();
   render(<App />);
   const harInput = document.querySelector<HTMLInputElement>(
-    'input[type="file"][accept=".har,.gz"]'
+    'input[type="file"][accept^=".har,.gz"]'
   );
   await user.upload(harInput!, makeFile(a, "a.har"));
   await screen.findByText("a.har");

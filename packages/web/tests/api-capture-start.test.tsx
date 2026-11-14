@@ -9,7 +9,7 @@ const generate = () => screen.getByRole("button", { name: /generate diagram/i })
 
 async function load(user: ReturnType<typeof userEvent.setup>, raw: object) {
   const input = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="file"]')).find(
-    (i) => i.accept === ".har,.gz"
+    (i) => i.accept.startsWith(".har,.gz")
   )!;
   await user.upload(input, makeFile(JSON.stringify(raw), "api.har"));
 }

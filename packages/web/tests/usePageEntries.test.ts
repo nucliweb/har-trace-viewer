@@ -1,6 +1,15 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement } from "react";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { makeEntry } from "../src/components/flow-builder/page-entry.js";
-import { pageEntriesReducer } from "../src/components/flow-builder/usePageEntries.js";
+import {
+  pageEntriesReducer,
+  usePageEntries,
+} from "../src/components/flow-builder/usePageEntries.js";
+import { MessagesContext } from "../src/i18n/context.js";
+import { en } from "../src/i18n/en.js";
+import { harJson, makeFile, traceJson } from "./fixtures.js";
 import type { PageEntriesState } from "../src/components/flow-builder/usePageEntries.js";
 
 const entry = (id: string, name: string) => ({ ...makeEntry(name), id });
@@ -60,5 +69,52 @@ describe("pageEntriesReducer", () => {
     const reset = pageEntriesReducer(patched, { type: "resetCompare", entry: entry("y", "") });
     expect(reset.compare.id).toBe("y");
     expect(reset.compare.harFileName).toBe("");
+  });
+});
+
+describe("usePageEntries.loadFiles", () => {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(MessagesContext.Provider, { value: en }, children);
+  const setup = () => renderHook(() => usePageEntries(), { wrapper });
+
+  it("loads a HAR and its trace dropped together into the same row", async () => {
+    const { result } = setup();
+    const rowId = result.current.pages[0].id;
+    act(() =>
+      result.current.loadFiles([makeFile(traceJson, "t.json"), makeFile(harJson, "a.har")], rowId)
+    );
+
+    await waitFor(() => {
+      expect(result.current.pages).toHaveLength(1);
+      expect(result.current.pages[0].harFileName).toBe("a.har");
+      expect(result.current.pages[0].traceFileName).toBe("t.json");
+    });
+  });
+
+  it("adds a row for each further HAR and keeps the good files when one is unreadable", async () => {
+    const { result } = setup();
+    act(() =>
+      result.current.loadFiles([
+        makeFile(harJson, "a.har"),
+        makeFile("{ not json", "b.har"),
+        makeFile(harJson, "c.har"),
+      ])
+    );
+
+    await waitFor(() => {
+      const [first, second, third] = result.current.pages;
+      expect(first.harFileName).toBe("a.har");
+      expect(second.harError).not.toBeNull();
+      expect(third.harFileName).toBe("c.har");
+    });
+    expect(result.current.pages.map((p) => p.name)).toEqual(["Page 1", "Page 2", "Page 3"]);
+  });
+
+  it("keeps a trace that came without a HAR in its row, waiting for it", async () => {
+    const { result } = setup();
+    act(() => result.current.loadFiles([makeFile(traceJson, "t.json")]));
+
+    await waitFor(() => expect(result.current.pages[0].traceFileName).toBe("t.json"));
+    expect(result.current.pages[0].har).toBeNull();
   });
 });

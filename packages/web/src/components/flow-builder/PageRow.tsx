@@ -15,7 +15,8 @@ interface Props {
   /** Part of a multi-page journey: the row shows its order buttons and its remove button. */
   journey: boolean;
   onNameChange: (name: string) => void;
-  onHarFile: (file: File) => void;
+  /** Files picked or dropped on the row: its HAR and trace, and more rows for the rest. */
+  onFiles: (files: File[]) => void;
   onSelectedPagesChange: (ids: string[]) => void;
   /** Offers to compare two pages of this HAR instead of building a flow. */
   showComparePicker: boolean;
@@ -36,7 +37,7 @@ export function PageRow({
   isDraggingOver,
   journey,
   onNameChange,
-  onHarFile,
+  onFiles,
   onSelectedPagesChange,
   showComparePicker,
   onComparePagesChange,
@@ -51,8 +52,8 @@ export function PageRow({
   const handleHarDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDragLeave();
-    const file = e.dataTransfer.files[0];
-    if (file) onHarFile(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) onFiles(files);
   };
 
   return (
@@ -99,7 +100,7 @@ export function PageRow({
           aria-label={t.nameLabel(idx + 1)}
         />
 
-        <FileZones entry={page} onHarFile={onHarFile} onTraceFile={onTraceFile} />
+        <FileZones entry={page} onHarFiles={onFiles} multiple onTraceFile={onTraceFile} />
 
         {journey && (
           <button

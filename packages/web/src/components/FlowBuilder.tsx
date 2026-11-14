@@ -1,6 +1,7 @@
 import { useCallback, useId, useState } from "react";
 import { isClientRegion } from "@htv/core";
 import type { ClientRegion, Flow, FlowOptions, PageFlow } from "@htv/core";
+import { useFileDrop } from "../hooks/useFileDrop.js";
 import { useMessages } from "../i18n/context.js";
 import styles from "./FlowBuilder.module.css";
 import { CompareTarget } from "./flow-builder/CompareTarget.js";
@@ -14,6 +15,7 @@ import {
   pagePairOf,
 } from "./flow-builder/page-entry.js";
 import { usePageEntries } from "./flow-builder/usePageEntries.js";
+import type { PageEntries } from "./flow-builder/usePageEntries.js";
 
 interface Props {
   /** `comparePages`, when given, is a second flow (B) to compare with `pages` (A). */
@@ -26,6 +28,11 @@ interface Props {
   error?: string | null;
   /** A generation is running: the Generate button says so and does not start another. */
   generating?: boolean;
+  /**
+   * The pages and their files, when the caller keeps them: they then outlive the builder, so a
+   * flow's Home comes back to them. Without it the builder keeps its own.
+   */
+  entries?: PageEntries;
 }
 
 /**
@@ -39,15 +46,19 @@ export function FlowBuilder({
   journeys = false,
   error = null,
   generating = false,
+  entries: keptEntries,
 }: Props) {
   const messages = useMessages();
   const t = messages.builder;
-  const entries = usePageEntries();
+  const ownEntries = usePageEntries();
+  const entries = keptEntries ?? ownEntries;
   const { pages, compare } = entries;
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
   // "auto" leaves the region to the latencies: generateFlow takes the region they suggest.
   const [clientRegion, setClientRegion] = useState<ClientRegion | "auto">("auto");
   const regionSelectId = useId();
+  // Files dropped anywhere on the screen (not on a row) go to the first row that lacks them.
+  const droppingFiles = useFileDrop((files) => entries.loadFiles(files));
   const [demoStatus, setDemoStatus] = useState<"idle" | "loading" | "error">("idle");
 
   const loadDemo = useCallback(() => {
@@ -114,7 +125,7 @@ export function FlowBuilder({
             isDraggingOver={draggingOver === page.id}
             journey={journeyControls}
             onNameChange={(name) => entries.update(page.id, { name })}
-            onHarFile={(file) => entries.loadFile(page.id, file)}
+            onFiles={(files) => entries.loadFiles(files, page.id)}
             onSelectedPagesChange={(selectedPageIds) =>
               entries.update(page.id, { selectedPageIds })
             }
@@ -188,6 +199,12 @@ export function FlowBuilder({
       </div>
 
       <Guide />
+
+      {droppingFiles && (
+        <div className={styles.dropOverlay} aria-hidden="true">
+          <p className={styles.dropOverlayText}>{t.dropAnywhere}</p>
+        </div>
+      )}
     </div>
   );
 }

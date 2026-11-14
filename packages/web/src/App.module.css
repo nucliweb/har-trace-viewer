@@ -194,9 +194,13 @@
   }
 }
 
-/* Four header buttons and the version share a 320px screen: Reset keeps its icon, and its word
-   stays in the accessible name. */
+/* The header buttons share a 320px screen: Home and Reset keep their icons, and their words stay
+   in the accessible names. With both of them there are five buttons, and the version gives way. */
 @media (max-width: 400px) {
+  .header:has(.resetButton + .resetButton) .version {
+    display: none;
+  }
+
   .headerActions {
     gap: var(--space-xs);
   }

@@ -15,7 +15,7 @@ const fileInputs = () =>
 
 async function loadHar(user: ReturnType<typeof userEvent.setup>, index = 0, content = harJson) {
   await user.upload(
-    fileInputs().filter((i) => i.accept === ".har,.gz")[index],
+    fileInputs().filter((i) => i.accept.startsWith(".har,.gz"))[index],
     makeFile(content, "site.har")
   );
 }

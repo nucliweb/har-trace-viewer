@@ -4,6 +4,7 @@ import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { CompareView, DIALOGS, DiagramView, HelpModal, SettingsModal } from "./components/lazy.js";
 import { ViewErrorBoundary } from "./components/ViewErrorBoundary.js";
 import { FlowBuilder } from "./components/FlowBuilder.js";
+import { usePageEntries } from "./components/flow-builder/usePageEntries.js";
 import { RegionNotice } from "./components/RegionNotice.js";
 import { useAppShortcuts } from "./hooks/useAppShortcuts.js";
 import { useJourneys } from "./hooks/useJourneys.js";
@@ -44,6 +45,9 @@ export function App() {
   const { theme, choice: themeChoice, toggleTheme, setChoice: setThemeChoice } = useTheme();
   const { locale, t, setLocale, cycleLocale } = useLocale();
   const [journeys, setJourneys] = useJourneys();
+  // The builder's pages live here, not in the builder: Home leaves the flow for the builder
+  // again, and the files already read are still on their rows to add a page and generate anew.
+  const entries = usePageEntries(t);
   // One dialog at a time: opening one replaces the other, its own key closes it.
   const [dialog, setDialog] = useState<"settings" | "help" | null>(null);
   const shortcuts = useMemo(() => {
@@ -61,7 +65,7 @@ export function App() {
   useEffect(() => preloadWhenIdle(DIALOGS), []);
 
   const [generateError, setGenerateError] = useState<string | null>(null);
-  // The analysis runs in a worker. Only the latest one lands: Reset, the demo flow or a newer
+  // The analysis runs in a worker. Only the latest one lands: Home, Reset, the demo flow or a newer
   // generation drop the result of one still running.
   const generation = useLatestTask();
   // The side whose region switch is running, to word its button.
@@ -142,13 +146,18 @@ export function App() {
     return [{ side, suggestion, applied, onSwitch, busy } as const];
   });
 
-  const handleReset = () => {
+  // Home goes back to the builder with its pages; Reset also empties them.
+  const handleHome = () => {
     generation.cancel();
     setFlow(null);
     setPages(null);
     setCompare(null);
     setComparePages(null);
     setGenerateError(null);
+  };
+  const handleReset = () => {
+    handleHome();
+    entries.reset();
   };
 
   return (
@@ -165,6 +174,12 @@ export function App() {
           </div>
           <div className={styles.headerActions}>
             {flow && (
+              <button className={styles.resetButton} onClick={handleHome} title={t.app.homeTitle}>
+                <span aria-hidden="true">⌂</span>{" "}
+                <span className={styles.resetLabel}>{t.app.home}</span>
+              </button>
+            )}
+            {(flow || !entries.blank) && (
               <button className={styles.resetButton} onClick={handleReset} title={t.app.resetTitle}>
                 <span aria-hidden="true">↩</span>{" "}
                 <span className={styles.resetLabel}>{t.app.reset}</span>
@@ -218,7 +233,7 @@ export function App() {
                   </p>
                 )}
                 <div className={styles.flowArea}>
-                  <ViewErrorBoundary onReset={handleReset}>
+                  <ViewErrorBoundary onReset={handleHome}>
                     {compare ? <CompareView a={flow} b={compare} /> : <DiagramView flow={flow} />}
                   </ViewErrorBoundary>
                 </div>
@@ -229,6 +244,7 @@ export function App() {
                   journeys={journeys}
                   error={generateError}
                   generating={generation.running}
+                  entries={entries}
                   onGenerate={handleGenerate}
                   // The demo chunk is not shipped inside generated reports.
                   onLoadFlow={embedded ? undefined : handleLoadFlow}

@@ -6,7 +6,10 @@ import type { PageEntry } from "./page-entry.js";
 
 interface Props {
   entry: PageEntry;
-  onHarFile: (file: File) => void;
+  /** The HAR input's files: more than one only when `multiple` is on. */
+  onHarFiles: (files: File[]) => void;
+  /** A selection of several files, HAR and trace together (the trace button takes one). */
+  multiple?: boolean;
   onTraceFile: (file: File) => void;
   /** Text of the empty HAR button. */
   dropLabel?: string;
@@ -24,7 +27,8 @@ export function NeedsHarNote({ entry }: { entry: PageEntry }) {
 /** The HAR button (click or drop) and the optional trace button of one recording. */
 export function FileZones({
   entry,
-  onHarFile,
+  onHarFiles,
+  multiple = false,
   onTraceFile,
   dropLabel,
   harInputLabel,
@@ -46,11 +50,12 @@ export function FileZones({
         <input
           ref={harInputRef}
           type="file"
-          accept=".har,.gz"
+          accept={multiple ? ".har,.gz,.json" : ".har,.gz"}
+          multiple={multiple}
           className={styles.hiddenInput}
           onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onHarFile(f);
+            const files = Array.from(e.target.files ?? []);
+            if (files.length > 0) onHarFiles(files);
             e.target.value = "";
           }}
           aria-hidden="true"
