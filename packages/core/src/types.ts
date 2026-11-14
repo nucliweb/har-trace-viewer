@@ -990,7 +990,7 @@ export interface RenderBlockingReport {
   // priorities, or nothing ("none": neither carries it, as in Firefox HARs).
   source: "trace" | "har" | "none";
   fcpMs: number | null;
-  documentEndMs: number; // last byte of the document
+  documentEndMs: number | null; // last byte of the document; null for a page without one
   resources: RenderBlockingResource[]; // requested before FCP, in request order
   totalBytes: number;
   // How long they held the first paint: last blocking byte (capped at FCP) − documentEndMs.

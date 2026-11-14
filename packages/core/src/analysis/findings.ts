@@ -1,3 +1,4 @@
+import { pageDocument } from "../parsers/har-parser.js";
 import { formatBytes, formatMs } from "../utils/format.js";
 import { METRIC_THRESHOLDS, rateMetric, summarizeFlowMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
@@ -492,9 +493,10 @@ export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}
         ...(options.side ? { side: options.side } : {}),
       };
       const doc = flowPage.har.documentEntry;
+      const document = pageDocument(flowPage.har) ?? undefined;
       return [
         ...reports(flow.pageAnalyses[index]).flatMap(([source, list]) =>
-          list.map((rec) => recommendationFinding(rec, source, page, doc))
+          list.map((rec) => recommendationFinding(rec, source, page, document))
         ),
         ...metricFindings(summaries[index], page, doc.url),
         ...[varianceFinding(flow.pageAnalyses[index]?.runSpread, page, doc.url)].filter(
@@ -541,8 +543,8 @@ const roundOrNull = (value: number | null, digits: number) =>
 /** The metrics summary as the document gives it: times to 0.1 ms, ratios and CLS to 0.001. */
 function documentMetrics(m: PageMetricsSummary): FindingsPageMetrics {
   return {
-    ttfb: round(m.ttfb, 1),
-    serverWait: round(m.serverWait, 1),
+    ttfb: roundOrNull(m.ttfb, 1),
+    serverWait: roundOrNull(m.serverWait, 1),
     fcp: roundOrNull(m.fcp, 1),
     lcp: roundOrNull(m.lcp, 1),
     cls: roundOrNull(m.cls ?? null, 3),

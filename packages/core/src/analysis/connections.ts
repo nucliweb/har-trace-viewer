@@ -1,3 +1,4 @@
+import { pageDocument } from "../parsers/har-parser.js";
 import { networkRequests } from "./network-requests.js";
 import { getHostname } from "../utils/domain.js";
 import { formatBytes } from "../utils/format.js";
@@ -216,7 +217,7 @@ export function analyzeConnections(har: ParsedHar): ConnectionsReport {
 
   return {
     hosts,
-    serverTiming: har.documentEntry.serverTiming ?? [],
+    serverTiming: pageDocument(har)?.serverTiming ?? [],
     recommendations: good ? [good] : findings,
   };
 }

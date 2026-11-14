@@ -1,3 +1,4 @@
+import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname } from "../utils/domain.js";
 import { tcpConnectMs } from "../utils/timing.js";
 import { detectPop, detectVercelFunctionRegion } from "./pops.js";
@@ -94,7 +95,7 @@ function tlsStalls(har: ParsedHar): string | null {
 // under .cn, or a CDN that served it from a PoP in mainland China.
 function chinaSignals(har: ParsedHar): string[] {
   const signals: string[] = [];
-  if ((getHostname(har.documentEntry.url) ?? "").endsWith(".cn")) {
+  if ((getHostname(pageDocument(har)?.url ?? "") ?? "").endsWith(".cn")) {
     signals.push("document host under .cn");
   }
   const pop = har.entries.map((e) => detectPop(e.responseHeaders)).find((p) => p?.country === "CN");
@@ -109,7 +110,7 @@ function chinaSignals(har: ParsedHar): string[] {
 // moderately, so the latencies alone take thresholds above those profiles. The result is
 // only a hint for the user; it never switches the topology on its own.
 export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | null {
-  const documentDnsMs = har.documentEntry.timing.dns;
+  const documentDnsMs = pageDocument(har)?.timing.dns ?? 0;
   const maxConnectMs = Math.max(0, ...har.entries.map((e) => e.timing.connect));
 
   const latencies: string[] = [];

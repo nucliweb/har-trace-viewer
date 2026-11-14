@@ -1,3 +1,4 @@
+import { pageDocument } from "../parsers/har-parser.js";
 import { isBeacon } from "./host-ttfb.js";
 import { networkRequests } from "./network-requests.js";
 import { formatBytes, formatMs } from "../utils/format.js";
@@ -99,7 +100,8 @@ function failedRequests(network: HarEntry[]): FailedRequest[] {
 }
 
 function mixedContent(har: ParsedHar): MixedContentRequest[] {
-  if (!har.documentEntry.url.startsWith("https:")) return [];
+  // Mixed content is what an https:// document loads over http://; without a document, none.
+  if (!pageDocument(har)?.url.startsWith("https:")) return [];
   const documentChain = har.documentRedirects ?? [];
   const seen = new Set<string>();
   const result: MixedContentRequest[] = [];

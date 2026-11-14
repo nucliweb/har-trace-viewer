@@ -49,7 +49,7 @@ describe("parsing in the worker", () => {
     );
     await expect(
       parseInWorker("har", makeFile('{"log":{"pages":[],"entries":[]}}', "site.har"))
-    ).rejects.toThrow(new Error("HAR contains no pages"));
+    ).rejects.toThrow(new Error("HAR contains no entries"));
   });
 
   it("brings the parsed pages back on success", async () => {

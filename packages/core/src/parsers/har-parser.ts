@@ -12,6 +12,7 @@ import type {
   ResourceType,
   ServerTimingMetric,
 } from "../types.js";
+import { getRootDomain } from "../utils/domain.js";
 
 // HAR 1.2 makes blocked, dns, connect and ssl optional; exporters such as Playwright leave
 // them out instead of writing -1.
@@ -122,6 +123,9 @@ function parseTiming(raw: RawHarTiming): HarTiming {
     ...(notApplicable.length > 0 ? { notApplicable } : {}),
   };
 }
+
+// HAR 1.2 defines an entry's time as the sum of its timings.
+const timingTotal = (t: HarTiming) => t.blocked + t.dns + t.connect + t.send + t.wait + t.receive;
 
 // Response headers that the analyzers read, or that describe how a response was
 // cached and served. Every other header is dropped while parsing: the parsed HAR is
@@ -676,7 +680,7 @@ function buildParsedHar(
       method: e.request.method,
       ...(e._resourceType === "ping" ? { ping: true as const } : {}),
       startTime,
-      duration: e.time,
+      duration: typeof e.time === "number" ? e.time : timingTotal(timing),
       timing,
       ttfb,
       status: response.status ?? 0,
@@ -698,40 +702,100 @@ function buildParsedHar(
     };
   });
 
-  const document = findDocument(entries, parsedEntries, rawPages[0].title ?? "");
-  if (!document) return null;
-  const { documentEntry, documentRedirects } = document;
+  const document = findDocument(entries, parsedEntries, rawPages[0].title);
+  const { documentEntry, documentRedirects } = document ?? {
+    documentEntry: primaryRequest(parsedEntries),
+    documentRedirects: [],
+  };
 
   return {
     pages: parsedPages,
     entries: parsedEntries,
     documentEntry,
     documentRedirects,
-    preconnectHints: parsePreconnectHints(parsedEntries, documentEntry.responseHeaders),
+    preconnectHints: parsePreconnectHints(
+      parsedEntries,
+      document ? documentEntry.responseHeaders : {}
+    ),
   };
 }
 
-function assertHasContent(raw: RawHar): { pages: RawHarPage[]; entries: RawHarEntry[] } {
-  const pages = raw.log.pages ?? [];
-  const entries = raw.log.entries ?? [];
-  if (pages.length === 0) throw new Error("HAR contains no pages");
-  if (entries.length === 0) throw new Error("HAR contains no entries");
+/**
+ * What stands for the document of a page without one (an API capture): the first request to
+ * the registrable domain that received the most requests, the most plausible first party.
+ */
+function primaryRequest(entries: HarEntry[]): HarEntry {
+  const byStart = [...entries].sort((a, b) => a.startTime - b.startTime);
+  const requests = new Map<string, number>();
+  for (const e of byStart) {
+    const root = getRootDomain(e.url);
+    requests.set(root, (requests.get(root) ?? 0) + 1);
+  }
+  const count = (e: HarEntry) => requests.get(getRootDomain(e.url))!;
+  return byStart.reduce((best, e) => (count(e) > count(best) ? e : best));
+}
+
+/**
+ * The page's HTML document; null for a page without one, whose documentEntry is then its
+ * primary request (the first party's first request) and no document metric applies.
+ */
+export function pageDocument(har: Pick<ParsedHar, "documentEntry">): HarEntry | null {
+  return har.documentEntry.isDocument ? har.documentEntry : null;
+}
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isValidDate = (value: unknown) => typeof value === "string" && !isNaN(Date.parse(value));
+
+// The least an entry needs to be read: a request with a URL and a start time to place it.
+function isReadableEntry(e: unknown): e is RawHarEntry {
+  if (!isObject(e) || !isObject(e.request)) return false;
+  const { url } = e.request;
+  return typeof url === "string" && url !== "" && isValidDate(e.startedDateTime);
+}
+
+// A page whose start is missing or invalid starts with the earliest of its entries.
+function startingWith(page: RawHarPage, entries: RawHarEntry[]): RawHarPage {
+  if (isValidDate(page.startedDateTime) || entries.length === 0) return page;
+  const earliest = Math.min(...entries.map(startMs));
+  return { ...page, startedDateTime: new Date(earliest).toISOString() };
+}
+
+/**
+ * The HAR's readable entries and its pages, each page titled and, when its start is missing
+ * or invalid, started with the earliest entry that names it. HAR 1.2 makes pages optional:
+ * without them the HAR is one untitled page that starts with its earliest entry.
+ */
+function readContent(raw: RawHar): { pages: RawHarPage[]; entries: RawHarEntry[] } {
+  const rawEntries: unknown[] = Array.isArray(raw.log.entries) ? raw.log.entries : [];
+  if (rawEntries.length === 0) throw new Error("HAR contains no entries");
+  const entries = rawEntries.filter(isReadableEntry);
+  if (entries.length === 0) {
+    throw new Error("No entry of the HAR has a request URL and a valid start time.");
+  }
+  const rawPages = (Array.isArray(raw.log.pages) ? raw.log.pages : []).filter(isObject);
+  if (rawPages.length === 0) {
+    return {
+      pages: [startingWith({ id: "page_1", title: "", startedDateTime: "" }, entries)],
+      entries,
+    };
+  }
+  const pages = rawPages.map((page) =>
+    startingWith(
+      { ...page, title: typeof page.title === "string" ? page.title : "" },
+      entries.filter((e) => e.pageref === page.id)
+    )
+  );
   return { pages, entries };
 }
 
-const NO_DOCUMENT_ERROR = "HAR contains no HTML document entry";
-
 export function parseHar(raw: RawHar): ParsedHar {
-  const { pages, entries } = assertHasContent(raw);
+  const { pages, entries } = readContent(raw);
   const source = harSource(raw);
   const [first, ...rest] = pages;
-  const parsed = buildParsedHar(
-    [anchorAtNavigation(first, entries, source), ...rest],
-    entries,
-    source
-  );
-  if (!parsed) throw new Error(NO_DOCUMENT_ERROR);
-  return parsed;
+  const page = anchorAtNavigation(startingWith(first, entries), entries, source);
+  return buildParsedHar([page, ...rest], entries, source)!;
 }
 
 // Seconds a response may be reused without asking the server, from Cache-Control max-age,
@@ -893,32 +957,51 @@ function splitNavigations(page: RawHarPage, entries: RawHarEntry[]): RawPageGrou
   return groups;
 }
 
+// A page's start for ordering: one that has none sorts after every other.
+const orderMs = (page: RawHarPage) => {
+  const ms = startMs(page);
+  return isNaN(ms) ? Infinity : ms;
+};
+
 /**
  * Splits a HAR recorded across several navigations into one ParsedHar per page,
- * ordered by page startedDateTime. Entries are grouped by `pageref` (entries
- * without one belong to the first page) and timed against their own page; a page
- * that holds several navigations of its main frame is split at each (splitNavigations).
- * Pages without an HTML document are skipped. WebPageTest repeat views carry the
- * browser-cache hits inferred from the first view of their run.
+ * ordered by page startedDateTime (pages that start together keep the HAR's order).
+ * Entries are grouped by `pageref` and timed against their own page: entries without
+ * one belong to the first page, and an entry whose pageref names no listed page to the
+ * page that was running when it started, so no request is dropped. A page that holds
+ * several navigations of its main frame is split at each (splitNavigations).
+ * Pages without an HTML document are skipped, unless no page has one (an API capture):
+ * then every page stays, each standing on its primary request (pageDocument).
+ * WebPageTest repeat views carry the browser-cache hits inferred from the first view of
+ * their run.
  */
 export function parseHarPages(raw: RawHar): ParsedHar[] {
-  const { pages, entries } = assertHasContent(raw);
-  const ordered = [...pages].sort(
-    (a, b) => new Date(a.startedDateTime).getTime() - new Date(b.startedDateTime).getTime()
+  const { pages, entries } = readContent(raw);
+  const ordered = [...pages].sort((a, b) =>
+    orderMs(a) === orderMs(b) ? 0 : orderMs(a) - orderMs(b)
   );
   const firstId = ordered[0].id;
+  const listed = new Set(ordered.map((page) => page.id));
+  const runningAt = (ms: number) =>
+    ordered.reduce((running, page) => (orderMs(page) <= ms ? page : running), ordered[0]);
+  const pageIdOf = (e: RawHarEntry) => {
+    if (e.pageref === undefined) return firstId;
+    return listed.has(e.pageref) ? e.pageref : runningAt(startMs(e)).id;
+  };
   const source = harSource(raw);
 
-  const parsedPages = new Map<string, ParsedPage>();
+  const allPages = new Map<string, ParsedPage>();
   for (const harPage of ordered) {
-    const harPageEntries = entries.filter((e) => (e.pageref ?? firstId) === harPage.id);
-    const navigated = anchorAtNavigation(harPage, harPageEntries, source);
+    const harPageEntries = entries.filter((e) => pageIdOf(e) === harPage.id);
+    const started = startingWith(harPage, harPageEntries);
+    const navigated = anchorAtNavigation(started, harPageEntries, source);
     for (const { page, entries: pageEntries } of splitNavigations(navigated, harPageEntries)) {
       const parsed = buildParsedHar([page], pageEntries, source);
-      if (parsed) parsedPages.set(page.id, { page, entries: pageEntries, parsed });
+      if (parsed) allPages.set(page.id, { page, entries: pageEntries, parsed });
     }
   }
-  if (parsedPages.size === 0) throw new Error(NO_DOCUMENT_ERROR);
+  const withDocument = [...allPages].filter(([, { parsed }]) => pageDocument(parsed) !== null);
+  const parsedPages = withDocument.length > 0 ? new Map(withDocument) : allPages;
 
   if (isWebPageTest(raw)) {
     for (const [id, repeatView] of parsedPages) {

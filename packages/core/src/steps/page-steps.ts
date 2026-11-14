@@ -1,5 +1,6 @@
 import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
 import { SERVER_WAIT_LABEL, TTFB_LABEL } from "../analysis/metrics-summary.js";
+import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname } from "../utils/domain.js";
 import { formatCaptionMs, formatMetricValue, formatMs } from "../utils/format.js";
 import { phaseMs, reusesConnection, tcpConnectMs } from "../utils/timing.js";
@@ -104,6 +105,9 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   const { har, trace, hasCdn, hasGfw, cdnResult, thirdPartyEntries, thirdPartyClusters } = ctx;
   const { entries } = har;
   const { document: documentEntry, page, cacheEntries } = ctx;
+  // Without an HTML document (an API capture) documentEntry is the primary request: the page
+  // has no TTFB, nothing to parse, and its primary request is one of its resources.
+  const hasDocument = pageDocument(har) !== null;
   const hasThirdPartyNodes = thirdPartyEntries.length > 0;
 
   const entryIndex = new Map(entries.map((entry, index) => [entry, index]));
@@ -169,7 +173,9 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   const requestStep: PageStep = {
     kind: "request",
     title: "First request in flight",
-    description: "Browser sends the HTTP request for the HTML document.",
+    description: hasDocument
+      ? "Browser sends the HTTP request for the HTML document."
+      : `Browser sends its first request to ${getHostname(documentEntry.url) ?? documentEntry.url}: the recording holds no page load, so there is no TTFB.`,
     timestamp: requestSentAt,
     activeNodes: serverNodes(hasCdn, hasGfw, documentToOrigin),
     activePaths: serverPaths(hasCdn, hasGfw, documentToOrigin),
@@ -193,6 +199,7 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
     pathDirections: serverPathDirections(hasCdn, hasGfw, "response", documentToOrigin),
     badge: { type: "ttfb", value: formatMs(firstByteAt), node: "browser" },
   };
+  const ttfbSteps = hasDocument ? [ttfbStep] : [];
 
   // A document sent over a connection the browser already had open (the HAR marks its TCP
   // connect -1) resolved nothing and shook no hands: its first step says so instead of
@@ -209,9 +216,9 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
           metrics: [{ label: "Connection", value: "reused" }],
         },
         { ...requestStep, pathTimings: { [firstPath]: "connection reused" } },
-        ttfbStep,
+        ...ttfbSteps,
       ]
-    : [connectionStep, requestStep, ttfbStep];
+    : [connectionStep, requestStep, ...ttfbSteps];
 
   // ── Timeline: resource groups and paints, ordered by when they happen.
   // A group is one step whose timestamp is its first request; resources that
@@ -418,7 +425,7 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
   // document, network and cached alike (other HTML responses such as iframes included,
   // although no resource group lists them), so the sidebar can summarise the whole page.
   const overviewEntries = entries
-    .filter((e) => e !== documentEntry)
+    .filter((e) => !hasDocument || e !== documentEntry)
     .sort((a, b) => a.startTime - b.startTime);
   // A page that used the browser cache closes with the hop to it, every cache hit counted.
   const loadedStep: PageStep = withCacheHop<PageStep>(
@@ -445,7 +452,15 @@ export function generatePageSteps(ctx: PageContext): PageStep[] {
     inferredCacheHits
   );
 
-  return [...prologue, ...sortByTimeline(timeline), loadedStep];
+  // Without a document nothing is parsed: only the resource groups the page has are shown.
+  const isEmptyGroup = ({ item }: TimedItem<PageStep>) =>
+    (item.kind === "critical" || item.kind === "secondary") &&
+    !item.resourceRefs &&
+    !item.cacheResourceRefs &&
+    !item.inferredCacheRefs;
+  const shown = hasDocument ? timeline : timeline.filter((group) => !isEmptyGroup(group));
+
+  return [...prologue, ...sortByTimeline(shown), loadedStep];
 }
 
 export function generateTransitionStep(fromPage: string, toPage: string): PageStep {

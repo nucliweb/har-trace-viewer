@@ -159,7 +159,7 @@ describe("FlowBuilder", () => {
       const user = userEvent.setup();
       render(<FlowBuilder onGenerate={vi.fn()} />);
       await loadHar(user, 0, '{"log":{"pages":[],"entries":[]}}');
-      expect(await screen.findByText("HAR contains no pages")).toBeInTheDocument();
+      expect(await screen.findByText("HAR contains no entries")).toBeInTheDocument();
       expect(generate()).toBeDisabled();
     });
 

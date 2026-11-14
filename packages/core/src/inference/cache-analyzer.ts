@@ -1,4 +1,4 @@
-import { WPT_REPEAT_VIEW_ID } from "../parsers/har-parser.js";
+import { pageDocument, WPT_REPEAT_VIEW_ID } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { isOwnNetworkResource, isOwnResource } from "../analysis/network-requests.js";
 import { formatDuration, formatMs, pct } from "../utils/format.js";
@@ -362,7 +362,7 @@ function documentRecommendation(
 }
 
 function buildRecommendations(
-  documentEntry: HarEntry,
+  documentEntry: HarEntry | null,
   doc: ResourceCacheProfile,
   own: CacheReport["ownResources"],
   browser: CacheReport["browser"],
@@ -372,7 +372,7 @@ function buildRecommendations(
   const recs: CacheRecommendation[] = [];
 
   // Document-level
-  const documentRec = documentRecommendation(documentEntry, doc);
+  const documentRec = documentEntry && documentRecommendation(documentEntry, doc);
   if (documentRec) recs.push(documentRec);
 
   // Static assets
@@ -529,7 +529,7 @@ export function analyzeCacheForHar(har: ParsedHar): CacheReport {
     ownResources,
     browser,
     recommendations: buildRecommendations(
-      doc,
+      pageDocument(har),
       documentProfile,
       ownResources,
       browser,

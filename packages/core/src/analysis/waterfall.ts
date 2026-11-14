@@ -1,3 +1,4 @@
+import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { shortUrl } from "../utils/format.js";
 import { renderBlockingUrls } from "./critical-path.js";
@@ -45,7 +46,7 @@ const phasesTotal = (phases: WaterfallPhases): number =>
 function marksOf(har: ParsedHar, trace: ParsedTrace | undefined): WaterfallMarks {
   const page = har.pages[0];
   return {
-    ttfb: documentTiming(har, trace).responseStartMs,
+    ttfb: pageDocument(har) ? documentTiming(har, trace).responseStartMs : null,
     fcp: trace?.fcp ?? null,
     lcp: trace?.lcp ?? null,
     dcl: page?.onContentLoad ?? null,

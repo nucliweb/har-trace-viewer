@@ -443,7 +443,11 @@ function documentDiagram(flow: Flow, index: number): string[] {
 
   const cdnStatus = detectCdnCacheStatus(doc.responseHeaders);
   const request = `${doc.method ?? "GET"} ${new URL(doc.url).pathname}`;
-  const response = `${doc.status} · TTFB ${formatMs(ttfb)}${edge ? ` · cache ${cdnStatus}` : ""}`;
+  const response = [
+    String(doc.status),
+    ...(ttfb === null ? [] : [`TTFB ${formatMs(ttfb)}`]),
+    ...(edge ? [`cache ${cdnStatus}`] : []),
+  ].join(" · ");
   const servedByEdge = edge && cdnStatus === "hit";
 
   // The chain of servers the request crosses, browser side first.

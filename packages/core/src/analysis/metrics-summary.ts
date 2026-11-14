@@ -1,4 +1,5 @@
 import type { CacheReport, Flow } from "../types.js";
+import { pageDocument } from "../parsers/har-parser.js";
 import { browserCacheHits, networkRequests } from "./network-requests.js";
 
 export type MetricRating = "good" | "needs-improvement" | "poor" | "none";
@@ -10,10 +11,13 @@ export const SERVER_WAIT_LABEL = "Server wait";
 
 export interface PageMetricsSummary {
   name: string;
-  /** Ms from the navigation start to the document's first byte: the TTFB step's timestamp. */
-  ttfb: number;
+  /**
+   * Ms from the navigation start to the document's first byte: the TTFB step's timestamp.
+   * Null for a page without an HTML document (an API capture), as is serverWait.
+   */
+  ttfb: number | null;
   /** Ms the document's server took to answer once the request was sent (HAR `wait`). */
-  serverWait: number;
+  serverWait: number | null;
   /**
    * Milliseconds from the trace, else the paint times the HAR's recorder measured
    * (WebPageTest); null without either or when never painted.
@@ -75,11 +79,12 @@ export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
     const { har, trace } = page;
     const report = flow.pageAnalyses[i]?.cacheReport;
     const ttfbStep = flow.steps.find((s) => s.pageIndex === i && s.kind === "ttfb");
+    const document = pageDocument(har);
     return {
       name: page.name,
       // Flows older than step timestamps only carry the server wait.
-      ttfb: ttfbStep?.timestamp ?? har.documentEntry.ttfb,
-      serverWait: har.documentEntry.ttfb,
+      ttfb: document ? (ttfbStep?.timestamp ?? document.ttfb) : null,
+      serverWait: document ? document.ttfb : null,
       fcp: trace?.fcp ?? har.pages[0]?.fcp ?? null,
       lcp: trace?.lcp ?? har.pages[0]?.lcp ?? null,
       cls: trace?.cls ?? null,

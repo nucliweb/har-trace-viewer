@@ -73,12 +73,12 @@
       "additionalProperties": false,
       "properties": {
         "ttfb": {
-          "type": "number",
-          "description": "From the navigation start to the document's first byte."
+          "$ref": "#/$defs/nullableNumber",
+          "description": "From the navigation start to the document's first byte; null for a page without an HTML document."
         },
         "serverWait": {
-          "type": "number",
-          "description": "The document's server wait (HAR timings.wait)."
+          "$ref": "#/$defs/nullableNumber",
+          "description": "The document's server wait (HAR timings.wait); null for a page without an HTML document."
         },
         "fcp": { "$ref": "#/$defs/nullableNumber" },
         "lcp": { "$ref": "#/$defs/nullableNumber" },

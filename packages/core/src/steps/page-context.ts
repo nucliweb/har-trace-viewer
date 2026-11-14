@@ -1,5 +1,6 @@
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectCdnPopCity, detectNode } from "../inference/node-detector.js";
+import { pageDocument } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { clusterThirdParties } from "./third-party-clusters.js";
 import type {
@@ -53,12 +54,14 @@ export function isThirdParty(entry: { url: string }, documentRoot: string): bool
 export function describePage(pageFlow: PageFlow, hasGfw: boolean): PageContext {
   const { har, trace } = pageFlow;
   const document = har.documentEntry;
+  // Only an HTML document is not a resource: the primary request of a page without one is.
+  const mainDocument = pageDocument(har);
   const page = har.pages[0];
   const cdnResult = detectNode(document.responseHeaders);
   const hasCdn = cdnResult.type === "edge";
   const documentRoot = getRootDomain(document.url);
   const thirdPartyEntries = har.entries.filter(
-    (e) => e !== document && isThirdParty(e, documentRoot)
+    (e) => e !== mainDocument && isThirdParty(e, documentRoot)
   );
   const statuses = new Map<HarEntry, CdnCacheStatus>();
   const cdnStatus = (entry: HarEntry): CdnCacheStatus => {
@@ -87,7 +90,7 @@ export function describePage(pageFlow: PageFlow, hasGfw: boolean): PageContext {
       thirdPartyEntries.filter((e) => e.fromCache === false),
       page?.onLoad ?? null
     ),
-    cacheEntries: har.entries.filter((e) => e !== document && e.fromCache !== false),
+    cacheEntries: har.entries.filter((e) => e !== mainDocument && e.fromCache !== false),
     inferredCacheHits: har.inferredCacheHits ?? [],
     cdnStatus,
   };

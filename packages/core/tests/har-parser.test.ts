@@ -559,11 +559,11 @@ describe("parseHar — malformed input", () => {
     expect(() => parseHar(raw)).toThrow("HAR contains no entries");
   });
 
-  it("treats a missing pages array as no pages", () => {
+  it("reads a HAR without a pages array as one page", () => {
     const raw = firefoxHar() as { log: { pages?: unknown } };
     delete raw.log.pages;
 
-    expect(() => parseHar(raw as never)).toThrow("HAR contains no pages");
+    expect(parseHar(raw as never).entries).toHaveLength(5);
   });
 
   it("treats missing timings as zeros", () => {
@@ -719,10 +719,10 @@ describe("parseHarPages", () => {
     expect(result[0].pages[0].title).toBe("Home");
   });
 
-  it("throws the readable error when no page has a document", () => {
+  it("keeps the pages without a document when no page has one", () => {
     const har = twoPageHar();
     har.log.entries = har.log.entries.filter((e) => e.response.content.mimeType !== "text/html");
-    expect(() => parseHarPages(har)).toThrow("HAR contains no HTML document entry");
+    expect(parseHarPages(har)).toHaveLength(2);
   });
 
   it("returns a single ParsedHar for a single-page HAR, equal to parseHar", () => {
