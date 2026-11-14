@@ -46,11 +46,39 @@ import {
   hstack,
   line,
   panel,
+  scrollTable,
   seg,
   table,
   wrap,
 } from "./lines.js";
-import type { Line } from "./lines.js";
+import type { Line, Segment } from "./lines.js";
+
+/**
+ * A tab whose tables scroll sideways: its lines, and the column offset past which nothing is
+ * left to show.
+ */
+export interface ColumnsRegion {
+  lines: Line[];
+  maxOffset: number;
+}
+
+/** A panel around a table that keeps its first column and scrolls the others sideways. */
+function tablePanel(
+  title: string,
+  intro: Line[],
+  spec: { header: string[]; rows: (Segment | string)[][]; aligns: ("left" | "right")[] },
+  width: number,
+  offset: number
+): ColumnsRegion {
+  const shown = scrollTable(spec.header, spec.rows, spec.aligns, width - 4, offset);
+  return { lines: panel(title, [...intro, ...shown.lines], width), maxOffset: shown.maxOffset };
+}
+
+/** Panels one above the other, a blank line apart, scrolled together. */
+const stackColumns = (regions: ColumnsRegion[]): ColumnsRegion => ({
+  lines: regions.flatMap((r, i) => (i > 0 ? [BLANK, ...r.lines] : r.lines)),
+  maxOffset: Math.max(...regions.map((r) => r.maxOffset)),
+});
 
 // Resources listed per step, busiest first; the rest are counted.
 const MAX_STEP_RESOURCES = 12;
@@ -441,9 +469,17 @@ const thirdPartiesOf = (flow: Flow, pageIndex: number): ThirdPartyReport => {
 const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${formatBytes(c.bytes)})`;
 
 /** The third parties of a page by entity: what each one cost, when it ran and whether it held the first paint. */
-function thirdPartiesPanel(report: ThirdPartyReport, title: string, width: number): Line[] {
+function thirdPartiesPanel(
+  report: ThirdPartyReport,
+  title: string,
+  width: number,
+  offset: number
+): ColumnsRegion {
   if (report.entities.length === 0) {
-    return panel(title, [line(seg("No third-party requests.", { dim: true }))], width);
+    return {
+      lines: panel(title, [line(seg("No third-party requests.", { dim: true }))], width),
+      maxOffset: 0,
+    };
   }
   const count = report.entities.length;
   const summary = [
@@ -453,67 +489,83 @@ function thirdPartiesPanel(report: ThirdPartyReport, title: string, width: numbe
     `${report.totals.renderBlocking} render-blocking`,
     ...(report.consentManager ? [`consent manager: ${report.consentManager}`] : []),
   ].join(" · ");
-  return panel(
+  return tablePanel(
     title,
-    [
-      line(seg(summary, { dim: true })),
-      BLANK,
-      ...table(
-        [
-          "Third party",
-          "Category",
-          "Requests",
-          "Cached",
-          "Transfer",
-          "Before onLoad",
-          "After onLoad",
-          "Blocking",
-          "Median TTFB",
-          "Hosts",
-        ],
-        report.entities.map((e) => [
-          seg(e.name, { bold: true }),
-          THIRD_PARTY_CATEGORY_LABEL[e.category],
-          String(e.requests),
-          String(e.cacheHits),
-          formatBytes(e.bytes),
-          cost(e.beforeLoad),
-          cost(e.afterLoad),
-          String(e.renderBlocking),
-          formatMs(e.medianTtfbMs),
-          e.hosts.join(", "),
-        ]),
-        ["left", "left", "right", "right", "right", "right", "right", "right", "right", "left"]
-      ),
-    ],
-    width
+    [line(seg(summary, { dim: true })), BLANK],
+    {
+      header: [
+        "Third party",
+        "Category",
+        "Requests",
+        "Cached",
+        "Transfer",
+        "Before onLoad",
+        "After onLoad",
+        "Blocking",
+        "Median TTFB",
+        "Hosts",
+      ],
+      rows: report.entities.map((e) => [
+        seg(e.name, { bold: true }),
+        THIRD_PARTY_CATEGORY_LABEL[e.category],
+        String(e.requests),
+        String(e.cacheHits),
+        formatBytes(e.bytes),
+        cost(e.beforeLoad),
+        cost(e.afterLoad),
+        String(e.renderBlocking),
+        formatMs(e.medianTtfbMs),
+        e.hosts.join(", "),
+      ]),
+      aligns: [
+        "left",
+        "left",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "left",
+      ],
+    },
+    width,
+    offset
   );
 }
 
 /**
  * Every host of a page: requests, browser-cache hits, bytes, median TTFB before and after
  * onLoad, connection cost, CDN cache hits, provider and PoP. Below it, the third parties by
- * entity.
+ * entity. Tables wider than the terminal keep their first column and show the others from
+ * `offset` on.
  */
-export function hostsRegion(flow: Flow, pageIndex: number, width: number): Line[] {
+export function hostsRegion(
+  flow: Flow,
+  pageIndex: number,
+  width: number,
+  offset = 0
+): ColumnsRegion {
   const { har } = flow.pages[pageIndex];
   const hops = analyzeHops(har, har.documentEntry.url);
-  return [
-    ...hostsPanel(hops, `Hosts · ${pageLabel(flow, pageIndex)}`, width),
-    BLANK,
-    ...thirdPartiesPanel(
+  return stackColumns([
+    hostsPanel(hops, `Hosts · ${pageLabel(flow, pageIndex)}`, width, offset),
+    thirdPartiesPanel(
       thirdPartiesOf(flow, pageIndex),
       `Third parties · ${pageLabel(flow, pageIndex)}`,
-      width
+      width,
+      offset
     ),
-  ];
+  ]);
 }
 
-function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
-  return panel(
+function hostsPanel(hops: HostHop[], title: string, width: number, offset: number): ColumnsRegion {
+  return tablePanel(
     title,
-    table(
-      [
+    [],
+    {
+      header: [
         "Host",
         "Requests",
         "Cached",
@@ -527,7 +579,7 @@ function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
         "PoP",
         "Party",
       ],
-      hops.map((hop) => [
+      rows: hops.map((hop) => [
         seg(hop.host, { bold: true }),
         String(hop.requests),
         String(hop.browserCacheHits),
@@ -541,7 +593,7 @@ function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
         hop.pop ? `${hop.pop.city} (${hop.pop.code.toUpperCase()})` : "",
         hop.party,
       ]),
-      [
+      aligns: [
         "left",
         "right",
         "right",
@@ -554,9 +606,10 @@ function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
         "left",
         "left",
         "left",
-      ]
-    ),
-    width
+      ],
+    },
+    width,
+    offset
   );
 }
 
@@ -564,73 +617,78 @@ function hostsPanel(hops: HostHop[], title: string, width: number): Line[] {
 function thirdPartyDeltaPanel(
   comparison: FlowComparison,
   names: { a: string; b: string },
-  width: number
-): Line[] {
+  width: number,
+  offset: number
+): ColumnsRegion {
   const { a, b, entities } = comparison.thirdParties;
   const title = `Third parties · A ${names.a} vs B ${names.b}`;
   if (entities.length === 0) {
-    return panel(
-      title,
-      [line(seg("No third-party requests on either side.", { dim: true }))],
-      width
-    );
+    return {
+      lines: panel(
+        title,
+        [line(seg("No third-party requests on either side.", { dim: true }))],
+        width
+      ),
+      maxOffset: 0,
+    };
   }
   const consent = [a.consentManager, b.consentManager].some(Boolean)
     ? ` · consent manager: A ${a.consentManager ?? "none"}, B ${b.consentManager ?? "none"}`
     : "";
   const summary = `Third-party bytes: A ${formatBytes(a.totals.bytes)} (${pct(a.byteShare)}) → B ${formatBytes(b.totals.bytes)} (${pct(b.byteShare)})${consent}`;
-  return panel(
+  return tablePanel(
     title,
-    [
-      line(seg(summary, { dim: true })),
-      BLANK,
-      ...table(
-        ["Third party", "Category", "Req A", "Req B", "Δ", "Bytes A", "Bytes B", "Δ bytes"],
-        entities.map((pair) => [
-          seg(pair.name, { bold: true }),
-          THIRD_PARTY_CATEGORY_LABEL[pair.category],
-          String(pair.a?.requests ?? 0),
-          String(pair.b?.requests ?? 0),
-          seg(formatDelta(pair.requests, "count"), {
-            color: DELTA_COLOR[rateDelta(pair.requests)],
-          }),
-          formatBytes(pair.a?.bytes ?? 0),
-          formatBytes(pair.b?.bytes ?? 0),
-          seg(formatDelta(pair.bytes, "bytes"), { color: DELTA_COLOR[rateDelta(pair.bytes)] }),
-        ]),
-        ["left", "left", "right", "right", "right", "right", "right", "right"]
-      ),
-    ],
-    width
+    [line(seg(summary, { dim: true })), BLANK],
+    {
+      header: ["Third party", "Category", "Req A", "Req B", "Δ", "Bytes A", "Bytes B", "Δ bytes"],
+      rows: entities.map((pair) => [
+        seg(pair.name, { bold: true }),
+        THIRD_PARTY_CATEGORY_LABEL[pair.category],
+        String(pair.a?.requests ?? 0),
+        String(pair.b?.requests ?? 0),
+        seg(formatDelta(pair.requests, "count"), {
+          color: DELTA_COLOR[rateDelta(pair.requests)],
+        }),
+        formatBytes(pair.a?.bytes ?? 0),
+        formatBytes(pair.b?.bytes ?? 0),
+        seg(formatDelta(pair.bytes, "bytes"), { color: DELTA_COLOR[rateDelta(pair.bytes)] }),
+      ]),
+      aligns: ["left", "left", "right", "right", "right", "right", "right", "right"],
+    },
+    width,
+    offset
   );
 }
 
 /**
  * The hosts of both flows joined by name; the TTFB delta covers the URLs both requested. Below
- * them, the third parties of both flows joined by entity.
+ * them, the third parties of both flows joined by entity. Tables wider than the terminal keep
+ * their first column and show the others from `offset` on.
  */
 export function hostDeltaRegion(
   comparison: FlowComparison,
   names: { a: string; b: string },
-  width: number
-): Line[] {
-  return [
-    ...hostDeltaPanel(comparison, names, width),
-    BLANK,
-    ...thirdPartyDeltaPanel(comparison, names, width),
-  ];
+  width: number,
+  offset = 0
+): ColumnsRegion {
+  return stackColumns([
+    hostDeltaPanel(comparison, names, width, offset),
+    thirdPartyDeltaPanel(comparison, names, width, offset),
+  ]);
 }
 
 function hostDeltaPanel(
   comparison: FlowComparison,
   names: { a: string; b: string },
-  width: number
-): Line[] {
+  width: number,
+  offset: number
+): ColumnsRegion {
   const notes = comparison.caveats.flatMap((c, i) => (c.affects.includes("hosts") ? [i + 1] : []));
-  return panel(
+  return tablePanel(
     `Hosts · A ${names.a} vs B ${names.b}${notes.length ? ` [${notes.join(",")}]` : ""}`,
-    table(
-      [
+    [],
+    {
+      header: [
         "Host",
         "Req A",
         "Req B",
@@ -641,7 +699,7 @@ function hostDeltaPanel(
         "Δ TTFB",
         "Provider",
       ],
-      comparison.hops.map(({ host, a, b, sameUrls }) => {
+      rows: comparison.hops.map(({ host, a, b, sameUrls }) => {
         const requests = (b?.requests ?? 0) - (a?.requests ?? 0);
         const ttfb = sameUrls ? Math.round(sameUrls.delta) : null;
         return [
@@ -658,9 +716,10 @@ function hostDeltaPanel(
           (b ?? a)!.providerName,
         ];
       }),
-      ["left", "right", "right", "right", "right", "right", "right", "right", "left"]
-    ),
-    width
+      aligns: ["left", "right", "right", "right", "right", "right", "right", "right", "left"],
+    },
+    width,
+    offset
   );
 }
 

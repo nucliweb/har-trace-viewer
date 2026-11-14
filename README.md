@@ -57,10 +57,10 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 A first session, as in the recording above:
 
 1. `htv page.har trace.json.gz` opens the report. The trace adds the FCP, the LCP, the render-blocking requests and the main-thread work; without it they read `n/a`.
-2. The Findings tab (`1`) comes first: the critical findings and the warnings at the top, each with what to do. `↑`/`↓` and `PgUp`/`PgDn` (or `Space`) scroll.
-3. The Waterfall (`2`) shows when each request ran. `/` then `-party:first` keeps the third parties (`Enter` keeps the filter, `Esc` clears it), and `z` zooms the axis on the page load, so the requests before onLoad take the whole width.
+2. The Findings tab (`1`) comes first: the critical findings and the warnings at the top, each with what to do. `↑`/`↓` and `PgUp`/`PgDn` (or `Space`) scroll, and `e` shows all the evidence of every finding.
+3. The Waterfall (`2`) shows when each request ran. `/` then `-party:first` keeps the third parties (`Enter` keeps the filter, `Esc` clears it), and `z` zooms the axis on the page load, so the requests before onLoad take the whole width. `↑`/`↓` move a cursor over the requests and `Enter` opens the one under it: its full URL, its timing phases and its response headers, with `n`/`N` for the next and the previous request and `Esc` to go back.
 4. On Resources (`3`), `s` cycles the column the table sorts by (start, size, time, TTFB, then the others) to find the heaviest or the slowest requests, and `S` reverses it.
-5. Overview (`4`) gathers the metrics, Steps (`5`) walks the load with `←`/`→`, and Hosts (`6`) and Cache & network (`7`) show where the time and the bytes went.
+5. Overview (`4`) gathers the metrics, Steps (`5`) walks the load with `←`/`→`, and Hosts (`6`) and Cache & network (`7`) show where the time and the bytes went. `<` and `>` scroll the columns of a table wider than the terminal.
 6. `?` lists every key and the filter syntax on any tab, and `q` (or `Ctrl+C`) quits.
 
 A comparison puts two recordings of the same page in one report, here with the browser cache off (`cold`) and on (`warm`):
@@ -161,7 +161,7 @@ The filter takes terms separated by spaces, all of which a request must match, a
 
 `domain:*.cdn.com type:js -is:cached larger-than:50k` lists the scripts of a CDN that came over the network at more than 50 KB.
 
-In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled to the terminal width: `░` blocked, `▒` DNS, connect and TLS, `█` request and wait, `▓` download and `╌` a cache hit, with `L` before the LCP resource and `B` before the render-blocking requests. The ruler marks `T` TTFB, `F` FCP, `L` LCP, `D` DCL and `O` onLoad, and stays in view while the rows scroll. `/` opens the filter, which takes the same language (`Enter` keeps it, `Esc` clears it), `f` cycles first party, third party and all, and `z` zooms the axis on the page load and back (`›` points at the requests after it). The Resources tab (`3`) lists the same requests as a table with their type, status, priority, protocol, encoding, size, TTFB, time and start; it shares the filter and the party with the waterfall, `s` cycles the column it sorts by (the measures largest first) and `S` reverses the order. `?` shows the keys and the filter syntax on any tab.
+In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled to the terminal width: `░` blocked, `▒` DNS, connect and TLS, `█` request and wait, `▓` download and `╌` a cache hit, with `L` before the LCP resource and `B` before the render-blocking requests. The ruler marks `T` TTFB, `F` FCP, `L` LCP, `D` DCL and `O` onLoad, and stays in view while the rows scroll. `/` opens the filter, which takes the same language (`Enter` keeps it, `Esc` clears it), `f` cycles first party, third party and all, and `z` zooms the axis on the page load and back (`›` points at the requests after it). The Resources tab (`3`) lists the same requests as a table with their type, status, priority, protocol, encoding, size, TTFB, time and start; it shares the filter and the party with the waterfall, `s` cycles the column it sorts by (the measures largest first) and `S` reverses the order. Both tabs share a cursor (`↑`/`↓`), and `Enter` opens the details of its request. `?` shows the keys and the filter syntax on any tab.
 
 ### Third parties
 

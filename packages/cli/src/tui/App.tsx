@@ -11,8 +11,9 @@ import {
   stepAtPair,
 } from "@htv/core";
 import type { Flow, ResourceSort, WaterfallAxis, WaterfallParty } from "@htv/core";
-import { findingsRegion } from "./findings-view.js";
+import { findingsRegion, hasHiddenEvidence } from "./findings-view.js";
 import { helpRegion } from "./help-view.js";
+import { requestRegion } from "./request-view.js";
 import { SORT_CYCLE, nextSort, resourcesRegion } from "./resources-view.js";
 import { waterfallRegion } from "./waterfall-view.js";
 import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
@@ -27,6 +28,7 @@ import {
   pairStepsRegion,
   stepsRegion,
 } from "./views.js";
+import type { ColumnsRegion } from "./views.js";
 
 interface Props {
   flow: Flow;
@@ -54,6 +56,13 @@ type Side = "a" | "b";
 const PARTIES: (WaterfallParty | null)[] = [null, "first", "third"];
 const nextParty = (party: WaterfallParty | null) =>
   PARTIES[(PARTIES.indexOf(party) + 1) % PARTIES.length];
+
+// The request under the cursor: its entry, null until the cursor moves, and its row.
+interface Cursor {
+  entry: number | null;
+  index: number;
+}
+const FIRST_ROW: Cursor = { entry: null, index: 0 };
 
 // The header block and the status bar around the scrolling region.
 const HEADER_LINES = 3;
@@ -178,6 +187,14 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const [axis, setAxis] = useState<WaterfallAxis>("end");
   const [sort, setSort] = useState<ResourceSort>(SORT_CYCLE[0]);
   const [help, setHelp] = useState(false);
+  // The request under the cursor of the waterfall and the resources: the entry it points at,
+  // and its index in the list, which the cursor falls back to when a filter hides the entry.
+  const [cursor, setCursor] = useState<Cursor>(FIRST_ROW);
+  const [detail, setDetail] = useState(false);
+  // The scroll of the list behind the details, restored when they close.
+  const [listScroll, setListScroll] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const [columnOffset, setColumnOffset] = useState(0);
 
   const names = useMemo(
     () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
@@ -187,15 +204,17 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     () => ({ a: collectFindings(flow), b: compare ? collectFindings(compare) : [] }),
     [flow, compare]
   );
+  const pageFindings = compare ? findings[side] : findings.a.filter((f) => f.page.index === page);
   // The tabs that show one side of a comparison at a time, picked with a/b.
   const sided = (tabName: string) =>
     ["Findings", "Waterfall", "Resources", "Cache & network"].includes(tabName);
   const stepCount = comparison ? comparison.pairs.length : flow.steps.length;
   const pageCount = flow.pages.length;
   const width = Math.max(MIN_COLUMNS, size.columns);
+  const narrow = width < 100;
   const viewport = Math.max(1, size.rows - HEADER_LINES - STATUS_LINES);
   const current = TABS[tab];
-  // The tabs that list the page's requests, which share the filter and the party.
+  // The tabs that list the page's requests, which share the filter, the party and the cursor.
   const listing = current === "Waterfall" || current === "Resources";
 
   // The page the waterfall and the resources show: the current page, or the side picked in a
@@ -210,24 +229,62 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     const rows = filterWaterfallRows(waterfall.rows, { search, party: party ?? undefined });
     return { rows, problems: parseResourceQuery(search).problems };
   }, [waterfall, search, party]);
+  // The requests in the order the tab lists them.
+  const listRows = useMemo(() => {
+    if (!filtered) return [];
+    return current === "Resources" ? sortWaterfallRows(filtered.rows, sort) : filtered.rows;
+  }, [current, filtered, sort]);
+  const rowCount = listRows.length;
+  const found =
+    cursor.entry === null ? -1 : listRows.findIndex((row) => row.entryIndex === cursor.entry);
+  const cursorIndex =
+    rowCount === 0 ? -1 : found >= 0 ? found : Math.min(cursor.index, rowCount - 1);
+  const cursorRow = cursorIndex >= 0 ? listRows[cursorIndex] : null;
+  const showDetail = detail && listing && cursorRow !== null;
+
   const listView = useMemo(() => {
     if (!waterfall || !filtered) return null;
-    const { rows, problems } = filtered;
-    const filter = { search, searching, problems };
-    if (current === "Resources") {
-      const sorted = sortWaterfallRows(rows, sort);
-      return resourcesRegion(waterfall.rows.length, sorted, { ...filter, party, sort }, width);
-    }
-    return waterfallRegion(waterfall, rows, { ...filter, party, axis }, width);
-  }, [current, waterfall, filtered, search, searching, party, axis, sort, width]);
+    const state = {
+      search,
+      searching,
+      problems: filtered.problems,
+      party,
+      cursor: cursorIndex >= 0 ? cursorIndex : undefined,
+    };
+    return current === "Resources"
+      ? resourcesRegion(waterfall.rows.length, listRows, { ...state, sort }, width)
+      : waterfallRegion(waterfall, listRows, { ...state, axis }, width);
+  }, [
+    current,
+    waterfall,
+    filtered,
+    listRows,
+    cursorIndex,
+    search,
+    searching,
+    party,
+    axis,
+    sort,
+    width,
+  ]);
+
+  const hostsView = useMemo((): ColumnsRegion | null => {
+    if (current !== "Hosts") return null;
+    return comparison
+      ? hostDeltaRegion(comparison, names, width, columnOffset)
+      : hostsRegion(flow, page, width, columnOffset);
+  }, [current, comparison, names, flow, page, width, columnOffset]);
+  const maxColumnOffset = hostsView?.maxOffset ?? 0;
 
   const region = useMemo((): Line[] => {
     if (help) return helpRegion(width);
+    if (showDetail && cursorRow) {
+      const entry = shownPage.har.entries[cursorRow.entryIndex];
+      return requestRegion(cursorRow, entry, { index: cursorIndex, count: rowCount }, width);
+    }
     switch (current) {
-      case "Findings": {
-        const list = compare ? findings[side] : findings.a.filter((f) => f.page.index === page);
-        return findingsRegion(list, width);
-      }
+      case "Findings":
+        return findingsRegion(pageFindings, width, expanded);
       case "Waterfall":
       case "Resources":
         return listView?.lines ?? [];
@@ -245,9 +302,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
         }
         return stepsRegion(flow, step, width, viewport);
       case "Hosts":
-        return comparison
-          ? hostDeltaRegion(comparison, names, width)
-          : hostsRegion(flow, page, width);
+        return hostsView?.lines ?? [];
       case "Cache & network": {
         const shown = compare ? (side === "a" ? flow : compare) : flow;
         const pageIndex = compare ? 0 : page;
@@ -265,18 +320,31 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     flow,
     compare,
     comparison,
-    names,
-    findings,
+    pageFindings,
+    expanded,
     listView,
+    hostsView,
     help,
+    showDetail,
+    cursorRow,
+    cursorIndex,
+    rowCount,
+    shownPage,
   ]);
 
+  // The list under the cursor, and not the help or the details over it.
+  const onList = listing && !help && !showDetail;
   // Lines at the top of the region that stay in view while the rest scrolls.
-  const pinned = listing && !help ? (listView?.pinned ?? 0) : 0;
+  const pinned = onList ? (listView?.pinned ?? 0) : 0;
   const rowsViewport = Math.max(1, viewport - pinned);
   const maxScroll = Math.max(0, region.length - pinned - rowsViewport);
-  // A resize can leave the stored scroll past the new end, so the view clamps it.
-  const offset = Math.min(scroll, maxScroll);
+  // The scroll that keeps the row at `index` in view, moving `from` as little as it can.
+  const follow = (index: number, from: number) =>
+    index < from ? index : index >= from + rowsViewport ? index - rowsViewport + 1 : from;
+  // A resize can leave the stored scroll past the new end, so the view clamps it; on a list,
+  // a sort or a filter can move the cursor out of view, so the view follows it.
+  const clamped = Math.min(scroll, maxScroll);
+  const offset = onList && cursorIndex >= 0 ? follow(cursorIndex, clamped) : clamped;
   const scrollTo = (value: number) => setScroll(Math.min(maxScroll, Math.max(0, value)));
   const scrollKeys = (input: string, key: Key) => {
     if (key.downArrow) scrollTo(offset + 1);
@@ -288,17 +356,56 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     else return false;
     return true;
   };
+  // Moves the cursor to the row at `target` and the view by `scrollBy` lines, as far as the
+  // cursor stays in view; on the last row the view shows the end of the list.
+  const moveCursor = (target: number, scrollBy = 0) => {
+    if (rowCount === 0) return;
+    const index = Math.min(rowCount - 1, Math.max(0, target));
+    setCursor({ entry: listRows[index].entryIndex, index });
+    const from = Math.min(maxScroll, Math.max(0, offset + scrollBy));
+    setScroll(index === rowCount - 1 ? maxScroll : follow(index, from));
+  };
+  const cursorKeys = (input: string, key: Key) => {
+    if (key.downArrow) moveCursor(cursorIndex + 1);
+    else if (key.upArrow) moveCursor(cursorIndex - 1);
+    else if (key.pageDown || input === " ") moveCursor(cursorIndex + rowsViewport, rowsViewport);
+    else if (key.pageUp) moveCursor(cursorIndex - rowsViewport, -rowsViewport);
+    else if (key.home) moveCursor(0);
+    else if (key.end) moveCursor(rowCount - 1);
+    else return false;
+    return true;
+  };
   const showTab = (index: number) => {
     setTab((index + TABS.length) % TABS.length);
     setScroll(0);
   };
   const movePage = (delta: number) => {
     setPage((p) => (p + delta + pageCount) % pageCount);
+    setCursor(FIRST_ROW);
     setScroll(0);
   };
   const moveStep = (delta: number) => {
     setStep((s) => Math.min(stepCount - 1, Math.max(0, s + delta)));
     setScroll(0);
+  };
+  const openDetail = () => {
+    setListScroll(offset);
+    setDetail(true);
+    setScroll(0);
+  };
+  const closeDetail = () => {
+    setDetail(false);
+    setScroll(listScroll);
+  };
+  const stepRequest = (delta: number) => {
+    const index = Math.min(rowCount - 1, Math.max(0, cursorIndex + delta));
+    setCursor({ entry: listRows[index].entryIndex, index });
+    setScroll(0);
+  };
+  const moveColumns = (delta: number) => {
+    setColumnOffset(
+      Math.min(maxColumnOffset, Math.max(0, Math.min(columnOffset, maxColumnOffset) + delta))
+    );
   };
 
   const editSearch = (input: string, key: Key) => {
@@ -319,6 +426,16 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     if (help) {
       if (input === "?" || input === "q" || key.escape) {
         setHelp(false);
+        setScroll(0);
+      } else scrollKeys(input, key);
+      return;
+    }
+    // The details close like the help: with Esc or q, and with the Enter that opened them.
+    if (showDetail) {
+      if (key.escape || key.return || input === "q") closeDetail();
+      else if (input === "n" || input === "N") stepRequest(input === "n" ? 1 : -1);
+      else if (input === "?") {
+        setHelp(true);
         setScroll(0);
       } else scrollKeys(input, key);
       return;
@@ -344,7 +461,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       const delta = key.rightArrow ? 1 : -1;
       if (current === "Steps") moveStep(delta);
       else if (!compare && pageCount > 1) movePage(delta);
-    } else if (scrollKeys(input, key)) return;
+    } else if (listing ? cursorKeys(input, key) : scrollKeys(input, key)) return;
+    else if (key.return && listing && cursorRow) openDetail();
     else if (input === "?") {
       setHelp(true);
       setScroll(0);
@@ -362,10 +480,15 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     } else if (input === "S" && current === "Resources") {
       setSort((s) => ({ ...s, direction: s.direction === "asc" ? "desc" : "asc" }));
       setScroll(0);
+    } else if (input === "e" && current === "Findings") {
+      setExpanded((e) => !e);
+    } else if ((input === "<" || input === ">") && current === "Hosts") {
+      moveColumns(input === ">" ? 1 : -1);
     } else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
       movePage(input === "p" ? 1 : -1);
     } else if ((input === "a" || input === "b") && compare) {
       setSide(input);
+      setCursor(FIRST_ROW);
       setScroll(0);
     }
   });
@@ -381,31 +504,59 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const scrolled = region.slice(pinned);
   const visible = [...region.slice(0, pinned), ...scrolled.slice(offset, offset + rowsViewport)];
 
+  const scrollHint =
+    maxScroll > 0 ? (narrow ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll") : null;
+  // On a narrow terminal the keys of the list stay in the line above it, and a kept filter
+  // names the key that clears it instead of the one that opens it.
   const listKeys = searching
     ? ["type to filter", "Enter keep", "Esc clear"]
-    : current === "Waterfall"
-      ? ["/ filter", "f party", "z axis", search ? "Esc clear filter" : null]
-      : current === "Resources"
-        ? ["/ filter", "f party", "s sort", "S reverse", search ? "Esc clear filter" : null]
-        : [];
-  const keys = help
-    ? `${width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll"}  ·  ? q Esc close help`
-    : searching
-      ? listKeys.join("  ·  ")
+    : narrow
+      ? ["↑/↓ move", "Enter open", search ? "Esc clear filter" : "/ filter"]
       : [
-          `1-${TABS.length}/Tab tabs`,
-          current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
-          maxScroll > 0 ? (width < 100 ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll") : null,
-          compare && sided(current) ? "a/b side" : null,
-          ...listKeys,
+          "↑/↓ move",
+          "Enter details",
+          "/ filter",
+          ...(current === "Waterfall" ? ["f party", "z axis"] : ["f party", "s sort", "S reverse"]),
+          search ? "Esc clear filter" : null,
+        ];
+  const parts: (string | null)[] = help
+    ? [narrow ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll", "? q Esc close help"]
+    : showDetail
+      ? [
+          scrollHint,
+          narrow ? "n/N request" : "n/N next/previous request",
+          narrow ? "Esc back" : "Esc/Enter/q back",
           "? help",
-          "q quit",
         ]
-          .filter(Boolean)
-          // Narrow terminals get a tighter separator, so that the help fits beside the position.
-          .join(width < 100 ? " · " : "  ·  ");
+      : searching
+        ? listKeys
+        : [
+            `1-${TABS.length}/Tab tabs`,
+            current === "Steps" ? "←/→ step" : pages ? "←/→ page" : null,
+            listing ? null : scrollHint,
+            compare && sided(current) ? "a/b side" : null,
+            ...(listing ? listKeys : []),
+            current === "Findings" && hasHiddenEvidence(pageFindings)
+              ? narrow
+                ? "e evidence"
+                : `e ${expanded ? "less" : "all"} evidence`
+              : null,
+            maxColumnOffset > 0 ? "< > columns" : null,
+            "? help",
+            "q quit",
+          ];
   const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - offset));
-  const position = maxScroll > 0 ? `${offset + 1}-${offset + shownRows}/${scrolled.length} ` : "";
+  const position =
+    onList && rowCount > 0
+      ? `${cursorIndex + 1}/${rowCount} `
+      : maxScroll > 0
+        ? `${offset + 1}-${offset + shownRows}/${scrolled.length} `
+        : "";
+  const shown = parts.filter(Boolean);
+  // Narrow terminals, and keys too many for the wide separator, get a tighter one, so that the
+  // help fits beside the position.
+  const wide = shown.join("  ·  ");
+  const keys = narrow || wide.length + position.length + 2 > width ? shown.join(" · ") : wide;
   const statusText = ` ${keys}`;
   const statusGap = Math.max(1, width - statusText.length - position.length);
   const status: Line = [seg(`${statusText}${" ".repeat(statusGap)}${position}`, { inverse: true })];

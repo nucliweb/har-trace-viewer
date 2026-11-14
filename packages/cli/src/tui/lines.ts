@@ -89,6 +89,65 @@ export function table(header: string[], rows: Cell[][], aligns: Align[] = []): L
   return [render(header.map((title) => seg(title, { dim: true }))), ...rows.map(render)];
 }
 
+/**
+ * The first column and the whole columns after it that fit in `width`, starting `offset`
+ * columns past the first, with a line below them that counts the columns hidden on each side.
+ * `offset` is clamped to `maxOffset`, the first one that shows the last column.
+ */
+export function scrollTable(
+  header: string[],
+  rows: Cell[][],
+  aligns: Align[],
+  width: number,
+  offset: number
+): { lines: Line[]; offset: number; maxOffset: number } {
+  const widths = header.map((title, i) =>
+    Math.max(textWidth(title), ...rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth))
+  );
+  const span = (columns: number[]) =>
+    columns.reduce((sum, i) => sum + widths[i], 0) + 2 * (columns.length - 1);
+  const rest = widths.map((_, i) => i).slice(1);
+  if (span([0, ...rest]) <= width) {
+    return { lines: table(header, rows, aligns), offset: 0, maxOffset: 0 };
+  }
+  let maxOffset = 0;
+  while (maxOffset < rest.length - 1 && span([0, ...rest.slice(maxOffset)]) > width) maxOffset++;
+  const start = Math.min(Math.max(0, offset), maxOffset);
+  const shown = [0];
+  for (const i of rest.slice(start)) {
+    if (shown.length > 1 && span([...shown, i]) > width) break;
+    shown.push(i);
+  }
+  const pick = <T>(cells: T[]) => shown.map((i) => cells[i]);
+  const right = rest.length - start - (shown.length - 1);
+  const more = (n: number) => `${n} more ${n === 1 ? "column" : "columns"}`;
+  const note = [start > 0 ? `◂ ${more(start)}` : null, right > 0 ? `${more(right)} ▸` : null]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    lines: [
+      ...table(pick(header), rows.map(pick), pick(aligns)),
+      [seg(`${note}  < > scroll`, { dim: true })],
+    ],
+    offset: start,
+    maxOffset,
+  };
+}
+
+/** Breaks a text with no spaces to break at, such as a URL, into lines of `width` columns. */
+export function breakText(text: string, width: number): string[] {
+  const out: string[] = [];
+  let rest = text;
+  while (textWidth(rest) > width) {
+    // A character wider than the line still takes one, so that the loop ends.
+    const head = cut(rest, width) || [...graphemes.segment(rest)][0].segment;
+    out.push(head);
+    rest = rest.slice(head.length);
+  }
+  out.push(rest);
+  return out;
+}
+
 /** Splits text into lines of at most `width` characters, breaking between words. */
 export function wrap(text: string, width: number, indent = ""): Line[] {
   const lines: Line[] = [];
@@ -133,19 +192,23 @@ export function padLine(line: Line, width: number): Line {
 }
 
 const FRAME = { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" };
+// Points at the row under the cursor from the panel's left border, so that it shows without
+// colour.
+const CURSOR = "▸";
 
 /** A piece of a frame: borders are dim so the content stands out. */
 export const frame = (text: string): Segment => seg(text, { dim: true });
 
 /**
  * The body framed with rounded borders and the title in the top edge, Ratatui style. Lines
- * wider than the panel are truncated; `minHeight` pads the panel with blank rows.
+ * wider than the panel are truncated; `minHeight` pads the panel with blank rows and `cursor`
+ * points at a row of the body.
  */
 export function panel(
   title: string,
   body: Line[],
   width: number,
-  options: { minHeight?: number } = {}
+  options: { minHeight?: number; cursor?: number } = {}
 ): Line[] {
   const inner = width - 4;
   const titleText = title ? ` ${title} ` : "";
@@ -155,8 +218,10 @@ export function panel(
     ...(title ? [seg(titleText, { bold: true, color: "cyan" })] : []),
     frame(`${FRAME.h.repeat(fill)}${FRAME.tr}`),
   ];
-  const rows = body.map((line): Line => [
-    frame(`${FRAME.v} `),
+  const rows = body.map((line, i): Line => [
+    ...(i === options.cursor
+      ? [frame(FRAME.v), seg(CURSOR, { bold: true, color: "cyan" })]
+      : [frame(`${FRAME.v} `)]),
     ...padLine(truncateLine(line, inner), inner),
     frame(` ${FRAME.v}`),
   ]);

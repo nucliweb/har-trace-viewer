@@ -6,14 +6,21 @@ const KEYS: [string, string][] = [
   ["1-7, Tab, Shift+Tab", "switch tabs"],
   ["←/→", "walk the steps (Steps tab) or the pages of a multi-page flow"],
   ["p/P", "next and previous page"],
-  ["↑/↓, PgUp/PgDn, Home/End, Space", "scroll"],
+  [
+    "↑/↓, PgUp/PgDn, Home/End, Space",
+    "scroll, or move the cursor over the waterfall and the resources",
+  ],
+  ["Enter", "the details of the request under the cursor (Enter, Esc or q goes back)"],
+  ["n/N", "the next and previous request, in the details"],
   ["a/b", "the side of a comparison shown"],
   ["/", "filter the waterfall and the resources (Enter keeps it, Esc clears it)"],
   ["f", "cycle the party: first, third, all"],
   ["z", "zoom the waterfall's axis on the page load and back"],
   ["s/S", "the column the resources sort by, and its direction"],
+  ["e", "all the evidence of the findings, or the first three rows of each"],
+  ["< >", "scroll the columns of a table wider than the terminal (Hosts tab)"],
   ["?", "this help (scrolls like a list; ?, q or Esc closes it)"],
-  ["q, Ctrl+C", "quit"],
+  ["q, Ctrl+C", "quit; q closes the help and the details first"],
 ];
 
 /** The keys of the terminal report and the syntax of the request filter, one panel each. */

@@ -3,8 +3,12 @@ import type { Finding, FindingSeverity } from "@htv/core";
 import { BLANK, panel, seg, table, wrap } from "./lines.js";
 import type { Line } from "./lines.js";
 
-// Evidence rows shown per finding; the rest are counted.
+// Evidence rows shown per finding until the evidence is expanded; the rest are counted.
 const MAX_EVIDENCE = 3;
+
+/** Whether a finding has evidence rows that show only once the evidence is expanded. */
+export const hasHiddenEvidence = (findings: Finding[]) =>
+  findings.some((f) => f.evidence.length > MAX_EVIDENCE);
 
 const SEVERITY: Record<FindingSeverity, { title: string; icon: string; color: string }> = {
   critical: { title: "Critical", icon: "✕", color: "red" },
@@ -27,8 +31,8 @@ function meta(finding: Finding): string {
     .join(" · ");
 }
 
-function evidenceRows(finding: Finding): Line[] {
-  const shown = finding.evidence.slice(0, MAX_EVIDENCE);
+function evidenceRows(finding: Finding, expanded: boolean): Line[] {
+  const shown = expanded ? finding.evidence : finding.evidence.slice(0, MAX_EVIDENCE);
   if (shown.length === 0) return [];
   const rows = table(
     ["  Evidence", "Size", "Time", "Detail"],
@@ -41,11 +45,11 @@ function evidenceRows(finding: Finding): Line[] {
     ["left", "right", "right", "left"]
   ).slice(1);
   const hidden = finding.evidence.length - shown.length;
-  if (hidden > 0) rows.push([seg(`  … ${hidden} more`, { dim: true })]);
+  if (hidden > 0) rows.push([seg(`  … ${hidden} more (e shows all)`, { dim: true })]);
   return rows;
 }
 
-function findingRows(finding: Finding, width: number): Line[] {
+function findingRows(finding: Finding, width: number, expanded: boolean): Line[] {
   const { icon, color } = SEVERITY[finding.severity];
   const rows: Line[] = [
     [
@@ -62,15 +66,16 @@ function findingRows(finding: Finding, width: number): Line[] {
       )
     );
   }
-  rows.push(...evidenceRows(finding));
+  rows.push(...evidenceRows(finding, expanded));
   return rows;
 }
 
 /**
  * The findings of one page, one panel per severity (critical, warnings, info, good), each
- * finding with its metric, its summary, what to do and its first evidence rows.
+ * finding with its metric, its summary, what to do and its first evidence rows, or all of
+ * them when `expanded`.
  */
-export function findingsRegion(findings: Finding[], width: number): Line[] {
+export function findingsRegion(findings: Finding[], width: number, expanded = false): Line[] {
   if (findings.length === 0) {
     return panel("Findings", [[seg("No findings for this page", { dim: true })]], width);
   }
@@ -79,7 +84,7 @@ export function findingsRegion(findings: Finding[], width: number): Line[] {
     if (group.length === 0) return [];
     const body = group.flatMap((finding, i) => [
       ...(i > 0 ? [BLANK] : []),
-      ...findingRows(finding, width - 4),
+      ...findingRows(finding, width - 4, expanded),
     ]);
     return panel(`${SEVERITY[severity].title} · ${group.length}`, body, width);
   });

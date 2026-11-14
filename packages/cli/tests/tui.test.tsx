@@ -20,7 +20,15 @@ import {
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ESC = "\u001B";
-const KEYS = { right: `${ESC}[C`, left: `${ESC}[D`, down: `${ESC}[B`, tab: "\t" };
+const KEYS = {
+  right: `${ESC}[C`,
+  left: `${ESC}[D`,
+  down: `${ESC}[B`,
+  pageDown: `${ESC}[6~`,
+  end: `${ESC}[F`,
+  tab: "\t",
+  enter: "\r",
+};
 
 // First view: everything from the network, a versioned bundle that forbids caching.
 function firstView(): Flow {
@@ -203,7 +211,7 @@ describe("TuiApp — a flow", () => {
     );
     const flow = generateFlow([{ name: "Cold", har }]);
     // The test terminal is 100 columns wide: render the hosts panel at 170 directly.
-    const rows = hostsRegion(flow, 0, 170).map(lineText);
+    const rows = hostsRegion(flow, 0, 170).lines.map(lineText);
 
     expect(rows.join("\n")).toMatch(/DNS \/ TCP \/ TLS\s+Protocol/);
     expect(rows.join("\n")).toMatch(/webperf-snippets\.nucliweb\.net\s.*reused\s+h2 · 1 conn\s/);
@@ -255,7 +263,7 @@ describe("TuiApp — a flow", () => {
   });
 
   it("lists the third parties by entity under the hosts", () => {
-    const rows = hostsRegion(firstView(), 0, 170).map(lineText).join("\n");
+    const rows = hostsRegion(firstView(), 0, 170).lines.map(lineText).join("\n");
 
     expect(rows).toMatch(/Third parties · /);
     expect(rows).toMatch(
@@ -275,7 +283,7 @@ describe("TuiApp — a flow", () => {
       )
     );
     const rows = hostsRegion(generateFlow([{ name: "Cold", har }]), 0, 170)
-      .map(lineText)
+      .lines.map(lineText)
       .join("\n");
 
     expect(rows).toMatch(/Google Tag Manager\s+Tag manager\s+1\s/);
@@ -588,7 +596,7 @@ describe("TuiApp — the waterfall", () => {
     expect(lastFrame()).toContain("z axis");
   });
 
-  it("keeps the ruler in view while the rows scroll", async () => {
+  it("keeps the ruler in view while the cursor pages down the rows", async () => {
     const assets = Array.from({ length: 40 }, (_, i) =>
       makeEntry({ url: `https://example.com/asset-${i}.js`, startTime: 100 + i * 5 })
     );
@@ -599,10 +607,13 @@ describe("TuiApp — the waterfall", () => {
     await press(stdin, "2");
     expect(lastFrame()).toContain("asset-0.js");
 
-    await press(stdin, ...Array(20).fill(KEYS.down));
+    // 16 rows, 8 of them for requests: two pages down put the cursor on the 17th request.
+    await press(stdin, KEYS.pageDown, KEYS.pageDown);
     expect(lastFrame()).not.toContain("asset-0.js ");
-    expect(lastFrame()).toContain("asset-20.js");
+    expect(rowOf(lastFrame()!, "asset-15.js")).toMatch(/^│▸/);
+    expect(lastFrame()).toContain("asset-22.js");
     expect(lastFrame()).toMatch(/Name\s+Type\s+Sts\s+Size/);
+    expect(lastFrame()).toMatch(/ 17\/41\s*$/);
   });
 
   const longName = makeEntry({
@@ -875,5 +886,115 @@ describe("TUI views — hits of an unknown store", () => {
     await press(stdin, "7");
     expect(lastFrame()).toMatch(/Hit ratio\s+50% \(1\/2\)/);
     expect(lastFrame()).toMatch(/Store not recorded\s+1/);
+  });
+});
+
+describe("TuiApp — the request cursor and its details", () => {
+  const lines = (frame: string) => frame.split("\n");
+  const statusOf = (frame: string) => lines(frame).at(-1) ?? "";
+  const cursorOn = (frame: string) =>
+    lines(frame)
+      .find((l) => l.startsWith("│▸"))
+      ?.match(
+        /(example\.com|critical-100\.css|chunk-47TTPNLV\.js|image-200\.png|tag-300\.js)/
+      )?.[1];
+
+  it("moves the cursor with the arrows and opens its request with Enter, back with Esc", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "2");
+    expect(cursorOn(lastFrame()!)).toBe("example.com");
+    expect(statusOf(lastFrame()!)).toContain("Enter details");
+
+    await press(stdin, KEYS.down, KEYS.enter);
+    const detail = lastFrame()!;
+    expect(detail).toContain("Request 2 of 5");
+    expect(detail).toContain("https://example.com/critical-100.css");
+    expect(detail).toMatch(/Wait \(TTFB\)\s+10 ms\s+█+/);
+    expect(detail).not.toContain("Waterfall · 5 requests");
+    expect(statusOf(detail)).toMatch(/n\/N next\/previous.*Esc\/Enter\/q back/);
+
+    await press(stdin, ESC);
+    expect(lastFrame()).toContain("Waterfall · 5 requests");
+    expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
+  });
+
+  it("steps through the requests with n and N in the details, and goes back with q", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "3", KEYS.enter, "n", "n", "N");
+    expect(lastFrame()).toContain("Request 2 of 5");
+    expect(lastFrame()).toContain("https://example.com/critical-100.css");
+
+    await press(stdin, "q");
+    expect(lastFrame()).toContain("Resources · 5 requests");
+    expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
+  });
+
+  it("keeps the cursor on its request through a sort, and on the same one in the waterfall", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={120} />
+    );
+    await press(stdin, "3", KEYS.down, KEYS.down, "s");
+    expect(lastFrame()).toContain("Sort: size ↓");
+    expect(cursorOn(lastFrame()!)).toBe("chunk-47TTPNLV.js");
+
+    await press(stdin, "2");
+    expect(cursorOn(lastFrame()!)).toBe("chunk-47TTPNLV.js");
+  });
+
+  it("clamps the cursor while a filter hides its request and returns to it without the filter", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "2", KEYS.end, "/", "critical", KEYS.enter);
+    expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
+
+    await press(stdin, ESC);
+    expect(cursorOn(lastFrame()!)).toBe("tag-300.js");
+  });
+
+  it("puts the cursor back on the first request when the side of a comparison changes", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "2", KEYS.down, "b");
+    expect(cursorOn(lastFrame()!)).toBe("example.com");
+  });
+
+  it("expands the evidence of every finding with e and folds it again", async () => {
+    const missing = [1, 2, 3, 4, 5].map((n) =>
+      makeEntry({ url: `https://example.com/missing-${n}.js`, status: 404, transferSize: 100 * n })
+    );
+    const flow = generateFlow([{ name: "Broken", har: makeHar(missing) }]);
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />
+    );
+    expect(statusOf(lastFrame()!)).toContain("e all evidence");
+
+    await press(stdin, "e");
+    expect(lastFrame()).toMatch(/missing-5\.js/);
+    expect(statusOf(lastFrame()!)).toContain("e less evidence");
+
+    await press(stdin, "e");
+    expect(lastFrame()).not.toMatch(/missing-5\.js/);
+  });
+
+  it("scrolls the hosts' columns sideways with > and < on a narrow terminal", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={80} />
+    );
+    await press(stdin, "6");
+    expect(lastFrame()).toMatch(/Host\s+Requests/);
+    expect(statusOf(lastFrame()!)).toContain("< > columns");
+
+    await press(stdin, ">");
+    expect(lastFrame()).not.toMatch(/Host\s+Requests/);
+    expect(lastFrame()).toMatch(/◂ 1 more column/);
+
+    await press(stdin, "<");
+    expect(lastFrame()).toMatch(/Host\s+Requests/);
   });
 });

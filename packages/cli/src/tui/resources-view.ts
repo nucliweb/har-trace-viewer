@@ -5,10 +5,11 @@ import type { Line } from "./lines.js";
 import { TYPE_LABEL, filterLine } from "./waterfall-view.js";
 import type { FilterState } from "./waterfall-view.js";
 
-/** What the resources table shows: the filter, the party and the sort. */
+/** What the resources table shows: the filter, the party, the sort and the row under the cursor. */
 interface ResourcesViewState extends FilterState {
   party: WaterfallParty | null;
   sort: ResourceSort;
+  cursor?: number;
 }
 
 // The columns s cycles through, each with the direction it starts in: the measures largest
@@ -83,8 +84,9 @@ function rowCells(row: WaterfallRow, nameWidth: number) {
 /**
  * The page's requests as a table: name, type, status, priority, protocol, encoding, size,
  * TTFB, time and start, with `L` before the LCP resource and `B` before the render-blocking
- * requests. `rows` are the ones the filter kept, in the order of the sort; the first `pinned`
- * lines stay in view while the rest scroll.
+ * requests. `rows` are the ones the filter kept, in the order of the sort, and `state.cursor`
+ * the index of the one under the cursor, drawn inverted; the first `pinned` lines stay in view
+ * while the rest scroll.
  */
 export function resourcesRegion(
   total: number,
@@ -115,12 +117,14 @@ export function resourcesRegion(
     filterLine(
       state,
       `Party: ${state.party ?? "all"}  Sort: ${sortLabel(state.sort)}`,
-      "/ filter  f party  s sort  S reverse  ? help"
+      "Enter details  / filter  f party  s sort  S reverse  ? help"
     ),
     ...table(
       header,
       rows.map((row) => rowCells(row, nameWidth)),
       aligns
+    ).map((line, i) =>
+      i === (state.cursor ?? -1) + 1 ? line.map((s) => ({ ...s, inverse: true })) : line
     ),
     ...(rows.length === 0 ? [[seg("No request matches", { dim: true })]] : []),
     BLANK,
@@ -131,5 +135,6 @@ export function resourcesRegion(
       seg(" render-blocking", { dim: true }),
     ],
   ];
-  return { lines: panel(title, body, width), pinned: PINNED };
+  const cursor = state.cursor === undefined ? undefined : PINNED - 1 + state.cursor;
+  return { lines: panel(title, body, width, { cursor }), pinned: PINNED };
 }

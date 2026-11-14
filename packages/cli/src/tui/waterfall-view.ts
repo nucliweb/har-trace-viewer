@@ -18,12 +18,13 @@ export interface FilterState {
 }
 
 /**
- * What the waterfall shows: the filter (and whether its prompt is open), the party and
- * where the time axis ends.
+ * What the waterfall shows: the filter (and whether its prompt is open), the party, where the
+ * time axis ends and the row under the cursor.
  */
 interface WaterfallViewState extends FilterState {
   party: WaterfallParty | null;
   axis: WaterfallAxis;
+  cursor?: number;
 }
 
 export const TYPE_LABEL: Record<ResourceType, string> = {
@@ -46,10 +47,10 @@ const MARKS: { key: keyof WaterfallMarks; letter: string; name: string; color: s
 
 // The bar's characters: queueing, connection setup (dns, connect, tls), request and wait,
 // download; a browser-cache hit is hollow.
-const BLOCKED = { char: "░", color: "gray" };
-const CONNECT = { char: "▒", color: "yellow" };
-const WAIT = { char: "█", color: "green" };
-const RECEIVE = { char: "▓", color: "cyan" };
+export const BLOCKED = { char: "░", color: "gray" };
+export const CONNECT = { char: "▒", color: "yellow" };
+export const WAIT = { char: "█", color: "green" };
+export const RECEIVE = { char: "▓", color: "cyan" };
 const CACHED = { char: "╌", color: "cyan" };
 // A request that starts after the end of a zoomed axis.
 const LATER = { char: "›", dim: true };
@@ -66,6 +67,8 @@ const MIN_BAR = 10;
 // Lines above the rows that stay in view while they scroll: the panel's top edge, the
 // filter line, the column header with the time ticks and the axis with the marks.
 const PINNED = 4;
+// The body lines above the first request: the filter line, the header and the axis.
+const HEAD_ROWS = PINNED - 1;
 
 interface Layout {
   name: number;
@@ -197,17 +200,21 @@ function barCells(row: WaterfallRow, layout: Layout, marks: PlacedMark[]): Cell[
   return cells;
 }
 
-function rowLine(row: WaterfallRow, layout: Layout, marks: PlacedMark[]): Line {
+/** A request's line; under the cursor, its text is inverted and its bar keeps its colours. */
+function rowLine(row: WaterfallRow, layout: Layout, marks: PlacedMark[], selected: boolean): Line {
   const flags = `${row.isLcpResource ? "L" : ""}${row.renderBlocking ? "B" : ""}`.padEnd(FLAGS);
   const status = row.status > 0 ? String(row.status) : "—";
   const statusColor = row.status >= 400 ? "red" : row.status >= 300 ? "yellow" : undefined;
   const size = row.fromCache ? row.fromCache : formatBytes(row.transferSize);
-  return [
+  const text = [
     seg(flags, { color: row.isLcpResource ? "yellow" : "red", bold: true }),
     seg(` ${fit(row.shortName, layout.name, { pad: true })} `),
     seg(`${TYPE_LABEL[row.resourceType].padEnd(TYPE)} `, { dim: true }),
     seg(status.padEnd(STATUS), { color: statusColor }),
     seg(` ${size.padStart(SIZE)} `, { dim: row.fromCache !== false }),
+  ];
+  return [
+    ...(selected ? text.map((s) => ({ ...s, inverse: true })) : text),
     ...cellsToSegments(barCells(row, layout, marks)),
   ];
 }
@@ -259,8 +266,9 @@ function legendLines(marks: PlacedMark[]): Line[] {
  * The page's requests on one time axis: a ruler with the time ticks and the marks (T TTFB,
  * F FCP, L LCP, D DCL, O onLoad), then one row per request with its name, type, status, size
  * and a bar of its phases scaled to the panel, on an axis that spans the whole recording or
- * ends at the page load (a `›` points at the requests after it). `rows` are the ones the filter kept; the first
- * `pinned` lines stay in view while the rest scroll.
+ * ends at the page load (a `›` points at the requests after it). `rows` are the ones the filter
+ * kept and `state.cursor` the index of the one under the cursor; the first `pinned` lines stay
+ * in view while the rest scroll.
  */
 export function waterfallRegion(
   waterfall: Waterfall,
@@ -279,15 +287,16 @@ export function waterfallRegion(
     filterLine(
       state,
       `Party: ${state.party ?? "all"}  Axis: ${state.axis}`,
-      "/ filter  f party  z axis  ? help"
+      "Enter details  / filter  f party  z axis  ? help"
     ),
     headerLine(layout),
     axisLine(marks, layout),
     ...(rows.length === 0
       ? [[seg("No request matches", { dim: true })]]
-      : rows.map((row) => rowLine(row, layout, marks))),
+      : rows.map((row, i) => rowLine(row, layout, marks, i === state.cursor))),
     BLANK,
     ...legendLines(marks),
   ];
-  return { lines: panel(title, body, width), pinned: PINNED };
+  const cursor = state.cursor === undefined ? undefined : HEAD_ROWS + state.cursor;
+  return { lines: panel(title, body, width, { cursor }), pinned: PINNED };
 }
