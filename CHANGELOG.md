@@ -6,6 +6,13 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-14
+
+### Changed
+
+- Load the diagram and comparison views, the drawers, the dialogs and the Spanish and Catalan texts of the web app on demand, which cuts its initial JavaScript by a third. An HTML report stays a single script that opens offline.
+- Check the gzip size of the web app and of the report build against budgets in CI.
+
 ## [0.11.0] - 2026-11-14
 
 ### Added
@@ -252,7 +259,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.1...v0.9.0
