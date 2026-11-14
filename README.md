@@ -420,7 +420,7 @@ git tag -a v<version> -m "v<version>"
 git push --follow-tags
 ```
 
-[CHANGELOG.md](CHANGELOG.md) lists the changes of every version. A change adds its line under `Unreleased`; the release commit renames that section to the version with its date, and adds the compare link at the bottom of the file.
+[CHANGELOG.md](CHANGELOG.md) lists the changes of every version. A change adds its line under `Unreleased`; the release commit renames that section to the version with its date, and adds the compare link at the bottom of the file. The workflow publishes that section as the notes of the GitHub Release, and fails before publishing when the changelog has no section for the version.
 
 The tag has to be annotated (`-a`): `--follow-tags` pushes annotated tags only, and a lightweight tag stays local without starting the workflow (push it with `git push origin v<version>`).
 
