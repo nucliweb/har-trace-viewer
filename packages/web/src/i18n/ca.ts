@@ -226,9 +226,12 @@ export const ca: Messages = {
   },
   export: {
     button: "Exporta",
-    menu: "Exporta el diagrama",
+    menu: "Exporta l'informe",
     svg: "Baixa l'SVG",
     png: "Baixa el PNG (2x)",
+    csv: "Baixa el CSV",
+    markdown: "Baixa el Markdown",
+    mermaid: "Baixa el Mermaid",
     failed: "No s'ha pogut exportar",
   },
   cache: {

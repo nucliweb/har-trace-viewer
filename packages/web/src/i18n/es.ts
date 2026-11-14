@@ -222,9 +222,12 @@ export const es: Messages = {
   },
   export: {
     button: "Exportar",
-    menu: "Exportar el diagrama",
+    menu: "Exportar el informe",
     svg: "Descargar SVG",
     png: "Descargar PNG (2x)",
+    csv: "Descargar CSV",
+    markdown: "Descargar Markdown",
+    mermaid: "Descargar Mermaid",
     failed: "Error al exportar",
   },
   cache: {

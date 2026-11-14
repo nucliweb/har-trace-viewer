@@ -2,7 +2,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ExportMenu } from "../src/components/ExportMenu.js";
+import { markdownReport, mermaidReport, requestsCsv } from "@htv/core";
 import { exportFilename, serializeDiagramSvg } from "../src/lib/export-diagram.js";
+import { textExportFilename } from "../src/lib/export-text.js";
+import { makeCompareFlows, makeFlow, makeTwoPageFlow } from "./fixtures.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -87,6 +90,7 @@ describe("ExportMenu", () => {
     document.body.appendChild(container);
     const utils = render(
       <ExportMenu
+        flow={makeFlow()}
         containerRef={{ current: container }}
         pageName="Home"
         stepNumber={3}
@@ -125,7 +129,88 @@ describe("ExportMenu", () => {
   });
 
   it("is disabled when there is no diagram", () => {
-    render(<ExportMenu containerRef={{ current: null }} pageName="Home" stepNumber={1} disabled />);
+    render(
+      <ExportMenu
+        flow={makeFlow()}
+        containerRef={{ current: null }}
+        pageName="Home"
+        stepNumber={1}
+        disabled
+      />
+    );
     expect(screen.getByRole("button", { name: "Export" })).toBeDisabled();
+  });
+});
+
+describe("textExportFilename", () => {
+  it("slugs the first page name, or both sides of a comparison", () => {
+    const [a, b] = makeCompareFlows();
+    expect(textExportFilename(a, undefined, "csv")).toBe("htv-first-view.csv");
+    expect(textExportFilename(a, b, "markdown")).toBe("htv-first-view-vs-repeat-view.md");
+  });
+});
+
+describe("ExportMenu text exports", () => {
+  const cases = [
+    { item: "Download CSV", ext: "csv", type: "text/csv", text: requestsCsv },
+    { item: "Download Markdown", ext: "md", type: "text/markdown", text: markdownReport },
+    { item: "Download Mermaid", ext: "mmd", type: "text/plain", text: mermaidReport },
+  ] as const;
+
+  for (const { item, ext, type, text } of cases) {
+    it(`downloads the ${ext} report as the core function writes it`, async () => {
+      const user = userEvent.setup();
+      const download = vi.fn();
+      const flow = makeTwoPageFlow();
+      render(<ExportMenu flow={flow} download={download} />);
+      await user.click(screen.getByRole("button", { name: "Export" }));
+      await user.click(screen.getByRole("menuitem", { name: item }));
+      expect(download).toHaveBeenCalledTimes(1);
+      const [blob, filename] = download.mock.calls[0] as [Blob, string];
+      expect(filename).toBe(`htv-example-home.${ext}`);
+      expect(blob.type).toBe(`${type};charset=utf-8`);
+      expect(await blob.text()).toBe(text(flow));
+      expect(screen.getByRole("button", { name: "Export" })).toHaveFocus();
+    });
+  }
+
+  it("exports both sides of a comparison", async () => {
+    const user = userEvent.setup();
+    const download = vi.fn();
+    const [a, b] = makeCompareFlows();
+    render(<ExportMenu flow={a} compare={b} download={download} />);
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(screen.getByRole("menuitem", { name: "Download CSV" }));
+    const [blob, filename] = download.mock.calls[0] as [Blob, string];
+    expect(filename).toBe("htv-first-view-vs-repeat-view.csv");
+    expect(await blob.text()).toBe(requestsCsv(a, b));
+  });
+
+  it("offers no image export without a diagram", async () => {
+    const user = userEvent.setup();
+    render(<ExportMenu flow={makeFlow()} />);
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "Download CSV",
+      "Download Markdown",
+      "Download Mermaid",
+    ]);
+    expect(screen.getByRole("menuitem", { name: "Download CSV" })).toHaveFocus();
+  });
+
+  it("offers every item with a diagram, in one menu", async () => {
+    const user = userEvent.setup();
+    const container = document.createElement("div");
+    render(
+      <ExportMenu
+        flow={makeFlow()}
+        containerRef={{ current: container }}
+        pageName="Home"
+        stepNumber={1}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(5);
   });
 });

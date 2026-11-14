@@ -76,3 +76,42 @@ test("the export menu closes with Escape and returns focus", async ({ page }) =>
   await expect(page.getByRole("menu")).toBeHidden();
   await expect(button).toBeFocused();
 });
+
+test("exports the requests as a CSV with every request of the page", async ({ page }, testInfo) => {
+  const errors = await openAtFcp(page);
+  const { path, filename } = await exportAs(page, "Download CSV", testInfo);
+
+  expect(filename).toMatch(/^htv-[a-z0-9-]+\.csv$/);
+  const csv = await readFile(path, "utf8");
+  expect(csv.endsWith("\r\n")).toBe(true);
+  const lines = csv.split("\r\n").filter(Boolean);
+  expect(lines[0]).toMatch(/^page,side,url,/);
+  expect(lines.length).toBeGreaterThan(5);
+  expect(errors).toEqual([]);
+});
+
+test("exports the Markdown report and the Mermaid diagrams", async ({ page }, testInfo) => {
+  await openAtFcp(page);
+  const markdown = await exportAs(page, "Download Markdown", testInfo);
+  expect(markdown.filename).toMatch(/\.md$/);
+  expect(await readFile(markdown.path, "utf8")).toMatch(/^# HAR Trace Viewer report/);
+
+  const mermaid = await exportAs(page, "Download Mermaid", testInfo);
+  expect(mermaid.filename).toMatch(/\.mmd$/);
+  expect(await readFile(mermaid.path, "utf8")).toContain("sequenceDiagram");
+});
+
+test("the compare report exports both sides as text only", async ({ page }, testInfo) => {
+  await page.context().setOffline(true);
+  await page.goto(pathToFileURL(resolve(output, "compare/index.html")).href);
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  await page.getByRole("button", { name: "Export" }).click();
+  await expect(page.getByRole("menuitem")).toHaveCount(3);
+  await page.keyboard.press("Escape");
+
+  const { path, filename } = await exportAs(page, "Download CSV", testInfo);
+  expect(filename).toMatch(/-vs-.*\.csv$/);
+  const rows = (await readFile(path, "utf8")).split("\r\n").filter(Boolean).slice(1);
+  const sides = new Set(rows.map((row) => row.split(",")[1]));
+  expect(sides).toEqual(new Set(["a", "b"]));
+});

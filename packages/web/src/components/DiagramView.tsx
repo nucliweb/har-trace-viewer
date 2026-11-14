@@ -135,7 +135,12 @@ export function DiagramView({ flow }: Props) {
         >
           {t.hops}
         </button>
-        <ExportMenu containerRef={viewRef} pageName={page.name} stepNumber={stepIndex + 1} />
+        <ExportMenu
+          flow={flow}
+          containerRef={viewRef}
+          pageName={page.name}
+          stepNumber={stepIndex + 1}
+        />
         <button
           className={`${styles.metricsBtn} ${drawer === "metrics" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("metrics")}

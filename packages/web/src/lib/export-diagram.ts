@@ -205,11 +205,15 @@ export function currentTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-export function exportFilename(pageName: string, step: number, extension: "svg" | "png"): string {
-  const slug =
-    pageName
+export function slugify(name: string): string {
+  return (
+    name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "page";
-  return `htv-${slug}-step-${step}.${extension}`;
+      .replace(/^-+|-+$/g, "") || "page"
+  );
+}
+
+export function exportFilename(pageName: string, step: number, extension: "svg" | "png"): string {
+  return `htv-${slugify(pageName)}-step-${step}.${extension}`;
 }

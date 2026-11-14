@@ -15,6 +15,7 @@ import { BadgeRow } from "./BadgeRow.js";
 import { CachePanel } from "./CachePanel.js";
 import { FindingsButton, FindingsPanel } from "./FindingsPanel.js";
 import { WaterfallButton, WaterfallPanel } from "./WaterfallPanel.js";
+import { ExportMenu } from "./ExportMenu.js";
 import { DELTA_CLASS, DeltaCell, DeltasPanel } from "./DeltasPanel.js";
 import { NodeRenderer } from "./NodeRenderer.js";
 import { StepControls, StepTrack } from "./StepPanel.js";
@@ -340,6 +341,7 @@ export function CompareView({ a, b }: Props) {
             >
               {t.deltas}
             </button>
+            <ExportMenu flow={a} compare={b} />
           </div>
           <div className={stepStyles.visuallyHidden} aria-live="polite" aria-atomic="true">
             {messages.steps.live(pairIndex + 1, pairs.length, labels[pairIndex])}

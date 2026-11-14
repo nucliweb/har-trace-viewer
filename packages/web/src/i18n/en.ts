@@ -224,9 +224,12 @@ export const en = {
   },
   export: {
     button: "Export",
-    menu: "Export diagram",
+    menu: "Export report",
     svg: "Download SVG",
     png: "Download PNG (2x)",
+    csv: "Download CSV",
+    markdown: "Download Markdown",
+    mermaid: "Download Mermaid",
     failed: "Export failed",
   },
   cache: {

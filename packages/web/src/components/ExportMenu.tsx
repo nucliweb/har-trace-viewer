@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import type { Flow } from "@htv/core";
 import { collectFontFaceCss, downloadBlob, svgBlob, svgToPngBlob } from "../lib/export-browser.js";
 import {
   currentTheme,
@@ -7,24 +8,33 @@ import {
   readBadges,
   serializeDiagramSvg,
 } from "../lib/export-diagram.js";
+import { TEXT_EXPORTS, textExportBlob, textExportFilename } from "../lib/export-text.js";
+import type { TextExport } from "../lib/export-text.js";
 import { useMessages } from "../i18n/context.js";
 import styles from "./ExportMenu.module.css";
 
 interface Props {
-  /** Element that contains the diagram `<svg>` and the badge row. */
-  containerRef: RefObject<HTMLElement | null>;
-  pageName: string;
-  stepNumber: number;
+  /** The flow the text exports describe; with `compare`, A of a comparison. */
+  flow: Flow;
+  compare?: Flow;
+  /** Element that contains the diagram `<svg>` and the badge row; without it, no image export. */
+  containerRef?: RefObject<HTMLElement | null>;
+  pageName?: string;
+  stepNumber?: number;
   disabled?: boolean;
   /** Injectable for tests. */
   download?: (blob: Blob, filename: string) => void;
   collectFonts?: () => Promise<string>;
 }
 
+const TEXT_KINDS = Object.keys(TEXT_EXPORTS) as TextExport[];
+
 export function ExportMenu({
+  flow,
+  compare,
   containerRef,
-  pageName,
-  stepNumber,
+  pageName = "",
+  stepNumber = 1,
   disabled = false,
   download = downloadBlob,
   collectFonts = collectFontFaceCss,
@@ -56,7 +66,7 @@ export function ExportMenu({
   };
 
   const run = async (extension: "svg" | "png") => {
-    const container = containerRef.current;
+    const container = containerRef?.current;
     const svg = container?.querySelector<SVGSVGElement>('[id="diagram-svg"]');
     setOpen(false);
     if (!container || !svg) return;
@@ -76,6 +86,12 @@ export function ExportMenu({
       setBusy(false);
       buttonRef.current?.focus();
     }
+  };
+
+  const runText = (kind: TextExport) => {
+    setOpen(false);
+    download(textExportBlob(kind, flow, compare), textExportFilename(flow, compare, kind));
+    buttonRef.current?.focus();
   };
 
   const onMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -110,17 +126,32 @@ export function ExportMenu({
         // The menu container handles Escape and arrow keys on behalf of its menuitems.
         // eslint-disable-next-line jsx-a11y/interactive-supports-focus
         <div role="menu" aria-label={t.menu} className={styles.menu} onKeyDown={onMenuKeyDown}>
-          <button
-            ref={firstItemRef}
-            role="menuitem"
-            className={styles.item}
-            onClick={() => run("svg")}
-          >
-            {t.svg}
-          </button>
-          <button role="menuitem" className={styles.item} onClick={() => run("png")}>
-            {t.png}
-          </button>
+          {containerRef && (
+            <>
+              <button
+                ref={firstItemRef}
+                role="menuitem"
+                className={styles.item}
+                onClick={() => run("svg")}
+              >
+                {t.svg}
+              </button>
+              <button role="menuitem" className={styles.item} onClick={() => run("png")}>
+                {t.png}
+              </button>
+            </>
+          )}
+          {TEXT_KINDS.map((kind, index) => (
+            <button
+              key={kind}
+              ref={!containerRef && index === 0 ? firstItemRef : undefined}
+              role="menuitem"
+              className={styles.item}
+              onClick={() => runText(kind)}
+            >
+              {t[kind]}
+            </button>
+          ))}
         </div>
       )}
       {failed && (

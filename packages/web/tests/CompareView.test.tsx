@@ -25,6 +25,17 @@ async function goTo(user: ReturnType<typeof userEvent.setup>, index: number) {
 }
 
 describe("CompareView", () => {
+  it("exports both sides as text, without an image export", async () => {
+    const user = userEvent.setup();
+    render(<CompareView a={a} b={b} />);
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent)).toEqual([
+      "Download CSV",
+      "Download Markdown",
+      "Download Mermaid",
+    ]);
+  });
+
   it("stacks one labelled diagram per flow, A on top, with a single step track", () => {
     render(<CompareView a={a} b={b} />);
 
