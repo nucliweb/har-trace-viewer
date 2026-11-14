@@ -6,6 +6,26 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14
+
+### Added
+
+- Export the requests as CSV, the report as Markdown and the diagrams as Mermaid from the web export menu, also in the compare view.
+- Read a HAR without pages as one page, and put an entry whose `pageref` names no listed page in the page that was running when it started.
+- Read an API capture that has no HTML document: the busiest domain is the first party, and the findings and metrics of a document are left out.
+- Announce "Generating…" while a diagram is generated in the web app.
+
+### Changed
+
+- Generate the diagram in a background worker, so the web app stays responsive on large recordings.
+
+### Fixed
+
+- Skip the entries of a HAR that have no request URL or valid start time instead of failing, and order the pages with a missing or invalid start time by their first request.
+- Measure the text of the terminal report by the columns it takes, so CJK characters and emoji keep the frames aligned and are never cut in half.
+- Name the file and the expected format when `htv redact` cannot read its input, and refuse a file that is not a HAR instead of writing it back.
+- Keep the Generate button from starting a second run while a diagram is generated.
+
 ## [0.9.0] - 2026-11-14
 
 ### Added
@@ -219,7 +239,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.7.2...v0.8.0
