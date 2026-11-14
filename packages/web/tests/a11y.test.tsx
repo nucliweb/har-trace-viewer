@@ -2,7 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { getStepResources } from "@htv/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { App } from "../src/App.js";
 import { CompareView } from "../src/components/CompareView.js";
 import { DiagramView } from "../src/components/DiagramView.js";
@@ -12,6 +12,7 @@ import { en } from "../src/i18n/en.js";
 import type { Messages } from "../src/i18n/en.js";
 import { es } from "../src/i18n/es.js";
 import { makeCompareFlows, makeFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const flow = makeFlow();
 const [a, b] = makeCompareFlows();
@@ -27,6 +28,9 @@ const DRAWERS: [RegExp, string][] = [
   [/^Toggle metrics summary$/, "Close metrics summary"],
   [/^Toggle cache analysis$/, "Close cache analysis"],
 ];
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("drawers and the keyboard (A-01)", () => {
   it("closing a drawer with its ✕ hands the focus back to its toggle", async () => {

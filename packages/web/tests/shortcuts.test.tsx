@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { App } from "../src/App.js";
 import { setMedia } from "./setup.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const html = document.documentElement;
 const version = JSON.parse(
@@ -16,6 +17,9 @@ afterEach(() => {
   Reflect.deleteProperty(document, "exitFullscreen");
   Reflect.deleteProperty(document, "fullscreenElement");
 });
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("App — keyboard shortcuts", () => {
   it("t toggles the theme", async () => {

@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/App.js";
 import { ViewErrorBoundary } from "../src/components/ViewErrorBoundary.js";
 import { MessagesContext } from "../src/i18n/context.js";
@@ -9,6 +9,7 @@ import { ca } from "../src/i18n/ca.js";
 import { en } from "../src/i18n/en.js";
 import { es } from "../src/i18n/es.js";
 import { harJson, makeFile, makeFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const analysis = vi.hoisted(() => ({ fail: false }));
 
@@ -40,7 +41,14 @@ afterEach(() => {
 async function loadHar(user: ReturnType<typeof userEvent.setup>) {
   const input = document.querySelector<HTMLInputElement>('input[accept=".har,.gz"]')!;
   await user.upload(input, makeFile(harJson, "site.har"));
+  // The button is there, disabled, while the file is read: a click then would do nothing.
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /generate diagram/i })).toBeEnabled()
+  );
 }
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("generation errors", () => {
   it("shows an alert and stays on the builder when the analysis throws", async () => {

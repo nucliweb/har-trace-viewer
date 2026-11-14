@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { analyzeHops, analyzeThirdParties, generateFlow } from "@htv/core";
 import type { Flow, HarEntry, ParsedHar } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { HopsPanel } from "../src/components/HopsPanel.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 function entry(url: string, over: Partial<HarEntry> = {}): HarEntry {
   return {
@@ -52,6 +53,9 @@ const flow: Flow = generateFlow([{ name: "Home", har }]);
 const noop = () => undefined;
 const panel = () =>
   render(<HopsPanel hops={analyzeHops(har, doc.url)} pageLabel="Page 1 · Home" onClose={noop} />);
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("HopsPanel", () => {
   it("renders one row per host, first party first", () => {

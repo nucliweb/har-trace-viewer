@@ -1,6 +1,6 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { expandPageFlows, generateFlow, parseHarPagesJson } from "@htv/core";
 import { App } from "../src/App.js";
 import { FlowBuilder } from "../src/components/FlowBuilder.js";
@@ -9,6 +9,7 @@ import { ca } from "../src/i18n/ca.js";
 import { MessagesContext } from "../src/i18n/context.js";
 import { es } from "../src/i18n/es.js";
 import { harJson, makeFile } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 /** Holds every generation until the test releases it; the generation itself is the real one. */
 const gate = vi.hoisted(() => ({ hold: null as Promise<void> | null, calls: 0 }));
@@ -58,8 +59,14 @@ const announcement = () =>
 async function loadHar(user: ReturnType<typeof userEvent.setup>, json = harJson) {
   const input = document.querySelector<HTMLInputElement>('input[accept=".har,.gz"]')!;
   await user.upload(input, makeFile(json, "site.har"));
-  return screen.findByRole("button", { name: /generate diagram/i });
+  // The button is there, disabled, while the file is read: a click then would do nothing.
+  const generate = await screen.findByRole("button", { name: /generate diagram/i });
+  await waitFor(() => expect(generate).toBeEnabled());
+  return generate;
 }
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("generating a diagram", () => {
   it("announces the generation and keeps the Generate button from starting a second one", async () => {
@@ -85,13 +92,14 @@ describe("generating a diagram", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(await loadHar(user, chinaJson));
-    const notice = await screen.findByText(/Great Firewall/);
+    // The builder's region list names the Great Firewall too: wait for the notice's own button.
+    const toDefault = await screen.findByRole("button", { name: "Show default topology" });
+    const notice = toDefault.closest("[role=status]");
+    expect(notice).toHaveTextContent(/Great Firewall/);
     const release = hold();
 
-    await user.click(screen.getByRole("button", { name: "Show default topology" }));
-    expect(notice.closest("[role=status]")).toContainElement(
-      screen.getByRole("button", { name: "Generating…" })
-    );
+    await user.click(toDefault);
+    expect(notice).toContainElement(screen.getByRole("button", { name: "Generating…" }));
     await user.click(screen.getByRole("button", { name: "Reset" }));
     await release();
 
@@ -133,9 +141,11 @@ describe("generating a diagram", () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(await loadHar(user, chinaJson));
-    const notice = (await screen.findByText(/Great Firewall/)).closest<HTMLElement>(
-      "[role=status]"
-    )!;
+    // The builder's region list names the Great Firewall too: wait for the notice's own button.
+    const notice = (
+      await screen.findByRole("button", { name: "Show default topology" })
+    ).closest<HTMLElement>("[role=status]")!;
+    expect(notice).toHaveTextContent(/Great Firewall/);
 
     await user.click(within(notice).getByRole("button", { name: "Show default topology" }));
 

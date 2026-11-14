@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { App } from "../src/App.js";
 import { makeCompareFlows, makeFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 afterEach(() => {
   delete window.__HTV_FLOW__;
@@ -15,6 +16,9 @@ afterEach(() => {
 const productVersion = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../cli/package.json"), "utf8")
 ).version;
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("App", () => {
   it("shows the product version in the header", () => {

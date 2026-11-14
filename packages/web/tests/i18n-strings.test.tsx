@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { analyzeCacheForHar } from "@htv/core";
 import { App } from "../src/App.js";
 import { CachePanel } from "../src/components/CachePanel.js";
@@ -11,6 +11,7 @@ import { es } from "../src/i18n/es.js";
 import { LOCALE_STORAGE_KEY } from "../src/i18n/useLocale.js";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
 import { harJson, makeFile, makeFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const analysis = vi.hoisted(() => ({ fail: false }));
 
@@ -39,6 +40,9 @@ const languages = [
   ["Spanish", es, "es"],
   ["Catalan", ca, "ca"],
 ] as const;
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe.each(languages)("translated strings in %s", (name, messages, locale) => {
   it(`labels the primary request of a capture without a document in ${name}`, () => {

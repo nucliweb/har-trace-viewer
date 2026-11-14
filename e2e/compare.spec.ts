@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { animationsSettled } from "./animations";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
@@ -96,9 +97,14 @@ for (const scheme of ["light", "dark"] as const) {
       const context = await browser.newContext({ colorScheme: scheme });
       const page = await context.newPage();
       const errors = await open(page);
-      await page.getByRole("tab", { name: /Third-party requests/ }).click();
-      if (deltas) await page.getByRole("button", { name: "Toggle deltas" }).click();
-      await page.waitForTimeout(500);
+      const tab = page.getByRole("tab", { name: /Third-party requests/ });
+      await tab.click();
+      await expect(tab).toHaveAttribute("aria-selected", "true");
+      if (deltas) {
+        await page.getByRole("button", { name: "Toggle deltas" }).click();
+        await expect(page.getByRole("table", { name: "Metric deltas" })).toBeVisible();
+      }
+      await animationsSettled(page);
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze();

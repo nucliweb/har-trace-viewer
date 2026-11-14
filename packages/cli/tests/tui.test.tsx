@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
+import { useEffect, useLayoutEffect, useState, type ReactElement } from "react";
+import { useInput } from "ink";
 import { render } from "ink-testing-library";
 import { buildWaterfall, generateFlow, parseHarJson } from "@htv/core";
 import type { Flow } from "@htv/core";
@@ -61,21 +63,86 @@ function repeatView(): Flow {
   return generateFlow([{ name: "Repeat view", har, trace: makeTrace(110, 250) }]);
 }
 
-// Lets Ink process input and re-render before the next assertion.
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+const WAIT_MS = 3_000;
 
-async function press(stdin: { write: (data: string) => void }, ...keys: string[]) {
-  // Ink subscribes to input in an effect, after the first frame.
-  await tick();
-  for (const key of keys) {
-    stdin.write(key);
-    await tick();
+// Polls `holds` until it is true, failing with `what` (and the last frame) after WAIT_MS.
+async function until(holds: () => boolean, what: () => string) {
+  await vi.waitFor(
+    () => {
+      if (!holds()) throw new Error(`Timed out after ${WAIT_MS} ms waiting for ${what()}`);
+    },
+    { timeout: WAIT_MS, interval: 5 }
+  );
+}
+
+// Renders the TUI next to a probe that sees every key Ink hands to `useInput`. Each key the probe
+// sees also re-renders the probe, in the same batch as the app's own update, so once that render
+// has committed the frame on screen is the app's answer to the key. A bare Esc only arrives once
+// Ink's escape timer gives up waiting for a sequence, so the next key must wait for it.
+function renderTui(element: ReactElement) {
+  const probe = { listening: false, received: 0, rendered: 0, unmounted: false };
+  function KeyProbe() {
+    const [seen, setSeen] = useState(0);
+    useInput(() => {
+      probe.received += 1;
+      setSeen(probe.received);
+    });
+    // Effects run in order, after those of the app rendered before the probe: its keys are wired.
+    useEffect(() => {
+      probe.listening = true;
+    }, []);
+    useLayoutEffect(() => {
+      probe.rendered = seen;
+    }, [seen]);
+    // q quits: the app unmounts with the probe, and no render follows the key.
+    useLayoutEffect(
+      () => () => {
+        probe.unmounted = true;
+      },
+      []
+    );
+    return null;
   }
+  const withProbe = (node: ReactElement) => (
+    <>
+      {node}
+      <KeyProbe />
+    </>
+  );
+  const app = render(withProbe(element));
+  const frame = () => `the frame:\n${app.lastFrame() ?? "(nothing drawn)"}`;
+
+  return {
+    lastFrame: app.lastFrame,
+    rerender: (next: ReactElement) => app.rerender(withProbe(next)),
+    // Types the keys one at a time, each once the app has drawn its answer to the one before.
+    async press(...keys: string[]) {
+      await until(
+        () => probe.listening,
+        () => `the app to listen for keys, ${frame()}`
+      );
+      for (const key of keys) {
+        const target = probe.received + 1;
+        app.stdin.write(key);
+        await until(
+          () => probe.unmounted || probe.rendered >= target,
+          () => `the app to render after the key ${JSON.stringify(key)}, ${frame()}`
+        );
+      }
+    },
+    // Waits until the last frame satisfies `holds`, for changes that come without a key.
+    async untilFrame(holds: (frame: string) => boolean, what: string) {
+      await until(
+        () => holds(app.lastFrame() ?? ""),
+        () => `${what}, ${frame()}`
+      );
+    },
+  };
 }
 
 describe("TuiApp — a flow", () => {
   it("opens on the findings, grouped by severity, with the version and the tabs", () => {
-    const { lastFrame } = render(<TuiApp flow={firstView()} version="9.9.9" rows={60} />);
+    const { lastFrame } = renderTui(<TuiApp flow={firstView()} version="9.9.9" rows={60} />);
     const frame = lastFrame()!;
 
     expect(frame).toContain("htv v9.9.9");
@@ -95,7 +162,7 @@ describe("TuiApp — a flow", () => {
       makeEntry({ url: `https://example.com/missing-${n}.js`, status: 404, transferSize: 100 * n })
     );
     const flow = generateFlow([{ name: "Broken", har: makeHar(missing) }]);
-    const { lastFrame } = render(<TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />);
+    const { lastFrame } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />);
     const frame = lastFrame()!;
 
     expect(frame).toContain("Warnings · ");
@@ -109,15 +176,15 @@ describe("TuiApp — a flow", () => {
   it("rates the Core Web Vitals among the findings", async () => {
     const har = makeHar([criticalCss(100)]);
     const flow = generateFlow([{ name: "Slow", har, trace: makeTrace(3_500, 5_200) }]);
-    const { lastFrame } = render(<TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />);
+    const { lastFrame } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />);
 
     expect(lastFrame()).toContain("LCP is poor: 5.2 s");
     expect(lastFrame()).toContain("FCP is poor: 3.5 s");
   });
 
   it("shows the overview with the rated metrics on the third tab", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="9.9.9" rows={40} />);
-    await press(stdin, "4");
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="9.9.9" rows={40} />);
+    await press("4");
     const frame = lastFrame()!;
 
     expect(frame).toContain("First view");
@@ -130,38 +197,38 @@ describe("TuiApp — a flow", () => {
 
   it("walks the steps with the arrow keys, showing the route and the step metrics", async () => {
     const flow = firstView();
-    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={40} />);
 
-    await press(stdin, "5");
+    await press("5");
     expect(lastFrame()).toContain(`Step 1 / ${flow.steps.length}`);
     expect(lastFrame()).toContain(flow.steps[0].title);
 
-    await press(stdin, KEYS.right, KEYS.right);
+    await press(KEYS.right, KEYS.right);
     expect(lastFrame()).toContain(`Step 3 / ${flow.steps.length}`);
     expect(lastFrame()).toContain(flow.steps[2].title);
     expect(lastFrame()).toContain("Browser →");
 
-    await press(stdin, KEYS.left);
+    await press(KEYS.left);
     expect(lastFrame()).toContain(`Step 2 / ${flow.steps.length}`);
   });
 
   it("windows the step list around the selected step on a short terminal", async () => {
     const flow = firstView();
-    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={12} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={12} />);
 
-    await press(stdin, "5");
+    await press("5");
     expect(lastFrame()).toContain("▸  1  DNS + initial connection");
     expect(lastFrame()).not.toContain("Page loaded");
 
-    await press(stdin, ...Array(flow.steps.length).fill(KEYS.right));
+    await press(...Array(flow.steps.length).fill(KEYS.right));
     expect(lastFrame()).toContain(`▸  ${flow.steps.length}  Page loaded`);
     expect(lastFrame()).not.toContain("1  DNS + initial connection");
   });
 
   it("lists the hosts with their requests, TTFB and provider", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toMatch(/example\.com\s+4\s/);
     expect(lastFrame()).toContain("cdn.third.com");
   });
@@ -178,11 +245,11 @@ describe("TuiApp — a flow", () => {
     ]);
     har.entries[2].timing.notApplicable = ["ssl"];
     const flow = generateFlow([{ name: "Hosts", har }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={40} columns={200} />
     );
 
-    await press(stdin, "6");
+    await press("6");
     const frame = lastFrame()!;
     expect(frame).toMatch(/Median TTFB\s+After onLoad\s+DNS \/ TCP \/ TLS/);
     expect(frame).toMatch(
@@ -191,11 +258,11 @@ describe("TuiApp — a flow", () => {
   });
 
   it("says when every request to a host reused a connection", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={200} />
     );
 
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toMatch(/cdn\.third\.com.*reused/);
   });
 
@@ -291,35 +358,37 @@ describe("TuiApp — a flow", () => {
   });
 
   it("compares the third parties of both sides on the Hosts tab", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={60} />
     );
 
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toMatch(/Third parties · A First view vs B Repeat view/);
     expect(lastFrame()).toMatch(/Third-party bytes: A 1\.0 KB \(\d+%\) → B 0 B \(0%\)/);
     expect(lastFrame()).toMatch(/third\.com\s+Other\s+1\s+0\s+−1\s+1\.0 KB\s+0 B\s+−1\.0 KB/);
   });
 
   it("captions the third parties with their median TTFB", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 
-    await press(stdin, "4");
+    await press("4");
     expect(lastFrame()).toMatch(/3rd Parties\s+1 · median TTFB 10 ms/);
   });
 
   it("counts browser-cache hits apart from the requests that reached each host", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={repeatView()} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(
+      <TuiApp flow={repeatView()} version="1.0.0" rows={40} />
+    );
 
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toMatch(/Host\s+Requests\s+Cached/);
     expect(lastFrame()).toMatch(/example\.com\s+1\s+2\s+/);
   });
 
   it("shows the cache recommendations with the resources they name", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={60} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={60} />);
 
-    await press(stdin, "7");
+    await press("7");
     const frame = lastFrame()!;
     expect(frame).toContain("Versioned assets are not cached");
     expect(frame).toMatch(/chunk-47TTPNLV\.js\s+20 KB\s+no-cache, no-store/);
@@ -332,11 +401,11 @@ describe("TuiApp — a flow", () => {
       makeEntry({ url: "https://example.com/app.js", startTime: 240, transferSize: 9_000 }),
     ]);
     const flow = generateFlow([{ name: "Broken", har }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={80} columns={120} />
     );
 
-    await press(stdin, "7");
+    await press("7");
     const frame = lastFrame()!;
     expect(frame).toMatch(/7 Cache & network/);
     expect(frame).toContain("Network");
@@ -348,59 +417,62 @@ describe("TuiApp — a flow", () => {
   });
 
   it("says when the network report found nothing", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={repeatView()} version="1.0.0" rows={80} columns={120} />
     );
 
-    await press(stdin, "7");
+    await press("7");
     expect(lastFrame()).toContain("No duplicate requests, redirects, errors or mixed content");
   });
 
   it("cycles the tabs with Tab", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 
-    await press(stdin, KEYS.tab, KEYS.tab, KEYS.tab, KEYS.tab);
+    await press(KEYS.tab, KEYS.tab, KEYS.tab, KEYS.tab);
     expect(lastFrame()).toContain("Step 1 /");
   });
 
   it("ignores a bare Esc and quits on q", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={20} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={20} />);
 
-    await press(stdin, ESC, "2");
+    await press(ESC, "2");
     expect(lastFrame()).toContain("Waterfall · 5 requests");
     expect(lastFrame()).not.toContain("Esc quit");
-    await press(stdin, "q");
+    await press("q");
     expect(lastFrame()).not.toContain("htv v1.0.0");
   });
 
   it("jumps to the start and the end with Home and End", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
 
-    await press(stdin, "7", "\u001B[F");
+    await press("7", "\u001B[F");
     expect(lastFrame()).not.toContain("Document");
     expect(lastFrame()).toContain("chunk-47TTPNLV.js");
-    await press(stdin, "\u001B[H");
+    await press("\u001B[H");
     expect(lastFrame()).toContain("Document");
   });
 
   it("clamps the scroll when the terminal grows", async () => {
     const flow = firstView();
-    const { lastFrame, stdin, rerender } = render(<TuiApp flow={flow} version="1.0.0" rows={10} />);
+    const { lastFrame, press, rerender, untilFrame } = renderTui(
+      <TuiApp flow={flow} version="1.0.0" rows={10} />
+    );
 
-    await press(stdin, "7", "\u001B[F");
+    await press("7", "\u001B[F");
+    expect(lastFrame()).not.toContain("Document");
     rerender(<TuiApp flow={flow} version="1.0.0" rows={60} />);
-    await tick();
+    await untilFrame((frame) => frame.split("\n").length > 10, "the frame to grow to 60 rows");
     expect(lastFrame()).toContain("Document");
     expect(lastFrame()).toContain("chunk-47TTPNLV.js");
   });
 
   it("scrolls a tab taller than the terminal", async () => {
-    const { lastFrame, stdin } = render(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={10} />);
 
-    await press(stdin, "7");
+    await press("7");
     expect(lastFrame()).toContain("Document");
     // 16 rows down reach the last resource; each key is a render, so no more than a margin.
-    await press(stdin, ...Array(24).fill(KEYS.down));
+    await press(...Array(24).fill(KEYS.down));
     expect(lastFrame()).not.toContain("Document");
     expect(lastFrame()).toContain("chunk-47TTPNLV.js");
   });
@@ -417,10 +489,10 @@ describe("TuiApp — the waterfall", () => {
   const barLength = (row: string) => (row.match(/[░▒█▓╌]+/)?.[0] ?? "").length;
 
   it("draws a ruler with the page's marks and one bar per request, sorted by start", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
     const frame = lastFrame()!;
 
     expect(frame).toContain("Waterfall · 5 requests");
@@ -457,10 +529,10 @@ describe("TuiApp — the waterfall", () => {
       ],
     };
     const flow = generateFlow([{ name: "Hero", har, trace }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
     const frame = lastFrame()!;
 
     expect(rowOf(frame, "critical-100.css")).toMatch(/│ B {2}critical-100\.css/);
@@ -469,111 +541,112 @@ describe("TuiApp — the waterfall", () => {
   });
 
   it("draws browser-cache hits hollow", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={repeatView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
 
     expect(rowOf(lastFrame()!, "critical-100.css")).toMatch(/css\s+200\s+disk\s.*╌+/);
   });
 
   it("filters the rows by URL with /, keeps the filter with Enter and clears it with Esc", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
     // Typing a digit or q searches instead of switching tabs or quitting.
-    await press(stdin, "2", "/", ..."tag-3");
+    await press("2", "/", ..."tag-3");
     expect(lastFrame()).toContain("Filter: tag-3");
     expect(lastFrame()).toContain("Waterfall · 1 of 5 requests");
     expect(names(lastFrame()!)).toEqual(["tag-300.js"]);
 
-    await press(stdin, "\r");
+    await press("\r");
     expect(names(lastFrame()!)).toEqual(["tag-300.js"]);
     expect(lastFrame()).toContain("Esc clear filter");
 
-    await press(stdin, ESC);
+    await press(ESC);
     expect(lastFrame()).toContain("Waterfall · 5 requests");
     expect(names(lastFrame()!)).toHaveLength(5);
   });
 
   it("filters the rows with the field language", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
     // Each query arrives in one write, as a paste does: one render per query, not per letter.
-    await press(stdin, "2", "/", "type:js -party:first", "\r");
+    await press("2", "/", "type:js -party:first", "\r");
     expect(lastFrame()).toContain("Filter: type:js -party:first");
     expect(lastFrame()).toContain("Waterfall · 1 of 5 requests");
     expect(names(lastFrame()!)).toEqual(["tag-300.js"]);
 
-    await press(stdin, ESC, "/", "larger-than:10k", "\r");
+    await press(ESC, "/", "larger-than:10k", "\r");
     expect(names(lastFrame()!)).toEqual(["chunk-47TTPNLV.js"]);
 
-    await press(stdin, ESC, "/", "party:first status:2xx -type:doc", "\r");
+    await press(ESC, "/", "party:first status:2xx -type:doc", "\r");
     expect(names(lastFrame()!)).toEqual(["critical-100.css", "chunk-47TTPNLV.js", "image-200.png"]);
   });
 
   it("says what it could not read in a filter and matches nothing with it", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", "/", ..."type:video");
+    // The query arrives in one write, as a paste does: one render for it, not one per letter.
+    await press("2", "/", "type:video");
 
     expect(lastFrame()).toContain("Waterfall · 0 of 5 requests");
     expect(lastFrame()).toContain('type: unknown type "video"');
   });
 
   it("opens the help with ? and closes it with ?, q or Esc", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={60} columns={120} />
     );
-    await press(stdin, "2", "?");
+    await press("2", "?");
 
     expect(lastFrame()).toContain("Filter syntax");
     expect(lastFrame()).toMatch(/larger-than\s+bytes, k or M/);
     expect(lastFrame()).toContain("close help");
-    await press(stdin, "x");
+    await press("x");
     expect(lastFrame()).toContain("Filter syntax");
-    await press(stdin, "?");
+    await press("?");
     expect(lastFrame()).not.toContain("Filter syntax");
     for (const key of ["q", ESC]) {
-      await press(stdin, "?", key);
+      await press("?", key);
       expect(lastFrame()).not.toContain("Filter syntax");
       expect(lastFrame()).toContain("Waterfall · 5 requests");
     }
   });
 
   it("scrolls the help with the keys of the lists", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={14} columns={120} />
     );
-    await press(stdin, "?");
+    await press("?");
     expect(lastFrame()).toContain("─ Keys ─");
     expect(lastFrame()).not.toContain("domain:*.cdn.com");
 
-    await press(stdin, "\u001B[F");
+    await press("\u001B[F");
     expect(lastFrame()).toContain("domain:*.cdn.com");
     expect(lastFrame()).not.toContain("switch tabs");
-    await press(stdin, "\u001B[H");
+    await press("\u001B[H");
     expect(lastFrame()).toContain("switch tabs");
-    await press(stdin, KEYS.down);
+    await press(KEYS.down);
     expect(lastFrame()).not.toContain("─ Keys ─");
   });
 
   it("cycles the party shown with f: first, third, then all", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", "f");
+    await press("2", "f");
     expect(lastFrame()).toContain("Party: first");
     expect(names(lastFrame()!)).not.toContain("tag-300.js");
     expect(names(lastFrame()!)).toContain("critical-100.css");
 
-    await press(stdin, "f");
+    await press("f");
     expect(lastFrame()).toContain("Party: third");
     expect(names(lastFrame()!)).toEqual(["tag-300.js"]);
 
-    await press(stdin, "f");
+    await press("f");
     expect(lastFrame()).toContain("Party: all");
     expect(names(lastFrame()!)).toHaveLength(5);
   });
@@ -582,14 +655,14 @@ describe("TuiApp — the waterfall", () => {
     const beacon = makeEntry({ url: "https://example.com/beacon", startTime: 5_000 });
     const har = makeHar([criticalCss(100), beacon], { onContentLoad: 300, onLoad: 500 });
     const flow = generateFlow([{ name: "Late", har, trace: makeTrace(150, 400) }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
     expect(lastFrame()).toContain("Axis: end");
     expect(lastFrame()).toMatch(/0 ms\s+1\.0 s\s+2\.0 s\s+3\.0 s\s+4\.0 s/);
 
-    await press(stdin, "z");
+    await press("z");
     expect(lastFrame()).toContain("Axis: load");
     expect(lastFrame()).toMatch(/0 ms\s+100 ms\s+200 ms\s+300 ms\s+400 ms/);
     expect(rowOf(lastFrame()!, "beacon")).toMatch(/›\s*│$/);
@@ -601,14 +674,14 @@ describe("TuiApp — the waterfall", () => {
       makeEntry({ url: `https://example.com/asset-${i}.js`, startTime: 100 + i * 5 })
     );
     const flow = generateFlow([{ name: "Many", har: makeHar(assets) }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={16} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
     expect(lastFrame()).toContain("asset-0.js");
 
     // 16 rows, 8 of them for requests: two pages down put the cursor on the 17th request.
-    await press(stdin, KEYS.pageDown, KEYS.pageDown);
+    await press(KEYS.pageDown, KEYS.pageDown);
     expect(lastFrame()).not.toContain("asset-0.js ");
     expect(rowOf(lastFrame()!, "asset-15.js")).toMatch(/^│▸/);
     expect(lastFrame()).toContain("asset-22.js");
@@ -624,10 +697,10 @@ describe("TuiApp — the waterfall", () => {
     generateFlow([{ name: "Long", har: makeHar([longName]), trace: makeTrace(150, 400) }]);
 
   it("fits 80 columns with a shorter name column", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={longFlow()} version="1.0.0" rows={30} columns={80} />
     );
-    await press(stdin, "2");
+    await press("2");
     const frame = lastFrame()!;
 
     for (const line of lines(frame)) expect(line.length).toBeLessThanOrEqual(80);
@@ -663,10 +736,10 @@ describe("TuiApp — the resources", () => {
     frame.split("\n").find((l) => l.includes(name)) ?? "";
 
   it("lists every request as a table by start, with its priority, protocol and encoding", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={120} />
     );
-    await press(stdin, "3");
+    await press("3");
     const frame = lastFrame()!;
 
     expect(frame).toContain("Resources · 5 requests");
@@ -686,17 +759,17 @@ describe("TuiApp — the resources", () => {
   });
 
   it("cycles the sort column with s, largest first, and reverses it with S", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={120} />
     );
-    await press(stdin, "3", "s");
+    await press("3", "s");
 
     expect(lastFrame()).toContain("Sort: size ↓");
     expect(names(lastFrame()!)[0]).toBe("chunk-47TTPNLV.js");
-    await press(stdin, "S");
+    await press("S");
     expect(lastFrame()).toContain("Sort: size ↑");
     expect(names(lastFrame()!)[4]).toBe("chunk-47TTPNLV.js");
-    await press(stdin, "s", "s", "s");
+    await press("s", "s", "s");
     expect(lastFrame()).toContain("Sort: name ↑");
     expect(names(lastFrame()!)).toEqual([
       "chunk-47TTPNLV.js",
@@ -708,27 +781,28 @@ describe("TuiApp — the resources", () => {
   });
 
   it("shares the filter and the party with the waterfall", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={120} />
     );
-    await press(stdin, "2", "/", ..."is:cached", "\r", "3");
+    // The query arrives in one write, as a paste does: one render for it, not one per letter.
+    await press("2", "/", "is:cached", "\r", "3");
     expect(lastFrame()).toContain("Resources · 0 of 5 requests");
     expect(lastFrame()).toContain("No request matches");
 
-    await press(stdin, ESC, "f");
+    await press(ESC, "f");
     expect(lastFrame()).toContain("Party: first");
     expect(lastFrame()).toContain("Resources · 4 of 5 requests");
-    await press(stdin, "2");
+    await press("2");
     expect(lastFrame()).toContain("Party: first");
   });
 });
 
 describe("TuiApp — a comparison", () => {
   it("compares the metrics of A and B with the deltas and their notes", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={50} />
     );
-    await press(stdin, "4");
+    await press("4");
     const frame = lastFrame()!;
 
     expect(frame).toContain("A First view");
@@ -740,47 +814,47 @@ describe("TuiApp — a comparison", () => {
   });
 
   it("pairs the steps of both flows by kind", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={50} />
     );
 
-    await press(stdin, "5");
+    await press("5");
     expect(lastFrame()).toMatch(/A\s+DNS \+ initial connection/);
     expect(lastFrame()).toMatch(/B\s+DNS \+ initial connection/);
   });
 
   it("joins the hosts with the TTFB delta over the same URLs", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={50} />
     );
 
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toContain("Same URLs");
     expect(lastFrame()).toMatch(/cdn\.third\.com\s+1\s+0\s+−1/);
   });
 
   it("switches the cache report between A and B", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={60} />
     );
 
-    await press(stdin, "7");
+    await press("7");
     expect(lastFrame()).toContain("Cache · A First view");
     expect(lastFrame()).toContain("Versioned assets are not cached");
-    await press(stdin, "b");
+    await press("b");
     expect(lastFrame()).toContain("Cache · B Repeat view");
     expect(lastFrame()).toMatch(/Hit ratio\s+100% \(2\/2\)/);
   });
 
   it("switches the findings between A and B", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={60} />
     );
 
     expect(lastFrame()).toContain("Findings · A First view");
     expect(lastFrame()).toContain("Versioned assets are not cached");
     expect(lastFrame()).toContain("a/b side");
-    await press(stdin, "b");
+    await press("b");
     expect(lastFrame()).toContain("Findings · B Repeat view");
     expect(lastFrame()).not.toContain("Versioned assets are not cached");
     expect(lastFrame()).toContain("Browser cache working well");
@@ -789,14 +863,14 @@ describe("TuiApp — a comparison", () => {
 
 describe("TuiApp — the waterfall of a comparison", () => {
   it("switches the waterfall between A and B", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={100} />
     );
 
-    await press(stdin, "2");
+    await press("2");
     expect(lastFrame()).toContain("Waterfall · A First view");
     expect(lastFrame()).toContain("tag-300.js");
-    await press(stdin, "b");
+    await press("b");
     expect(lastFrame()).toContain("Waterfall · B Repeat view");
     expect(lastFrame()).not.toContain("tag-300.js");
   });
@@ -813,12 +887,12 @@ describe("TuiApp — a flow of several pages", () => {
       { name: "Home", har: first },
       { name: "Cart", har: second },
     ]);
-    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={40} />);
 
     expect(lastFrame()).toMatch(/Home\s+Cart/);
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toContain("Page 1 / 2 · Home");
-    await press(stdin, "p");
+    await press("p");
     expect(lastFrame()).toContain("Page 2 / 2 · Cart");
   });
 
@@ -831,10 +905,10 @@ describe("TuiApp — a flow of several pages", () => {
       { name: "Home", har: first },
       { name: "Cart", har: second },
     ]);
-    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={40} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={40} />);
 
     expect(lastFrame()).not.toContain("1 request failed (4xx)");
-    await press(stdin, "p");
+    await press("p");
     expect(lastFrame()).toContain("1 request failed (4xx)");
   });
 });
@@ -881,9 +955,9 @@ describe("TUI views — hits of an unknown store", () => {
       { onContentLoad: 150, onLoad: 200 }
     );
     const flow = generateFlow([{ name: "Playwright", har }]);
-    const { lastFrame, stdin } = render(<TuiApp flow={flow} version="1.0.0" rows={60} />);
+    const { lastFrame, press } = renderTui(<TuiApp flow={flow} version="1.0.0" rows={60} />);
 
-    await press(stdin, "7");
+    await press("7");
     expect(lastFrame()).toMatch(/Hit ratio\s+50% \(1\/2\)/);
     expect(lastFrame()).toMatch(/Store not recorded\s+1/);
   });
@@ -900,14 +974,14 @@ describe("TuiApp — the request cursor and its details", () => {
       )?.[1];
 
   it("moves the cursor with the arrows and opens its request with Enter, back with Esc", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2");
+    await press("2");
     expect(cursorOn(lastFrame()!)).toBe("example.com");
     expect(statusOf(lastFrame()!)).toContain("Enter details");
 
-    await press(stdin, KEYS.down, KEYS.enter);
+    await press(KEYS.down, KEYS.enter);
     const detail = lastFrame()!;
     expect(detail).toContain("Request 2 of 5");
     expect(detail).toContain("https://example.com/critical-100.css");
@@ -915,52 +989,52 @@ describe("TuiApp — the request cursor and its details", () => {
     expect(detail).not.toContain("Waterfall · 5 requests");
     expect(statusOf(detail)).toMatch(/n\/N next\/previous.*Esc\/Enter\/q back/);
 
-    await press(stdin, ESC);
+    await press(ESC);
     expect(lastFrame()).toContain("Waterfall · 5 requests");
     expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
   });
 
   it("steps through the requests with n and N in the details, and goes back with q", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "3", KEYS.enter, "n", "n", "N");
+    await press("3", KEYS.enter, "n", "n", "N");
     expect(lastFrame()).toContain("Request 2 of 5");
     expect(lastFrame()).toContain("https://example.com/critical-100.css");
 
-    await press(stdin, "q");
+    await press("q");
     expect(lastFrame()).toContain("Resources · 5 requests");
     expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
   });
 
   it("keeps the cursor on its request through a sort, and on the same one in the waterfall", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={120} />
     );
-    await press(stdin, "3", KEYS.down, KEYS.down, "s");
+    await press("3", KEYS.down, KEYS.down, "s");
     expect(lastFrame()).toContain("Sort: size ↓");
     expect(cursorOn(lastFrame()!)).toBe("chunk-47TTPNLV.js");
 
-    await press(stdin, "2");
+    await press("2");
     expect(cursorOn(lastFrame()!)).toBe("chunk-47TTPNLV.js");
   });
 
   it("clamps the cursor while a filter hides its request and returns to it without the filter", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", KEYS.end, "/", "critical", KEYS.enter);
+    await press("2", KEYS.end, "/", "critical", KEYS.enter);
     expect(cursorOn(lastFrame()!)).toBe("critical-100.css");
 
-    await press(stdin, ESC);
+    await press(ESC);
     expect(cursorOn(lastFrame()!)).toBe("tag-300.js");
   });
 
   it("puts the cursor back on the first request when the side of a comparison changes", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", KEYS.down, "b");
+    await press("2", KEYS.down, "b");
     expect(cursorOn(lastFrame()!)).toBe("example.com");
   });
 
@@ -971,48 +1045,48 @@ describe("TuiApp — the request cursor and its details", () => {
       { name: "Home", har: makeHar([criticalCss(100)]) },
       { name: "Cart", har: second },
     ]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", KEYS.down);
+    await press("2", KEYS.down);
     expect(lines(lastFrame()!).find((l) => l.startsWith("│▸"))).toMatch(/critical-100\.css/);
 
-    await press(stdin, "p");
+    await press("p");
     expect(lastFrame()).toContain("Page 2 / 2 · Cart");
     expect(lines(lastFrame()!).find((l) => l.startsWith("│▸"))).toMatch(/^│▸\s+cart\s+doc/);
   });
 
   it("opens the details of the side of a comparison shown, and resets the cursor when it changes", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={100} />
     );
-    await press(stdin, "2", "b", KEYS.down, KEYS.enter);
+    await press("2", "b", KEYS.down, KEYS.enter);
     expect(lastFrame()).toContain("Request 2 of 3");
     expect(lastFrame()).toContain("Served from the browser's disk cache");
 
-    await press(stdin, ESC, "a");
+    await press(ESC, "a");
     expect(lastFrame()).toContain("Waterfall · A First view");
     expect(cursorOn(lastFrame()!)).toBe("example.com");
-    await press(stdin, KEYS.enter);
+    await press(KEYS.enter);
     expect(lastFrame()).toContain("Request 1 of 5");
     expect(lastFrame()).not.toContain("disk cache");
   });
 
   it("scrolls the columns of a comparison's tables with > and <", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={80} />
     );
-    await press(stdin, "6");
+    await press("6");
     expect(statusOf(lastFrame()!)).toContain("< > columns");
     const first = lastFrame();
     expect(first).toMatch(/Host\s+/);
     expect(first).toMatch(/more column/);
 
-    await press(stdin, ">");
+    await press(">");
     expect(lastFrame()).not.toBe(first);
     expect(lastFrame()).toMatch(/◂ \d+ more column/);
 
-    await press(stdin, "<");
+    await press("<");
     expect(lastFrame()).toBe(first);
   });
 
@@ -1021,32 +1095,32 @@ describe("TuiApp — the request cursor and its details", () => {
       makeEntry({ url: `https://example.com/missing-${n}.js`, status: 404, transferSize: 100 * n })
     );
     const flow = generateFlow([{ name: "Broken", har: makeHar(missing) }]);
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={flow} version="1.0.0" rows={60} columns={120} />
     );
     expect(statusOf(lastFrame()!)).toContain("e all evidence");
 
-    await press(stdin, "e");
+    await press("e");
     expect(lastFrame()).toMatch(/missing-5\.js/);
     expect(statusOf(lastFrame()!)).toContain("e less evidence");
 
-    await press(stdin, "e");
+    await press("e");
     expect(lastFrame()).not.toMatch(/missing-5\.js/);
   });
 
   it("scrolls the hosts' columns sideways with > and < on a narrow terminal", async () => {
-    const { lastFrame, stdin } = render(
+    const { lastFrame, press } = renderTui(
       <TuiApp flow={firstView()} version="1.0.0" rows={40} columns={80} />
     );
-    await press(stdin, "6");
+    await press("6");
     expect(lastFrame()).toMatch(/Host\s+Requests/);
     expect(statusOf(lastFrame()!)).toContain("< > columns");
 
-    await press(stdin, ">");
+    await press(">");
     expect(lastFrame()).not.toMatch(/Host\s+Requests/);
     expect(lastFrame()).toMatch(/◂ 1 more column/);
 
-    await press(stdin, "<");
+    await press("<");
     expect(lastFrame()).toMatch(/Host\s+Requests/);
   });
 });

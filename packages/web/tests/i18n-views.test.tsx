@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CompareView } from "../src/components/CompareView.js";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { ca } from "../src/i18n/ca.js";
@@ -9,10 +9,14 @@ import { MessagesContext } from "../src/i18n/context.js";
 import type { Messages } from "../src/i18n/en.js";
 import { es } from "../src/i18n/es.js";
 import { makeCompareFlows, makeFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const inLanguage = (messages: Messages, children: ReactNode) => (
   <MessagesContext.Provider value={messages}>{children}</MessagesContext.Provider>
 );
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("DiagramView in Spanish", () => {
   const flow = makeFlow();

@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import { collectFindings, generateFlow, getStepResources } from "@htv/core";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { criticalCss, makeHar, secondaryImage } from "../../core/tests/helpers/synthetic-har";
 import { makeCompareFlows, makeFlow, makeWptRepeatView } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const flow = makeFlow();
 const stepOf = (type: string) => flow.steps.findIndex((s) => s.badge?.type === type);
@@ -16,6 +17,9 @@ const isHidden = (label: string) => badge(label)!.className.includes("badgeHidde
 async function goTo(user: ReturnType<typeof userEvent.setup>, index: number) {
   await user.click(screen.getByRole("tab", { name: new RegExp(`^Step ${index + 1}:`) }));
 }
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("DiagramView", () => {
   it("starts on step 1 with every badge hidden", () => {

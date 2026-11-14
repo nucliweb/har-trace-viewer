@@ -1,9 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { compareFlows } from "@htv/core";
 import { CompareView } from "../src/components/CompareView.js";
 import { makeCompareFlows } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const [a, b] = makeCompareFlows();
 const { pairs } = compareFlows(a, b);
@@ -23,6 +24,9 @@ const cellTexts = (row: HTMLElement) =>
 async function goTo(user: ReturnType<typeof userEvent.setup>, index: number) {
   await user.click(screen.getByRole("tab", { name: new RegExp(`^Step ${index + 1}:`) }));
 }
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("CompareView", () => {
   it("exports both sides as text, without an image export", async () => {

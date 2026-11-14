@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { CompareView } from "../src/components/CompareView.js";
 import { makeFlow } from "./fixtures.js";
 import { apiCaptureHar, apiCaptureWithPageHar, makeApiFlow } from "./api-capture.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const NONSENSE = /NaN|undefined|null|Invalid Date/;
 const DRAWERS = [/metrics/i, /cache/i, /findings/i, /waterfall/i, /hops/i];
@@ -13,6 +14,9 @@ const captures = [
   ["without pages", () => makeApiFlow(apiCaptureHar())],
   ["with a page that has no document", () => makeApiFlow(apiCaptureWithPageHar())],
 ] as const;
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe.each(captures)("an API capture %s", (_name, make) => {
   const flow = make();

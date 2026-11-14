@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { animationsSettled } from "./animations";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
@@ -54,10 +55,16 @@ async function totalSteps(page: Page): Promise<number> {
 
 test("bundled report opens over file:// offline without console errors", async ({ page }) => {
   const collected = await open(page, bundleUrl);
+  const html = page.locator("html");
+  const initialTheme = await html.getAttribute("data-theme");
   await page.getByRole("button", { name: "Next →" }).click();
+  await expect(page.getByText(/^Step 2 \/ \d+$/)).toBeVisible();
   await page.getByRole("button", { name: "Toggle cache analysis" }).click();
+  await expect(page.getByRole("region", { name: "Cache analysis details" })).toBeVisible();
   await themeToggle(page).click();
-  await page.waitForTimeout(300);
+  await expect(html).toHaveAttribute("data-theme", initialTheme === "dark" ? "light" : "dark");
+  // Everything the three clicks set off has played out, so any error it raised is in by now.
+  await animationsSettled(page);
   expect(collected.errors).toEqual([]);
 });
 
@@ -328,8 +335,9 @@ for (const scheme of ["light", "dark"] as const) {
       if (cachePanel) {
         await page.getByRole("button", { name: "Toggle cache analysis" }).click();
         await expect(page.getByRole("button", { name: "Toggle cache analysis" })).toBeVisible();
+        await expect(page.getByRole("region", { name: "Cache analysis details" })).toBeVisible();
       }
-      await page.waitForTimeout(500);
+      await animationsSettled(page);
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze();
@@ -354,7 +362,7 @@ for (const scheme of ["light", "dark"] as const) {
     const table = page.getByRole("table", { name: "Hops per host" });
     await expect(table).toBeVisible();
     expect(await table.getByRole("row").count()).toBeGreaterThanOrEqual(2);
-    await page.waitForTimeout(500);
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -392,7 +400,7 @@ for (const scheme of ["light", "dark"] as const) {
       "Good1",
     ]);
     await expect(details.getByText("The document is behind 2 redirects")).toBeVisible();
-    await page.waitForTimeout(500);
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -433,7 +441,7 @@ for (const scheme of ["light", "dark"] as const) {
     await expect(tooltip).toContainText(/^https:\/\/.+\.css/);
     await expect(tooltip).toContainText("Wait");
 
-    await page.waitForTimeout(500);
+    await animationsSettled(page);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();

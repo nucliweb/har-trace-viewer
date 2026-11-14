@@ -1,8 +1,9 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { App } from "../src/App.js";
 import { harJson, makeCompareFlows, makeFile } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 afterEach(() => {
   delete window.__HTV_FLOW__;
@@ -41,6 +42,9 @@ async function compare(a: string, b: string) {
   await screen.findByRole("region", { name: "Comparison" });
   return user;
 }
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("a comparison of loads from different places", () => {
   it("draws the Great Firewall only on the side whose latencies suggest China", async () => {

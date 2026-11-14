@@ -1,12 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { generateFlow, parseHarJson } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { MetricsSummary } from "../src/components/MetricsSummary.js";
 import { harJson, makeFlow } from "./fixtures.js";
 import { makeHar } from "../../core/tests/helpers/synthetic-har";
+import { loadOnDemandModules } from "./lazy.js";
 
 const noop = () => undefined;
 
@@ -26,6 +27,9 @@ const cell = (row: string, column: number) => {
   const tr = screen.getByRole("rowheader", { name: row }).closest("tr")!;
   return within(tr).getAllByRole("cell")[column];
 };
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("MetricsSummary", () => {
   it("renders one column per page with the expected rows", () => {

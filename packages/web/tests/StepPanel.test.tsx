@@ -1,15 +1,19 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { MessagesContext } from "../src/i18n/context.js";
 import { es } from "../src/i18n/es.js";
 import { makeFlow, makeTwoPageFlow } from "./fixtures.js";
+import { loadOnDemandModules } from "./lazy.js";
 
 const flow = makeFlow();
 const total = flow.steps.length;
 const label = (n: number) => screen.getByText(`Step ${n} / ${total}`);
 const tab = (n: number) => screen.getByRole("tab", { name: new RegExp(`^Step ${n}:`) });
+
+// Parts of the app load on demand: load them before the tests use them (see lazy.ts).
+beforeAll(loadOnDemandModules);
 
 describe("keyboard navigation", () => {
   it("moves with ArrowRight and ArrowLeft from the document", async () => {
