@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-14
+
 ### Added
 
 - Keep only the requests that match a waterfall query with `--filter <query>` (`type:js`, `domain:cdn.*`, `status:4xx`, `-is:cached`) in the `csv` and `json` formats. Any other format, or an invalid query, exits with an error.
@@ -294,7 +296,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.10.0...v0.11.0
