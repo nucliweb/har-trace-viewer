@@ -111,6 +111,8 @@
 
   .toolbar {
     gap: var(--space-xs);
+    /* The buttons share one height: a row made taller by the export note leaves them at its top. */
+    align-items: flex-start;
   }
 
   .cacheBtn,

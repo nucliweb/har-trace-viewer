@@ -116,8 +116,32 @@
   }
 }
 
+/* Mobile: the button sits toward the right of a toolbar that wraps. The menu, the note and the
+   failure message hang from its right edge, not its left, so they stay inside the screen; the
+   note wraps at a width that fits, and the row makes room under the button for either text, so
+   it does not cover the buttons of the next row. */
 @media (max-width: 640px) {
   .button {
     min-height: 44px;
+  }
+
+  .menu,
+  .note,
+  .error {
+    left: auto;
+    right: 0;
+  }
+
+  .note {
+    max-width: 11rem;
+    text-align: right;
+  }
+
+  .root:has(.note:not(:empty)) {
+    margin-bottom: calc(2 * 18px + var(--space-xs));
+  }
+
+  .root:has(.error) {
+    margin-bottom: calc(18px + var(--space-xs));
   }
 }
