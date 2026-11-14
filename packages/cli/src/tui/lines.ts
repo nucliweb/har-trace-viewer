@@ -1,5 +1,5 @@
 import stringWidth from "string-width";
-import type { DeltaRating, MetricRating } from "@htv/core";
+import { maxOf, type DeltaRating, type MetricRating } from "@htv/core";
 
 /** A run of text with one style. */
 export interface Segment {
@@ -78,7 +78,7 @@ export function fit(text: string, width: number, options: { pad?: boolean } = {}
  */
 export function table(header: string[], rows: Cell[][], aligns: Align[] = []): Line[] {
   const widths = header.map((title, i) =>
-    Math.max(textWidth(title), ...rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth))
+    maxOf(rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth), textWidth(title))
   );
   const render = (cells: Cell[]): Line =>
     cells.flatMap((cell, i) => {
@@ -102,7 +102,7 @@ export function scrollTable(
   offset: number
 ): { lines: Line[]; offset: number; maxOffset: number } {
   const widths = header.map((title, i) =>
-    Math.max(textWidth(title), ...rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth))
+    maxOf(rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth), textWidth(title))
   );
   const span = (columns: number[]) =>
     columns.reduce((sum, i) => sum + widths[i], 0) + 2 * (columns.length - 1);

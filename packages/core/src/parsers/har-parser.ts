@@ -13,6 +13,7 @@ import type {
   ServerTimingMetric,
 } from "../types.js";
 import { getRootDomain } from "../utils/domain.js";
+import { minOf } from "../utils/extent.js";
 
 // HAR 1.2 makes blocked, dns, connect and ssl optional; exporters such as Playwright leave
 // them out instead of writing -1.
@@ -763,7 +764,7 @@ type NonEmptyPages = [RawHarPage, ...RawHarPage[]];
 // A page whose start is missing or invalid starts with the earliest of its entries.
 function startingWith(page: RawHarPage, entries: RawHarEntry[]): RawHarPage {
   if (isValidDate(page.startedDateTime) || entries.length === 0) return page;
-  const earliest = Math.min(...entries.map(startMs));
+  const earliest = minOf(entries.map(startMs));
   return { ...page, startedDateTime: new Date(earliest).toISOString() };
 }
 
@@ -788,10 +789,16 @@ function readContent(raw: RawHar): { pages: NonEmptyPages; entries: RawHarEntry[
       entries,
     };
   }
+  const byPageref = new Map<string | undefined, RawHarEntry[]>();
+  for (const e of entries) {
+    const group = byPageref.get(e.pageref);
+    if (group) group.push(e);
+    else byPageref.set(e.pageref, [e]);
+  }
   const readPage = (page: RawHarPage) =>
     startingWith(
       { ...page, title: typeof page.title === "string" ? page.title : "" },
-      entries.filter((e) => e.pageref === page.id)
+      byPageref.get(page.id) ?? []
     );
   return { pages: [readPage(firstRawPage), ...otherRawPages.map(readPage)], entries };
 }
@@ -886,7 +893,7 @@ function anchorAtNavigation(page: RawHarPage, entries: RawHarEntry[], source: Ha
   if (!source.playwright) return page;
   const documents = entries.filter((e) => e._resourceType === "document");
   if (documents.length === 0) return page;
-  const navigationStart = Math.min(...documents.map(startMs));
+  const navigationStart = minOf(documents.map(startMs));
   const offset = navigationStart - startMs(page);
   if (offset <= 0) return page;
   const shift = (value: number | undefined) =>
@@ -1000,9 +1007,18 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
   };
   const source = harSource(raw);
 
+  // Group the entries by page once, in capture order, instead of scanning them for every page.
+  const entriesByPage = new Map<string, RawHarEntry[]>();
+  for (const e of entries) {
+    const id = pageIdOf(e);
+    const group = entriesByPage.get(id);
+    if (group) group.push(e);
+    else entriesByPage.set(id, [e]);
+  }
+
   const allPages = new Map<string, ParsedPage>();
   for (const harPage of ordered) {
-    const harPageEntries = entries.filter((e) => pageIdOf(e) === harPage.id);
+    const harPageEntries = entriesByPage.get(harPage.id) ?? [];
     const started = startingWith(harPage, harPageEntries);
     const navigated = anchorAtNavigation(started, harPageEntries, source);
     for (const { page, entries: pageEntries } of splitNavigations(navigated, harPageEntries)) {

@@ -1,6 +1,7 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { networkRequests } from "./network-requests.js";
 import { getHostname } from "../utils/domain.js";
+import { maxOf } from "../utils/extent.js";
 import { formatBytes } from "../utils/format.js";
 import type {
   ConnectionsReport,
@@ -59,7 +60,7 @@ function analyzeHost(host: string, network: HarEntry[]): HostConnections {
     advertisesHttp3: network.some((e) => e.advertisesHttp3 === true),
     staticOnly: network.every((e) => STATIC_TYPES.includes(e.resourceType)),
     cookieBytes: cookies.reduce((sum, bytes) => sum + bytes, 0),
-    maxCookieBytes: Math.max(0, ...cookies),
+    maxCookieBytes: maxOf(cookies, 0),
   };
 }
 
@@ -201,7 +202,9 @@ export function analyzeConnections(har: ParsedHar): ConnectionsReport {
   for (const entry of networkRequests(har)) {
     const host = getHostname(entry.url);
     if (host === null) continue;
-    entries.set(host, [...(entries.get(host) ?? []), entry]);
+    const group = entries.get(host);
+    if (group) group.push(entry);
+    else entries.set(host, [entry]);
   }
   const hosts = [...entries]
     .map(([host, network]) => analyzeHost(host, network))

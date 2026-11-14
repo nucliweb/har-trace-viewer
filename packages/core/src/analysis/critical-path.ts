@@ -1,4 +1,5 @@
 import { getRootDomain } from "../utils/domain.js";
+import { maxOf } from "../utils/extent.js";
 import { formatBytes, formatMs } from "../utils/format.js";
 import {
   documentTiming,
@@ -118,8 +119,11 @@ function findBlocking(
   return { source: "none", blocking: [] };
 }
 
-const uniqueByUrl = <T extends { url: string }>(items: T[]) =>
-  items.filter((item, i) => items.findIndex((other) => other.url === item.url) === i);
+// The first item of each URL, in order.
+function uniqueByUrl<T extends { url: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => !seen.has(item.url) && !!seen.add(item.url));
+}
 
 /**
  * The critical request tree from the document: the blocking requests with the requests that
@@ -135,10 +139,17 @@ function buildChains(
 ): CriticalChain[] {
   const documentUrl = documentRequest.url;
   const allUrls = uniqueByUrl([...har.entries, ...(trace?.requests ?? [])]).map((r) => r.url);
+  // The first HAR entry and trace request of each URL, looked up once instead of per URL.
+  const entryByUrl = new Map<string, HarEntry>();
+  for (const e of har.entries) if (!entryByUrl.has(e.url)) entryByUrl.set(e.url, e);
+  const traceByUrl = new Map<string, TraceRequest>();
+  for (const r of trace?.requests ?? []) if (!traceByUrl.has(r.url)) traceByUrl.set(r.url, r);
   const requests = new Map<string, PageRequest>(
     allUrls.map((url) => [
       url,
-      url === documentUrl ? documentRequest : pageRequest(har, trace, url),
+      url === documentUrl
+        ? documentRequest
+        : describe(entryByUrl.get(url) ?? null, traceByUrl.get(url) ?? null, url),
     ])
   );
 
@@ -183,7 +194,9 @@ function buildChains(
     if (url === documentUrl) continue;
     const request = requests.get(url)!;
     const parent = parentOf(request);
-    children.set(parent, [...(children.get(parent) ?? []), request]);
+    const siblings = children.get(parent);
+    if (siblings) siblings.push(request);
+    else children.set(parent, [request]);
   }
 
   const chains: CriticalChain[] = [];
@@ -288,7 +301,7 @@ export function analyzeRenderBlocking(
     }))
   );
 
-  const lastEnd = Math.max(...resources.map((r) => r.endMs));
+  const lastEnd = maxOf(resources.map((r) => r.endMs));
   const heldMs =
     resources.length === 0 ? 0 : Math.max(0, Math.min(lastEnd, fcpMs ?? lastEnd) - docTiming.endMs);
 
@@ -357,8 +370,8 @@ export function renderBlockingRecommendations(report: RenderBlockingReport): Rec
   }
 
   if (longChains.length > 0) {
-    const longest = Math.max(...longChains.map((c) => c.durationMs));
-    const deepest = Math.max(...longChains.map((c) => c.depth));
+    const longest = maxOf(longChains.map((c) => c.durationMs));
+    const deepest = maxOf(longChains.map((c) => c.depth));
     const severity: ProblemSeverity =
       longest > FCP_POOR_MS
         ? "critical"

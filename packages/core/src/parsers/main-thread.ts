@@ -1,3 +1,4 @@
+import { maxOf } from "../utils/extent.js";
 import type { LongTask, MainThreadProfile, ScriptTime, TaskCategory } from "../types.js";
 
 export interface RawTraceEvent {
@@ -198,7 +199,7 @@ export function profileMainThread(
   const tasks = collectTasks(own, nav.ts);
   if (tasks.length === 0) return null;
 
-  const recordingEndMs = Math.max(...tasks.map((t) => t.startMs + t.durationMs));
+  const recordingEndMs = maxOf(tasks.map((t) => t.startMs + t.durationMs));
   const tbtToMs = firstInputMs ?? recordingEndMs;
   const inWindow = (t: Task) => fcpMs !== null && t.startMs >= fcpMs && t.startMs < tbtToMs;
 

@@ -1,3 +1,5 @@
+import { minOf } from "../utils/extent.js";
+
 // A page's steps follow the real order of events. Each candidate step carries
 // the timestamp of the event it narrates and a rank that breaks ties the way
 // the classic 7-step narrative does (critical → FCP → secondary → LCP → third
@@ -18,5 +20,5 @@ export function sortByTimeline<T>(items: TimedItem<T>[]): T[] {
 // When a group has no resources it keeps its classic place: right after the
 // event that precedes it in the narrative.
 export function firstStart(startTimes: number[], fallback: number): number {
-  return startTimes.length > 0 ? Math.min(...startTimes) : fallback;
+  return startTimes.length > 0 ? minOf(startTimes) : fallback;
 }

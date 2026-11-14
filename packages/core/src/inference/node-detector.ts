@@ -1,5 +1,6 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname } from "../utils/domain.js";
+import { maxOf } from "../utils/extent.js";
 import { tcpConnectMs } from "../utils/timing.js";
 import { detectPop, detectVercelFunctionRegion } from "./pops.js";
 import type {
@@ -111,7 +112,10 @@ function chinaSignals(har: ParsedHar): string[] {
 // only a hint for the user; it never switches the topology on its own.
 export function suggestClientRegion(har: ParsedHar): ClientRegionSuggestion | null {
   const documentDnsMs = pageDocument(har)?.timing.dns ?? 0;
-  const maxConnectMs = Math.max(0, ...har.entries.map((e) => e.timing.connect));
+  const maxConnectMs = maxOf(
+    har.entries.map((e) => e.timing.connect),
+    0
+  );
 
   const latencies: string[] = [];
   if (documentDnsMs >= GFW_DNS_THRESHOLD_MS) {

@@ -6,6 +6,14 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Fixed
+
+- Analyse captures of more than about 100,000 requests, which failed with "Maximum call stack size exceeded".
+
+### Performance
+
+- Read a HAR with many pages by grouping its entries once, and run the connections and render-blocking analyses in linear time. A capture of 150,000 requests in 3 pages takes 11 s instead of 105 s.
+
 ## [0.13.0] - 2026-11-14
 
 ### Changed
