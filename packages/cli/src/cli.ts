@@ -15,6 +15,8 @@ import {
   expandPageFlows,
   listHarPages,
   parsePageSelection,
+  parseResourceQuery,
+  buildWaterfall,
   generateFlow,
   isClientRegion,
   findingsDocument,
@@ -31,7 +33,7 @@ import {
   RUN_METRIC_CHOICES,
 } from "@htv/core";
 import type { ClientRegion, Flow, PageFlow, RedactOptions, RunMetric, RunSpread } from "@htv/core";
-import { readRecording } from "./recording";
+import { readRecording, STDIN, STDIN_NAME } from "./recording";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
 import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
@@ -98,6 +100,8 @@ export interface Args {
   /** Compares the flow (A) with another recording (B). */
   compareWith?: CompareArg;
   listPages?: boolean;
+  /** A request filter (the resource query language): only the matching requests are emitted. */
+  filter?: string;
   region?: ClientRegion; // undefined when --region is absent
   /** B's region in a comparison; undefined when --compare-region is absent. */
   compareRegion?: ClientRegion;
@@ -118,6 +122,15 @@ const TRACE_FILE = /\.json(\.gz)?$/i;
 function parseFormat(value: string | undefined): OutputFormat {
   if (OUTPUT_FORMATS.includes(value as OutputFormat)) return value as OutputFormat;
   throw new Error(`Invalid --format "${value ?? ""}". Valid values: ${OUTPUT_FORMATS.join(", ")}.`);
+}
+
+function parseFilter(value: string | undefined): string {
+  const query = value ?? "";
+  const { problems } = parseResourceQuery(query);
+  if (problems.length > 0) {
+    throw new Error(`Invalid --filter "${query}": ${problems.join("; ")}.`);
+  }
+  return query;
 }
 
 function parseRuns(value: string | undefined): RunsChoice {
@@ -162,6 +175,7 @@ export function parseArgs(argv: string[]): Args {
       select: { type: "string", multiple: true },
       runs: { type: "string", multiple: true },
       "list-pages": { type: "boolean" },
+      filter: { type: "string" },
       compare: { type: "boolean" },
       "compare-with": { type: "string" },
       "compare-trace": { type: "string" },
@@ -188,6 +202,7 @@ export function parseArgs(argv: string[]): Args {
   let format: OutputFormat | undefined;
   let bundle = false;
   let listPages = false;
+  let filter: string | undefined;
   let help = false;
   let version = false;
   let region: ClientRegion | undefined;
@@ -204,11 +219,11 @@ export function parseArgs(argv: string[]): Args {
   };
   // A file given without its flag: a HAR by its extension, a trace by its own.
   const addPositional = (value: string) => {
-    if (HAR_FILE.test(value)) lastPage().har = value;
+    if (value === STDIN || HAR_FILE.test(value)) lastPage().har = value;
     else if (TRACE_FILE.test(value)) lastPage().trace = value;
     else {
       throw new Error(
-        `Unexpected argument "${value}": pass HAR files as .har or .har.gz and traces as .json or .json.gz, or use --har and --trace.`
+        `Unexpected argument "${value}": pass HAR files as .har or .har.gz (or - for stdin) and traces as .json or .json.gz, or use --har and --trace.`
       );
     }
   };
@@ -238,6 +253,9 @@ export function parseArgs(argv: string[]): Args {
         break;
       case "list-pages":
         listPages = true;
+        break;
+      case "filter":
+        filter = parseFilter(value);
         break;
       case "compare":
         compare = true;
@@ -293,6 +311,7 @@ export function parseArgs(argv: string[]): Args {
     bundle,
     ...(format ? { format } : {}),
     ...(listPages ? { listPages } : {}),
+    ...(filter !== undefined ? { filter } : {}),
     ...(compare ? { compare } : {}),
     ...(compareWith ? { compareWith } : {}),
     ...(region ? { region } : {}),
@@ -392,6 +411,13 @@ export function outputTarget(args: Args, isInteractive: boolean): OutputTarget {
       : hasExtension(output, TEXT_EXTENSIONS.csv)
         ? "csv"
         : undefined);
+  const effective = format ?? (isJsonPath(output) ? "json" : output ? "html" : undefined);
+  if (args.filter !== undefined && effective !== "csv" && effective !== "json") {
+    const given = effective ?? (checkOptions(args) ? "a check result" : "tui");
+    throw new Error(
+      `--filter works with --format csv and json only (the requests it keeps); the output here is ${given}.`
+    );
+  }
   if (format === "tui" && output) {
     throw new Error("--format tui shows the report in the terminal: drop --output");
   }
@@ -428,8 +454,11 @@ export function outputTarget(args: Args, isInteractive: boolean): OutputTarget {
   }
   if (checks) return { kind: "check" };
   if (!isInteractive) {
+    const piped = args.pages.some((p) => p.har === STDIN)
+      ? " A HAR read from stdin cannot open it."
+      : "";
     throw new Error(
-      "The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json."
+      `The terminal report needs an interactive terminal: pass -o report.html, -o report.json or --format json.${piped}`
     );
   }
   return { kind: "tui" };
@@ -505,6 +534,20 @@ Input:
                       run, N keeps run N. Default: median without --select, all
                       with it; with both, the median of the selected pages.
   --list-pages        Print the pages (id, title, entries) of each --har and exit.
+                      With --format json, print { files: [{ file, pages: [{ id,
+                      title, url, entries }] }] } instead.
+  -                   As the HAR (htv - --format csv, or --har -): read it from
+                      stdin, gzipped or not, e.g. cat page.har | htv - --format csv.
+                      The terminal report needs a terminal, so pass --format or -o.
+                      A HAR only, once per run.
+  --filter <query>    With --format csv or json: keep only the requests matching the
+                      query, the language of the waterfall filter: free text matches
+                      the URL; type:js, domain:cdn.*, status:4xx, method:post,
+                      larger-than:100k, party:third, is:render-blocking...; a leading -
+                      negates (write --filter=-type:image, as a value cannot start
+                      with a dash otherwise). In JSON it narrows har.entries of each
+                      page; the metrics and findings still describe the whole capture.
+                      Any other format is an error; an invalid query exits 1.
 
 Comparison:
   --compare           Compare the two pages of the flow instead of chaining them:
@@ -578,7 +621,23 @@ const missingHar = (page: PageArg) =>
     ? `${page.trace} is a Chrome trace: it needs the HAR of the same recording, e.g. htv page.har ${page.trace}`
     : `Missing --har for page "${page.name}"`;
 
+/** Where the standard input is named as a trace, or more than once: it can be read once. */
+function stdinError(args: Args): string | null {
+  const traces = [...args.pages, ...(args.compareWith ? [args.compareWith] : [])].map(
+    (p) => p.trace
+  );
+  if (traces.includes(STDIN)) return "Reading stdin (-) works for a HAR only, not for a trace";
+  const hars = [...args.pages.map((p) => p.har), args.compareWith?.har];
+  if (hars.filter((har) => har === STDIN).length > 1) return "stdin (-) can be read once";
+  return null;
+}
+
 export function validateArgs(args: Args): string | null {
+  const stdin = stdinError(args);
+  if (stdin) return stdin;
+  if (args.filter !== undefined && args.listPages) {
+    return "--filter narrows the requests of --format csv and json: drop it with --list-pages";
+  }
   if (args.listPages) {
     if (args.pages.length === 0) return "";
     const missing = args.pages.find((p) => !p.har);
@@ -598,17 +657,22 @@ export function validateArgs(args: Args): string | null {
   return null;
 }
 
-/** Describes the pages of each --har: id, entries and title. */
+/**
+ * Describes the pages of each --har: id, entries and title; with --format json, as
+ * `{ files: [{ file, pages: [{ id, title, url, entries }] }] }`.
+ */
 export async function listPagesReport(args: Args): Promise<string> {
   const lines: string[] = [];
+  const files: { file: string; pages: ReturnType<typeof listHarPages> }[] = [];
   for (const p of args.compareWith?.har ? [...args.pages, args.compareWith] : args.pages) {
     const pages = listHarPages(await readRecording("har", p.har));
+    files.push({ file: p.har, pages });
     lines.push(`${p.har} (${pages.length} page${pages.length === 1 ? "" : "s"})`);
     for (const page of pages) {
       lines.push(`  ${page.id}  ${page.entries} entries  ${page.title || page.url}`);
     }
   }
-  return lines.join("\n");
+  return args.format === "json" ? JSON.stringify({ files }, null, 2) : lines.join("\n");
 }
 
 /**
@@ -622,7 +686,7 @@ async function readPageFlows(
 ): Promise<PageFlow[]> {
   const har = await readRecording("har", p.har);
   const select = p.select !== undefined ? parsePageSelection(har, p.select) : undefined;
-  const fileName = basename(p.har).replace(/\.har(\.gz)?$/i, "");
+  const fileName = (p.har === STDIN ? STDIN_NAME : basename(p.har)).replace(/\.har(\.gz)?$/i, "");
   const pages = expandPageFlows({
     name: "name" in p ? p.name : har.length === 1 ? fileName : undefined,
     har,
@@ -792,7 +856,35 @@ export async function buildReport(args: Args): Promise<Report> {
 
   noteSuggestedRegion(flow, args.region, compare ? "A" : undefined);
   if (compare) noteSuggestedRegion(compare, args.compareRegion, "B");
+  if (args.filter !== undefined) {
+    const kept = [flow, ...(compare ? [compare] : [])].map((f) =>
+      keepMatchingRequests(f, args.filter!)
+    );
+    const total = kept.reduce((sum, k) => sum + k.total, 0);
+    const matching = kept.reduce((sum, k) => sum + k.matching, 0);
+    console.error(
+      `Note: --filter kept ${matching} of ${total} request${total === 1 ? "" : "s"}: "${args.filter}".`
+    );
+  }
   return compare ? { flow, compare } : { flow };
+}
+
+/**
+ * Narrows each page's requests (`har.entries`) of the flow, in place, to those the resource
+ * query matches. The metrics, findings and diagrams stay those of the whole capture.
+ */
+function keepMatchingRequests(flow: Flow, query: string): { matching: number; total: number } {
+  let matching = 0;
+  let total = 0;
+  flow.pages = flow.pages.map((page) => {
+    const rows = buildWaterfall(page.har, undefined, { filter: { search: query } }).rows;
+    const keep = new Set(rows.map((row) => row.entryIndex));
+    const entries = page.har.entries.filter((_, i) => keep.has(i));
+    matching += entries.length;
+    total += page.har.entries.length;
+    return { ...page, har: { ...page.har, entries } };
+  });
+  return { matching, total };
 }
 
 /**

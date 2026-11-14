@@ -6,6 +6,12 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Keep only the requests that match a waterfall query with `--filter <query>` (`type:js`, `domain:cdn.*`, `status:4xx`, `-is:cached`) in the `csv` and `json` formats. Any other format, or an invalid query, exits with an error.
+- Read the HAR from stdin when the input is `-` (`cat page.har | htv - --format csv`), gzipped or not.
+- Print the pages of each HAR as JSON with `--list-pages --format json`.
+
 ### Fixed
 
 - Analyse captures of more than about 100,000 requests, which failed with "Maximum call stack size exceeded".

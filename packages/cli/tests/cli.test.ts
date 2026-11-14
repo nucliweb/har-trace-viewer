@@ -171,7 +171,7 @@ describe("parseArgs", () => {
 
   it("rejects a positional argument that is neither a HAR nor a trace", () => {
     expect(() => parseArgs(["stray"])).toThrow(
-      'Unexpected argument "stray": pass HAR files as .har or .har.gz and traces as .json or .json.gz, or use --har and --trace.'
+      'Unexpected argument "stray": pass HAR files as .har or .har.gz (or - for stdin) and traces as .json or .json.gz, or use --har and --trace.'
     );
   });
 
