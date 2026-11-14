@@ -60,7 +60,11 @@ const { metafile } = await build({
   },
   legalComments: "eof",
   metafile: true,
-  outfile: join(dist, "index.js"),
+  // The TUI is a dynamic import, so splitting emits it (with Ink and React) as its own chunk next
+  // to the entry; the non-interactive commands never load it. dist is inside the package files.
+  splitting: true,
+  outdir: dist,
+  chunkNames: "tui-[hash]",
   logLevel: "info",
 });
 

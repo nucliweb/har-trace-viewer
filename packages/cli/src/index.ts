@@ -18,7 +18,6 @@ import {
 import { formatChecks, runChecks } from "./budget";
 import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
 import type { RedactArgs } from "./redact";
-import { runTui } from "./tui/run.js";
 import type { Args } from "./cli";
 
 async function redactCommand(argv: string[]) {
@@ -106,9 +105,12 @@ async function main() {
     case "html":
       console.log(`Report generated: ${writeHtmlReport(report, target)}`);
       break;
-    case "tui":
+    case "tui": {
+      // Loaded here alone: Ink and React cost startup time the other formats should not pay
+      const { runTui } = await import("./tui/run.js");
       await runTui(report, __HTV_VERSION__);
       return;
+    }
     case "check":
       break;
   }
