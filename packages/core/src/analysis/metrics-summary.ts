@@ -73,6 +73,31 @@ function cdnHitRatio(own: CacheReport["ownResources"] | undefined): number | nul
   return (own.network ?? own.total) > 0 ? own.cdnHitRatio : null;
 }
 
+const PAGE_LOAD_METRICS = new Set([
+  "ttfb",
+  "serverWait",
+  "fcp",
+  "lcp",
+  "cls",
+  "inp",
+  "tbt",
+  "dcl",
+  "onLoad",
+]);
+
+/**
+ * Whether a summary lists a metric. A page without an HTML document (an API capture) has no
+ * page load, so it lists a page-load metric only when the capture carries a value for it; a
+ * page with a document lists them all, and the ones no trace measured read n/a.
+ */
+export function listsMetric(
+  key: string,
+  value: number | null | undefined,
+  page: Pick<PageFlow, "har">
+): boolean {
+  return pageDocument(page.har) !== null || !PAGE_LOAD_METRICS.has(key) || (value ?? null) !== null;
+}
+
 /** The summary of one page of a flow, `index` being its position in `flow.pages`. */
 export function summarizePageMetrics(
   flow: Flow,

@@ -128,6 +128,15 @@ describe("API capture without an HTML document", () => {
     expect(mermaidReport(flow)).not.toMatch(/TTFB/);
   });
 
+  it("lists no page-load metric in the Markdown report, only what the capture has", () => {
+    const report = markdownReport(apiFlow());
+
+    expect(report).toMatch(/^\| Requests \| \d+ \|/m);
+    for (const metric of ["TTFB", "Server wait", "FCP", "LCP", "CLS", "INP", "TBT"]) {
+      expect(report, metric).not.toMatch(new RegExp(`^\\| ${metric}\\b`, "m"));
+    }
+  });
+
   it("writes a findings document that the schema accepts", () => {
     const meta = { htvVersion: "9.9.9", generatedAt: "2026-11-01T00:00:00.000Z", schema: "s.json" };
     const doc = findingsDocument([{ flow: apiFlow() }], meta);

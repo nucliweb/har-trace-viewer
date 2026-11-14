@@ -236,7 +236,19 @@ export function filterLine(state: FilterState, status: string, hint: string): Li
   ];
 }
 
-function legendLines(marks: PlacedMark[]): Line[] {
+/** What the flags before a request's name mean, for the flags the page can show. */
+export function flagLegend(flags: { lcp: boolean; blocking: boolean }): Segment[] {
+  return [
+    ...(flags.lcp
+      ? [seg("L", { color: "yellow", bold: true }), seg(" LCP resource  ", { dim: true })]
+      : []),
+    ...(flags.blocking
+      ? [seg("B", { color: "red", bold: true }), seg(" render-blocking", { dim: true })]
+      : []),
+  ];
+}
+
+function legendLines(marks: PlacedMark[], flags: { lcp: boolean; blocking: boolean }): Line[] {
   const phases: Line = [
     ...[
       [BLOCKED, "blocked"],
@@ -254,12 +266,9 @@ function legendLines(marks: PlacedMark[]): Line[] {
       seg(letter, { color, bold: true }),
       seg(` ${MARKS.find((m) => m.letter === letter)!.name}  `, { dim: true }),
     ]),
-    seg("L", { color: "yellow", bold: true }),
-    seg(" LCP resource  ", { dim: true }),
-    seg("B", { color: "red", bold: true }),
-    seg(" render-blocking", { dim: true }),
+    ...flagLegend(flags),
   ];
-  return [phases, named];
+  return named.length > 0 ? [phases, named] : [phases];
 }
 
 /**
@@ -268,17 +277,20 @@ function legendLines(marks: PlacedMark[]): Line[] {
  * and a bar of its phases scaled to the panel, on an axis that spans the whole recording or
  * ends at the page load (a `›` points at the requests after it). `rows` are the ones the filter
  * kept and `state.cursor` the index of the one under the cursor; the first `pinned` lines stay
- * in view while the rest scroll.
+ * in view while the rest scroll. The legend names the L and B flags only for a page that
+ * `hasDocument` (the default), and L only with an LCP from a trace.
  */
 export function waterfallRegion(
   waterfall: Waterfall,
   rows: WaterfallRow[],
   state: WaterfallViewState,
-  width: number
+  width: number,
+  options: { hasDocument?: boolean } = {}
 ): { lines: Line[]; pinned: number } {
   const layout = layoutFor(width - 4, waterfallAxisMs(waterfall, state.axis));
   const marks = placeMarks(waterfall.marks, layout);
   const total = waterfall.rows.length;
+  const hasDocument = options.hasDocument ?? true;
   const title =
     rows.length === total
       ? `Waterfall · ${total} requests`
@@ -295,7 +307,11 @@ export function waterfallRegion(
       ? [[seg("No request matches", { dim: true })]]
       : rows.map((row, i) => rowLine(row, layout, marks, i === state.cursor))),
     BLANK,
-    ...legendLines(marks),
+    ...legendLines(marks, {
+      // A page without a document holds no first paint, and only a trace names the LCP resource.
+      lcp: hasDocument && waterfall.marks.lcp !== null,
+      blocking: hasDocument,
+    }),
   ];
   const cursor = state.cursor === undefined ? undefined : HEAD_ROWS + state.cursor;
   return { lines: panel(title, body, width, { cursor }), pinned: PINNED };

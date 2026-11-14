@@ -7,7 +7,7 @@ import { findingsRegion } from "../src/tui/findings-view";
 import { helpRegion } from "../src/tui/help-view";
 import { requestRegion } from "../src/tui/request-view";
 import { resourcesRegion } from "../src/tui/resources-view";
-import { cacheRegion, hostsRegion } from "../src/tui/views";
+import { cacheRegion, hostsRegion, overviewRegion } from "../src/tui/views";
 import { waterfallRegion } from "../src/tui/waterfall-view";
 import {
   criticalCss,
@@ -248,6 +248,166 @@ describe("the help", () => {
     expect(all).toMatch(/e\s+all the evidence of the findings/);
     expect(all).toMatch(/< >\s+scroll the columns/);
     expect(all).toMatch(/q, Ctrl\+C\s+quit; q closes the help and the details first/);
+  });
+});
+
+// An API capture: JSON only, no page timings, so no entry is the page's HTML document.
+function apiCapture() {
+  const api = (path: string, startTime: number) =>
+    makeEntry({
+      url: `https://api.example.cn/${path}`,
+      startTime,
+      mimeType: "application/json",
+      resourceType: "fetch",
+    });
+  const primary = api("v1/session", 0);
+  const base = makeHar([]);
+  return {
+    ...base,
+    pages: [{ id: "p", title: "API", onContentLoad: null, onLoad: null }],
+    entries: [primary, api("v1/items", 300)],
+    documentEntry: primary,
+  };
+}
+
+describe("the waterfall legend", () => {
+  const legend = (har: ReturnType<typeof makeHar>, trace?: ReturnType<typeof makeTrace>) => {
+    const waterfall = buildWaterfall(har, trace);
+    const hasDocument = har.documentEntry.isDocument;
+    return text(
+      waterfallRegion(waterfall, waterfall.rows, { ...listState, axis: "end" }, 120, {
+        hasDocument,
+      }).lines
+    );
+  };
+
+  it("names the LCP resource and render-blocking flags for a page with a document and a trace", () => {
+    const { har, trace } = page();
+
+    expect(legend(har, trace)).toMatch(/L LCP resource\s+B render-blocking/);
+  });
+
+  it("leaves the LCP flag out without a trace, since only a trace names an LCP resource", () => {
+    const shown = legend(makeHar([criticalCss(100)]));
+
+    expect(shown).not.toContain("LCP resource");
+    expect(shown).toContain("B render-blocking");
+  });
+
+  it("names neither flag for a page without an HTML document", () => {
+    const shown = legend(apiCapture(), makeTrace(150, 400));
+
+    expect(shown).not.toContain("LCP resource");
+    expect(shown).not.toContain("render-blocking");
+    expect(shown).toContain("request/wait");
+  });
+
+  it("does the same in the resources table", () => {
+    const { waterfall } = page();
+    const state = { ...listState, sort: { key: "start" as const, direction: "asc" as const } };
+    const shown = (options: { hasDocument?: boolean; hasLcp?: boolean }) =>
+      text(resourcesRegion(waterfall.rows.length, waterfall.rows, state, 100, options).lines);
+
+    expect(shown({})).toMatch(/L LCP resource\s+B render-blocking/);
+    expect(shown({ hasLcp: false })).not.toContain("LCP resource");
+    expect(shown({ hasLcp: false })).toContain("B render-blocking");
+    expect(shown({ hasDocument: false })).not.toContain("LCP resource");
+    expect(shown({ hasDocument: false })).not.toContain("render-blocking");
+  });
+});
+
+describe("the overview of a page without an HTML document", () => {
+  const rows = (flow: Parameters<typeof overviewRegion>[0]) => text(overviewRegion(flow, 0, 100));
+
+  it("lists no metric that needs a document, and keeps the ones that do not", () => {
+    const shown = rows(generateFlow([{ name: "API", har: apiCapture() }]));
+
+    for (const label of ["TTFB", "Server wait", "FCP", "LCP", "CLS", "INP", "TBT", "DCL", "onLoad"])
+      expect(shown).not.toContain(label);
+    expect(shown).not.toContain("n/a");
+    expect(shown).toMatch(/Requests\s+2/);
+    expect(shown).toContain("Transfer");
+  });
+
+  it("still shows a metric the capture does carry", () => {
+    const har = {
+      ...apiCapture(),
+      pages: [{ id: "p", title: "API", onContentLoad: 90, onLoad: 120 }],
+    };
+    const shown = rows(generateFlow([{ name: "API", har }]));
+
+    expect(shown).toMatch(/DCL\s+90 ms/);
+    expect(shown).toMatch(/onLoad\s+120 ms/);
+    expect(shown).not.toContain("TTFB");
+  });
+
+  it("keeps n/a for the metrics a page with a document has no trace for", () => {
+    const shown = rows(generateFlow([{ name: "Page", har: makeHar([criticalCss(100)]) }]));
+
+    for (const label of ["FCP", "LCP", "CLS", "INP", "TBT"])
+      expect(shown).toMatch(new RegExp(`${label}\\s+n/a`));
+    expect(shown).toMatch(/TTFB \(from navigation\)\s+81 ms/);
+  });
+});
+
+describe("the request names", () => {
+  it("shows a percent-encoded CJK name as text in the waterfall and the resources", () => {
+    const har = makeHar([
+      makeEntry({ url: "https://example.cn/%E9%9D%99%E6%80%81/%E6%A0%B7%E5%BC%8F%E8%A1%A8.css" }),
+    ]);
+    const waterfall = buildWaterfall(har);
+    const wf = text(
+      waterfallRegion(waterfall, waterfall.rows, { ...listState, axis: "end" }, 100).lines
+    );
+    const res = text(
+      resourcesRegion(
+        waterfall.rows.length,
+        waterfall.rows,
+        { ...listState, sort: { key: "start", direction: "asc" } },
+        100
+      ).lines
+    );
+
+    expect(wf).toContain("样式表.css");
+    expect(res).toContain("样式表.css");
+    expect(wf + res).not.toContain("%E6");
+  });
+
+  it("keeps the full URL of the detail exactly as recorded", () => {
+    const url = "https://example.cn/%E9%9D%99/%E6%A0%B7%E5%BC%8F%E8%A1%A8.css?a=%2F";
+    const har = makeHar([makeEntry({ url })]);
+    const row = buildWaterfall(har).rows[1];
+    const shown = requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 2 }, 120)
+      .map(lineText)
+      .map((l) => l.slice(2, -2).trimEnd())
+      .join("");
+
+    expect(shown).toContain(url);
+  });
+});
+
+describe("the timing phases of a request", () => {
+  const phases = (receive: number) => {
+    const har = makeHar([
+      makeEntry({
+        timing: { dns: 0, connect: 0, ssl: 0, send: 1, wait: 40, receive, blocked: 0 },
+      }),
+    ]);
+    const row = buildWaterfall(har).rows[1];
+    return requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 2 }, 100);
+  };
+
+  it("reads a phase under a millisecond as <1 ms and still draws its cell", () => {
+    const receive = lineText(lineWith(phases(0.3), "Receive "));
+
+    expect(receive).toMatch(/Receive\s+<1 ms\s+▓/);
+  });
+
+  it("draws no cell for a phase that took no time", () => {
+    const receive = lineText(lineWith(phases(0), "Receive "));
+
+    expect(receive).toMatch(/Receive\s+0 ms/);
+    expect(receive).not.toContain("▓");
   });
 });
 

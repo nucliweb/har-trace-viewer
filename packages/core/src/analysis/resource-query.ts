@@ -372,7 +372,10 @@ const hasFlag = (row: WaterfallRow, flag: RequestFlag): boolean => {
 function matchesTerm(row: WaterfallRow, term: ResourceQueryTerm): boolean {
   switch (term.kind) {
     case "text":
-      return row.url.toLowerCase().includes(term.value);
+      return (
+        row.url.toLowerCase().includes(term.value) ||
+        row.shortName.toLowerCase().includes(term.value)
+      );
     case "host":
       return term.pattern.test(row.host.toLowerCase());
     case "status":

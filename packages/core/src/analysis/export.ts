@@ -18,6 +18,7 @@ import { analyzeThirdParties } from "./third-parties.js";
 import { THIRD_PARTY_CATEGORY_LABEL } from "./third-party-entities.js";
 import {
   rateMetric,
+  listsMetric,
   summarizePageMetrics,
   TTFB_LABEL,
   SERVER_WAIT_LABEL,
@@ -187,11 +188,11 @@ const spreadOf = (spread: RunSpread | undefined, key: ComparedMetric): MetricSpr
  * The page's metrics. For the median run of several, each value is the page's own (the same the
  * findings and the comparison use) followed by the min–max over the runs.
  */
-function metricsTable(m: PageMetricsSummary, spread?: RunSpread): string[] {
+function metricsTable(m: PageMetricsSummary, page: PageFlow, spread?: RunSpread): string[] {
   const runs = Math.max(0, ...METRIC_ROWS.map((r) => spreadOf(spread, r.key)?.runs ?? 0));
   return table(
     ["Metric", runs > 1 ? `Value (min–max of ${runs} runs)` : "Value", "Rating"],
-    METRIC_ROWS.map((r) => {
+    METRIC_ROWS.filter((r) => listsMetric(r.key, r.value(m), page)).map((r) => {
       const s = spreadOf(spread, r.key);
       const value = r.value(m) ?? null;
       const rating = rateMetric(r.key, value);
@@ -343,7 +344,7 @@ function pageSection({ flow, side }: Side, page: PageFlow, index: number): strin
     "",
     "### Metrics",
     "",
-    ...metricsTable(summary, flow.pageAnalyses[index]?.runSpread),
+    ...metricsTable(summary, page, flow.pageAnalyses[index]?.runSpread),
     "",
     "### Findings",
     "",

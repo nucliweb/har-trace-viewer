@@ -253,8 +253,13 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       cursor: cursorIndex >= 0 ? cursorIndex : undefined,
     };
     return current === "Resources"
-      ? resourcesRegion(waterfall.rows.length, listRows, { ...state, sort }, width)
-      : waterfallRegion(waterfall, listRows, { ...state, axis }, width);
+      ? resourcesRegion(waterfall.rows.length, listRows, { ...state, sort }, width, {
+          hasDocument: pageDocument(shownPage.har) !== null,
+          hasLcp: waterfall.marks.lcp !== null,
+        })
+      : waterfallRegion(waterfall, listRows, { ...state, axis }, width, {
+          hasDocument: pageDocument(shownPage.har) !== null,
+        });
   }, [
     current,
     waterfall,
@@ -267,6 +272,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     axis,
     sort,
     width,
+    shownPage,
   ]);
 
   const hostsView = useMemo((): ColumnsRegion | null => {

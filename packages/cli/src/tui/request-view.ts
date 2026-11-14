@@ -118,9 +118,11 @@ function phaseLines(row: WaterfallRow, width: number): Line[] {
     let to = total > 0 ? Math.round(((elapsed + ms) / total) * bar) : 0;
     if (ms > 0 && to === from) to = Math.min(bar, from + 1);
     elapsed += ms;
+    // A phase that rounds to 0 ms still draws its cell, so its text says that it is not nothing.
+    const shown = ms > 0 && Math.round(ms) === 0 ? "<1 ms" : formatMs(ms);
     return [
       head,
-      seg(formatMs(ms).padStart(PHASE_MS)),
+      seg(shown.padStart(PHASE_MS)),
       seg(`  ${" ".repeat(Math.max(0, Math.min(from, bar - 1)))}`),
       seg(style.char.repeat(Math.max(0, to - from)), { color: style.color }),
     ];

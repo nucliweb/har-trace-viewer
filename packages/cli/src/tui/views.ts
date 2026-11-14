@@ -17,6 +17,7 @@ import {
   getStepInferredCacheHits,
   getStepResources,
   pct,
+  listsMetric,
   protocolLabel,
   rateDelta,
   rateMetric,
@@ -182,7 +183,11 @@ function mainThreadPanel(report: MainThreadReport, width: number): Line[] {
  */
 export function overviewRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const summary = summarizeFlowMetrics(flow)[pageIndex];
-  const rows = COMPARED_METRICS.map((metric) => {
+  const page = flow.pages[pageIndex];
+  const shown = COMPARED_METRICS.filter(
+    (metric) => !page || listsMetric(metric.key, metric.value(summary), page)
+  );
+  const rows = shown.map((metric) => {
     const value = metric.value(summary) ?? null;
     const style =
       value === null ? { dim: true } : { color: RATING_COLOR[rateMetric(metric.key, value)] };

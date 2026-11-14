@@ -964,6 +964,58 @@ describe("TuiApp — the request cursor and its details", () => {
     expect(cursorOn(lastFrame()!)).toBe("example.com");
   });
 
+  it("puts the cursor back on the first request when the page of a flow changes", async () => {
+    const second = makeHar([makeEntry({ url: "https://shop.example.com/cart.css" })]);
+    second.documentEntry.url = "https://shop.example.com/cart";
+    const flow = generateFlow([
+      { name: "Home", har: makeHar([criticalCss(100)]) },
+      { name: "Cart", har: second },
+    ]);
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={flow} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "2", KEYS.down);
+    expect(lines(lastFrame()!).find((l) => l.startsWith("│▸"))).toMatch(/critical-100\.css/);
+
+    await press(stdin, "p");
+    expect(lastFrame()).toContain("Page 2 / 2 · Cart");
+    expect(lines(lastFrame()!).find((l) => l.startsWith("│▸"))).toMatch(/^│▸\s+cart\s+doc/);
+  });
+
+  it("opens the details of the side of a comparison shown, and resets the cursor when it changes", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={100} />
+    );
+    await press(stdin, "2", "b", KEYS.down, KEYS.enter);
+    expect(lastFrame()).toContain("Request 2 of 3");
+    expect(lastFrame()).toContain("Served from the browser's disk cache");
+
+    await press(stdin, ESC, "a");
+    expect(lastFrame()).toContain("Waterfall · A First view");
+    expect(cursorOn(lastFrame()!)).toBe("example.com");
+    await press(stdin, KEYS.enter);
+    expect(lastFrame()).toContain("Request 1 of 5");
+    expect(lastFrame()).not.toContain("disk cache");
+  });
+
+  it("scrolls the columns of a comparison's tables with > and <", async () => {
+    const { lastFrame, stdin } = render(
+      <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={40} columns={80} />
+    );
+    await press(stdin, "6");
+    expect(statusOf(lastFrame()!)).toContain("< > columns");
+    const first = lastFrame();
+    expect(first).toMatch(/Host\s+/);
+    expect(first).toMatch(/more column/);
+
+    await press(stdin, ">");
+    expect(lastFrame()).not.toBe(first);
+    expect(lastFrame()).toMatch(/◂ \d+ more column/);
+
+    await press(stdin, "<");
+    expect(lastFrame()).toBe(first);
+  });
+
   it("expands the evidence of every finding with e and folds it again", async () => {
     const missing = [1, 2, 3, 4, 5].map((n) =>
       makeEntry({ url: `https://example.com/missing-${n}.js`, status: 404, transferSize: 100 * n })

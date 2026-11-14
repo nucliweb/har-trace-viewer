@@ -2,7 +2,7 @@ import { formatBytes, formatMs } from "@htv/core";
 import type { ResourceSort, ResourceSortKey, WaterfallParty, WaterfallRow } from "@htv/core";
 import { BLANK, fit, panel, seg, table } from "./lines.js";
 import type { Line } from "./lines.js";
-import { TYPE_LABEL, filterLine } from "./waterfall-view.js";
+import { TYPE_LABEL, filterLine, flagLegend } from "./waterfall-view.js";
 import type { FilterState } from "./waterfall-view.js";
 
 /** What the resources table shows: the filter, the party, the sort and the row under the cursor. */
@@ -86,14 +86,21 @@ function rowCells(row: WaterfallRow, nameWidth: number) {
  * TTFB, time and start, with `L` before the LCP resource and `B` before the render-blocking
  * requests. `rows` are the ones the filter kept, in the order of the sort, and `state.cursor`
  * the index of the one under the cursor, drawn inverted; the first `pinned` lines stay in view
- * while the rest scroll.
+ * while the rest scroll. As in the waterfall, the flags are explained only for a page that
+ * `hasDocument` (the default), and L only when it `hasLcp` (the default).
  */
 export function resourcesRegion(
   total: number,
   rows: WaterfallRow[],
   state: ResourcesViewState,
-  width: number
+  width: number,
+  options: { hasDocument?: boolean; hasLcp?: boolean } = {}
 ): { lines: Line[]; pinned: number } {
+  const hasDocument = options.hasDocument ?? true;
+  const legend = flagLegend({
+    lcp: hasDocument && (options.hasLcp ?? true),
+    blocking: hasDocument,
+  });
   const nameWidth = Math.min(MAX_NAME, Math.max(MIN_NAME, width - 4 - OTHER_COLUMNS));
   const title =
     rows.length === total
@@ -127,13 +134,7 @@ export function resourcesRegion(
       i === (state.cursor ?? -1) + 1 ? line.map((s) => ({ ...s, inverse: true })) : line
     ),
     ...(rows.length === 0 ? [[seg("No request matches", { dim: true })]] : []),
-    BLANK,
-    [
-      seg("L", { color: "yellow", bold: true }),
-      seg(" LCP resource  ", { dim: true }),
-      seg("B", { color: "red", bold: true }),
-      seg(" render-blocking", { dim: true }),
-    ],
+    ...(legend.length > 0 ? [BLANK, legend] : []),
   ];
   const cursor = state.cursor === undefined ? undefined : PINNED - 1 + state.cursor;
   return { lines: panel(title, body, width, { cursor }), pinned: PINNED };

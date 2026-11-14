@@ -120,19 +120,73 @@ export function fileName(url: string): string {
 
 const MAX_URL_LABEL = 36;
 
+// What must not reach a terminal or reorder a label: controls, format characters (bidi
+// overrides, zero-width marks), line and paragraph separators, private use.
+const UNSAFE_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Co}]/u;
+const ESCAPES = /(?:%[0-9A-Fa-f]{2})+/g;
+const strict = new TextDecoder("utf-8", { fatal: true });
+
+const sequenceLength = (lead: number): number =>
+  lead >= 0xf0 ? 4 : lead >= 0xe0 ? 3 : lead >= 0xc2 ? 2 : 0;
+
 /**
- * Short label for a resource URL: the last path segment plus the query string,
- * truncated to 36 characters with an ellipsis. Falls back to the hostname for a bare
- * origin and to the raw (truncated) string when the URL cannot be parsed.
+ * Turns the percent-escaped non-ASCII characters of a label into text. ASCII escapes (%2F, %3F,
+ * %23, %20, ...) stay, since decoding them could change what the path says; so do invalid UTF-8,
+ * malformed escapes and the characters in UNSAFE_CHAR.
+ */
+function decodeLabel(label: string): string {
+  return label.replace(ESCAPES, (run) => {
+    const bytes = run
+      .slice(1)
+      .split("%")
+      .map((hex) => parseInt(hex, 16));
+    let out = "";
+    let i = 0;
+    while (i < bytes.length) {
+      const length = sequenceLength(bytes[i] ?? 0);
+      const escape = (count: number) =>
+        bytes
+          .slice(i, i + count)
+          .map((b) => `%${b.toString(16).toUpperCase().padStart(2, "0")}`)
+          .join("");
+      let char: string | null = null;
+      if (length > 0 && i + length <= bytes.length) {
+        try {
+          char = strict.decode(Uint8Array.from(bytes.slice(i, i + length)));
+        } catch {
+          char = null;
+        }
+      }
+      if (char === null || UNSAFE_CHAR.test(char)) {
+        const count = char === null ? 1 : length;
+        out += escape(count);
+        i += count;
+      } else {
+        out += char;
+        i += length;
+      }
+    }
+    return out;
+  });
+}
+
+/**
+ * Short label for a resource URL: the last path segment plus the query string, with the
+ * percent-escaped non-ASCII characters shown as text, truncated to 36 characters with an
+ * ellipsis. Falls back to the hostname for a bare origin and to the raw (truncated) string when
+ * the URL cannot be parsed.
  */
 export function shortUrl(url: string): string {
   let label: string;
   try {
     const { pathname, search, hostname } = new URL(url);
     const segment = pathname.split("/").pop() || pathname;
-    label = segment && segment !== "/" ? `${segment}${search}` : hostname;
+    label = segment && segment !== "/" ? decodeLabel(`${segment}${search}`) : hostname;
   } catch {
     label = url;
   }
-  return label.length > MAX_URL_LABEL ? `${label.slice(0, MAX_URL_LABEL - 2)}…` : label;
+  if (label.length <= MAX_URL_LABEL) return label;
+  const end = MAX_URL_LABEL - 2;
+  const cut = /[\uDC00-\uDFFF]/.test(label[end] ?? "") ? end - 1 : end;
+  return `${label.slice(0, cut)}…`;
 }
