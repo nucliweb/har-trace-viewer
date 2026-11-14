@@ -7,11 +7,12 @@
     "dev": "vite",
     "build": "npm run typecheck && vite build",
     "build:site": "npm run typecheck && vite build --mode site",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p ../../e2e/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "preview": "vite preview",
     "demo:build": "node scripts/build-demo.mjs",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "typecheck:e2e": "tsc --noEmit -p ../../e2e/tsconfig.json"
   },
   "dependencies": {
     "@htv/core": "*",
