@@ -51,7 +51,7 @@ describe("generation errors", () => {
 
     await user.click(await screen.findByRole("button", { name: /generate diagram/i }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(en.errors.generate);
+    expect(await screen.findByRole("alert")).toHaveTextContent(en.errors.generate);
     expect(screen.getByText("Build your flow")).toBeInTheDocument();
   });
 
@@ -61,13 +61,13 @@ describe("generation errors", () => {
     await loadHar(user);
     analysis.fail = true;
     await user.click(await screen.findByRole("button", { name: /generate diagram/i }));
-    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
 
     analysis.fail = false;
     await user.click(screen.getByRole("button", { name: /generate diagram/i }));
 
+    expect(await screen.findByRole("region", { name: /diagram|flow/i })).toBeInTheDocument();
     expect(screen.queryByText(en.errors.generate)).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /diagram|flow/i })).toBeInTheDocument();
   });
 });
 

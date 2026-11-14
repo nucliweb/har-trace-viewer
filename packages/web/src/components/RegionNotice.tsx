@@ -11,11 +11,14 @@ interface Props {
   // Draws the other topology. Absent when the raw pages are unavailable (flow embedded in a
   // report): the notice names the --region flag instead.
   onSwitch?: () => void;
+  // A diagram is being generated: the switch button waits, and says so when it started it.
+  busy?: "self" | "other";
   onDismiss: () => void;
 }
 
-export function RegionNotice({ side, suggestion, applied, onSwitch, onDismiss }: Props) {
-  const t = useMessages().region;
+export function RegionNotice({ side, suggestion, applied, onSwitch, busy, onDismiss }: Props) {
+  const messages = useMessages();
+  const t = messages.region;
   const otherRegion = applied ? "default" : suggestion.region;
   // The CLI sets each side's region with its own flag: --region for A, --compare-region for B.
   const flag = side === "B" ? "--compare-region" : "--region";
@@ -40,8 +43,12 @@ export function RegionNotice({ side, suggestion, applied, onSwitch, onDismiss }:
       </p>
       <div className={styles.actions}>
         {onSwitch && (
-          <button className={styles.applyBtn} onClick={onSwitch}>
-            {applied ? t.showDefault : t.showGfw}
+          <button
+            className={styles.applyBtn}
+            onClick={busy ? undefined : onSwitch}
+            aria-disabled={busy ? true : undefined}
+          >
+            {busy === "self" ? messages.app.generating : applied ? t.showDefault : t.showGfw}
           </button>
         )}
         <button className={styles.dismissBtn} onClick={onDismiss} aria-label={t.dismiss}>

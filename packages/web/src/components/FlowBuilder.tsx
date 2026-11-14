@@ -24,6 +24,8 @@ interface Props {
   journeys?: boolean;
   /** Why the last attempt to generate failed, shown above the Generate button. */
   error?: string | null;
+  /** A generation is running: the Generate button says so and does not start another. */
+  generating?: boolean;
 }
 
 /**
@@ -31,8 +33,15 @@ interface Props {
  * recording to compare with, the client region and the Generate button; the empty state
  * offers a demo flow.
  */
-export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false, error = null }: Props) {
-  const t = useMessages().builder;
+export function FlowBuilder({
+  onGenerate,
+  onLoadFlow,
+  journeys = false,
+  error = null,
+  generating = false,
+}: Props) {
+  const messages = useMessages();
+  const t = messages.builder;
   const entries = usePageEntries();
   const { pages, compare } = entries;
   const [draggingOver, setDraggingOver] = useState<string | null>(null);
@@ -62,6 +71,7 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false, error = 
     (pagePair !== null || pages.some(hasFlowPages));
 
   const handleGenerate = () => {
+    if (generating) return;
     const generation = buildGeneration(
       pages,
       compare,
@@ -161,8 +171,18 @@ export function FlowBuilder({ onGenerate, onLoadFlow, journeys = false, error = 
               <option value="cn">{t.regionCn}</option>
             </select>
           </div>
-          <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate}>
-            {comparing ? t.generateComparison : t.generateDiagram}
+          {/* aria-disabled, not disabled, while generating: the button keeps the focus. */}
+          <button
+            className={styles.generateBtn}
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            aria-disabled={generating || undefined}
+          >
+            {generating
+              ? messages.app.generating
+              : comparing
+                ? t.generateComparison
+                : t.generateDiagram}
           </button>
         </div>
       </div>

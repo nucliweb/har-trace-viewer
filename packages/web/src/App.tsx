@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { generateFlow, normalizeFlow } from "@htv/core";
+import { normalizeFlow } from "@htv/core";
 import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { CompareView } from "./components/CompareView.js";
 import { DiagramView } from "./components/DiagramView.js";
@@ -10,10 +10,12 @@ import { RegionNotice } from "./components/RegionNotice.js";
 import { SettingsModal } from "./components/SettingsModal.js";
 import { useAppShortcuts } from "./hooks/useAppShortcuts.js";
 import { useJourneys } from "./hooks/useJourneys.js";
+import { useLatestTask } from "./hooks/useLatestTask.js";
 import { useTheme } from "./hooks/useTheme.js";
 import { MessagesContext } from "./i18n/context.js";
 import { useLocale } from "./i18n/useLocale.js";
 import { toggleFullscreen } from "./lib/keyboard.js";
+import { generateInWorker } from "./lib/parse-client.js";
 import styles from "./App.module.css";
 
 declare global {
@@ -60,35 +62,49 @@ export function App() {
   useAppShortcuts(shortcuts);
 
   const [generateError, setGenerateError] = useState<string | null>(null);
+  // The analysis runs in a worker. Only the latest one lands: Reset, the demo flow or a newer
+  // generation drop the result of one still running.
+  const generation = useLatestTask();
+  // The side whose region switch is running, to word its button.
+  const [switching, setSwitching] = useState<Side | null>(null);
   // An analysis that throws leaves the screen as it was, with the reason in view.
-  const attempt = (generate: () => void) => {
-    try {
-      generate();
-      setGenerateError(null);
-    } catch (error) {
-      console.error(error);
-      setGenerateError(t.errors.generate);
-    }
-  };
+  const attempt = <T,>(generate: () => Promise<T>, apply: (result: T) => void) =>
+    void generation.run(
+      generate,
+      (result) => {
+        apply(result);
+        setGenerateError(null);
+      },
+      (error) => {
+        console.error(error);
+        setGenerateError(t.errors.generate);
+      }
+    );
 
   const handleGenerate = (
     nextPages: PageFlow[],
     options: FlowOptions,
     nextComparePages?: PageFlow[]
   ) =>
-    attempt(() => {
+    attempt(
       // Each side has its own region: two loads from different places differ. A region chosen in
       // the builder applies to both; on Auto, each side takes the one its latencies suggest.
-      const nextFlow = generateFlow(nextPages, options);
-      const nextCompare = nextComparePages ? generateFlow(nextComparePages, options) : null;
-      setPages(nextPages);
-      setFlow(nextFlow);
-      setComparePages(nextComparePages ?? null);
-      setCompare(nextCompare);
-      setDismissed(NONE_DISMISSED);
-    });
+      () =>
+        Promise.all([
+          generateInWorker(nextPages, options),
+          nextComparePages ? generateInWorker(nextComparePages, options) : null,
+        ]),
+      ([nextFlow, nextCompare]) => {
+        setPages(nextPages);
+        setFlow(nextFlow);
+        setComparePages(nextComparePages ?? null);
+        setCompare(nextCompare);
+        setDismissed(NONE_DISMISSED);
+      }
+    );
 
   const handleLoadFlow = (loaded: Flow) => {
+    generation.cancel();
     setPages(null);
     setFlow(normalizeFlow(loaded));
     setComparePages(null);
@@ -107,17 +123,23 @@ export function App() {
     if (!sideFlow || !suggestion || dismissed.has(side)) return [];
     const applied = sideFlow.clientRegion !== "default";
     const onSwitch = sidePages
-      ? () =>
-          attempt(() =>
-            setSideFlow(
-              generateFlow(sidePages, { clientRegion: applied ? "default" : suggestion.region })
-            )
-          )
+      ? () => {
+          setSwitching(side);
+          attempt(
+            () =>
+              generateInWorker(sidePages, {
+                clientRegion: applied ? "default" : suggestion.region,
+              }),
+            setSideFlow
+          );
+        }
       : undefined;
-    return [{ side, suggestion, applied, onSwitch }];
+    const busy = generation.running ? (switching === side ? "self" : "other") : undefined;
+    return [{ side, suggestion, applied, onSwitch, busy } as const];
   });
 
   const handleReset = () => {
+    generation.cancel();
     setFlow(null);
     setPages(null);
     setCompare(null);
@@ -174,13 +196,14 @@ export function App() {
         <main className={styles.main}>
           {flow ? (
             <div className={styles.flowLayout}>
-              {regionNotices.map(({ side, suggestion, applied, onSwitch }) => (
+              {regionNotices.map(({ side, suggestion, applied, onSwitch, busy }) => (
                 <RegionNotice
                   key={side}
                   side={compare ? SIDE_LABEL[side] : undefined}
                   suggestion={suggestion}
                   applied={applied}
                   onSwitch={onSwitch}
+                  busy={busy}
                   onDismiss={() => setDismissed((prev) => new Set(prev).add(side))}
                 />
               ))}
@@ -200,6 +223,7 @@ export function App() {
               <FlowBuilder
                 journeys={journeys}
                 error={generateError}
+                generating={generation.running}
                 onGenerate={handleGenerate}
                 // The demo chunk is not shipped inside generated reports.
                 onLoadFlow={embedded ? undefined : handleLoadFlow}
@@ -220,6 +244,9 @@ export function App() {
           />
         )}
         {dialog === "help" && <HelpModal onClose={() => setDialog(null)} />}
+        <div className={styles.visuallyHidden} aria-live="polite" aria-atomic="true">
+          {generation.running ? t.app.generating : ""}
+        </div>
       </div>
     </MessagesContext.Provider>
   );

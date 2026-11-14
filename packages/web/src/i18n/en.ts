@@ -18,6 +18,7 @@ export const en = {
     settingsTitle: "Settings (c)",
     help: "Help",
     helpTitle: "Help (?)",
+    generating: "Generating…",
   },
   modal: { close: "Close" },
   errors: {

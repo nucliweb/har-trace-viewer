@@ -14,6 +14,7 @@ export const ca: Messages = {
     settingsTitle: "Configuració (c)",
     help: "Ajuda",
     helpTitle: "Ajuda (?)",
+    generating: "Generant…",
   },
   modal: { close: "Tanca" },
   errors: {

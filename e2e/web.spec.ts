@@ -137,6 +137,38 @@ test("a gzipped HAR loads like a plain one", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("a dropped HAR's diagram is generated in the worker", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.addInitScript(() => {
+    const posted: string[] = ((window as unknown as { __posted: string[] }).__posted = []);
+    const postMessage = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (this: Worker, message: { kind: string }) {
+      posted.push(message.kind);
+      return postMessage.call(this, message);
+    };
+  });
+  await page.goto(baseUrl);
+  const har = await readFile(
+    resolve(
+      import.meta.dirname,
+      "../packages/core/tests/fixtures/webperf-snippets.har.fixture.json"
+    )
+  );
+
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({ name: "site.har", mimeType: "application/json", buffer: har });
+  await page.getByRole("button", { name: /Generate diagram/ }).click();
+
+  await expect(page.locator("#diagram-svg")).toBeVisible();
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __posted: string[] }).__posted)).toEqual(
+    ["har", "flow"]
+  );
+  expect(errors).toEqual([]);
+});
+
 test.describe("mobile 360x740", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true });
 

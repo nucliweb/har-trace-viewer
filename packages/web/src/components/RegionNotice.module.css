@@ -58,8 +58,13 @@
   font-size: 16px;
 }
 
-.applyBtn:hover {
+.applyBtn:not([aria-disabled="true"]):hover {
   border-color: var(--color-red);
+}
+
+.applyBtn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .dismissBtn:hover {

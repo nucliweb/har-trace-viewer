@@ -14,6 +14,7 @@ export const es: Messages = {
     settingsTitle: "Configuración (c)",
     help: "Ayuda",
     helpTitle: "Ayuda (?)",
+    generating: "Generando…",
   },
   modal: { close: "Cerrar" },
   errors: {

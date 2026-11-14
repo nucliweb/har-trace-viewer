@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ParseRequest, ParseResponse } from "../src/lib/parse-protocol.js";
+import { expandPageFlows, generateFlow, parseHarPagesJson } from "@htv/core";
+import type { ParseResponse, WorkerRequest } from "../src/lib/parse-protocol.js";
 import { harJson, makeFile } from "./fixtures.js";
 
 /** A worker the test drives by hand: it records the requests and fails or reports on demand. */
@@ -8,12 +9,12 @@ class FakeWorker {
   onmessage: ((event: { data: ParseResponse }) => void) | null = null;
   onerror: ((event: { message?: string; preventDefault(): void }) => void) | null = null;
   onmessageerror: (() => void) | null = null;
-  requests: ParseRequest[] = [];
+  requests: WorkerRequest[] = [];
   terminate = vi.fn();
   constructor() {
     FakeWorker.instances.push(this);
   }
-  postMessage(request: ParseRequest): void {
+  postMessage(request: WorkerRequest): void {
     this.requests.push(request);
   }
   progress(): void {
@@ -67,5 +68,20 @@ describe("parse-client when the worker fails", () => {
     // The next parse gets a fresh worker: the crash does not turn the worker off for good.
     void parseInWorker("har", makeFile(harJson, "site.har"));
     expect(FakeWorker.instances).toHaveLength(2);
+  });
+
+  it("generates on the main thread when the worker script does not load", async () => {
+    const { generateInWorker } = await load();
+    const pages = expandPageFlows({ name: "Home", har: parseHarPagesJson(harJson) });
+    const promise = generateInWorker(pages, { clientRegion: "default" });
+    expect(FakeWorker.instances[0].requests[0]).toMatchObject({ kind: "flow", pages });
+    FakeWorker.instances[0].fail("Failed to fetch a worker script");
+
+    const flow = await promise;
+    expect(flow).toEqual(generateFlow(pages, { clientRegion: "default" }));
+    expect(flow.pages).toBe(pages);
+    // Later generations go straight to the main thread.
+    expect(await generateInWorker(pages)).toEqual(generateFlow(pages));
+    expect(FakeWorker.instances).toHaveLength(1);
   });
 });

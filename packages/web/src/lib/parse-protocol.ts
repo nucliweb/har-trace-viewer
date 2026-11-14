@@ -1,4 +1,4 @@
-import type { ParsedHar, ParsedTrace } from "@htv/core";
+import type { Flow, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
 
 export type ParseKind = "har" | "trace";
 type ParsePhase = "reading" | "decompressing" | "parsing";
@@ -17,9 +17,22 @@ export interface ParseRequest {
   file: File;
 }
 
+/** generateFlow(pages, options), off the main thread. */
+export interface FlowRequest {
+  id: number;
+  kind: "flow";
+  pages: PageFlow[];
+  options: FlowOptions;
+}
+
+export type WorkerRequest = ParseRequest | FlowRequest;
+
 export type ParseResultFor<K extends ParseKind> = K extends "har" ? ParsedHar[] : ParsedTrace;
+
+/** A generated flow comes back with `pages` empty: the page already holds them. */
+export type WorkerResult = ParsedHar[] | ParsedTrace | Flow;
 
 export type ParseResponse =
   | { id: number; progress: ParseProgress }
-  | { id: number; ok: true; result: ParsedHar[] | ParsedTrace }
+  | { id: number; ok: true; result: WorkerResult }
   | { id: number; ok: false; error: string };

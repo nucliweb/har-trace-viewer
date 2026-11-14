@@ -405,8 +405,13 @@
   transition: opacity var(--transition-fast);
 }
 
-.generateBtn:not(:disabled):hover {
+.generateBtn:not(:disabled, [aria-disabled="true"]):hover {
   opacity: 0.85;
+}
+
+.generateBtn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .generateBtn:disabled {

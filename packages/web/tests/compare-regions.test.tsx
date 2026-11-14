@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { App } from "../src/App.js";
@@ -38,6 +38,7 @@ async function compare(a: string, b: string) {
   );
   await within(target).findByText("b.har");
   await user.click(screen.getByRole("button", { name: /generate comparison/i }));
+  await screen.findByRole("region", { name: "Comparison" });
   return user;
 }
 
@@ -55,7 +56,7 @@ describe("a comparison of loads from different places", () => {
     expect(notice).toHaveTextContent(/^B · China \/ GFW routing/);
 
     await user.click(within(notice).getByRole("button", { name: "Show default topology" }));
-    expect(drawsGfw("B")).toBe(false);
+    await waitFor(() => expect(drawsGfw("B")).toBe(false));
     expect(drawsGfw("A")).toBe(false);
     expect(
       within(regionNotices()[0]).getByRole("button", { name: "Show GFW topology" })

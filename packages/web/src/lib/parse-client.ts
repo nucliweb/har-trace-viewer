@@ -1,25 +1,28 @@
+import { generateFlow } from "@htv/core";
+import type { Flow, FlowOptions, PageFlow } from "@htv/core";
 import { en } from "../i18n/en.js";
 import { readRecordingFile } from "./parse-recording.js";
-import type { ParsedHar, ParsedTrace } from "@htv/core";
 import type {
+  FlowRequest,
   ParseKind,
   ParseProgress,
   ParseRequest,
   ParseResponse,
   ParseResultFor,
+  WorkerResult,
 } from "./parse-protocol.js";
 
 /**
- * One shared worker, created on first use. It is terminated after IDLE_MS without
- * pending work so a large parsed payload and the worker heap are released, while
- * consecutive drops (HAR then trace) reuse the same worker.
+ * One shared worker, created on first use, parses the dropped files and generates the flow.
+ * It is terminated after IDLE_MS without pending work so a large parsed payload and the
+ * worker heap are released, while consecutive drops (HAR then trace) reuse the same worker.
  */
 const IDLE_MS = 30_000;
 
 interface Pending {
-  kind: ParseKind;
-  file: File;
-  resolve: (value: ParsedHar[] | ParsedTrace) => void;
+  /** The same work on the main thread, for when the worker cannot load. */
+  runHere: () => Promise<WorkerResult>;
+  resolve: (value: WorkerResult) => void;
   reject: (error: Error) => void;
   onProgress?: (progress: ParseProgress) => void;
 }
@@ -27,7 +30,7 @@ interface Pending {
 let worker: Worker | null = null;
 /**
  * Set once the worker script fails to load (for example in a `--bundle` report, where the
- * worker chunk is not inlined). Later calls parse on the main thread directly.
+ * worker chunk is not inlined). Later calls run on the main thread directly.
  */
 let workerBroken = false;
 /**
@@ -59,7 +62,7 @@ async function parseOnMainThread(
   kind: ParseKind,
   file: File,
   onProgress?: (progress: ParseProgress) => void
-): Promise<ParsedHar[] | ParsedTrace> {
+): Promise<WorkerResult> {
   onProgress?.({ phase: "parsing", loaded: 0, total: 0 });
   // Let the "Parsing…" state paint before the synchronous parse blocks the thread.
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -84,7 +87,7 @@ function fallBackToMainThread(): void {
   const stranded = [...pending.values()];
   pending.clear();
   for (const p of stranded) {
-    parseOnMainThread(p.kind, p.file, p.onProgress).then(p.resolve, p.reject);
+    p.runHere().then(p.resolve, p.reject);
   }
 }
 
@@ -118,22 +121,52 @@ function getWorker(): Worker {
   return created;
 }
 
+type Request = Omit<ParseRequest, "id"> | Omit<FlowRequest, "id">;
+
+function send(
+  request: Request,
+  runHere: () => Promise<WorkerResult>,
+  onProgress?: (progress: ParseProgress) => void
+): Promise<WorkerResult> {
+  clearTimeout(idleTimer);
+  if (workerBroken) return runHere();
+  const id = nextId++;
+  return new Promise<WorkerResult>((resolve, reject) => {
+    pending.set(id, { runHere, resolve, reject, onProgress });
+    try {
+      getWorker().postMessage({ ...request, id });
+    } catch {
+      // The Worker constructor can throw synchronously (for example SecurityError on file://).
+      fallBackToMainThread();
+    }
+  });
+}
+
 export function parseInWorker<K extends ParseKind>(
   kind: K,
   file: File,
   onProgress?: (progress: ParseProgress) => void
 ): Promise<ParseResultFor<K>> {
-  clearTimeout(idleTimer);
-  if (workerBroken) return parseOnMainThread(kind, file, onProgress) as Promise<ParseResultFor<K>>;
-  const id = nextId++;
-  return new Promise<ParsedHar[] | ParsedTrace>((resolve, reject) => {
-    pending.set(id, { kind, file, resolve, reject, onProgress });
-    const request: ParseRequest = { id, kind, file };
-    try {
-      getWorker().postMessage(request);
-    } catch {
-      // The Worker constructor can throw synchronously (for example SecurityError on file://).
-      fallBackToMainThread();
-    }
-  }) as Promise<ParseResultFor<K>>;
+  return send(
+    { kind, file },
+    () => parseOnMainThread(kind, file, onProgress),
+    onProgress
+  ) as Promise<ParseResultFor<K>>;
+}
+
+async function generateOnMainThread(pages: PageFlow[], options: FlowOptions): Promise<Flow> {
+  // Let the "Generating…" state paint before the synchronous analysis blocks the thread.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  return generateFlow(pages, options);
+}
+
+/** generateFlow off the main thread: the same flow, its `pages` the very pages passed in. */
+export async function generateInWorker(
+  pages: PageFlow[],
+  options: FlowOptions = {}
+): Promise<Flow> {
+  const flow = (await send({ kind: "flow", pages, options }, () =>
+    generateOnMainThread(pages, options)
+  )) as Flow;
+  return { ...flow, pages };
 }
