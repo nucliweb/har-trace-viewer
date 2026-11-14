@@ -1,6 +1,11 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { formatBytes, formatMs } from "../utils/format.js";
-import { METRIC_THRESHOLDS, rateMetric, summarizeFlowMetrics } from "./metrics-summary.js";
+import {
+  METRIC_THRESHOLDS,
+  rateMetric,
+  summarizeFlowMetrics,
+  summarizePageMetrics,
+} from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
 import type {
   Finding,
@@ -340,8 +345,10 @@ function vitalFinding(
   documentUrl: string
 ): Finding | null {
   const rating = rateMetric(vital.key, value);
-  if (rating !== "poor" && rating !== "needs-improvement") return null;
-  const [good, poor] = METRIC_THRESHOLDS[vital.key].map((limit) => formatVital(vital.key, limit));
+  const limits = METRIC_THRESHOLDS[vital.key];
+  if (!limits || (rating !== "poor" && rating !== "needs-improvement")) return null;
+  const good = formatVital(vital.key, limits[0]);
+  const poor = formatVital(vital.key, limits[1]);
   const shown = formatVital(vital.key, value);
   const happened = vital.happened(shown, summary);
   const poorRating = rating === "poor";
@@ -419,13 +426,14 @@ function varianceFinding(
 ): Finding | null {
   const varying = VITALS.flatMap(({ key, label }) => {
     const s = spread?.[key];
-    if (!s || s.runs < 2) return [];
+    const good = METRIC_THRESHOLDS[key]?.[0];
+    if (!s || s.runs < 2 || good === undefined) return [];
     const range = s.max - s.min;
-    const good = METRIC_THRESHOLDS[key][0];
     if (range <= good && range <= VARIANCE_SHARE * s.median) return [];
     return [{ key, label, s, overGood: range > good, weight: range / good }];
   }).sort((a, b) => b.weight - a.weight);
-  if (varying.length === 0) return null;
+  const [firstVarying] = varying;
+  if (!firstVarying) return null;
 
   const runs = Math.max(...varying.map((v) => v.s.runs));
   const and = (labels: string[]) =>
@@ -439,7 +447,7 @@ function varianceFinding(
     id: "run-to-run-variance",
     title: `Run-to-run variance in ${and(varying.map((v) => v.label))}`,
     severity: overGood.length > 0 ? "warning" : "info",
-    metric: findingMetric(varying[0].key),
+    metric: findingMetric(firstVarying.key),
     summary: `Over ${runs} runs, ${ranges.join("; ")}. ${
       overGood.length > 0
         ? `The spread of ${and(overGood)} is wider than the good threshold, so a single run can rate differently from the median.`
@@ -484,7 +492,6 @@ export interface CollectFindingsOptions {
  * variance on a page that is the median of several runs. Ordered by severity, then by impact.
  */
 export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}): Finding[] {
-  const summaries = summarizeFlowMetrics(flow);
   return flow.pages
     .flatMap((flowPage, index) => {
       const page: FindingPage = {
@@ -498,7 +505,7 @@ export function collectFindings(flow: Flow, options: CollectFindingsOptions = {}
         ...reports(flow.pageAnalyses[index]).flatMap(([source, list]) =>
           list.map((rec) => recommendationFinding(rec, source, page, document))
         ),
-        ...metricFindings(summaries[index], page, doc.url),
+        ...metricFindings(summarizePageMetrics(flow, flowPage, index), page, doc.url),
         ...[varianceFinding(flow.pageAnalyses[index]?.runSpread, page, doc.url)].filter(
           (f): f is Finding => f !== null
         ),

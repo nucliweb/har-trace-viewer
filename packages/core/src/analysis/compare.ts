@@ -2,6 +2,7 @@ import type {
   DiagramStep,
   Flow,
   Metric,
+  PageFlow,
   StepKind,
   ThirdPartyCategory,
   ThirdPartyEntity,
@@ -13,7 +14,7 @@ import type { HostHop } from "./hops.js";
 import type { DeltaUnit } from "../utils/format.js";
 import { getHostname } from "../utils/domain.js";
 import { networkRequests } from "./network-requests.js";
-import { SERVER_WAIT_LABEL, TTFB_LABEL, summarizeFlowMetrics } from "./metrics-summary.js";
+import { SERVER_WAIT_LABEL, TTFB_LABEL, summarizePageMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
 
 /** One position of a comparison: the step of each flow showing `kind`, when it has one. */
@@ -156,20 +157,26 @@ function pairSteps(a: Flow, b: Flow): StepPair[] {
   };
 
   for (;;) {
-    while (i < listA.length && !remainingA.has(listA[i].step.kind)) i++;
-    while (j < listB.length && !remainingB.has(listB[j].step.kind)) j++;
-    const headA = listA[i];
-    const headB = listB[j];
-    if (!headA && !headB) return pairs;
+    let headA = listA[i];
+    while (headA && !remainingA.has(headA.step.kind)) headA = listA[++i];
+    let headB = listB[j];
+    while (headB && !remainingB.has(headB.step.kind)) headB = listB[++j];
 
-    const onlyA = headA !== undefined && !remainingB.has(headA.step.kind);
-    const onlyB = headB !== undefined && !remainingA.has(headB.step.kind);
-    if (onlyA && onlyB) {
-      take(timestampOf(headB) < timestampOf(headA) ? headB.step.kind : headA.step.kind);
-    } else if (onlyB || !headA) {
+    if (!headA) {
+      if (!headB) return pairs;
       take(headB.step.kind);
-    } else {
+    } else if (!headB) {
       take(headA.step.kind);
+    } else {
+      const onlyA = !remainingB.has(headA.step.kind);
+      const onlyB = !remainingA.has(headB.step.kind);
+      if (onlyA && onlyB) {
+        take(timestampOf(headB) < timestampOf(headA) ? headB.step.kind : headA.step.kind);
+      } else if (onlyB) {
+        take(headB.step.kind);
+      } else {
+        take(headA.step.kind);
+      }
     }
   }
 }
@@ -186,7 +193,7 @@ export function stepAtPair(
   const own = pairs[pairIndex]?.[side];
   if (own !== undefined) return { index: own, current: true };
   for (let i = pairIndex - 1; i >= 0; i--) {
-    const previous = pairs[i][side];
+    const previous = pairs[i]?.[side];
     if (previous !== undefined) return { index: previous, current: false };
   }
   const first = pairs.find((p) => p[side] !== undefined)?.[side];
@@ -245,8 +252,8 @@ export function rateDelta(delta: number | null, higherIsBetter = false): DeltaRa
 }
 
 function compareMetrics(a: Flow, b: Flow): MetricDelta[] {
-  const [pageA] = summarizeFlowMetrics(a);
-  const [pageB] = summarizeFlowMetrics(b);
+  const pageA = summarizePageMetrics(a, firstPage(a), 0);
+  const pageB = summarizePageMetrics(b, firstPage(b), 0);
   return COMPARED_METRICS.map(({ key, label, value, higherIsBetter }) => {
     const valueA = value(pageA) ?? null;
     const valueB = value(pageB) ?? null;
@@ -263,15 +270,21 @@ function compareMetrics(a: Flow, b: Flow): MetricDelta[] {
   });
 }
 
+function firstPage(flow: Flow): PageFlow {
+  const [page] = flow.pages;
+  if (!page) throw new Error("Cannot compare a flow without pages");
+  return page;
+}
+
 const firstPageHops = (flow: Flow): HostHop[] => {
-  const { har } = flow.pages[0];
+  const { har } = firstPage(flow);
   return analyzeHops(har, har.documentEntry.url);
 };
 
 // TTFBs of the first page's network requests by host, then by URL, in request order.
 function ttfbsByHostAndUrl(flow: Flow): Map<string, Map<string, number[]>> {
   const byHost = new Map<string, Map<string, number[]>>();
-  for (const entry of networkRequests(flow.pages[0].har)) {
+  for (const entry of networkRequests(firstPage(flow).har)) {
     const host = getHostname(entry.url);
     if (host === null) continue;
     const byUrl = byHost.get(host) ?? new Map<string, number[]>();
@@ -290,12 +303,13 @@ function sameUrlTtfb(
   let sumB = 0;
   for (const [url, ttfbsA] of urlsA ?? []) {
     const ttfbsB = urlsB?.get(url) ?? [];
-    const paired = Math.min(ttfbsA.length, ttfbsB.length);
-    for (let i = 0; i < paired; i++) {
-      sumA += ttfbsA[i];
-      sumB += ttfbsB[i];
+    for (const [i, ttfbA] of ttfbsA.entries()) {
+      const ttfbB = ttfbsB[i];
+      if (ttfbB === undefined) break;
+      sumA += ttfbA;
+      sumB += ttfbB;
+      count++;
     }
-    count += paired;
   }
   if (count === 0) return undefined;
   const avgTtfbA = sumA / count;
@@ -320,7 +334,7 @@ function compareHops(a: Flow, b: Flow): HopPair[] {
 }
 
 const firstPageThirdParties = (flow: Flow): ThirdPartyReport => {
-  const { har, trace } = flow.pages[0];
+  const { har, trace } = firstPage(flow);
   return flow.pageAnalyses[0]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
 };
 
@@ -357,8 +371,8 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
   const caveats: ComparisonCaveat[] = [];
   // The same count as the "requests" metric.
-  const requestsA = networkRequests(a.pages[0].har).length;
-  const requestsB = networkRequests(b.pages[0].har).length;
+  const requestsA = networkRequests(firstPage(a).har).length;
+  const requestsB = networkRequests(firstPage(b).har).length;
   const difference = requestsB - requestsA;
   if (Math.abs(difference) > REQUEST_MIX_THRESHOLD * Math.max(requestsA, requestsB)) {
     caveats.push({
@@ -371,7 +385,7 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
     ["A", a],
     ["B", b],
   ] as const) {
-    const inferred = flow.pages[0].har.inferredCacheHits?.length ?? 0;
+    const inferred = firstPage(flow).har.inferredCacheHits?.length ?? 0;
     if (inferred === 0) continue;
     caveats.push({
       id: "inferred-cache-hits",

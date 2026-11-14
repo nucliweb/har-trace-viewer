@@ -164,6 +164,14 @@ describe("parseRunMetric", () => {
   });
 });
 
+describe("pickMedianRun of a group without runs", () => {
+  it("names the problem instead of returning a run without a page", () => {
+    expect(() => pickMedianRun({ view: "first", step: 1, runs: [] })).toThrow(
+      "A run group has no runs"
+    );
+  });
+});
+
 describe("runs of a WebPageTest HAR", () => {
   const pages = parseHarPagesJson(readFileSync(join(dir, "wpt-runs.har.fixture.json"), "utf8"));
   const flow = generateFlow(pages.map((har) => ({ name: har.pages[0].title, har })));

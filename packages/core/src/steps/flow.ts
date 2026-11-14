@@ -84,19 +84,18 @@ export function generateFlow(pages: PageFlow[], options: FlowOptions = {}): Flow
   const suggestion = suggestFlowRegion(pages);
   const clientRegion: ClientRegion = options.clientRegion ?? suggestion?.region ?? "default";
   const hasGfw = clientRegion === "cn";
-  const contexts = pages.map((page) => describePage(page, hasGfw));
+  const described = pages.map((page) => ({ page, context: describePage(page, hasGfw) }));
 
   const steps: DiagramStep[] = [];
-  pages.forEach((page, pageIndex) => {
+  described.forEach(({ page, context }, pageIndex) => {
     // The transition belongs to the page it leads to.
-    const pageSteps = generatePageSteps(contexts[pageIndex]);
-    if (pageIndex > 0) {
-      pageSteps.unshift(generateTransitionStep(pages[pageIndex - 1].name, page.name));
-    }
+    const pageSteps = generatePageSteps(context);
+    const previous = pages[pageIndex - 1];
+    if (previous) pageSteps.unshift(generateTransitionStep(previous.name, page.name));
     steps.push(...pageSteps.map((step) => ({ pageIndex, ...step })));
   });
 
-  const pageAnalyses = pages.map((page, pageIndex) => analyzePage(contexts[pageIndex], page));
+  const pageAnalyses = described.map(({ page, context }) => analyzePage(context, page));
 
   return {
     version: FLOW_VERSION,

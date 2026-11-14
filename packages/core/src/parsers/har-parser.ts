@@ -333,7 +333,7 @@ const unquote = (value: string) =>
 function parseServerTiming(header: string): ServerTimingMetric[] {
   const metrics: ServerTimingMetric[] = [];
   for (const part of splitUnquoted(header, ",")) {
-    const [rawName, ...params] = splitUnquoted(part, ";");
+    const [rawName = "", ...params] = splitUnquoted(part, ";");
     const name = rawName.trim();
     if (!name) continue;
     const metric: ServerTimingMetric = { name };
@@ -435,8 +435,8 @@ function resourceTypeFromUrl(url: string): ResourceType | null {
   } catch {
     return null;
   }
-  const match = pathname.match(/\.([a-z0-9]+)$/i);
-  return match ? (URL_EXTENSION_TYPES[match[1].toLowerCase()] ?? null) : null;
+  const extension = pathname.match(/\.([a-z0-9]+)$/i)?.[1];
+  return extension ? (URL_EXTENSION_TYPES[extension.toLowerCase()] ?? null) : null;
 }
 
 function inferResourceType(url: string, mimeType: string): ResourceType {
@@ -531,13 +531,13 @@ function splitLinks(linkHeader: string): string[] {
 function preconnectHostnames(linkHeader: string): string[] {
   const result: string[] = [];
   for (const part of splitLinks(linkHeader)) {
-    const urlMatch = part.match(/<([^>]+)>/);
+    const linkUrl = part.match(/<([^>]+)>/)?.[1];
     // rel may list several relations: rel="dns-prefetch preconnect".
     const relMatch = part.match(/;\s*rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^;\s]+))/i);
     const rels = (relMatch?.[1] ?? relMatch?.[2] ?? relMatch?.[3] ?? "").toLowerCase().split(/\s+/);
-    if (urlMatch && rels.includes("preconnect")) {
+    if (linkUrl && rels.includes("preconnect")) {
       try {
-        result.push(new URL(urlMatch[1]).hostname);
+        result.push(new URL(linkUrl).hostname);
       } catch {
         // malformed URL — skip
       }
@@ -591,22 +591,24 @@ function redirectTarget(raw: RawHarEntry): string | null {
 // The redirects the navigation followed from the page's first request, in order, and the
 // response they led to; no redirects when the first request is not one or the HAR did not
 // record where the chain ends.
-function followRedirects(
-  raw: RawHarEntry[],
-  entries: HarEntry[]
-): { redirects: HarEntry[]; final: HarEntry | null } {
+function followRedirects(entries: HarEntry[]): {
+  redirects: HarEntry[];
+  final: HarEntry | null;
+} {
   const redirects: HarEntry[] = [];
+  let current = entries[0];
+  let final: HarEntry | null = null;
   let index = 0;
-  let target = redirectTarget(raw[0]);
-  while (target !== null) {
-    redirects.push(entries[index]);
-    const url = target;
+  while (current?.redirectURL !== undefined) {
+    redirects.push(current);
+    const url = current.redirectURL;
     const next = entries.findIndex((e, i) => i > index && e.url === url);
-    if (next === -1) return { redirects: [], final: null };
+    const nextEntry = entries[next];
+    if (!nextEntry) return { redirects: [], final: null };
     index = next;
-    target = redirectTarget(raw[index]);
+    current = final = nextEntry;
   }
-  return redirects.length > 0 ? { redirects, final: entries[index] } : { redirects, final: null };
+  return { redirects, final };
 }
 
 /**
@@ -616,11 +618,10 @@ function followRedirects(
  * Falls back to the first HTML response, and null without one.
  */
 function findDocument(
-  raw: RawHarEntry[],
   entries: HarEntry[],
   pageTitle: string
 ): { documentEntry: HarEntry; documentRedirects: HarEntry[] } | null {
-  const { redirects, final } = followRedirects(raw, entries);
+  const { redirects, final } = followRedirects(entries);
   if (final?.isDocument && isFinalStatus(final.status)) {
     return { documentEntry: final, documentRedirects: redirects };
   }
@@ -648,12 +649,14 @@ function buildParsedHar(
   entries: RawHarEntry[],
   source: HarSource
 ): ParsedHar | null {
-  if (entries.length === 0) return null;
+  const [firstEntry] = entries;
+  const [firstPage] = rawPages;
+  if (!firstEntry || !firstPage) return null;
 
   // Use the first entry's startedDateTime as origin; Chrome's page.startedDateTime
   // can be a few ms later than the first request due to rounding.
-  const firstEntryMs = new Date(entries[0].startedDateTime).getTime();
-  const pageOriginMs = new Date(rawPages[0].startedDateTime).getTime();
+  const firstEntryMs = new Date(firstEntry.startedDateTime).getTime();
+  const pageOriginMs = new Date(firstPage.startedDateTime).getTime();
   const pageOrigin = Math.min(firstEntryMs, pageOriginMs);
 
   const parsedPages: HarPage[] = rawPages.map((p) => ({
@@ -702,7 +705,7 @@ function buildParsedHar(
     };
   });
 
-  const document = findDocument(entries, parsedEntries, rawPages[0].title);
+  const document = findDocument(parsedEntries, firstPage.title);
   const { documentEntry, documentRedirects } = document ?? {
     documentEntry: primaryRequest(parsedEntries),
     documentRedirects: [],
@@ -755,6 +758,8 @@ function isReadableEntry(e: unknown): e is RawHarEntry {
   return typeof url === "string" && url !== "" && isValidDate(e.startedDateTime);
 }
 
+type NonEmptyPages = [RawHarPage, ...RawHarPage[]];
+
 // A page whose start is missing or invalid starts with the earliest of its entries.
 function startingWith(page: RawHarPage, entries: RawHarEntry[]): RawHarPage {
   if (isValidDate(page.startedDateTime) || entries.length === 0) return page;
@@ -767,27 +772,28 @@ function startingWith(page: RawHarPage, entries: RawHarEntry[]): RawHarPage {
  * or invalid, started with the earliest entry that names it. HAR 1.2 makes pages optional:
  * without them the HAR is one untitled page that starts with its earliest entry.
  */
-function readContent(raw: RawHar): { pages: RawHarPage[]; entries: RawHarEntry[] } {
+function readContent(raw: RawHar): { pages: NonEmptyPages; entries: RawHarEntry[] } {
   const rawEntries: unknown[] = Array.isArray(raw.log.entries) ? raw.log.entries : [];
   if (rawEntries.length === 0) throw new Error("HAR contains no entries");
   const entries = rawEntries.filter(isReadableEntry);
   if (entries.length === 0) {
     throw new Error("No entry of the HAR has a request URL and a valid start time.");
   }
-  const rawPages = (Array.isArray(raw.log.pages) ? raw.log.pages : []).filter(isObject);
-  if (rawPages.length === 0) {
+  const [firstRawPage, ...otherRawPages] = (
+    Array.isArray(raw.log.pages) ? raw.log.pages : []
+  ).filter(isObject);
+  if (!firstRawPage) {
     return {
       pages: [startingWith({ id: "page_1", title: "", startedDateTime: "" }, entries)],
       entries,
     };
   }
-  const pages = rawPages.map((page) =>
+  const readPage = (page: RawHarPage) =>
     startingWith(
       { ...page, title: typeof page.title === "string" ? page.title : "" },
       entries.filter((e) => e.pageref === page.id)
-    )
-  );
-  return { pages, entries };
+    );
+  return { pages: [readPage(firstRawPage), ...otherRawPages.map(readPage)], entries };
 }
 
 export function parseHar(raw: RawHar): ParsedHar {
@@ -804,8 +810,8 @@ export function parseHar(raw: RawHar): ParsedHar {
 function freshnessLifetime(headers: Record<string, string>): number | null {
   const cacheControl = (headers["cache-control"] ?? "").toLowerCase();
   if (/\b(no-store|no-cache)\b/.test(cacheControl)) return null;
-  const maxAge = cacheControl.match(/\bmax-age=(\d+)/);
-  if (maxAge) return parseInt(maxAge[1], 10);
+  const maxAge = cacheControl.match(/\bmax-age=(\d+)/)?.[1];
+  if (maxAge) return parseInt(maxAge, 10);
   const date = Date.parse(headers["date"] ?? "");
   if (isNaN(date)) return null;
   if (headers["expires"] !== undefined) {
@@ -843,7 +849,7 @@ function inferCacheHits(firstView: ParsedPage, repeatView: ParsedPage): Inferred
   const hits: InferredCacheHit[] = [];
   firstView.entries.forEach((raw, i) => {
     const entry = firstView.parsed.entries[i];
-    if (entry.isDocument || requested.has(entry.url)) return;
+    if (!entry || entry.isDocument || requested.has(entry.url)) return;
     if (raw.request.method !== "GET" || entry.status !== 200) return;
     const lifetime = freshnessLifetime(entry.responseHeaders);
     if (lifetime === null) return;
@@ -927,9 +933,13 @@ function splitNavigations(page: RawHarPage, entries: RawHarEntry[]): RawPageGrou
   });
   if (starts.length < 2) return [{ page, entries }];
 
+  const laterStarts = starts.slice(1);
   const navigationAt = (ms: number) => {
     let index = 0;
-    while (index + 1 < starts.length && starts[index + 1] <= ms) index++;
+    for (const start of laterStarts) {
+      if (start > ms) break;
+      index++;
+    }
     return index;
   };
   const pageStart = startMs(page);
@@ -953,7 +963,8 @@ function splitNavigations(page: RawHarPage, entries: RawHarEntry[]): RawPageGrou
     },
     entries: [],
   }));
-  for (const entry of entries) groups[navigationAt(startMs(entry))].entries.push(entry);
+  // navigationAt stays below starts.length, the length of groups.
+  for (const entry of entries) groups[navigationAt(startMs(entry))]!.entries.push(entry);
   return groups;
 }
 
@@ -977,9 +988,8 @@ const orderMs = (page: RawHarPage) => {
  */
 export function parseHarPages(raw: RawHar): ParsedHar[] {
   const { pages, entries } = readContent(raw);
-  const ordered = [...pages].sort((a, b) =>
-    orderMs(a) === orderMs(b) ? 0 : orderMs(a) - orderMs(b)
-  );
+  const ordered: NonEmptyPages = [...pages];
+  ordered.sort((a, b) => (orderMs(a) === orderMs(b) ? 0 : orderMs(a) - orderMs(b)));
   const firstId = ordered[0].id;
   const listed = new Set(ordered.map((page) => page.id));
   const runningAt = (ms: number) =>

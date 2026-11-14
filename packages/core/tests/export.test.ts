@@ -215,6 +215,15 @@ describe("mermaidReport", () => {
     expect(mermaidReport(flowNamed("Home"))).not.toContain("GFW");
   });
 
+  it("draws the request straight to the origin for a flow that carries no topology", () => {
+    const lines = mermaidReport({ ...flowNamed("Home"), nodes: undefined, pageAnalyses: [] }).split(
+      "\n"
+    );
+
+    expect(lines).toContain("    participant Origin as Origin");
+    expect(lines.some((l) => /^ {4}Browser->>Origin: GET \//.test(l))).toBe(true);
+  });
+
   it("emits a block per side of a comparison", () => {
     const out = mermaidReport(flowNamed("A"), flowNamed("B"));
     expect(out.split("\n").filter((l) => l === "```mermaid")).toHaveLength(2);

@@ -13,8 +13,8 @@ import type {
 } from "../types.js";
 
 function parseMaxAge(cacheControl: string): number | null {
-  const match = cacheControl.match(/\bmax-age=(\d+)/);
-  return match ? parseInt(match[1], 10) : null;
+  const maxAge = cacheControl.match(/\bmax-age=(\d+)/)?.[1];
+  return maxAge === undefined ? null : parseInt(maxAge, 10);
 }
 
 // Splits a header list on commas that are not inside a quoted string.

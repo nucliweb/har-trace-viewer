@@ -314,10 +314,10 @@ class Redactor {
   // Keys may hold hostnames or URLs too (the preconnect hints of a flow).
   private renameKeys(node: Record<string, unknown>): void {
     const entries = Object.entries(node);
-    const renamed = entries.map(([k, v]) => [this.text(k, "text"), v] as const);
-    if (renamed.every(([k], i) => k === entries[i][0])) return;
-    for (const [k] of entries) Reflect.deleteProperty(node, k);
-    for (const [k, v] of renamed) node[k] = v;
+    const renamed = entries.map(([key, v]) => [key, this.text(key, "text"), v] as const);
+    if (renamed.every(([key, newKey]) => key === newKey)) return;
+    for (const [key] of renamed) Reflect.deleteProperty(node, key);
+    for (const [, newKey, v] of renamed) node[newKey] = v;
   }
 
   private postData(postData: Record<string, unknown>): void {
@@ -375,9 +375,11 @@ class Redactor {
   }
 
   private headerLine(line: string): string {
-    const match = HEADER_LINE.exec(line);
-    if (!match) return this.text(line, "headers");
-    return `${match[1]}:${match[2]}${this.headerValue(match[1], match[3])}`;
+    const [, name, gap, value] = HEADER_LINE.exec(line) ?? [];
+    if (name === undefined || gap === undefined || value === undefined) {
+      return this.text(line, "headers");
+    }
+    return `${name}:${gap}${this.headerValue(name, value)}`;
   }
 
   // Cookie: every name=value pair. Set-Cookie: the first pair of each line; attributes stay.
@@ -512,6 +514,10 @@ export function redactFlows(
   options: RedactOptions = {}
 ): { flows: Flow[]; report: RedactionReport } {
   const copies = structuredClone(flows);
+  return { flows: copies, report: redactCopies(copies, options) };
+}
+
+function redactCopies(copies: Flow[], options: RedactOptions): RedactionReport {
   const redactor = new Redactor(options);
   if (options.hosts === "mask") {
     const pages = copies.flatMap((flow) => flow.pages);
@@ -525,7 +531,7 @@ export function redactFlows(
     );
   }
   for (const flow of copies) redactor.value(flow, "", "text");
-  return { flows: copies, report: redactor.report };
+  return redactor.report;
 }
 
 /** Redacts one flow; see redactFlows. */
@@ -533,8 +539,8 @@ export function redactFlow(
   flow: Flow,
   options: RedactOptions = {}
 ): { flow: Flow; report: RedactionReport } {
-  const { flows, report } = redactFlows([flow], options);
-  return { flow: flows[0], report };
+  const copy = structuredClone(flow);
+  return { flow: copy, report: redactCopies([copy], options) };
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;

@@ -134,6 +134,15 @@ describe("redactHar", () => {
     ]);
   });
 
+  it("redacts a raw header line that is not a name and a value, such as a request line", () => {
+    const raw = {
+      log: { entries: [{ _headers: { request: [`GET /?mail=${SECRETS.email} HTTP/1.1`] } }] },
+    };
+    const { har } = redactHar(raw);
+
+    expect(JSON.stringify(har.log.entries[0]._headers.request)).not.toContain(SECRETS.email);
+  });
+
   it("counts the redacted header values", () => {
     // cookie, set-cookie, authorization, x-api-key, x-csrf-token and the JWT header.
     expect(redacted().report.headers).toBe(6);

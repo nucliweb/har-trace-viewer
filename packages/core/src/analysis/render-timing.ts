@@ -101,7 +101,7 @@ function linkHeaderTargets(linkHeader: string, rel: string, base: string): strin
     const rels =
       link
         .match(/;\s*rel\s*=\s*"?([^";]+)"?/i)?.[1]
-        .toLowerCase()
+        ?.toLowerCase()
         .split(/\s+/) ?? [];
     if (!url || !rels.includes(rel)) continue;
     try {

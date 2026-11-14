@@ -18,7 +18,7 @@ import { analyzeThirdParties } from "./third-parties.js";
 import { THIRD_PARTY_CATEGORY_LABEL } from "./third-party-entities.js";
 import {
   rateMetric,
-  summarizeFlowMetrics,
+  summarizePageMetrics,
   TTFB_LABEL,
   SERVER_WAIT_LABEL,
 } from "./metrics-summary.js";
@@ -32,6 +32,7 @@ import type {
   MetricSpread,
   RunMetric,
   MainThreadReport,
+  PageFlow,
   RunSpread,
   ThirdPartyReport,
 } from "../types.js";
@@ -246,8 +247,7 @@ function findingsSection(findings: Finding[]): string[] {
   return lines;
 }
 
-function hostsTable(flow: Flow, index: number): string[] {
-  const { har } = flow.pages[index];
+function hostsTable({ har }: PageFlow): string[] {
   const hops = analyzeHops(har, har.documentEntry.url);
   return table(
     ["Host", "Provider · PoP", "Requests", "Cache hits", "Bytes", "Median TTFB", "Protocol"],
@@ -263,13 +263,12 @@ function hostsTable(flow: Flow, index: number): string[] {
   );
 }
 
-function thirdPartiesOf(flow: Flow, index: number): ThirdPartyReport {
-  const { har, trace } = flow.pages[index];
+function thirdPartiesOf(flow: Flow, { har, trace }: PageFlow, index: number): ThirdPartyReport {
   return flow.pageAnalyses[index]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
 }
 
-function thirdPartiesSection(flow: Flow, index: number): string[] {
-  const report = thirdPartiesOf(flow, index);
+function thirdPartiesSection(flow: Flow, page: PageFlow, index: number): string[] {
+  const report = thirdPartiesOf(flow, page, index);
   if (report.entities.length === 0) return ["No third-party requests."];
   const count = report.entities.length;
   const summary = [
@@ -331,8 +330,8 @@ function mainThreadSection(report: MainThreadReport | undefined): string[] {
   return lines;
 }
 
-function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSummary): string[] {
-  const page = flow.pages[index];
+function pageSection({ flow, side }: Side, page: PageFlow, index: number): string[] {
+  const summary = summarizePageMetrics(flow, page, index);
   const heading = side ? `${side.toUpperCase()}: ${page.name}` : page.name;
   const findings = collectFindings(flow, side ? { side } : {}).filter(
     (f) => f.page.index === index
@@ -352,11 +351,11 @@ function pageSection({ flow, side }: Side, index: number, summary: PageMetricsSu
     "",
     "### Hosts",
     "",
-    ...hostsTable(flow, index),
+    ...hostsTable(page),
     "",
     "### Third parties",
     "",
-    ...thirdPartiesSection(flow, index),
+    ...thirdPartiesSection(flow, page, index),
     "",
     "### Main thread",
     "",
@@ -417,8 +416,7 @@ export function markdownReport(flow: Flow, compare?: Flow): string {
     lines.push(...comparisonSection(flow, compare), ...thirdPartyComparisonSection(flow, compare));
   }
   for (const side of sides) {
-    const summaries = summarizeFlowMetrics(side.flow);
-    summaries.forEach((summary, index) => lines.push(...pageSection(side, index, summary)));
+    side.flow.pages.forEach((page, index) => lines.push(...pageSection(side, page, index)));
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }
@@ -428,12 +426,11 @@ export function markdownReport(flow: Flow, compare?: Flow): string {
 /** Mermaid ends a statement at ";" and starts a comment at "#". */
 const mermaidText = (text: string) => text.replace(/[;#]/g, ",").replace(/\s+/g, " ");
 
-function documentDiagram(flow: Flow, index: number): string[] {
-  const page = flow.pages[index];
-  const nodes = flow.pageAnalyses[index]?.nodes ?? flow.nodes;
+function documentDiagram(flow: Flow, page: PageFlow, index: number): string[] {
+  const nodes = flow.pageAnalyses[index]?.nodes ?? flow.nodes ?? [];
   const node = (id: string) => nodes.find((n) => n.id === id && n.present);
   const doc = page.har.documentEntry;
-  const ttfb = summarizeFlowMetrics(flow)[index].ttfb;
+  const { ttfb } = summarizePageMetrics(flow, page, index);
 
   const gfw = node("gfw");
   const edge = node("edge");
@@ -481,9 +478,13 @@ export function mermaidReport(flow: Flow, compare?: Flow): string {
   const blocks = sidesOf(flow, compare).flatMap(({ flow: f, side }) =>
     f.pages.map((page, index) => {
       const heading = side ? `${side.toUpperCase()}: ${page.name}` : page.name;
-      return [`### ${cell(heading)}`, "", "```mermaid", ...documentDiagram(f, index), "```"].join(
-        "\n"
-      );
+      return [
+        `### ${cell(heading)}`,
+        "",
+        "```mermaid",
+        ...documentDiagram(f, page, index),
+        "```",
+      ].join("\n");
     })
   );
   return `${blocks.join("\n\n")}\n`;

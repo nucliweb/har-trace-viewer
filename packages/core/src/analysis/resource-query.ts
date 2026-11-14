@@ -148,10 +148,10 @@ const isProblem = <T>(value: Parsed<T>): value is Problem =>
   typeof value === "object" && value !== null && "problem" in value;
 
 function parseQuantity(text: string, units: Record<string, number>): number | null {
-  const match = /^(\d+(?:\.\d+)?)\s*([a-z]*)$/i.exec(text.trim());
-  if (!match) return null;
-  const scale = units[match[2].toLowerCase()];
-  return scale === undefined ? null : Number(match[1]) * scale;
+  const [, amount, unit] = /^(\d+(?:\.\d+)?)\s*([a-z]*)$/i.exec(text.trim()) ?? [];
+  if (amount === undefined || unit === undefined) return null;
+  const scale = units[unit.toLowerCase()];
+  return scale === undefined ? null : Number(amount) * scale;
 }
 
 const parseSize = (text: string): Parsed<number> =>
@@ -168,9 +168,9 @@ function parseComparison(
   text: string,
   units: Record<string, number>
 ): Parsed<{ op: ComparisonOp; value: number }> {
-  const match = /^(>=|<=|>|<|=)?\s*(.+)$/.exec(text.trim());
-  const op = (match?.[1] ?? "=") as ComparisonOp;
-  const value = match ? parseQuantity(match[2], units) : null;
+  const [, operator, amount] = /^(>=|<=|>|<|=)?\s*(.+)$/.exec(text.trim()) ?? [];
+  const op = (operator ?? "=") as ComparisonOp;
+  const value = amount === undefined ? null : parseQuantity(amount, units);
   if (value === null)
     return { problem: `expected an operator and a value such as >100k, got "${text}"` };
   return { op, value };

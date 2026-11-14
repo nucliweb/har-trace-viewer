@@ -17,10 +17,9 @@ export function isBeacon(entry: HarEntry): boolean {
 
 /** The middle value (the mean of the two middle ones for an even count); null without values. */
 function median(values: number[]): number | null {
-  if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  const middle = sorted.slice(Math.ceil(sorted.length / 2) - 1, Math.floor(sorted.length / 2) + 1);
+  return middle.length === 0 ? null : middle.reduce((sum, value) => sum + value, 0) / middle.length;
 }
 
 interface TtfbByLoad {

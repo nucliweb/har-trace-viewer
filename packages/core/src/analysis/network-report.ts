@@ -22,7 +22,7 @@ const RESOURCE_REDIRECT_WARNING = 3;
 
 const isRedirect = (entry: HarEntry) => entry.status >= 300 && entry.status < 400;
 const sameRequest = (a: HarEntry, b: HarEntry) => a.url === b.url && a.startTime === b.startTime;
-const withoutFragment = (url: string) => url.split("#")[0];
+const withoutFragment = (url: string) => url.replace(/#.*/s, "");
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /**
@@ -58,15 +58,18 @@ function findDuplicates(network: HarEntry[]): DuplicateRequest[] {
 
 function documentRedirectHops(har: ParsedHar): NetworkReport["documentRedirects"] {
   const redirects = har.documentRedirects ?? [];
-  if (redirects.length === 0) return { hops: [], delayMs: 0 };
-  const chain = [...redirects, har.documentEntry];
-  const hops = redirects.map((entry, i) => ({
-    url: entry.url,
-    status: entry.status,
-    target: entry.redirectURL ?? chain[i + 1].url,
-    costMs: chain[i + 1].startTime - entry.startTime,
-  }));
-  return { hops, delayMs: har.documentEntry.startTime - redirects[0].startTime };
+  const [first] = redirects;
+  if (!first) return { hops: [], delayMs: 0 };
+  const hops = redirects.map((entry, i) => {
+    const next = redirects[i + 1] ?? har.documentEntry;
+    return {
+      url: entry.url,
+      status: entry.status,
+      target: entry.redirectURL ?? next.url,
+      costMs: next.startTime - entry.startTime,
+    };
+  });
+  return { hops, delayMs: har.documentEntry.startTime - first.startTime };
 }
 
 function resourceRedirectHops(har: ParsedHar): NetworkReport["resourceRedirects"] {

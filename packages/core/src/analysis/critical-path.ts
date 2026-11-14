@@ -187,20 +187,20 @@ function buildChains(
   }
 
   const chains: CriticalChain[] = [];
-  const walk = (path: PageRequest[]) => {
-    const last = path[path.length - 1];
+  const walk = (last: PageRequest, path: PageRequest[]) => {
     const next = (children.get(last.url) ?? []).filter((c) => !path.includes(c));
     if (next.length === 0) {
-      if (path.length > 1) chains.push(toChain(path));
+      if (path.length > 1) chains.push(toChain(path, documentRequest, last));
       return;
     }
-    for (const child of next.sort((a, b) => a.startMs - b.startMs)) walk([...path, child]);
+    for (const child of next.sort((a, b) => a.startMs - b.startMs)) walk(child, [...path, child]);
   };
-  walk([documentRequest]);
+  walk(documentRequest, [documentRequest]);
   return chains.sort((a, b) => b.depth - a.depth || b.durationMs - a.durationMs);
 }
 
-function toChain(path: PageRequest[]): CriticalChain {
+// A path starts at the document request and ends at `last`.
+function toChain(path: PageRequest[], first: PageRequest, last: PageRequest): CriticalChain {
   const requests: CriticalChainRequest[] = path.map(
     ({ url, resourceType, startMs, endMs, transferSize }) => ({
       url,
@@ -213,7 +213,7 @@ function toChain(path: PageRequest[]): CriticalChain {
   return {
     requests,
     depth: requests.length,
-    durationMs: requests[requests.length - 1].endMs - requests[0].startMs,
+    durationMs: last.endMs - first.startMs,
     transferSize: requests.reduce((sum, r) => sum + r.transferSize, 0),
   };
 }
@@ -369,7 +369,7 @@ export function renderBlockingRecommendations(report: RenderBlockingReport): Rec
       label: "Long critical request chain",
       description: `The longest critical chain is ${deepest} requests deep and takes ${formatMs(longest)}: each request is found only once the previous one arrives. Preload the requests at the end of the chain (fonts, imported stylesheets, injected scripts) or reference them from the HTML.`,
       severity,
-      resources: uniqueByUrl(longChains.map((c) => c.requests[c.requests.length - 1])).map(
+      resources: uniqueByUrl(longChains.flatMap((c) => c.requests.slice(-1))).map(
         ({ url, transferSize }) => ({ url, transferSize })
       ),
     });

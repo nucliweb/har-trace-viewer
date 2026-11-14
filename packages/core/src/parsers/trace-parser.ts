@@ -20,7 +20,8 @@ function findMainNavigation(events: RawTraceEvent[]): RawTraceEvent {
   const navs = events.filter(
     (e) => e.name === "navigationStart" && dataOf(e).isOutermostMainFrame === true
   );
-  if (navs.length === 0) {
+  const [firstNav] = navs;
+  if (!firstNav) {
     throw new Error("No navigationStart found in trace");
   }
 
@@ -46,7 +47,7 @@ function findMainNavigation(events: RawTraceEvent[]): RawTraceEvent {
   if (withPaint.length > 0) return withPaint.at(-1)!;
 
   const withUrl = navs.filter(hasUrl);
-  return withUrl.at(-1) ?? navs[0];
+  return withUrl.at(-1) ?? firstNav;
 }
 
 function isMainFrameCandidate(data: EventData): boolean {

@@ -1,5 +1,6 @@
 import { defaultPageName } from "../parsers/har-parser.js";
 import type { PageFlow, ParsedHar, ParsedTrace } from "../types.js";
+import { pageOf } from "./page-context.js";
 
 export interface ExpandPageFlowsInput {
   /** Name chosen by the user; "Page <n>" placeholders count as not chosen. */
@@ -27,18 +28,23 @@ export interface HarPageSummary {
 
 /** Describes the pages of a parsed HAR, in flow order. */
 export function listHarPages(har: ParsedHar[]): HarPageSummary[] {
-  return har.map((h) => ({
-    id: h.pages[0].id,
-    title: h.pages[0].title.trim(),
-    url: h.documentEntry.url,
-    entries: h.entries.length,
-  }));
+  return har.map(summarizeHarPage);
+}
+
+function summarizeHarPage(har: ParsedHar): HarPageSummary {
+  const page = pageOf(har);
+  return {
+    id: page.id,
+    title: page.title.trim(),
+    url: har.documentEntry.url,
+    entries: har.entries.length,
+  };
 }
 
 /** Run number and view of a WebPageTest page title ("Run 1, First View for https://x"). */
 function parseWebPageTestTitle(title: string): { run: string; view: "First" | "Repeat" } | null {
-  const m = /^Run (\d+), (First|Repeat) View for .+$/.exec(title.trim());
-  return m ? { run: m[1], view: m[2] as "First" | "Repeat" } : null;
+  const [, run, view] = /^Run (\d+), (First|Repeat) View for .+$/.exec(title.trim()) ?? [];
+  return run !== undefined && (view === "First" || view === "Repeat") ? { run, view } : null;
 }
 
 /** "Run 1, First View for https://x" (WebPageTest) becomes "Run 1 · First view"; other titles give null. */
@@ -65,7 +71,8 @@ export function defaultSelectedPageIds(har: ParsedHar[]): string[] {
  */
 export function defaultComparePageIds(har: ParsedHar[]): [string, string] | null {
   const pages = listHarPages(har);
-  if (pages.length < 2) return null;
+  const [firstPage, secondPage] = pages;
+  if (!firstPage || !secondPage) return null;
   const views = pages.map((p) => ({ id: p.id, wpt: parseWebPageTestTitle(p.title) }));
   for (const first of views) {
     if (first.wpt?.view !== "First") continue;
@@ -73,7 +80,7 @@ export function defaultComparePageIds(har: ParsedHar[]): [string, string] | null
     const repeat = views.find((v) => v.wpt?.view === "Repeat" && v.wpt.run === run);
     if (repeat) return [first.id, repeat.id];
   }
-  return [pages[0].id, pages[1].id];
+  return [firstPage.id, secondPage.id];
 }
 
 function describePages(pages: HarPageSummary[]): string {
@@ -116,9 +123,10 @@ function selectPages(har: ParsedHar[], select: PageSelection): ParsedHar[] {
       `Unknown page id${unknown.length > 1 ? "s" : ""}: ${unknown.join(", ")}. Available pages:\n${describePages(pages)}`
     );
   }
-  const selected = har.filter((_, i) => {
-    const byId = select.pageIds?.includes(pages[i].id) ?? false;
-    const byMatch = select.match !== undefined && matches(pages[i], select.match);
+  const selected = har.filter((h) => {
+    const summary = summarizeHarPage(h);
+    const byId = select.pageIds?.includes(summary.id) ?? false;
+    const byMatch = select.match !== undefined && matches(summary, select.match);
     return byId || byMatch;
   });
   if (selected.length === 0) {
@@ -128,7 +136,7 @@ function selectPages(har: ParsedHar[], select: PageSelection): ParsedHar[] {
 }
 
 function comparableUrl(url: string): string {
-  const withoutHash = url.split("#")[0];
+  const withoutHash = url.replace(/#.*/s, "");
   return withoutHash.endsWith("/") ? withoutHash.slice(0, -1) : withoutHash;
 }
 
@@ -153,8 +161,9 @@ export function expandPageFlows({
   const har = select ? selectPages(allPages, select) : allPages;
   const chosen = name?.trim() && !isPlaceholderName(name.trim()) ? name.trim() : undefined;
 
-  if (allPages.length === 1) {
-    return [{ name: name?.trim() || "Page 1", har: har[0], ...(trace ? { trace } : {}) }];
+  const [only] = har;
+  if (allPages.length === 1 && only) {
+    return [{ name: name?.trim() || "Page 1", har: only, ...(trace ? { trace } : {}) }];
   }
 
   let traceIndex = 0;
@@ -166,7 +175,7 @@ export function expandPageFlows({
 
   return har.map((h, i) => {
     const label =
-      webPageTestLabel(h.pages[0].title) ?? defaultPageName(h.pages[0], i, h.documentEntry.url);
+      webPageTestLabel(pageOf(h).title) ?? defaultPageName(pageOf(h), i, h.documentEntry.url);
     return {
       name: chosen ? `${chosen} · ${label}` : label,
       har: h,

@@ -1,4 +1,4 @@
-import type { CacheReport, Flow } from "../types.js";
+import type { CacheReport, Flow, PageFlow } from "../types.js";
 import { pageDocument } from "../parsers/har-parser.js";
 import { browserCacheHits, networkRequests } from "./network-requests.js";
 
@@ -73,30 +73,37 @@ function cdnHitRatio(own: CacheReport["ownResources"] | undefined): number | nul
   return (own.network ?? own.total) > 0 ? own.cdnHitRatio : null;
 }
 
+/** The summary of one page of a flow, `index` being its position in `flow.pages`. */
+export function summarizePageMetrics(
+  flow: Flow,
+  page: PageFlow,
+  index: number
+): PageMetricsSummary {
+  const { har, trace } = page;
+  const report = flow.pageAnalyses[index]?.cacheReport;
+  const ttfbStep = flow.steps.find((s) => s.pageIndex === index && s.kind === "ttfb");
+  const document = pageDocument(har);
+  return {
+    name: page.name,
+    // Flows older than step timestamps only carry the server wait.
+    ttfb: document ? (ttfbStep?.timestamp ?? document.ttfb) : null,
+    serverWait: document ? document.ttfb : null,
+    fcp: trace?.fcp ?? har.pages[0]?.fcp ?? null,
+    lcp: trace?.lcp ?? har.pages[0]?.lcp ?? null,
+    cls: trace?.cls ?? null,
+    inp: trace?.inp ?? null,
+    tbt: trace?.mainThread?.tbtMs ?? null,
+    dcl: har.pages[0]?.onContentLoad ?? null,
+    onLoad: har.pages[0]?.onLoad ?? null,
+    requests: networkRequests(har).length,
+    cacheHits: browserCacheHits(har),
+    transferBytes: har.entries.reduce((sum, e) => sum + e.transferSize, 0),
+    cdnHitRatio: cdnHitRatio(report?.ownResources),
+    browserCacheHitRatio: report?.browser.hitRatio ?? 0,
+  };
+}
+
 /** One summary per page, reading the same numbers the step badges are built from. */
 export function summarizeFlowMetrics(flow: Flow): PageMetricsSummary[] {
-  return flow.pages.map((page, i) => {
-    const { har, trace } = page;
-    const report = flow.pageAnalyses[i]?.cacheReport;
-    const ttfbStep = flow.steps.find((s) => s.pageIndex === i && s.kind === "ttfb");
-    const document = pageDocument(har);
-    return {
-      name: page.name,
-      // Flows older than step timestamps only carry the server wait.
-      ttfb: document ? (ttfbStep?.timestamp ?? document.ttfb) : null,
-      serverWait: document ? document.ttfb : null,
-      fcp: trace?.fcp ?? har.pages[0]?.fcp ?? null,
-      lcp: trace?.lcp ?? har.pages[0]?.lcp ?? null,
-      cls: trace?.cls ?? null,
-      inp: trace?.inp ?? null,
-      tbt: trace?.mainThread?.tbtMs ?? null,
-      dcl: har.pages[0]?.onContentLoad ?? null,
-      onLoad: har.pages[0]?.onLoad ?? null,
-      requests: networkRequests(har).length,
-      cacheHits: browserCacheHits(har),
-      transferBytes: har.entries.reduce((sum, e) => sum + e.transferSize, 0),
-      cdnHitRatio: cdnHitRatio(report?.ownResources),
-      browserCacheHitRatio: report?.browser.hitRatio ?? 0,
-    };
-  });
+  return flow.pages.map((page, index) => summarizePageMetrics(flow, page, index));
 }

@@ -88,7 +88,7 @@ const requestsOf = (entries: HarEntry[], hops: Map<HarEntry, Hop>) =>
 
 // `split`: the cluster holds one region of a provider split by region.
 function toCluster(
-  entries: HarEntry[],
+  entries: Group,
   hops: Map<HarEntry, Hop>,
   split: boolean,
   onLoad: number | null
@@ -109,11 +109,15 @@ function toCluster(
   };
 }
 
-function groupBy<K>(entries: HarEntry[], key: (entry: HarEntry) => K): HarEntry[][] {
-  const groups = new Map<K, HarEntry[]>();
+type Group = [HarEntry, ...HarEntry[]];
+
+function groupBy<K>(entries: HarEntry[], key: (entry: HarEntry) => K): Group[] {
+  const groups = new Map<K, Group>();
   for (const entry of entries) {
     const k = key(entry);
-    groups.set(k, [...(groups.get(k) ?? []), entry]);
+    const group = groups.get(k);
+    if (group) group.push(entry);
+    else groups.set(k, [entry]);
   }
   return [...groups.values()];
 }
@@ -138,7 +142,7 @@ export function clusterThirdParties(
   const cdns = providers.filter((group) => group !== direct).sort(byRequests);
 
   let count = providers.length;
-  const clusters: { entries: HarEntry[]; split: boolean }[] = [];
+  const clusters: { entries: Group; split: boolean }[] = [];
   for (const group of cdns) {
     const regions = groupBy(group, (e) => hops.get(e)!.region);
     if (regions.length > 1 && count + regions.length - 1 <= MAX_THIRD_PARTY_CLUSTERS) {
@@ -188,7 +192,9 @@ function shortHost(host: string): string {
 }
 
 // The busiest host and how many more.
-function hostsCaption([busiest, ...rest]: string[]): string {
+function hostsCaption(hosts: string[]): string {
+  const [busiest, ...rest] = hosts;
+  if (busiest === undefined) return "";
   const host = shortHost(busiest);
   return rest.length > 0 ? `${host} +${rest.length}` : host;
 }

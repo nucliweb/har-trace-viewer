@@ -152,7 +152,10 @@ function collectTasks(events: RawTraceEvent[], navigationStart: number): Task[] 
   for (const e of sorted) {
     const start = e.ts;
     const end = e.ts + e.dur!;
-    while (stack.length > 0 && stack[stack.length - 1].end <= start) close(stack.pop()!);
+    for (let top = stack.at(-1); top && top.end <= start; top = stack.at(-1)) {
+      stack.pop();
+      close(top);
+    }
     const parent = stack[stack.length - 1];
     if (parent) parent.childrenUs += Math.min(end, parent.end) - start;
     else {

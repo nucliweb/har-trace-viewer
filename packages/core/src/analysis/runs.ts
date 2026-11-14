@@ -1,5 +1,5 @@
 import type { PageMetricsSummary } from "./metrics-summary.js";
-import type { MetricSpread, RunMetric, RunSpread } from "../types.js";
+import type { RunMetric, RunSpread } from "../types.js";
 
 // A WebPageTest test of several runs records each run and view as its own page, with ids
 // shaped page_<run>_<cached>_<step>: cached 0 is the first view and 1 the repeat view.
@@ -104,7 +104,11 @@ const metricValue = (page: RunPage, metric: RunMetric): number | null => {
 const percentile = (sorted: number[], p: number) =>
   sorted[Math.max(0, Math.ceil(p * sorted.length) - 1)];
 
-const lowerMiddle = (count: number) => Math.floor((count - 1) / 2);
+function lowerMiddle<R>(runs: R[]): R {
+  const run = runs[Math.floor((runs.length - 1) / 2)];
+  if (!run) throw new Error("A run group has no runs");
+  return run;
+}
 
 export interface MedianRun<T extends RunPage = RunPage> {
   run: number;
@@ -125,12 +129,12 @@ export function pickMedianRun<T extends RunPage>(
   const runs = [...group.runs].sort((a, b) => a.run - b.run);
   const candidates = [...new Set<RunMetric>([metric, "onLoad", "dcl"])];
   const used = candidates.find((m) => runs.every((r) => metricValue(r.page, m) !== null));
-  if (!used) return { ...runs[lowerMiddle(runs.length)], metric: null };
+  if (!used) return { ...lowerMiddle(runs), metric: null };
   // A stable sort: runs with the same value keep their order by number.
   const ranked = [...runs].sort(
     (a, b) => (metricValue(a.page, used) ?? 0) - (metricValue(b.page, used) ?? 0)
   );
-  return { ...ranked[lowerMiddle(ranked.length)], metric: used };
+  return { ...lowerMiddle(ranked), metric: used };
 }
 
 /** Per metric of the summary, its min, median, max and p75 over the runs that measured it. */
@@ -141,15 +145,14 @@ export function runSpread(group: RunGroup): RunSpread {
       .map((r) => metricValue(r.page, metric))
       .filter((v): v is number => v !== null)
       .sort((a, b) => a - b);
-    if (values.length === 0) continue;
-    const entry: MetricSpread = {
-      min: values[0],
-      median: percentile(values, 0.5),
-      max: values[values.length - 1],
-      p75: percentile(values, 0.75),
-      runs: values.length,
-    };
-    spread[metric] = entry;
+    const min = values[0];
+    const median = percentile(values, 0.5);
+    const max = values.at(-1);
+    const p75 = percentile(values, 0.75);
+    if (min === undefined || median === undefined || max === undefined || p75 === undefined) {
+      continue;
+    }
+    spread[metric] = { min, median, max, p75, runs: values.length };
   }
   return spread;
 }

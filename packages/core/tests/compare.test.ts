@@ -144,6 +144,42 @@ describe("compareFlows — steps", () => {
   });
 });
 
+describe("compareFlows — flows with unequal steps", () => {
+  const connectionOnly = (flow: Flow): Flow => ({
+    ...flow,
+    steps: flow.steps.filter((s) => s.kind === "connection"),
+  });
+
+  it("lists the kinds only B has once A has no step left", () => {
+    const { pairs } = compareFlows(connectionOnly(firstView()), repeatView());
+
+    expect(pairs[0]).toMatchObject({ kind: "connection", a: 0, b: 0 });
+    expect(pairs.slice(1).every((p) => p.a === undefined && p.b !== undefined)).toBe(true);
+    expect(kindsOf(pairs)).toContain("loaded");
+  });
+
+  it("lists the kinds only A has once B has no step left", () => {
+    const { pairs } = compareFlows(firstView(), connectionOnly(repeatView()));
+
+    expect(pairs[0]).toMatchObject({ kind: "connection", a: 0, b: 0 });
+    expect(pairs.slice(1).every((p) => p.b === undefined && p.a !== undefined)).toBe(true);
+    expect(kindsOf(pairs)).toContain("loaded");
+  });
+
+  it("pairs nothing for two flows without steps", () => {
+    const { pairs } = compareFlows({ ...firstView(), steps: [] }, { ...repeatView(), steps: [] });
+
+    expect(pairs).toEqual([]);
+  });
+
+  it("names the problem when a flow has no pages instead of failing on an undefined page", () => {
+    const empty: Flow = { ...firstView(), pages: [], pageAnalyses: [] };
+
+    expect(() => compareFlows(empty, repeatView())).toThrow("Cannot compare a flow without pages");
+    expect(() => compareFlows(firstView(), empty)).toThrow("Cannot compare a flow without pages");
+  });
+});
+
 describe("stepAtPair", () => {
   it("shows a side's own step when it has the pair's kind", () => {
     const { pairs } = compareFlows(firstView(), repeatView());

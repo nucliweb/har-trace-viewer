@@ -181,3 +181,11 @@ describe("defaultComparePageIds", () => {
     expect(defaultComparePageIds(parseHarPages(firefoxHar()))).toBeNull();
   });
 });
+
+describe("a parsed HAR without a page", () => {
+  it("is named when listed instead of failing on an undefined page", () => {
+    const [har] = parseHarPages(firefoxHar());
+
+    expect(() => listHarPages([{ ...har!, pages: [] }])).toThrow("The parsed HAR has no page");
+  });
+});

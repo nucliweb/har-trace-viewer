@@ -62,7 +62,8 @@ export function computeInp(events: VitalsEvent[]): number | null {
     if (typeof duration !== "number") continue;
     longest.set(interactionId, Math.max(longest.get(interactionId) ?? 0, duration));
   }
-  if (longest.size === 0) return null;
   const sorted = [...longest.values()].sort((a, b) => b - a);
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length / INP_PERCENTILE_STEP))];
+  return (
+    sorted[Math.min(sorted.length - 1, Math.floor(sorted.length / INP_PERCENTILE_STEP))] ?? null
+  );
 }

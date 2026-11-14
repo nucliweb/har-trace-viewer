@@ -51,12 +51,19 @@ export function isThirdParty(entry: { url: string }, documentRoot: string): bool
   return getRootDomain(entry.url) !== documentRoot;
 }
 
+/** The page a parsed HAR stands for; parseHar and parseHarPages always give it one. */
+export function pageOf(har: ParsedHar): HarPage {
+  const [page] = har.pages;
+  if (!page) throw new Error("The parsed HAR has no page");
+  return page;
+}
+
 export function describePage(pageFlow: PageFlow, hasGfw: boolean): PageContext {
   const { har, trace } = pageFlow;
   const document = har.documentEntry;
   // Only an HTML document is not a resource: the primary request of a page without one is.
   const mainDocument = pageDocument(har);
-  const page = har.pages[0];
+  const page = pageOf(har);
   const cdnResult = detectNode(document.responseHeaders);
   const hasCdn = cdnResult.type === "edge";
   const documentRoot = getRootDomain(document.url);
