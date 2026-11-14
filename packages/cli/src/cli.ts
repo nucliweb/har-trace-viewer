@@ -12,8 +12,6 @@ import { resolve, dirname, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs as nodeParseArgs } from "node:util";
 import {
-  parseRecording,
-  RecordingFormatError,
   expandPageFlows,
   listHarPages,
   parsePageSelection,
@@ -32,17 +30,8 @@ import {
   summarizeFlowMetrics,
   RUN_METRIC_CHOICES,
 } from "@htv/core";
-import type {
-  ClientRegion,
-  Flow,
-  PageFlow,
-  RecordingKind,
-  RecordingResult,
-  RedactOptions,
-  RunMetric,
-  RunSpread,
-} from "@htv/core";
-import { readTextFile } from "@htv/core/node";
+import type { ClientRegion, Flow, PageFlow, RedactOptions, RunMetric, RunSpread } from "@htv/core";
+import { readRecording } from "./recording";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
 import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
@@ -607,41 +596,6 @@ export function validateArgs(args: Args): string | null {
     if (!p.har) return missingHar(p);
   }
   return null;
-}
-
-const RECORDING_NOUN: Record<RecordingKind, string> = { har: "a HAR", trace: "a Chrome trace" };
-const RECORDING_SHAPE: Record<RecordingKind, string> = {
-  har: "(log.entries)",
-  trace: "(traceEvents or an event array)",
-};
-
-/** Reads and parses a HAR or a trace; every failure is one line that starts with the file. */
-async function readRecording<K extends RecordingKind>(
-  kind: K,
-  file: string
-): Promise<RecordingResult<K>> {
-  try {
-    return parseRecording(kind, await readTextFile(resolve(file)));
-  } catch (error) {
-    const expected = RECORDING_NOUN[kind];
-    if (error instanceof RecordingFormatError) {
-      if (error.reason === "not-json") {
-        throw new Error(`${file}: expected ${expected}, but the file is not valid JSON`, {
-          cause: error,
-        });
-      }
-      const found = error.found
-        ? `this is ${RECORDING_NOUN[error.found]}`
-        : "found neither a HAR nor a Chrome trace";
-      const shape = error.found ? "" : ` ${RECORDING_SHAPE[kind]}`;
-      throw new Error(`${file}: expected ${expected}${shape} but ${found}`, { cause: error });
-    }
-    const code = (error as NodeJS.ErrnoException).code;
-    throw new Error(
-      `${file}: ${code === "ENOENT" ? "no such file or directory" : (error as Error).message}`,
-      { cause: error }
-    );
-  }
 }
 
 /** Describes the pages of each --har: id, entries and title. */

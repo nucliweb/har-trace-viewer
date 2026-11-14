@@ -148,6 +148,39 @@ describe("htv redact", () => {
     expect(result.stderr).toContain("htv redact needs one HAR file");
   });
 
+  it.each([
+    ["a missing file", "missing.har", null, "no such file or directory"],
+    ["a missing .gz file", "missing.har.gz", null, "no such file or directory"],
+    [
+      "a file that is not JSON",
+      "notes.har",
+      "hello",
+      "expected a HAR, but the file is not valid JSON",
+    ],
+    [
+      "JSON that is not a recording",
+      "other.har",
+      '{"a":1}',
+      "expected a HAR (log.entries) but found neither a HAR nor a Chrome trace",
+    ],
+    [
+      "a Chrome trace",
+      "trace.json",
+      '{"traceEvents":[]}',
+      "expected a HAR but this is a Chrome trace",
+    ],
+  ])("names the file and writes nothing for %s", (_case, name, content, message) => {
+    const dir = makeTempDir();
+    const input = join(dir, name);
+    if (content !== null) writeFileSync(input, content);
+    const output = join(dir, "out.har");
+    const result = runCli(["redact", input, "-o", output]);
+    expect(result.status).toBe(1);
+    expect(result.stderr.trim()).toBe(`${input}: ${message}`);
+    expect(result.stdout).toBe("");
+    expect(existsSync(output)).toBe(false);
+  });
+
   it("redacts a real recording", () => {
     const output = join(makeTempDir(), "shared.har");
 

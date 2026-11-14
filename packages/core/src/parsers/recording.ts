@@ -50,11 +50,10 @@ function detectRecordingKind(value: unknown): RecordingKind | null {
 }
 
 /**
- * Parses the text of a HAR (into its pages) or of a Chrome trace. Throws a RecordingFormatError
- * when the text is not JSON, not a recording, or the other kind of recording; the core
- * parsers' own errors pass through.
+ * The JSON value of a HAR or of a Chrome trace, checked to be the kind asked for. Throws a
+ * RecordingFormatError when the text is not JSON, not a recording, or the other kind.
  */
-export function parseRecording<K extends RecordingKind>(kind: K, text: string): RecordingResult<K> {
+export function readRecordingJson(kind: RecordingKind, text: string): unknown {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -70,6 +69,16 @@ export function parseRecording<K extends RecordingKind>(kind: K, text: string): 
   const found = detectRecordingKind(value);
   if (found === null) throw new RecordingFormatError(UNRECOGNIZED_JSON, "unrecognized", kind);
   if (found !== kind) throw new RecordingFormatError(WRONG_KIND[kind], "wrong-kind", kind, found);
+  return value;
+}
+
+/**
+ * Parses the text of a HAR (into its pages) or of a Chrome trace. Throws a RecordingFormatError
+ * when the text is not JSON, not a recording, or the other kind of recording; the core
+ * parsers' own errors pass through.
+ */
+export function parseRecording<K extends RecordingKind>(kind: K, text: string): RecordingResult<K> {
+  const value = readRecordingJson(kind, text);
   const result =
     kind === "har"
       ? parseHarPages(value as RawHar)

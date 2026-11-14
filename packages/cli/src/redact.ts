@@ -4,8 +4,8 @@ import { parseArgs as nodeParseArgs } from "node:util";
 import { gzipSync } from "node:zlib";
 import { describeRedaction, redactFlows, redactHar } from "@htv/core";
 import type { RedactOptions } from "@htv/core";
-import { readTextFile } from "@htv/core/node";
 import type { Report } from "./cli";
+import { readHarJson } from "./recording";
 
 /** `htv redact <in.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]`. */
 export interface RedactArgs {
@@ -40,7 +40,7 @@ export function parseRedactArgs(argv: string[]): RedactArgs {
  * stdout, or to stdout with the counts on stderr.
  */
 export async function runRedactCommand(args: RedactArgs): Promise<void> {
-  const raw: unknown = JSON.parse(await readTextFile(resolve(args.input)));
+  const raw = await readHarJson(args.input);
   const { har, report } = redactHar(raw, { hosts: args.hosts });
   const json = `${JSON.stringify(har, null, 2)}\n`;
   const counts = `Redacted: ${describeRedaction(report)}`;
