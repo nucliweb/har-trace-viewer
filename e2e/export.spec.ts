@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -114,4 +115,75 @@ test("the compare report exports both sides as text only", async ({ page }, test
   const rows = (await readFile(path, "utf8")).split("\r\n").filter(Boolean).slice(1);
   const sides = new Set(rows.map((row) => row.split(",")[1]));
   expect(sides).toEqual(new Set(["a", "b"]));
+});
+
+test("redacts the text exports, says what changed and leaves the images alone", async ({
+  page,
+}, testInfo) => {
+  const errors = await openAtFcp(page);
+  const analyticsId = "1403848601.1770921786";
+
+  const plain = await exportAs(page, "Download CSV", testInfo);
+  expect(await readFile(plain.path, "utf8")).toContain(analyticsId);
+  await expect(page.getByRole("status")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await expect(page.getByRole("menuitemradio", { name: "Secrets", exact: true })).toBeChecked();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download CSV" }).click();
+  const download = await downloading;
+  const path = testInfo.outputPath("redacted.csv");
+  await download.saveAs(path);
+  const redacted = await readFile(path, "utf8");
+  expect(redacted).not.toContain(analyticsId);
+  expect(redacted).toContain("[redacted-1]");
+  expect(redacted).toContain("region1.google-analytics.com");
+  await expect(page.getByRole("status")).toContainText(/^Redacted: \d+ query values?/);
+
+  const svg = await exportAs(page, "Download SVG", testInfo);
+  expect(await readFile(svg.path, "utf8")).toContain("<svg");
+  await expect(page.getByRole("status")).toHaveText("");
+  expect(errors).toEqual([]);
+});
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`the open export menu and the redaction note have no axe violations: ${scheme} theme`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ colorScheme: scheme });
+    const page = await context.newPage();
+    await openAtFcp(page);
+    await page.getByRole("button", { name: "Export" }).click();
+    await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Download CSV" }).click();
+    await expect(page.getByRole("status")).toContainText("Redacted:");
+    await page.getByRole("button", { name: "Export" }).click();
+    await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(
+      results.violations.map((v) => ({ id: v.id, nodes: v.nodes.map((n) => n.html) }))
+    ).toEqual([]);
+    await context.close();
+  });
+}
+
+test("the second redaction level also masks third-party hosts", async ({ page }, testInfo) => {
+  await page.context().setOffline(true);
+  await page.goto(pathToFileURL(resolve(output, "problems/index.html")).href);
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  await page.getByRole("button", { name: "Export" }).click();
+  await page.getByRole("menuitemradio", { name: "Secrets and third-party hosts" }).click();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Download CSV" }).click();
+  const path = testInfo.outputPath("masked.csv");
+  await (await downloading).saveAs(path);
+  const csv = await readFile(path, "utf8");
+  expect(csv).not.toContain("example-cdn.net");
+  expect(csv).toContain("host-1.redacted");
+  expect(csv).toContain("www.example.com");
+  await expect(page.getByRole("status")).toContainText("1 host masked");
 });

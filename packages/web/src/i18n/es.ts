@@ -230,6 +230,11 @@ export const es: Messages = {
     markdown: "Descargar Markdown",
     mermaid: "Descargar Mermaid",
     failed: "Error al exportar",
+    redactGroup: "Ocultar secretos en CSV, Markdown y Mermaid (no en las imágenes)",
+    redactOff: "No",
+    redactSecrets: "Secretos",
+    redactHosts: "Secretos y hosts de terceros",
+    redacted: "Ocultado:",
   },
   cache: {
     title: "Caché y red",

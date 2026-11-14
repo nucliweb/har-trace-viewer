@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Flow } from "@htv/core";
 import { collectFontFaceCss, downloadBlob, svgBlob, svgToPngBlob } from "../lib/export-browser.js";
@@ -8,8 +8,10 @@ import {
   readBadges,
   serializeDiagramSvg,
 } from "../lib/export-diagram.js";
-import { TEXT_EXPORTS, textExportBlob, textExportFilename } from "../lib/export-text.js";
+import { TEXT_EXPORTS, textExport, textExportFilename } from "../lib/export-text.js";
 import type { TextExport } from "../lib/export-text.js";
+import { useRedaction } from "../hooks/useRedaction.js";
+import type { RedactionLevel } from "../hooks/useRedaction.js";
 import { useMessages } from "../i18n/context.js";
 import styles from "./ExportMenu.module.css";
 
@@ -28,6 +30,12 @@ interface Props {
 }
 
 const TEXT_KINDS = Object.keys(TEXT_EXPORTS) as TextExport[];
+const REDACTION_LABELS = {
+  off: "redactOff",
+  secrets: "redactSecrets",
+  "mask-hosts": "redactHosts",
+} as const;
+const REDACTION_LEVELS = Object.keys(REDACTION_LABELS) as RedactionLevel[];
 
 export function ExportMenu({
   flow,
@@ -43,6 +51,9 @@ export function ExportMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [redaction, setRedaction] = useRedaction();
+  const [summary, setSummary] = useState<string | null>(null);
+  const groupId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
@@ -90,7 +101,9 @@ export function ExportMenu({
 
   const runText = (kind: TextExport) => {
     setOpen(false);
-    download(textExportBlob(kind, flow, compare), textExportFilename(flow, compare, kind));
+    const { blob, summary: redacted } = textExport(kind, flow, compare, redaction);
+    setSummary(redacted);
+    download(blob, textExportFilename(flow, compare, kind));
     buttonRef.current?.focus();
   };
 
@@ -103,7 +116,7 @@ export function ExportMenu({
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
     const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]')
+      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')
     );
     const index = items.indexOf(document.activeElement as HTMLElement);
     const step = event.key === "ArrowDown" ? 1 : -1;
@@ -118,7 +131,10 @@ export function ExportMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled || busy}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setSummary(null);
+          setOpen((v) => !v);
+        }}
       >
         {t.button}
       </button>
@@ -152,7 +168,32 @@ export function ExportMenu({
               {t[kind]}
             </button>
           ))}
+          <div role="group" aria-labelledby={groupId} className={styles.group}>
+            <span id={groupId} className={styles.groupLabel}>
+              {t.redactGroup}
+            </span>
+            {REDACTION_LEVELS.map((level) => (
+              <button
+                key={level}
+                role="menuitemradio"
+                aria-checked={redaction === level}
+                className={styles.item}
+                onClick={() => setRedaction(level)}
+              >
+                {t[REDACTION_LABELS[level]]}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+      {redaction !== "off" && (
+        <span role="status" className={styles.note}>
+          {summary !== null && (
+            <>
+              {t.redacted} <span lang="en">{summary}</span>
+            </>
+          )}
+        </span>
       )}
       {failed && (
         <span role="alert" className={styles.error}>

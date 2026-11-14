@@ -234,6 +234,11 @@ export const ca: Messages = {
     markdown: "Baixa el Markdown",
     mermaid: "Baixa el Mermaid",
     failed: "No s'ha pogut exportar",
+    redactGroup: "Oculta els secrets al CSV, Markdown i Mermaid (no a les imatges)",
+    redactOff: "No",
+    redactSecrets: "Secrets",
+    redactHosts: "Secrets i hosts de tercers",
+    redacted: "Ocultat:",
   },
   cache: {
     title: "Memòria cau i xarxa",

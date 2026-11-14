@@ -232,6 +232,11 @@ export const en = {
     markdown: "Download Markdown",
     mermaid: "Download Mermaid",
     failed: "Export failed",
+    redactGroup: "Redact CSV, Markdown and Mermaid (not images)",
+    redactOff: "Off",
+    redactSecrets: "Secrets",
+    redactHosts: "Secrets and third-party hosts",
+    redacted: "Redacted:",
   },
   cache: {
     title: "Cache & Network",
