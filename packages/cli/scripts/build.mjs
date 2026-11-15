@@ -1,6 +1,7 @@
 // Builds the CLI: the web app first, then the esbuild bundle, then the slice of the web build
 // that a report needs. Site-only files (social images, icons, robots.txt) stay out of dist/web,
-// so they are in neither the npm tarball nor any report; the demo flow is not in that web build.
+// so they are in neither the npm tarball nor any report; the demo flow is not in that web build,
+// and is copied on its own for `--demo`.
 import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -115,6 +116,9 @@ writeFileSync(join(webOut, "index.html"), html);
 
 // The schema of `--format findings`, which the document links to inside the published package.
 cpSync(resolve(cliDir, "../core/schema/findings.schema.json"), join(dist, "findings.schema.json"));
+
+// The example of `--demo`: the flow the web app's demo button loads, read from disk when asked for.
+cpSync(join(webDir, "src/demo/demo-flow.json"), join(dist, "demo-flow.json"));
 
 // The README npm shows: the repository's, for the users of the command (scripts/readme.mjs).
 writeNpmReadme(resolve(cliDir, "../.."), cliDir);

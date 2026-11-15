@@ -16,7 +16,10 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
 htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]] [--compare-region default|cn]
 htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
+htv --demo
 ```
+
+`htv --demo` opens the built-in example, with no file needed: one page of a real site with its Chrome trace, to look around the [terminal report](#terminal-report) before recording anything. It goes to every output too (`htv --demo -o demo.html`, `htv --demo --format markdown`).
 
 A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
 
@@ -183,6 +186,7 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `<file>`                   | A HAR (`.har`, `.har.gz`) or a Chrome trace (`.json`, `.json.gz`) given without its flag, attached to the preceding `--page`                                                                                                                    |
 | `--page <name>`            | Page label (can be specified multiple times for multi-page reports)                                                                                                                                                                             |
+| `--demo`                   | Report the built-in example (one page of a real site with its trace) instead of a recording; no file needed. It cannot go with a recording, a comparison, `--list-pages` or a region                                                            |
 | `--har <file>`             | HAR file (`.har` or `.har.gz`) for the preceding `--page`                                                                                                                                                                                       |
 | `--trace <file>`           | Chrome trace file (`.json` or `.json.gz`) for the preceding `--page`                                                                                                                                                                            |
 | `--select <value>`         | For the preceding `--har` with several pages (WebPageTest runs and views): keep only the matching pages, by page id, comma-separated ids or text/regex on id, title and URL                                                                     |
@@ -399,7 +403,7 @@ Real recordings live in `fixtures/` (see its README for what each one is); small
 
 ### Demo flow
 
-The web app's empty state offers a "Load demo flow" button. The flow it loads is pre-generated from the core test fixtures (`webperf-snippets.har.fixture.json` and `webperf-snippets.trace.fixture.json`) and stored in `packages/web/src/demo/demo-flow.json`. It is a separate chunk fetched on click, so it does not weigh on the main bundle, and it is not offered inside generated reports. Regenerate it after changing the flow format or the fixtures with `npm run demo:build -w @htv/web`.
+The web app's empty state offers a "Load demo flow" button, and `htv --demo` reports the same flow from the command line (the CLI build copies it to `dist/demo-flow.json`). The flow is pre-generated from the core test fixtures (`webperf-snippets.har.fixture.json` and `webperf-snippets.trace.fixture.json`) and stored in `packages/web/src/demo/demo-flow.json`. It is a separate chunk fetched on click, so it does not weigh on the main bundle, and it is not offered inside generated reports. Regenerate it after changing the flow format or the fixtures with `npm run demo:build -w @htv/web`.
 
 ### Terminal recordings
 

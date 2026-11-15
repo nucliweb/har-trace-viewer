@@ -18,6 +18,7 @@ import {
   parseResourceQuery,
   buildWaterfall,
   generateFlow,
+  normalizeFlow,
   isClientRegion,
   findingsDocument,
   markdownReport,
@@ -100,6 +101,8 @@ export interface Args {
   /** Compares the flow (A) with another recording (B). */
   compareWith?: CompareArg;
   listPages?: boolean;
+  /** Reports the built-in example instead of a recording. */
+  demo?: boolean;
   /** A request filter (the resource query language): only the matching requests are emitted. */
   filter?: string;
   region?: ClientRegion; // undefined when --region is absent
@@ -175,6 +178,7 @@ export function parseArgs(argv: string[]): Args {
       select: { type: "string", multiple: true },
       runs: { type: "string", multiple: true },
       "list-pages": { type: "boolean" },
+      demo: { type: "boolean" },
       filter: { type: "string" },
       compare: { type: "boolean" },
       "compare-with": { type: "string" },
@@ -202,6 +206,7 @@ export function parseArgs(argv: string[]): Args {
   let format: OutputFormat | undefined;
   let bundle = false;
   let listPages = false;
+  let demo = false;
   let filter: string | undefined;
   let help = false;
   let version = false;
@@ -253,6 +258,9 @@ export function parseArgs(argv: string[]): Args {
         break;
       case "list-pages":
         listPages = true;
+        break;
+      case "demo":
+        demo = true;
         break;
       case "filter":
         filter = parseFilter(value);
@@ -311,6 +319,7 @@ export function parseArgs(argv: string[]): Args {
     bundle,
     ...(format ? { format } : {}),
     ...(listPages ? { listPages } : {}),
+    ...(demo ? { demo } : {}),
     ...(filter !== undefined ? { filter } : {}),
     ...(compare ? { compare } : {}),
     ...(compareWith ? { compareWith } : {}),
@@ -466,7 +475,8 @@ export function outputTarget(args: Args, isInteractive: boolean): OutputTarget {
 
 export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
        htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]
-       htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]`;
+       htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
+       htv --demo    (the built-in example, no file needed)`;
 
 export const HELP = `${USAGE}
 
@@ -511,6 +521,10 @@ Output (where the report goes):
                       HAR to stdout without -o.
 
 Input:
+  --demo              Report the built-in example instead of a recording: one page
+                      of a real site with its Chrome trace. Needs no file, and goes
+                      to any output (htv --demo, htv --demo -o demo.html,
+                      htv --demo --format markdown).
   <file>              A HAR (.har or .har.gz) or a Chrome trace (.json or .json.gz)
                       given without its flag, attached to the preceding --page.
                       A HAR with another extension needs --har.
@@ -632,7 +646,25 @@ function stdinError(args: Args): string | null {
   return null;
 }
 
+/** What --demo cannot go with: the example is one page, already analysed, with no file behind. */
+function demoError(args: Args): string | null {
+  const extra =
+    args.pages.length > 0
+      ? "a recording"
+      : args.listPages
+        ? "--list-pages"
+        : args.compare || args.compareWith
+          ? "a comparison"
+          : args.region || args.compareRegion
+            ? "a region"
+            : null;
+  return extra
+    ? `--demo reports the built-in example, a single page drawn as it is: drop ${extra}`
+    : null;
+}
+
 export function validateArgs(args: Args): string | null {
+  if (args.demo) return demoError(args);
   const stdin = stdinError(args);
   if (stdin) return stdin;
   if (args.filter !== undefined && args.listPages) {
@@ -836,7 +868,26 @@ export interface Report {
   compare?: Flow;
 }
 
+/** The example the web app's demo button loads: a page of a real site with its trace. */
+function demoFlow(): Flow {
+  return normalizeFlow(JSON.parse(readFileSync(join(__dirname, "demo-flow.json"), "utf-8")));
+}
+
+function narrowToFilter(flows: Flow[], filter: string) {
+  const kept = flows.map((f) => keepMatchingRequests(f, filter));
+  const total = kept.reduce((sum, k) => sum + k.total, 0);
+  const matching = kept.reduce((sum, k) => sum + k.matching, 0);
+  console.error(
+    `Note: --filter kept ${matching} of ${total} request${total === 1 ? "" : "s"}: "${filter}".`
+  );
+}
+
 export async function buildReport(args: Args): Promise<Report> {
+  if (args.demo) {
+    const flow = demoFlow();
+    if (args.filter !== undefined) narrowToFilter([flow], args.filter);
+    return { flow };
+  }
   const pageFlows: PageFlow[] = [];
   const spreads = new Map<PageFlow, RunSpread>();
   for (const p of args.pages) pageFlows.push(...(await readPageFlows(p, spreads)));
@@ -856,16 +907,7 @@ export async function buildReport(args: Args): Promise<Report> {
 
   noteSuggestedRegion(flow, args.region, compare ? "A" : undefined);
   if (compare) noteSuggestedRegion(compare, args.compareRegion, "B");
-  if (args.filter !== undefined) {
-    const kept = [flow, ...(compare ? [compare] : [])].map((f) =>
-      keepMatchingRequests(f, args.filter!)
-    );
-    const total = kept.reduce((sum, k) => sum + k.total, 0);
-    const matching = kept.reduce((sum, k) => sum + k.matching, 0);
-    console.error(
-      `Note: --filter kept ${matching} of ${total} request${total === 1 ? "" : "s"}: "${args.filter}".`
-    );
-  }
+  if (args.filter !== undefined) narrowToFilter(compare ? [flow, compare] : [flow], args.filter);
   return compare ? { flow, compare } : { flow };
 }
 

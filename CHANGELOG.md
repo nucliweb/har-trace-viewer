@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Try the command without a file with `htv --demo`: the built-in example, one page of a real site with its Chrome trace, in the terminal report or in any other output.
+
 ## [0.14.0] - 2026-11-14
 
 ### Added
