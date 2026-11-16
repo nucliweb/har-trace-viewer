@@ -49,11 +49,28 @@ describe("parsing in the worker", () => {
 
   it("brings the parser's message back across the worker boundary", async () => {
     await expect(parseInWorker("har", makeFile('{"foo":1}', "site.har"))).rejects.toThrow(
-      new Error(UNRECOGNIZED_JSON)
+      UNRECOGNIZED_JSON
     );
     await expect(
       parseInWorker("har", makeFile('{"log":{"pages":[],"entries":[]}}', "site.har"))
-    ).rejects.toThrow(new Error("HAR contains no entries"));
+    ).rejects.toThrow("HAR contains no entries");
+  });
+
+  it("brings the parser's code and parameters back", async () => {
+    const error = await parseInWorker("trace", makeFile("[1", "trace.json")).catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ code: "not-json", params: { kind: "trace" } });
+    expect(error.params.detail).toEqual(expect.any(String));
+
+    const wrong = await parseInWorker("har", makeFile("[]", "site.har")).catch((e) => e);
+    expect(wrong).toMatchObject({ code: "wrong-kind", params: { kind: "har", found: "trace" } });
+    expect(wrong.message).toBe("This is a Chrome trace, not a HAR: load it with the Trace button.");
+  });
+
+  it("brings an error without a code back as a plain Error", async () => {
+    const error = await generateInWorker([]).catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.code).toBeUndefined();
   });
 
   it("brings the parsed pages back on success", async () => {
@@ -80,8 +97,6 @@ describe("parsing in the worker", () => {
   });
 
   it("brings a failed generation back as an error", async () => {
-    await expect(generateInWorker([])).rejects.toThrow(
-      new Error("Flow requires at least one page")
-    );
+    await expect(generateInWorker([])).rejects.toThrow("Flow requires at least one page");
   });
 });

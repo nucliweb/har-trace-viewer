@@ -1,4 +1,4 @@
-import { generateFlow } from "@htv/core";
+import { ParseError, generateFlow } from "@htv/core";
 import { readRecordingFile } from "../lib/parse-recording.js";
 import type {
   ParseProgress,
@@ -33,7 +33,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   try {
     post({ id, ok: true, result: await handle(event.data) });
   } catch (error) {
-    // An Error does not cross postMessage as such: its message does.
-    post({ id, ok: false, error: error instanceof Error ? error.message : String(error) });
+    post({
+      id,
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+      ...(error instanceof ParseError ? { code: error.code, params: error.params } : {}),
+    });
   }
 };

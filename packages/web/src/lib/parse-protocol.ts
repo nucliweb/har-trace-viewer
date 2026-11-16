@@ -1,4 +1,11 @@
-import type { Flow, FlowOptions, PageFlow, ParsedHar, ParsedTrace } from "@htv/core";
+import type {
+  Flow,
+  FlowOptions,
+  PageFlow,
+  ParseErrorParams,
+  ParsedHar,
+  ParsedTrace,
+} from "@htv/core";
 
 export type ParseKind = "har" | "trace";
 type ParsePhase = "reading" | "decompressing" | "parsing";
@@ -35,4 +42,6 @@ export type WorkerResult = ParsedHar[] | ParsedTrace | Flow;
 export type ParseResponse =
   | { id: number; progress: ParseProgress }
   | { id: number; ok: true; result: WorkerResult }
-  | { id: number; ok: false; error: string };
+  // An Error does not cross postMessage as such: its message does, and a parser's error also
+  // its code and parameters, so the page can word it in its own language.
+  | { id: number; ok: false; error: string; code?: string; params?: ParseErrorParams };

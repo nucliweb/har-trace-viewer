@@ -115,6 +115,24 @@ export const en = {
       "Add the HAR of the same recording: a trace adds main-thread detail to a HAR and can't be shown on its own.",
     parserCrash: (detail: string | undefined) =>
       `The parser crashed in the browser${detail ? ` (${detail})` : ""}. The file may be too large for this tab: try the htv command line, or a HAR without response bodies.`,
+    // The parsers' errors by code, with their parameters (strings); the English ones are the
+    // messages the command line prints.
+    parseErrors: {
+      notJson: (p: Record<string, string>) => `Not valid JSON: ${p.detail}`,
+      unrecognizedJson:
+        "This JSON is neither a HAR (log.entries) nor a Chrome trace (traceEvents or an event array).",
+      wrongKind: (p: Record<string, string>): string =>
+        p.kind === "har"
+          ? "This is a Chrome trace, not a HAR: load it with the Trace button."
+          : "This is a HAR, not a Chrome trace: load it as the page's HAR.",
+      harNoEntries: "HAR contains no entries",
+      harNoUsableEntries: "No entry of the HAR has a request URL and a valid start time.",
+      traceNoNavigation: "No navigationStart found in trace",
+      gzipUnsupported:
+        "This browser cannot decompress .gz files (no DecompressionStream): decompress the file and load it again.",
+      gzipInvalid: (p: Record<string, string>) =>
+        `Could not decompress the file${p.detail ? ` (${p.detail})` : ""}. It may be truncated or not a gzip file.`,
+    },
     moveUp: "Move up",
     moveUpLabel: "Move page up",
     moveDown: "Move down",

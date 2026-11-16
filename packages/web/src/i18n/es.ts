@@ -112,6 +112,23 @@ export const es: Messages = {
       "Añade el HAR de la misma grabación: una traza añade detalle del hilo principal a un HAR y no se puede mostrar sola.",
     parserCrash: (detail) =>
       `El analizador ha fallado en el navegador${detail ? ` (${detail})` : ""}. Puede que el archivo sea demasiado grande para esta pestaña: prueba la línea de comandos de htv, o un HAR sin los cuerpos de las respuestas.`,
+    parseErrors: {
+      notJson: (p) => `No es un JSON válido: ${p.detail}`,
+      unrecognizedJson:
+        "Este JSON no es ni un HAR (log.entries) ni una traza de Chrome (traceEvents o un array de eventos).",
+      wrongKind: (p) =>
+        p.kind === "har"
+          ? "Esto es una traza de Chrome, no un HAR: cárgala con el botón Traza."
+          : "Esto es un HAR, no una traza de Chrome: cárgalo como el HAR de la página.",
+      harNoEntries: "El HAR no contiene ninguna entrada",
+      harNoUsableEntries:
+        "Ninguna entrada del HAR tiene una URL de petición y una hora de inicio válida.",
+      traceNoNavigation: "No se ha encontrado navigationStart en la traza",
+      gzipUnsupported:
+        "Este navegador no puede descomprimir archivos .gz (no tiene DecompressionStream): descomprime el archivo y vuelve a cargarlo.",
+      gzipInvalid: (p) =>
+        `No se ha podido descomprimir el archivo${p.detail ? ` (${p.detail})` : ""}. Puede que esté incompleto o que no sea un archivo gzip.`,
+    },
     moveUp: "Subir",
     moveUpLabel: "Subir la página",
     moveDown: "Bajar",

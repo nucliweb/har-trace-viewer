@@ -1,4 +1,5 @@
 import type { ParsedTrace, TraceLcpCandidate, TraceRequest } from "../types.js";
+import { ParseError } from "./errors.js";
 import { profileMainThread } from "./main-thread.js";
 import type { RawTraceEvent } from "./main-thread.js";
 import { computeCls, computeInp } from "./web-vitals.js";
@@ -22,7 +23,7 @@ function findMainNavigation(events: RawTraceEvent[]): RawTraceEvent {
   );
   const [firstNav] = navs;
   if (!firstNav) {
-    throw new Error("No navigationStart found in trace");
+    throw new ParseError("No navigationStart found in trace", "trace-no-navigation");
   }
 
   // Prefer the navigation that actually produced paint events.

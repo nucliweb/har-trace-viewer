@@ -1,7 +1,12 @@
 import { useRef } from "react";
 import { useCoreLang, useMessages } from "../../i18n/context.js";
 import styles from "../FlowBuilder.module.css";
-import { describeEntryError, describeProgress, needsHar } from "./page-entry.js";
+import {
+  describeEntryError,
+  describeProgress,
+  isWordedByInterface,
+  needsHar,
+} from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
 
 interface Props {
@@ -39,8 +44,10 @@ export function FileZones({
   const traceError = entry.traceError && describeEntryError(entry.traceError, t);
   // A parser's own message is English; the ones the interface words follow its language.
   const coreLang = useCoreLang();
-  const harErrorLang = entry.harError?.kind === "message" ? coreLang : undefined;
-  const traceErrorLang = entry.traceError?.kind === "message" ? coreLang : undefined;
+  const harErrorLang =
+    entry.harError && !isWordedByInterface(entry.harError) ? coreLang : undefined;
+  const traceErrorLang =
+    entry.traceError && !isWordedByInterface(entry.traceError) ? coreLang : undefined;
   const harInputRef = useRef<HTMLInputElement>(null);
   const traceInputRef = useRef<HTMLInputElement>(null);
 

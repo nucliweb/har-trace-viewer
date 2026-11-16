@@ -1,4 +1,4 @@
-import type { Flow, FlowOptions, PageFlow } from "@htv/core";
+import type { Flow, FlowOptions, PageFlow, ParseErrorParams as ErrorParams } from "@htv/core";
 import { en } from "../i18n/en.js";
 import type {
   FlowRequest,
@@ -80,6 +80,18 @@ export class ParserCrashError extends Error {
   }
 }
 
+/**
+ * The Error a failed response stands for, with the code and parameters of a parser's error.
+ * It is not a ParseError: the class would pull the parsers into the main bundle, which only the
+ * worker (or the main-thread fallback) loads.
+ */
+function rebuildError(failure: { error: string; code?: string; params?: ErrorParams }): Error {
+  const error = new Error(failure.error);
+  return failure.code === undefined
+    ? error
+    : Object.assign(error, { code: failure.code, params: failure.params ?? {} });
+}
+
 function reportCrash(message: string | undefined): void {
   shutdown(new ParserCrashError(message));
 }
@@ -111,7 +123,7 @@ function getWorker(): Worker {
     }
     pending.delete(message.id);
     if (message.ok) entry.resolve(message.result);
-    else entry.reject(new Error(message.error));
+    else entry.reject(rebuildError(message));
     scheduleIdleShutdown();
   };
   created.onerror = (event) => {

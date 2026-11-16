@@ -38,10 +38,33 @@ export type EntryError =
   | { kind: "har-extension" }
   | { kind: "trace-extension" }
   | { kind: "parser-crash"; detail?: string }
-  // The parsers' messages are written for the user: they are shown as they are.
+  // A parser's error: its code and parameters are worded in the interface language, so the row
+  // re-words itself when the language changes; the English message stands in for an unknown code.
+  | { kind: "parse"; code: string; params: Record<string, string>; message: string }
+  // Any other message is shown as it is.
   | { kind: "message"; message: string };
 
 type BuilderMessages = Messages["builder"];
+
+const PARSE_ERROR_TEXT = {
+  "not-json": "notJson",
+  "unrecognized-json": "unrecognizedJson",
+  "wrong-kind": "wrongKind",
+  "har-no-entries": "harNoEntries",
+  "har-no-usable-entries": "harNoUsableEntries",
+  "trace-no-navigation": "traceNoNavigation",
+  "gzip-unsupported": "gzipUnsupported",
+  "gzip-invalid": "gzipInvalid",
+} as const satisfies Record<string, keyof BuilderMessages["parseErrors"]>;
+
+const parseErrorText = (code: string) =>
+  Object.hasOwn(PARSE_ERROR_TEXT, code)
+    ? PARSE_ERROR_TEXT[code as keyof typeof PARSE_ERROR_TEXT]
+    : undefined;
+
+/** Whether the interface words the error, as opposed to showing an English message as it is. */
+export const isWordedByInterface = (error: EntryError): boolean =>
+  error.kind === "parse" ? parseErrorText(error.code) !== undefined : error.kind !== "message";
 
 export function describeEntryError(error: EntryError, t: BuilderMessages): string {
   switch (error.kind) {
@@ -51,6 +74,12 @@ export function describeEntryError(error: EntryError, t: BuilderMessages): strin
       return t.traceExtension;
     case "parser-crash":
       return t.parserCrash(error.detail);
+    case "parse": {
+      const key = parseErrorText(error.code);
+      if (key === undefined) return error.message;
+      const text = t.parseErrors[key];
+      return typeof text === "function" ? text(error.params) : text;
+    }
     case "message":
       return error.message;
   }
@@ -94,10 +123,21 @@ export const isEntryParsing = (p: PageEntry) => p.harProgress !== null || p.trac
 /** A trace only adds detail to the HAR of its recording: without one, the entry is incomplete. */
 export const needsHar = (p: PageEntry) => p.har === null && p.trace !== null;
 
-const toEntryError = (error: unknown): EntryError =>
-  error instanceof ParserCrashError
-    ? { kind: "parser-crash", detail: error.detail }
-    : { kind: "message", message: error instanceof Error ? error.message : String(error) };
+/** A parser's error carries a `code` and its `params` (see ParseError in @htv/core). */
+const codeOf = (error: unknown): { code: string; params: Record<string, string> } | null => {
+  if (!(error instanceof Error)) return null;
+  const { code, params } = error as { code?: unknown; params?: unknown };
+  return typeof code === "string" && typeof params === "object" && params !== null
+    ? { code, params: params as Record<string, string> }
+    : null;
+};
+
+const toEntryError = (error: unknown): EntryError => {
+  if (error instanceof ParserCrashError) return { kind: "parser-crash", detail: error.detail };
+  const coded = codeOf(error);
+  if (coded) return { kind: "parse", ...coded, message: (error as Error).message };
+  return { kind: "message", message: error instanceof Error ? error.message : String(error) };
+};
 
 /** Loads a file given as the recording's HAR: a trace, by its name, goes to the trace instead. */
 export function loadRecordingFile(file: File, apply: (patch: EntryPatch) => void) {

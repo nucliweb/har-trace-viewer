@@ -12,6 +12,7 @@ import type {
   ResourceType,
   ServerTimingMetric,
 } from "../types.js";
+import { ParseError } from "./errors.js";
 import { getRootDomain } from "../utils/domain.js";
 import { minOf } from "../utils/extent.js";
 
@@ -775,10 +776,13 @@ function startingWith(page: RawHarPage, entries: RawHarEntry[]): RawHarPage {
  */
 function readContent(raw: RawHar): { pages: NonEmptyPages; entries: RawHarEntry[] } {
   const rawEntries: unknown[] = Array.isArray(raw.log.entries) ? raw.log.entries : [];
-  if (rawEntries.length === 0) throw new Error("HAR contains no entries");
+  if (rawEntries.length === 0) throw new ParseError("HAR contains no entries", "har-no-entries");
   const entries = rawEntries.filter(isReadableEntry);
   if (entries.length === 0) {
-    throw new Error("No entry of the HAR has a request URL and a valid start time.");
+    throw new ParseError(
+      "No entry of the HAR has a request URL and a valid start time.",
+      "har-no-usable-entries"
+    );
   }
   const [firstRawPage, ...otherRawPages] = (
     Array.isArray(raw.log.pages) ? raw.log.pages : []

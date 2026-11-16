@@ -62,10 +62,10 @@ describe("parseRecording", () => {
 
   it("passes on the messages of the parsers verbatim", () => {
     expect(() => parseRecording("har", '{"log":{"pages":[],"entries":[]}}')).toThrow(
-      new Error("HAR contains no entries")
+      expect.objectContaining({ message: "HAR contains no entries" })
     );
     expect(() => parseRecording("trace", '{"traceEvents":[]}')).toThrow(
-      new Error("No navigationStart found in trace")
+      expect.objectContaining({ message: "No navigationStart found in trace" })
     );
   });
 });

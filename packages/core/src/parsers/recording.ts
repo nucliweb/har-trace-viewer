@@ -1,4 +1,5 @@
 import type { ParsedHar, ParsedTrace } from "../types.js";
+import { ParseError } from "./errors.js";
 import { parseHarPages } from "./har-parser.js";
 import { parseTrace } from "./trace-parser.js";
 
@@ -21,15 +22,25 @@ const WRONG_KIND: Record<RecordingKind, string> = {
  * of neither kind, or the other kind. `message` is worded for the web app; other callers can
  * word their own from the fields.
  */
-export class RecordingFormatError extends Error {
+export class RecordingFormatError extends ParseError {
   constructor(
     message: string,
     readonly reason: "not-json" | "unrecognized" | "wrong-kind",
     readonly expected: RecordingKind,
     readonly found?: RecordingKind,
-    options?: ErrorOptions
+    options?: ErrorOptions,
+    detail = ""
   ) {
-    super(message, options);
+    super(
+      message,
+      reason === "unrecognized" ? "unrecognized-json" : reason,
+      {
+        kind: expected,
+        ...(found ? { found } : {}),
+        ...(reason === "not-json" ? { detail } : {}),
+      },
+      options
+    );
     this.name = "RecordingFormatError";
   }
 }
@@ -58,12 +69,14 @@ export function readRecordingJson(kind: RecordingKind, text: string): unknown {
   try {
     value = JSON.parse(text);
   } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
     throw new RecordingFormatError(
-      `Not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      `Not valid JSON: ${detail}`,
       "not-json",
       kind,
       undefined,
-      { cause: error }
+      { cause: error },
+      detail
     );
   }
   const found = detectRecordingKind(value);

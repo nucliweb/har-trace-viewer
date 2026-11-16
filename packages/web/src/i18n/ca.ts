@@ -116,6 +116,22 @@ export const ca: Messages = {
       "Afegeix l'HAR de la mateixa gravació: una traça afegeix detall del fil principal a un HAR i no es pot mostrar sola.",
     parserCrash: (detail) =>
       `L'analitzador ha fallat al navegador${detail ? ` (${detail})` : ""}. Pot ser que el fitxer sigui massa gran per a aquesta pestanya: prova la línia d'ordres d'htv, o un HAR sense els cossos de les respostes.`,
+    parseErrors: {
+      notJson: (p) => `No és un JSON vàlid: ${p.detail}`,
+      unrecognizedJson:
+        "Aquest JSON no és ni un HAR (log.entries) ni una traça de Chrome (traceEvents o una matriu d'esdeveniments).",
+      wrongKind: (p) =>
+        p.kind === "har"
+          ? "Això és una traça de Chrome, no un HAR: carrega-la amb el botó Traça."
+          : "Això és un HAR, no una traça de Chrome: carrega'l com a HAR de la pàgina.",
+      harNoEntries: "L'HAR no conté cap entrada",
+      harNoUsableEntries: "Cap entrada de l'HAR té una URL de petició i una hora d'inici vàlida.",
+      traceNoNavigation: "No s'ha trobat navigationStart a la traça",
+      gzipUnsupported:
+        "Aquest navegador no pot descomprimir fitxers .gz (no té DecompressionStream): descomprimeix el fitxer i torna'l a carregar.",
+      gzipInvalid: (p) =>
+        `No s'ha pogut descomprimir el fitxer${p.detail ? ` (${p.detail})` : ""}. Pot ser que estigui incomplet o que no sigui un fitxer gzip.`,
+    },
     moveUp: "Puja",
     moveUpLabel: "Puja la pàgina",
     moveDown: "Baixa",
