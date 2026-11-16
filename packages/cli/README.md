@@ -206,8 +206,10 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 | `--bundle`                 | For a directory `--output`: inline all assets (CSS, JS, fonts) into its `index.html`                                                                                                                                                            |
 | `--redact[=mask-hosts]`    | Redact the report before it is written or shown, in every format; `=mask-hosts` also masks third-party hostnames. See [Sharing a report safely](#sharing-a-report-safely)                                                                       |
 | `--region <id>`            | Client network region: `default`, or `cn` for the Great Firewall before the first server. Without the flag, `cn` when the latencies suggest China/GFW routing. In a comparison, A's region                                                      |
-| `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit; repeatable. See [CI budgets](#ci-budgets)                                                                                                                                |
+| `--budget <list>`          | `<metric>=<value>[,...]`: fail (exit 2) when a page goes over a limit, or `delta:<metric><=<value>` when B is worse than A in a comparison; repeatable. See [CI budgets](#ci-budgets)                                                           |
 | `--budget-strict`          | Fail a budget whose metric the page cannot provide (LCP without a trace) instead of passing it as `n/a`                                                                                                                                         |
+| `--check-format <format>`  | `text` (default), `json`, `junit` or `github`: the format of the check result. See [Check formats](#check-formats)                                                                                                                              |
+| `--check-output <path>`    | Also write the check result, in `--check-format`, to a file; the terminal keeps the text result                                                                                                                                                 |
 | `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                                                                                             |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                                                                                        |
 | `-v, --version`            | Print the version and exit                                                                                                                                                                                                                      |
@@ -261,6 +263,91 @@ Findings at warning or worse:
 Checks failed: 1 of 3 budgets failed; 1 finding at warning or worse.
 $ echo $?
 2
+```
+
+#### Budgets on a comparison
+
+With `--compare` or `--compare-with`, a `delta:` budget limits how much worse B may be than A. The value is the metric's usual one (`delta:lcp<=200`, `delta:transfer<=50kb`), or a percentage of A (`delta:transfer<=10%`, `delta:requests<=5%`). A hit ratio is worse when it drops, and its delta is in points of the ratio (`delta:cdn-hit-ratio<=5%` allows 90% to fall to 85%). Any improvement passes. Pages are paired by position, a metric either side cannot provide is `n/a` as above, and a percentage of an A of zero fails when B grew. The `<=` is optional (`delta:lcp=200`), the prefix applies to one pair of a comma-separated list (`lcp=2500,delta:lcp<=10%`), and a `delta:` budget without a comparison is a usage error (exit 1). Plain budgets keep checking both sides of the comparison.
+
+```bash
+htv --har before.har --compare-with after.har --budget "delta:lcp<=200,delta:transfer<=10%"
+```
+
+#### Check formats
+
+`--check-format` chooses how the result is written, to stdout or stderr as above:
+
+| Format   | Output                                                                                                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`   | The table above (default)                                                                                                                                                                            |
+| `json`   | One document, see below                                                                                                                                                                              |
+| `junit`  | JUnit XML: one `testsuite`, one `testcase` per budget and per finding that reached `--fail-on`, a `<failure>` with a message for each check that failed, `<skipped>` for an `n/a` one                |
+| `github` | GitHub Actions workflow commands: `::error` for a failed budget or a critical finding, `::warning` for a warning finding, `::notice` for an `n/a` budget, so failures show as annotations on the run |
+
+`--check-output <path>` writes the result in that format to a file, creating its directories, so a pipeline keeps `-o report.html` and collects `checks.xml` too; the terminal then shows the text result. An unwritable path is an error (exit 1). The exit codes do not depend on the format.
+
+The JSON document has this shape:
+
+```json
+{
+  "passed": false,
+  "failOn": "warning",
+  "summary": { "budgets": { "total": 2, "passed": 1, "failed": 1, "skipped": 0 }, "findings": 1 },
+  "budgets": [
+    {
+      "page": "Page 1",
+      "metric": "lcp",
+      "operator": "<=",
+      "limit": 2500,
+      "actual": 3100,
+      "unit": "ms",
+      "status": "failed",
+      "type": "value"
+    },
+    {
+      "page": "A: Home vs B: Home",
+      "metric": "transfer",
+      "operator": "<=",
+      "limit": 10,
+      "actual": 4.2,
+      "unit": "percent",
+      "status": "passed",
+      "type": "delta",
+      "baseline": 1000000,
+      "candidate": 1042000
+    }
+  ],
+  "findings": [
+    {
+      "page": "Page 1",
+      "severity": "warning",
+      "source": "thirdParty",
+      "id": "third-party-before-load",
+      "title": "Third-party requests before the load event"
+    }
+  ]
+}
+```
+
+`status` is `passed`, `failed` or `skipped` (the page cannot provide the metric and `--budget-strict` is absent; `actual` is `null`). `type` is `value` for a page checked against its limit and `delta` for a `delta:` budget, whose `actual` is how much worse B is than A in `unit` and which carries `baseline` (A) and `candidate` (B). `unit` is `ms`, `bytes`, `count`, `score`, `ratio` or `percent`; `operator` is `>=` for the hit ratios and `<=` otherwise. `findings` lists those that reached `--fail-on`, and `failOn` is `null` without it.
+
+In GitHub Actions, the annotations appear on the run without a parser:
+
+```yaml
+- run: npx har-trace-viewer page.har trace.json.gz --budget lcp=2.5s,transfer=1.5mb --fail-on warning --check-format github
+```
+
+To keep the report and a JUnit file for a test reporter:
+
+```yaml
+- run: npx har-trace-viewer page.har -o report.html --budget lcp=2.5s --check-format junit --check-output checks.xml
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: htv
+    path: |
+      report.html
+      checks.xml
 ```
 
 ### Sharing a report safely

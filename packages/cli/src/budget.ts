@@ -45,6 +45,11 @@ export interface Budget {
   metric: BudgetMetric;
   /** In the metric's base unit: ms, bytes, a count, a unitless score or a 0–1 ratio. */
   limit: number;
+  /**
+   * Set for a `delta:` budget, which limits how much worse B is than A in a comparison:
+   * `absolute` in the metric's base unit, `percent` as a percentage of A (`limit` is then 10 for 10%).
+   */
+  delta?: "absolute" | "percent";
 }
 
 const NUMBER = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
@@ -91,27 +96,43 @@ const VALUE_HINTS: Record<BudgetUnit, string> = {
 const isBudgetMetric = (name: string): name is BudgetMetric =>
   (BUDGET_METRICS as readonly string[]).includes(name);
 
-/** Parses one --budget value: `<metric>=<value>[,<metric>=<value>...]`. */
+const DELTA_PREFIX = /^delta:/i;
+
+/**
+ * Parses one --budget value: `<metric>=<value>[,<metric>=<value>...]`. A pair starting with
+ * `delta:` limits how much worse B may be than A in a comparison: `delta:lcp<=200` (the `<=` is
+ * optional: `delta:lcp=200`) or `delta:transfer<=10%` for a percentage of A.
+ */
 export function parseBudgets(value: string): Budget[] {
   return value.split(",").map((pair) => {
-    const eq = pair.indexOf("=");
-    if (eq === -1) {
-      throw new Error(`Invalid --budget "${pair.trim()}": expected <metric>=<value>.`);
+    const trimmed = pair.trim();
+    const isDelta = DELTA_PREFIX.test(trimmed);
+    const body = isDelta ? trimmed.replace(DELTA_PREFIX, "") : trimmed;
+    const match = (isDelta ? /^([^=<]*)(?:<=|=)(.*)$/ : /^([^=]*)=(.*)$/).exec(body);
+    if (!match) {
+      throw new Error(
+        `Invalid --budget "${trimmed}": expected ${isDelta ? "delta:<metric><=<value>" : "<metric>=<value>"}.`
+      );
     }
-    const metric = pair.slice(0, eq).trim().toLowerCase();
-    const raw = pair.slice(eq + 1).trim();
+    const metric = match[1].trim().toLowerCase();
+    const raw = match[2].trim();
     if (!isBudgetMetric(metric)) {
       throw new Error(
         `Unknown --budget metric "${metric}". Valid metrics: ${BUDGET_METRICS.join(", ")}.`
       );
     }
-    const limit = parseValue(UNITS[metric], raw);
-    if (limit === null) {
-      throw new Error(
+    const invalid = () =>
+      new Error(
         `Invalid --budget value "${raw}" for ${metric}: expected ${VALUE_HINTS[UNITS[metric]]}.`
       );
+    if (isDelta && UNITS[metric] !== "ratio" && raw.endsWith("%")) {
+      const percent = /^(\d+(?:\.\d+)?|\.\d+)%$/.exec(raw);
+      if (!percent) throw invalid();
+      return { metric, limit: Number(percent[1]), delta: "percent" as const };
     }
-    return { metric, limit };
+    const limit = parseValue(UNITS[metric], raw);
+    if (limit === null) throw invalid();
+    return { metric, limit, ...(isDelta ? { delta: "absolute" as const } : {}) };
   });
 }
 
@@ -158,12 +179,21 @@ export function budgetValues(flow: Flow): PageBudgetValues[] {
   }));
 }
 
-interface BudgetResult {
+export interface BudgetResult {
   page: string;
   metric: BudgetMetric;
   limit: number;
+  /** The value, or for a delta budget how much worse B is than A (a percentage for `delta-percent`). */
   actual: number | null;
   passed: boolean;
+  /** Absent for a page checked against a limit; the delta modes check B against A. */
+  mode?: "delta" | "delta-percent";
+  /** The A value of a delta budget. */
+  baseline?: number | null;
+  /** The B value of a delta budget. */
+  candidate?: number | null;
+  /** Why a delta budget has no actual value. */
+  note?: string;
 }
 
 /**
@@ -176,12 +206,60 @@ export function evaluateBudgets(
   { strict }: { strict: boolean }
 ): BudgetResult[] {
   return pages.flatMap(({ page, values }) =>
-    budgets.map(({ metric, limit }) => {
-      const actual = values[metric];
-      const passed =
-        actual === null ? !strict : isMinimum(metric) ? actual >= limit : actual <= limit;
-      return { page, metric, limit, actual, passed };
-    })
+    budgets
+      .filter((b) => !b.delta)
+      .map(({ metric, limit }) => {
+        const actual = values[metric];
+        const passed =
+          actual === null ? !strict : isMinimum(metric) ? actual >= limit : actual <= limit;
+        return { page, metric, limit, actual, passed };
+      })
+  );
+}
+
+/**
+ * Checks every `delta:` budget on the pages of A and B, paired by position: B may be worse than A
+ * by at most the limit (lower is worse for the hit ratios), and any improvement passes. A metric
+ * either side cannot provide passes, or fails when `strict`.
+ */
+export function evaluateDeltas(
+  a: PageBudgetValues[],
+  b: PageBudgetValues[],
+  budgets: Budget[],
+  { strict }: { strict: boolean }
+): BudgetResult[] {
+  return a.slice(0, b.length).flatMap((pageA, i) =>
+    budgets
+      .filter((budget) => budget.delta)
+      .map(({ metric, limit, delta }): BudgetResult => {
+        const baseline = pageA.values[metric];
+        const candidate = b[i].values[metric];
+        const base = {
+          page: `A: ${pageA.page} vs B: ${b[i].page}`,
+          metric,
+          limit,
+          baseline,
+          candidate,
+          mode: delta === "percent" ? ("delta-percent" as const) : ("delta" as const),
+        };
+        if (baseline === null || candidate === null) {
+          return { ...base, actual: null, passed: !strict, note: "not in both recordings" };
+        }
+        const worse = isMinimum(metric) ? baseline - candidate : candidate - baseline;
+        if (delta !== "percent") return { ...base, actual: worse, passed: worse <= limit };
+        if (baseline === 0) {
+          return worse <= 0
+            ? { ...base, actual: 0, passed: true }
+            : {
+                ...base,
+                actual: null,
+                passed: false,
+                note: "A is 0, so a percentage is undefined",
+              };
+        }
+        const percent = (worse / baseline) * 100;
+        return { ...base, actual: percent, passed: percent <= limit };
+      })
   );
 }
 
@@ -213,7 +291,7 @@ export interface CheckOptions {
   strict: boolean;
 }
 
-interface CheckResult {
+export interface CheckResult {
   budgets: BudgetResult[];
   failOn?: FailOnSeverity;
   findings: FailingFinding[];
@@ -225,6 +303,11 @@ export function runChecks(
   { flow, compare }: { flow: Flow; compare?: Flow },
   options: CheckOptions
 ): CheckResult {
+  if (options.budgets.some((b) => b.delta) && !compare) {
+    throw new Error(
+      "A delta budget compares the two sides: use it with --compare or --compare-with."
+    );
+  }
   const sides: [string, Flow][] = compare
     ? [
         ["A: ", flow],
@@ -242,12 +325,26 @@ export function runChecks(
       );
     }
   }
+  if (compare) {
+    budgets.push(
+      ...evaluateDeltas(budgetValues(flow), budgetValues(compare), options.budgets, options)
+    );
+  }
   return {
     budgets,
     ...(options.failOn ? { failOn: options.failOn } : {}),
     findings,
     passed: budgets.every((b) => b.passed) && findings.length === 0,
   };
+}
+
+export function metricUnit(metric: BudgetMetric): BudgetUnit {
+  return UNITS[metric];
+}
+
+/** The comparison a budget makes: a hit ratio is a minimum, everything else a maximum. */
+export function budgetOperator(b: BudgetResult): "<=" | ">=" {
+  return !b.mode && isMinimum(b.metric) ? ">=" : "<=";
 }
 
 function formatValue(metric: BudgetMetric, value: number): string {
@@ -278,25 +375,44 @@ function columns(rows: string[][]): string[] {
 
 const status = (passed: boolean) => (passed ? "pass" : "FAIL");
 
+const signed = (text: string, value: number) => `${value < 0 ? "-" : "+"}${text}`;
+
+/** The row of a budget in the text table: status, page, metric, actual, limit and a note. */
+export function budgetRow(b: BudgetResult): string[] {
+  if (!b.mode) {
+    return [
+      status(b.passed),
+      b.page,
+      b.metric,
+      b.actual === null ? "n/a" : formatValue(b.metric, b.actual),
+      `${isMinimum(b.metric) ? ">=" : "<="} ${formatValue(b.metric, b.limit)}`,
+      b.actual === null
+        ? `not in this recording${b.passed ? " (--budget-strict fails it)" : ""}`
+        : "",
+    ];
+  }
+  const percent = b.mode === "delta-percent";
+  const show = (v: number) => (percent ? `${v.toFixed(1)}%` : formatValue(b.metric, v));
+  const detail =
+    b.baseline != null && b.candidate != null
+      ? ` (${formatValue(b.metric, b.baseline)} -> ${formatValue(b.metric, b.candidate)})`
+      : "";
+  return [
+    status(b.passed),
+    b.page,
+    `delta ${b.metric}`,
+    b.actual === null ? "n/a" : signed(show(Math.abs(b.actual)), b.actual) + detail,
+    `<= ${signed(show(b.limit), b.limit)}`,
+    b.note ? `${b.note}${b.passed ? " (--budget-strict fails it)" : ""}` : "",
+  ];
+}
+
 /** The check result as a short table: one line per budget per page and per failing finding. */
 export function formatChecks(result: CheckResult): string {
   const lines: string[] = [];
   if (result.budgets.length > 0) {
     lines.push("Budgets:");
-    lines.push(
-      ...columns(
-        result.budgets.map((b) => [
-          status(b.passed),
-          b.page,
-          b.metric,
-          b.actual === null ? "n/a" : formatValue(b.metric, b.actual),
-          `${isMinimum(b.metric) ? ">=" : "<="} ${formatValue(b.metric, b.limit)}`,
-          b.actual === null
-            ? `not in this recording${b.passed ? " (--budget-strict fails it)" : ""}`
-            : "",
-        ])
-      )
-    );
+    lines.push(...columns(result.budgets.map(budgetRow)));
   }
   if (result.failOn) {
     lines.push(`Findings at ${result.failOn}${result.failOn === "critical" ? "" : " or worse"}:`);

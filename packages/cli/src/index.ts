@@ -15,7 +15,8 @@ import {
   writeHtmlReport,
   checkOptions,
 } from "./cli";
-import { formatChecks, runChecks } from "./budget";
+import { runChecks } from "./budget";
+import { formatCheckResult } from "./check-format";
 import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
 import type { RedactArgs } from "./redact";
 import type { Args } from "./cli";
@@ -119,7 +120,22 @@ async function main() {
   if (!options) return;
   const result = runChecks(report, options);
   // Without a report the check result is the output; otherwise stdout keeps the report alone.
-  (target.kind === "check" ? console.log : console.error)(formatChecks(result));
+  const print = target.kind === "check" ? console.log : console.error;
+  if (args.checkOutput) {
+    const path = resolve(args.checkOutput);
+    // Printed first: a file that cannot be written must not hide the result itself.
+    print(formatCheckResult(result, "text"));
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, `${formatCheckResult(result, args.checkFormat ?? "text")}\n`);
+    } catch (err) {
+      throw new Error(`Could not write the check result to ${path}: ${(err as Error).message}`, {
+        cause: err,
+      });
+    }
+  } else {
+    print(formatCheckResult(result, args.checkFormat ?? "text"));
+  }
   if (!result.passed) process.exitCode = 2;
 }
 

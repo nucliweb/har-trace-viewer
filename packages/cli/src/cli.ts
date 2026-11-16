@@ -37,6 +37,8 @@ import type { ClientRegion, Flow, PageFlow, RedactOptions, RunMetric, RunSpread 
 import { readRecording, STDIN, STDIN_NAME } from "./recording";
 import { buildFlowInjection } from "./serialize";
 import { parseBudgets, parseFailOn } from "./budget";
+import { parseCheckFormat } from "./check-format";
+import type { CheckFormat } from "./check-format";
 import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -113,6 +115,10 @@ export interface Args {
   failOn?: FailOnSeverity;
   /** Fails a budget whose metric the page cannot provide instead of passing it. */
   budgetStrict?: boolean;
+  /** The format of the check result; text when absent. */
+  checkFormat?: CheckFormat;
+  /** Writes the check result, in --check-format, to this file. */
+  checkOutput?: string;
   /** Redacts the report before it is written or shown. */
   redact?: RedactOptions;
   help?: boolean;
@@ -192,6 +198,8 @@ export function parseArgs(argv: string[]): Args {
       budget: { type: "string", multiple: true },
       "fail-on": { type: "string" },
       "budget-strict": { type: "boolean" },
+      "check-format": { type: "string" },
+      "check-output": { type: "string" },
       redact: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
@@ -217,6 +225,8 @@ export function parseArgs(argv: string[]): Args {
   const budgets: Budget[] = [];
   let failOn: FailOnSeverity | undefined;
   let budgetStrict = false;
+  let checkFormat: CheckFormat | undefined;
+  let checkOutput: string | undefined;
   const compareArg = () => (compareWith ??= { har: "" });
   const lastPage = () => {
     if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
@@ -301,6 +311,12 @@ export function parseArgs(argv: string[]): Args {
       case "budget-strict":
         budgetStrict = true;
         break;
+      case "check-format":
+        checkFormat = parseCheckFormat(value);
+        break;
+      case "check-output":
+        checkOutput = value;
+        break;
       case "redact":
         redact ??= { hosts: "keep" };
         break;
@@ -328,6 +344,8 @@ export function parseArgs(argv: string[]): Args {
     ...(budgets.length > 0 ? { budgets } : {}),
     ...(failOn ? { failOn } : {}),
     ...(budgetStrict ? { budgetStrict } : {}),
+    ...(checkFormat ? { checkFormat } : {}),
+    ...(checkOutput ? { checkOutput } : {}),
     ...(redact ? { redact } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
@@ -587,6 +605,17 @@ the report, or to stdout without --output instead of the terminal report):
                       (2500, 2500ms or 2.5s); cls (0.1); requests (80);
                       transfer in bytes (500000, 500kb, 1.5mb; 1 kb = 1000 B);
                       cdn-hit-ratio and cache-hit-ratio as minimums (0.9 or 90%).
+                      delta:<metric><=<value> limits how much worse B may be than A
+                      in a comparison (--compare or --compare-with): delta:lcp<=200,
+                      or a percentage of A, delta:transfer<=10%; a hit ratio delta is
+                      in points (delta:cdn-hit-ratio<=5%).
+  --check-format <format>
+                      text | json | junit | github: the format of the check result.
+                      github prints ::error and ::warning workflow commands, which
+                      show as annotations on the run. Default: text.
+  --check-output <path>
+                      Also write the check result, in --check-format, to a file; the
+                      terminal keeps the text result.
   --budget-strict     Fail a budget whose metric the page lacks (LCP without a
                       trace); by default it passes as n/a.
   --fail-on <severity>
@@ -685,6 +714,12 @@ export function validateArgs(args: Args): string | null {
   }
   for (const p of args.pages) {
     if (!p.har) return missingHar(p);
+  }
+  if (args.budgets?.some((b) => b.delta) && !args.compare && !args.compareWith) {
+    return "A delta: budget limits B against A: use it with --compare or --compare-with";
+  }
+  if ((args.checkFormat || args.checkOutput) && !checkOptions(args)) {
+    return "--check-format and --check-output need --budget or --fail-on";
   }
   return null;
 }

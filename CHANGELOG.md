@@ -6,6 +6,12 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Choose the format of the `--budget` and `--fail-on` result with `--check-format text|json|junit|github`: a stable JSON document, JUnit XML with one test case per check, or GitHub Actions workflow commands that show the failures as annotations on the run.
+- Write the check result to a file with `--check-output <path>` while the report keeps `-o`, so a pipeline collects `report.html` and `checks.xml` together.
+- Limit how much worse B may be than A in a comparison with `delta:` budgets (`--budget "delta:lcp<=200,delta:transfer<=10%"`), in the unit of the metric or as a percentage of A.
+
 ### Changed
 
 - Show the file-loading errors of the web app (invalid JSON, not a HAR or a trace, a HAR without entries, a truncated gzip) in the language of the interface, and word them again when the language changes.
