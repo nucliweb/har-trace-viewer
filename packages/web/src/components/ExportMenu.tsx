@@ -71,6 +71,14 @@ export function ExportMenu({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  // The button is disabled while an image export runs, and a disabled button takes no focus:
+  // the focus goes back to it once it is enabled again.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy) buttonRef.current?.focus();
+    wasBusy.current = busy;
+  }, [busy]);
+
   const close = () => {
     setOpen(false);
     buttonRef.current?.focus();
@@ -95,7 +103,6 @@ export function ExportMenu({
       setFailed(true);
     } finally {
       setBusy(false);
-      buttonRef.current?.focus();
     }
   };
 

@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Fixed
+
+- Return the focus to the Export button of the web app after an image export, where it was lost.
+
 ## [0.16.0] - 2026-11-16
 
 ### Added
