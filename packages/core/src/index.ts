@@ -29,5 +29,6 @@ export * from "./analysis/waterfall.js";
 export * from "./analysis/resource-query.js";
 export * from "./analysis/compare.js";
 export * from "./utils/format.js";
+export * from "./utils/presentation.js";
 export * from "./analysis/export.js";
 export * from "./analysis/redact.js";

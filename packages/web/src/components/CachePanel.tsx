@@ -3,11 +3,13 @@ import { browserCacheHitCount, fileName, formatBytes, pct } from "@htv/core";
 import type {
   CacheReport,
   CdnCacheStatus,
+  FindingSeverity,
   NetworkReport,
   Recommendation,
   RecommendationResource,
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
+import { SEVERITY_ICON } from "../lib/severity-icons.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {
@@ -62,17 +64,19 @@ function CdnStatusBadge({ status }: { status: CdnCacheStatus }) {
   return <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>{label}</span>;
 }
 
-function SeverityIcon({ severity }: { severity: "good" | "info" | "warning" | "critical" }) {
-  switch (severity) {
-    case "good":
-      return <span className={`${styles.sevIcon} ${styles.sevGood}`}>✓</span>;
-    case "info":
-      return <span className={`${styles.sevIcon} ${styles.sevInfo}`}>ℹ</span>;
-    case "warning":
-      return <span className={`${styles.sevIcon} ${styles.sevWarn}`}>⚠</span>;
-    case "critical":
-      return <span className={`${styles.sevIcon} ${styles.sevCrit}`}>✕</span>;
-  }
+const SEVERITY_CLASS: Record<FindingSeverity, string | undefined> = {
+  good: styles.sevGood,
+  info: styles.sevInfo,
+  warning: styles.sevWarn,
+  critical: styles.sevCrit,
+};
+
+function SeverityIcon({ severity }: { severity: FindingSeverity }) {
+  return (
+    <span className={`${styles.sevIcon} ${SEVERITY_CLASS[severity]}`}>
+      {SEVERITY_ICON[severity]}
+    </span>
+  );
 }
 
 /** The resources a recommendation names, collapsed behind their count and total size. */

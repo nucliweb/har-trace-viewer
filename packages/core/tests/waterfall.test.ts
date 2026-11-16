@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildWaterfall, filterWaterfallRows, waterfallAxisMs } from "../src/analysis/waterfall.js";
+import {
+  buildWaterfall,
+  filterWaterfallRows,
+  sortWaterfallRows,
+  waterfallAxisMs,
+} from "../src/analysis/waterfall.js";
+import { RESOURCE_TYPE_ORDER } from "../src/utils/presentation.js";
 import type { ParsedTrace } from "../src/types.js";
 import { makeEntry, makeHar, makeTrace } from "./helpers/synthetic-har.js";
 
@@ -258,5 +264,19 @@ describe("buildWaterfall", () => {
 
     expect(waterfall.rows).toHaveLength(10_001);
     expect(elapsed).toBeLessThan(500);
+  });
+});
+
+describe("sortWaterfallRows by type", () => {
+  it("follows the display order of the resource types", () => {
+    const others = RESOURCE_TYPE_ORDER.filter((type) => type !== "document")
+      .reverse()
+      .map((resourceType, i) =>
+        makeEntry({ url: `https://example.com/${i}`, startTime: 100 + i, resourceType })
+      );
+    const { rows } = buildWaterfall(makeHar(others), undefined);
+
+    const sorted = sortWaterfallRows(rows, { key: "type", direction: "asc" });
+    expect(sorted.map((r) => r.resourceType)).toEqual(RESOURCE_TYPE_ORDER);
   });
 });

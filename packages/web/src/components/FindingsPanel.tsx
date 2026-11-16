@@ -1,8 +1,16 @@
 import { useId } from "react";
-import { fileName, formatBytes, formatMs } from "@htv/core";
+import {
+  FINDING_EVIDENCE_PREVIEW,
+  FINDING_SEVERITIES,
+  fileName,
+  findingMetricLabel,
+  formatBytes,
+  formatMs,
+} from "@htv/core";
 import type { Finding, FindingEvidence, FindingSeverity } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
+import { SEVERITY_ICON } from "../lib/severity-icons.js";
 import styles from "./FindingsPanel.module.css";
 
 interface Props {
@@ -11,26 +19,9 @@ interface Props {
   onClose: () => void;
 }
 
-// Evidence rows shown per finding; the rest wait behind their count.
-const MAX_EVIDENCE = 3;
-
-const SEVERITY_ICON: Record<FindingSeverity, string> = {
-  critical: "✕",
-  warning: "⚠",
-  info: "ℹ",
-  good: "✓",
-};
-const ORDER: FindingSeverity[] = ["critical", "warning", "info", "good"];
-const VITALS = new Set(["ttfb", "fcp", "lcp", "cls", "inp"]);
-
 /** "LCP · high confidence · metrics": what the finding affects, how sure it is, where it comes from. */
 function findingMeta(finding: Finding, t: Messages["findings"]): string {
-  const metric = VITALS.has(finding.metric) ? finding.metric.toUpperCase() : finding.metric;
-  return [
-    finding.metric === "none" ? null : metric,
-    t.confidence[finding.confidence],
-    finding.source,
-  ]
+  return [findingMetricLabel(finding.metric), t.confidence[finding.confidence], finding.source]
     .filter(Boolean)
     .join(" · ");
 }
@@ -61,8 +52,8 @@ function EvidenceRow({ evidence }: { evidence: FindingEvidence }) {
 function Evidence({ evidence }: { evidence: FindingEvidence[] }) {
   const t = useMessages().findings;
   if (evidence.length === 0) return null;
-  const shown = evidence.slice(0, MAX_EVIDENCE);
-  const rest = evidence.slice(MAX_EVIDENCE);
+  const shown = evidence.slice(0, FINDING_EVIDENCE_PREVIEW);
+  const rest = evidence.slice(FINDING_EVIDENCE_PREVIEW);
   return (
     <div className={styles.evidenceBlock}>
       <ul className={styles.evidenceList}>
@@ -149,7 +140,7 @@ export function FindingsPanel({ findings, pageLabel, onClose }: Props) {
         {findings.length === 0 ? (
           <p className={styles.empty}>{t.empty}</p>
         ) : (
-          ORDER.map((severity) => {
+          FINDING_SEVERITIES.map((severity) => {
             const group = findings.filter((f) => f.severity === severity);
             return group.length > 0 ? (
               <SeverityGroup key={severity} severity={severity} findings={group} />

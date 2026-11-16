@@ -1,5 +1,6 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { formatBytes, formatMs, plural } from "../utils/format.js";
+import { FINDING_SEVERITIES } from "../utils/presentation.js";
 import {
   METRIC_THRESHOLDS,
   rateMetric,
@@ -13,7 +14,6 @@ import type {
   FindingEvidence,
   FindingMetric,
   FindingPage,
-  FindingSeverity,
   Flow,
   HarEntry,
   PageAnalysis,
@@ -158,8 +158,6 @@ function ruleFor(label: string, source: string): Rule {
 
 // ── From a recommendation to a finding ───────────────────────────────────────
 
-const SEVERITIES: readonly FindingSeverity[] = ["critical", "warning", "info", "good"];
-
 // The end of the first sentence: a stop followed by a capital, "e.g." and "i.e." aside.
 const SENTENCE_END = /(?<!\b(?:e\.g|i\.e))[.!?](?=\s+[A-Z<"'(])/;
 
@@ -247,7 +245,7 @@ function reports(analysis: PageAnalysis | undefined): [string, Recommendation[]]
     const list = (value as { recommendations?: unknown } | null)?.recommendations;
     if (!Array.isArray(list)) return [];
     const valid = (list as Recommendation[]).filter(
-      (r) => typeof r?.label === "string" && SEVERITIES.includes(r.severity)
+      (r) => typeof r?.label === "string" && FINDING_SEVERITIES.includes(r.severity)
     );
     return [[key.slice(0, -"Report".length), valid]];
   });
@@ -465,14 +463,13 @@ function varianceFinding(
 
 // ── Collecting ───────────────────────────────────────────────────────────────
 
-const RANK: Record<FindingSeverity, number> = { critical: 0, warning: 1, info: 2, good: 3 };
 const total = (evidence: FindingEvidence[], key: "ms" | "bytes") =>
   evidence.reduce((sum, e) => sum + (e[key] ?? 0), 0);
 
 /** Critical first, then warning, info and good; within a severity, the most time, then bytes. */
 function byImpact(a: Finding, b: Finding): number {
   return (
-    RANK[a.severity] - RANK[b.severity] ||
+    FINDING_SEVERITIES.indexOf(a.severity) - FINDING_SEVERITIES.indexOf(b.severity) ||
     total(b.evidence, "ms") - total(a.evidence, "ms") ||
     total(b.evidence, "bytes") - total(a.evidence, "bytes")
   );

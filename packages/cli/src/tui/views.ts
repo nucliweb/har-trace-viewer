@@ -53,6 +53,7 @@ import {
   wrap,
 } from "./lines.js";
 import type { Line, Segment } from "./lines.js";
+import { SEVERITY_MARK } from "./findings-view.js";
 
 /**
  * A tab whose tables scroll sideways: its lines, and the column offset past which nothing is
@@ -730,13 +731,6 @@ function hostDeltaPanel(
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
-const SEVERITY: Record<Recommendation["severity"], { icon: string; color: string }> = {
-  good: { icon: "✓", color: "green" },
-  info: { icon: "i", color: "cyan" },
-  warning: { icon: "!", color: "yellow" },
-  critical: { icon: "✕", color: "red" },
-};
-
 const kv = (label: string, value: string): Line => [
   seg(label.padEnd(19), { dim: true }),
   seg(value),
@@ -747,7 +741,7 @@ const resourceCount = (count: number) => `${count} ${count === 1 ? "resource" : 
 function recommendationRows(recommendations: Recommendation[], width: number): Line[] {
   const rows: Line[] = [];
   recommendations.forEach((rec, i) => {
-    const { icon, color } = SEVERITY[rec.severity];
+    const { icon, color } = SEVERITY_MARK[rec.severity];
     if (i > 0) rows.push(BLANK);
     rows.push([seg(`${icon} `, { color, bold: true }), seg(rec.label, { bold: true })]);
     rows.push(...wrap(rec.description, width, "  "));

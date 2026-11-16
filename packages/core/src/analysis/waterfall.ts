@@ -2,6 +2,7 @@ import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { isThirdParty } from "./network-requests.js";
 import { shortUrl } from "../utils/format.js";
+import { RESOURCE_TYPE_ORDER } from "../utils/presentation.js";
 import { renderBlockingUrls } from "./critical-path.js";
 import { documentTiming } from "./render-timing.js";
 import { matchesResourceQuery, parseResourceQuery } from "./resource-query.js";
@@ -11,7 +12,6 @@ import type {
   ParsedTrace,
   ResourcePriority,
   ResourceSort,
-  ResourceType,
   Waterfall,
   WaterfallAxis,
   WaterfallFilter,
@@ -84,16 +84,6 @@ export function filterWaterfallRows(rows: WaterfallRow[], filter: WaterfallFilte
   );
 }
 
-// Display order of the types: render-critical first, then images, runtime requests, the rest.
-const TYPE_RANK: Record<ResourceType, number> = {
-  document: 0,
-  stylesheet: 1,
-  script: 2,
-  font: 3,
-  image: 4,
-  fetch: 5,
-  other: 6,
-};
 const PRIORITY_RANK: Record<ResourcePriority, number> = {
   VeryHigh: 0,
   High: 1,
@@ -112,7 +102,7 @@ function sortValue(row: WaterfallRow, key: ResourceSort["key"]): number | string
     case "host":
       return row.host;
     case "type":
-      return TYPE_RANK[row.resourceType];
+      return RESOURCE_TYPE_ORDER.indexOf(row.resourceType);
     case "status":
       return row.status;
     case "priority":

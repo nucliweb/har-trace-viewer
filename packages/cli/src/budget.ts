@@ -1,4 +1,4 @@
-import { collectFindings, formatBytes, summarizeFlowMetrics } from "@htv/core";
+import { FINDING_SEVERITIES, collectFindings, formatBytes, summarizeFlowMetrics } from "@htv/core";
 import type { Finding, Flow, FindingSeverity } from "@htv/core";
 
 /** The metrics a --budget can limit. */
@@ -136,11 +136,9 @@ export function parseBudgets(value: string): Budget[] {
   });
 }
 
-type Severity = FindingSeverity;
-export type FailOnSeverity = Extract<Severity, "critical" | "warning">;
+export type FailOnSeverity = Extract<FindingSeverity, "critical" | "warning">;
 
 const FAIL_ON: readonly FailOnSeverity[] = ["critical", "warning"];
-const SEVERITY_RANK: Record<Severity, number> = { good: 0, info: 1, warning: 2, critical: 3 };
 
 export function parseFailOn(value: string | undefined): FailOnSeverity {
   if (FAIL_ON.includes(value as FailOnSeverity)) return value as FailOnSeverity;
@@ -275,7 +273,7 @@ interface FailingFinding extends Pick<Finding, "id" | "title" | "severity" | "so
  */
 export function failingFindings(flow: Flow, failOn: FailOnSeverity): FailingFinding[] {
   return collectFindings(flow)
-    .filter((f) => SEVERITY_RANK[f.severity] >= SEVERITY_RANK[failOn])
+    .filter((f) => FINDING_SEVERITIES.indexOf(f.severity) <= FINDING_SEVERITIES.indexOf(failOn))
     .map(({ page, source, id, title, severity }) => ({
       page: page.name,
       source,
