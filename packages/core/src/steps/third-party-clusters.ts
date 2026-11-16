@@ -1,4 +1,5 @@
 import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
+import { hostsByRequests } from "../analysis/network-requests.js";
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectThirdPartyHop, providerRegion } from "../inference/node-detector.js";
 import { getHostname } from "../utils/domain.js";
@@ -58,16 +59,6 @@ function popsByRequests(pops: (PopDetection | null)[]): PopDetection[] {
     counts.set(pop.code, seen);
   }
   return [...counts.values()].sort((a, b) => b.count - a.count).map((seen) => seen.pop);
-}
-
-// Hostnames by request count, busiest first (in order of first request on a tie).
-function hostsByRequests(entries: HarEntry[]): string[] {
-  const counts = new Map<string, number>();
-  for (const e of entries) {
-    const host = getHostname(e.url) ?? e.url;
-    counts.set(host, (counts.get(host) ?? 0) + 1);
-  }
-  return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
 }
 
 function stats(entries: HarEntry[], onLoad: number | null) {

@@ -1,5 +1,12 @@
 import type { MetricUnit } from "../types.js";
 
+/** The singular form for a count of one, the plural form otherwise (no count in the text). */
+export const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+
+/** A count with its noun: "1 request", "3 requests"; `many` defaults to `one` plus "s". */
+export const pluralCount = (count: number, one: string, many = `${one}s`) =>
+  `${count} ${plural(count, one, many)}`;
+
 /**
  * Formats a byte count with decimal units (1 KB = 1000 B).
  * Whole bytes below 1 KB, then KB and MB with one decimal under 10 and none from 10 up.

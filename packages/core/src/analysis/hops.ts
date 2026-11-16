@@ -4,7 +4,7 @@ import { detectPop } from "../inference/pops.js";
 import type { CdnProvider, HarEntry, HostProtocol, NetworkRegion, ParsedHar } from "../types.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { tcpConnectMs } from "../utils/timing.js";
-import { isBrowserCacheHit } from "./network-requests.js";
+import { isBrowserCacheHit, isThirdParty } from "./network-requests.js";
 import { phaseMs } from "../utils/timing.js";
 import { medianTtfbByLoad } from "./host-ttfb.js";
 import { connectionCount, hostProtocol } from "./connections.js";
@@ -98,7 +98,7 @@ function buildHop(
 
   return {
     host,
-    party: getRootDomain(`https://${host}/`) === documentRoot ? "first" : "third",
+    party: isThirdParty({ url: `https://${host}/` }, documentRoot) ? "third" : "first",
     provider: provider === "unknown" ? "origin" : provider,
     providerName,
     pop: pop ? { code: pop.code, city: pop.city, region: pop.region } : null,

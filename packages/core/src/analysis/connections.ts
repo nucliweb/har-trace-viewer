@@ -2,7 +2,7 @@ import { pageDocument } from "../parsers/har-parser.js";
 import { networkRequests } from "./network-requests.js";
 import { getHostname } from "../utils/domain.js";
 import { maxOf } from "../utils/extent.js";
-import { formatBytes } from "../utils/format.js";
+import { formatBytes, plural } from "../utils/format.js";
 import type {
   ConnectionsReport,
   HarEntry,
@@ -22,8 +22,6 @@ const MIN_STATIC_COOKIE_BYTES = 1_000;
 const MIN_JUDGED_REQUESTS = 3;
 
 const STATIC_TYPES: readonly ResourceType[] = ["stylesheet", "script", "image", "font"];
-
-const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /**
  * The HTTP version of a host's network requests: the one they all used, "mixed" when they used

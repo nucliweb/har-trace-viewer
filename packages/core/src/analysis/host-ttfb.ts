@@ -29,6 +29,11 @@ interface TtfbByLoad {
   afterLoad: number | null;
 }
 
+/** Whether a request started after the load event; with no load event (null) none did. */
+export function isAfterLoad(entry: HarEntry, onLoad: number | null): boolean {
+  return onLoad !== null && entry.startTime > onLoad;
+}
+
 /**
  * Median TTFB (server wait) of the network requests that fetched something, split at the load
  * event. Beacons and 304 revalidations are left out: their wait measures a tracker or a cache
@@ -38,7 +43,7 @@ interface TtfbByLoad {
  */
 export function medianTtfbByLoad(entries: HarEntry[], onLoad: number | null): TtfbByLoad {
   const fetches = entries.filter((e) => e.fromCache === false && !isBeacon(e) && e.status !== 304);
-  const afterLoad = (e: HarEntry) => onLoad !== null && e.startTime > onLoad;
+  const afterLoad = (e: HarEntry) => isAfterLoad(e, onLoad);
   return {
     beforeLoad: median(fetches.filter((e) => !afterLoad(e)).map((e) => e.ttfb)),
     afterLoad: median(fetches.filter(afterLoad).map((e) => e.ttfb)),

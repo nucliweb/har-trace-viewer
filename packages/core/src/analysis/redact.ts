@@ -1,6 +1,7 @@
 import type { Flow } from "../types.js";
 import { parseHarPages } from "../parsers/har-parser.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
+import { pluralCount } from "../utils/format.js";
 
 /**
  * Redaction of a HAR, or of a flow already generated from one, before sharing it.
@@ -543,18 +544,16 @@ export function redactFlow(
   return { flow: copy, report: redactCopies([copy], options) };
 }
 
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-
 /** The counts of a redaction in one line: "5 cookie values, 12 query values, 2 hosts masked". */
 export function describeRedaction(report: RedactionReport): string {
   const parts = [
-    report.cookies && plural(report.cookies, "cookie value", "cookie values"),
-    report.headers && plural(report.headers, "header value", "header values"),
-    report.queryParams && plural(report.queryParams, "query value", "query values"),
-    report.bodies && plural(report.bodies, "body", "bodies"),
-    report.emails && plural(report.emails, "email", "emails"),
-    report.tokens && plural(report.tokens, "token", "tokens"),
-    report.hosts && plural(report.hosts, "host masked", "hosts masked"),
+    report.cookies && pluralCount(report.cookies, "cookie value", "cookie values"),
+    report.headers && pluralCount(report.headers, "header value", "header values"),
+    report.queryParams && pluralCount(report.queryParams, "query value", "query values"),
+    report.bodies && pluralCount(report.bodies, "body", "bodies"),
+    report.emails && pluralCount(report.emails, "email", "emails"),
+    report.tokens && pluralCount(report.tokens, "token", "tokens"),
+    report.hosts && pluralCount(report.hosts, "host masked", "hosts masked"),
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(", ") : "nothing to redact";
 }

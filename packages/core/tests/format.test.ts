@@ -8,6 +8,8 @@ import {
   formatMetricValue,
   formatMs,
   pct,
+  plural,
+  pluralCount,
   shortUrl,
 } from "../src/utils/format.js";
 
@@ -128,5 +130,20 @@ describe("fileName", () => {
     ["not a url", "not a url"],
   ])("reads %s as %s", (url, expected) => {
     expect(fileName(url)).toBe(expected);
+  });
+});
+
+describe("plural and pluralCount", () => {
+  it("picks the singular form for one and the plural form otherwise, zero included", () => {
+    expect(plural(1, "host", "hosts")).toBe("host");
+    expect(plural(0, "host", "hosts")).toBe("hosts");
+    expect(plural(2, "body", "bodies")).toBe("bodies");
+  });
+
+  it("prefixes the count, adding an s unless the plural form is given", () => {
+    expect(pluralCount(1, "request")).toBe("1 request");
+    expect(pluralCount(0, "request")).toBe("0 requests");
+    expect(pluralCount(3, "third party", "third parties")).toBe("3 third parties");
+    expect(pluralCount(1, "third party", "third parties")).toBe("1 third party");
   });
 });

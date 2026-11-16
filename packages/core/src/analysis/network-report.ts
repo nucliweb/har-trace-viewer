@@ -1,7 +1,7 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { isBeacon } from "./host-ttfb.js";
 import { networkRequests } from "./network-requests.js";
-import { formatBytes, formatMs } from "../utils/format.js";
+import { formatBytes, formatMs, plural } from "../utils/format.js";
 import type {
   DuplicateRequest,
   FailedRequest,
@@ -23,7 +23,6 @@ const RESOURCE_REDIRECT_WARNING = 3;
 const isRedirect = (entry: HarEntry) => entry.status >= 300 && entry.status < 400;
 const sameRequest = (a: HarEntry, b: HarEntry) => a.url === b.url && a.startTime === b.startTime;
 const withoutFragment = (url: string) => url.replace(/#.*/s, "");
-const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /**
  * Whether a network request downloaded a response the browser could have reused: a GET

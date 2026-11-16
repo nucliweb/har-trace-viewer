@@ -1,6 +1,7 @@
 import { getRootDomain } from "../utils/domain.js";
+import { isThirdParty } from "./network-requests.js";
 import { maxOf } from "../utils/extent.js";
-import { formatBytes, formatMs } from "../utils/format.js";
+import { formatBytes, formatMs, plural } from "../utils/format.js";
 import {
   documentTiming,
   harEntryFor,
@@ -297,7 +298,7 @@ export function analyzeRenderBlocking(
       startMs: request.startMs,
       endMs: request.endMs,
       status,
-      thirdParty: getRootDomain(request.url) !== documentRoot,
+      thirdParty: isThirdParty(request, documentRoot),
     }))
   );
 
@@ -324,8 +325,6 @@ export function analyzeRenderBlocking(
 
 const isLongChain = (chain: CriticalChain) =>
   chain.depth >= LONG_CHAIN_DEPTH || chain.durationMs > LONG_CHAIN_MS;
-
-const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /**
  * What the render-blocking analysis suggests fixing: resources that block the first paint

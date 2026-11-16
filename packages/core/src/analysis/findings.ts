@@ -1,5 +1,5 @@
 import { pageDocument } from "../parsers/har-parser.js";
-import { formatBytes, formatMs } from "../utils/format.js";
+import { formatBytes, formatMs, plural } from "../utils/format.js";
 import {
   METRIC_THRESHOLDS,
   rateMetric,
@@ -199,8 +199,6 @@ function documentEvidence(doc: HarEntry): FindingEvidence {
     ms: Math.round(doc.ttfb),
   };
 }
-
-const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /** A summary without numbers gets the count and size of its evidence: "… (2 resources, 9.0 KB)." */
 function withNumbers(summary: string, evidence: FindingEvidence[]): string {

@@ -1,5 +1,6 @@
 import { detectCdnCacheStatus } from "../inference/cache-analyzer.js";
 import { detectCdnPopCity, detectNode } from "../inference/node-detector.js";
+import { isThirdParty } from "../analysis/network-requests.js";
 import { pageDocument } from "../parsers/har-parser.js";
 import { getRootDomain } from "../utils/domain.js";
 import { clusterThirdParties } from "./third-party-clusters.js";
@@ -45,10 +46,6 @@ export interface PageContext {
   inferredCacheHits: InferredCacheHit[];
   // The CDN cache status of an entry of the page, read from its headers once.
   cdnStatus: (entry: HarEntry) => CdnCacheStatus;
-}
-
-export function isThirdParty(entry: { url: string }, documentRoot: string): boolean {
-  return getRootDomain(entry.url) !== documentRoot;
 }
 
 /** The page a parsed HAR stands for; parseHar and parseHarPages always give it one. */

@@ -1,6 +1,6 @@
 import { networkRequests } from "./network-requests.js";
 import { parseContentEncoding } from "../parsers/har-parser.js";
-import { formatBytes } from "../utils/format.js";
+import { formatBytes, plural } from "../utils/format.js";
 import type {
   CompressibleType,
   CompressionByType,
@@ -35,8 +35,6 @@ const WARNING_IMAGE_SAVINGS = 100_000;
 const MODERN_ENCODINGS: readonly ContentEncoding[] = ["br", "zstd"];
 const UNCOMPRESSED: readonly ContentEncoding[] = ["none", "identity"];
 const TYPE_ORDER: readonly CompressibleType[] = ["html", "css", "js", "json", "svg", "text"];
-
-const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /** The entry's Content-Encoding, read from its header for flows parsed before it was kept. */
 function encodingOf(entry: HarEntry): ContentEncoding {

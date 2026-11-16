@@ -1,10 +1,11 @@
 import { medianTtfbByLoad } from "../analysis/host-ttfb.js";
+import { isThirdParty } from "../analysis/network-requests.js";
 import { SERVER_WAIT_LABEL, TTFB_LABEL } from "../analysis/metrics-summary.js";
 import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname } from "../utils/domain.js";
 import { formatCaptionMs, formatMetricValue, formatMs } from "../utils/format.js";
 import { phaseMs, reusesConnection, tcpConnectMs } from "../utils/timing.js";
-import { avgMs, isThirdParty, reachesOrigin, type PageContext } from "./page-context.js";
+import { avgMs, reachesOrigin, type PageContext } from "./page-context.js";
 import { clusterNode, clusterPath, ttfbCaption } from "./third-party-clusters.js";
 import { firstStart, sortByTimeline, type TimedItem } from "./timeline.js";
 import {

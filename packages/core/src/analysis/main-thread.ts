@@ -1,6 +1,7 @@
 import { identifyThirdParty } from "./third-party-entities.js";
 import { getRootDomain } from "../utils/domain.js";
-import { formatMs } from "../utils/format.js";
+import { isThirdParty } from "./network-requests.js";
+import { formatMs, pluralCount } from "../utils/format.js";
 import type {
   MainThreadParty,
   MainThreadReport,
@@ -23,14 +24,11 @@ const MAX_SCRIPTS = 20;
 const MAX_RESOURCES = 8;
 const EXTENSIONS = "Browser extensions";
 
-const plural = (count: number, one: string, many = `${one}s`) =>
-  `${count} ${count === 1 ? one : many}`;
-
 function describeScript(script: ScriptTime, documentRoot: string): MainThreadScript {
   if (script.url.startsWith("chrome-extension://")) {
     return { ...script, party: "extension", entity: EXTENSIONS };
   }
-  if (getRootDomain(script.url) === documentRoot) {
+  if (!isThirdParty(script, documentRoot)) {
     return { ...script, party: "first", entity: documentRoot };
   }
   return { ...script, party: "third", entity: identifyThirdParty(script.url).name };
@@ -65,7 +63,7 @@ function scriptResources(har: ParsedHar, scripts: MainThreadScript[]): Recommend
   return scripts.slice(0, MAX_RESOURCES).map((s) => ({
     url: s.url,
     transferSize: transferSizeOf(har, s.url),
-    detail: `${formatMs(s.ms)} on the main thread · ${formatMs(s.blockingMs)} blocking · ${plural(s.tasks, "task")}`,
+    detail: `${formatMs(s.ms)} on the main thread · ${formatMs(s.blockingMs)} blocking · ${pluralCount(s.tasks, "task")}`,
   }));
 }
 
@@ -93,7 +91,7 @@ function longTasksRecommendation(
     : "";
   return {
     label: "Long tasks block the main thread",
-    description: `${plural(counted.length, "long task")} (over 50 ms) ran between the first contentful paint and ${windowEnd} and blocked the main thread for ${formatMs(tbtMs)} in total (the Total Blocking Time)${longest}. While a long task runs the page cannot answer a tap or a key press. Split the work into tasks under 50 ms and yield between them (scheduler.yield, setTimeout), move heavy computation to a Web Worker, and defer the scripts the page does not need to become interactive.`,
+    description: `${pluralCount(counted.length, "long task")} (over 50 ms) ran between the first contentful paint and ${windowEnd} and blocked the main thread for ${formatMs(tbtMs)} in total (the Total Blocking Time)${longest}. While a long task runs the page cannot answer a tap or a key press. Split the work into tasks under 50 ms and yield between them (scheduler.yield, setTimeout), move heavy computation to a Web Worker, and defer the scripts the page does not need to become interactive.`,
     severity: tbtMs > TBT_CRITICAL_MS ? "critical" : tbtMs > TBT_WARNING_MS ? "warning" : "info",
     resources: scriptResources(har, blocking),
   };
@@ -111,7 +109,7 @@ function thirdPartyRecommendation(
   const names = third.slice(0, 3).map((p) => `${p.entity} (${formatMs(p.ms)})`);
   return {
     label: "Third-party scripts cost main-thread time",
-    description: `Scripts from ${plural(third.length, "third party", "third parties")} ran for ${formatMs(ms)} on the main thread, ${formatMs(blockingMs)} of it blocking input: ${names.join(", ")}${third.length > 3 ? " and others" : ""}. Load them after the page is interactive or once the visitor consents, drop the ones nobody reads, and ask the vendors of the rest for lighter builds.`,
+    description: `Scripts from ${pluralCount(third.length, "third party", "third parties")} ran for ${formatMs(ms)} on the main thread, ${formatMs(blockingMs)} of it blocking input: ${names.join(", ")}${third.length > 3 ? " and others" : ""}. Load them after the page is interactive or once the visitor consents, drop the ones nobody reads, and ask the vendors of the rest for lighter builds.`,
     severity: blockingMs >= THIRD_PARTY_BLOCKING_MS ? "warning" : "info",
     resources: scriptResources(
       har,
@@ -134,7 +132,7 @@ function extensionsRecommendation(
     resources: extensions.slice(0, MAX_RESOURCES).map((s) => ({
       url: s.url,
       transferSize: 0,
-      detail: `${formatMs(s.ms)} on the main thread · ${plural(s.tasks, "task")}`,
+      detail: `${formatMs(s.ms)} on the main thread · ${pluralCount(s.tasks, "task")}`,
     })),
   };
 }

@@ -1,4 +1,4 @@
-import { getRootDomain } from "../utils/domain.js";
+import { getHostname, getRootDomain } from "../utils/domain.js";
 import type { HarEntry, ParsedHar } from "../types.js";
 
 // The one definition of what reached the network and what a page owns, shared by the
@@ -22,9 +22,24 @@ export function browserCacheHits(har: ParsedHar): number {
   return har.entries.filter(isBrowserCacheHit).length + (har.inferredCacheHits?.length ?? 0);
 }
 
+/** Whether a URL is outside the registrable domain of the page's document. */
+export function isThirdParty(entry: { url: string }, documentRoot: string): boolean {
+  return getRootDomain(entry.url) !== documentRoot;
+}
+
 /** A resource of the document's registrable domain, the HTML documents aside. */
 export function isOwnResource(entry: HarEntry, documentRoot: string): boolean {
-  return !entry.isDocument && getRootDomain(entry.url) === documentRoot;
+  return !entry.isDocument && !isThirdParty(entry, documentRoot);
+}
+
+/** The hostnames of the entries by request count, busiest first (first request on a tie). */
+export function hostsByRequests(entries: HarEntry[]): string[] {
+  const counts = new Map<string, number>();
+  for (const e of entries) {
+    const host = getHostname(e.url) ?? e.url;
+    counts.set(host, (counts.get(host) ?? 0) + 1);
+  }
+  return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
 }
 
 /** An own resource that reached the network: the only kind a CDN status describes for this load. */

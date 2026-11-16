@@ -1,5 +1,6 @@
 import { pageDocument } from "../parsers/har-parser.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
+import { isThirdParty } from "./network-requests.js";
 import { shortUrl } from "../utils/format.js";
 import { renderBlockingUrls } from "./critical-path.js";
 import { documentTiming } from "./render-timing.js";
@@ -169,7 +170,7 @@ export function buildWaterfall(
       url: entry.url,
       shortName: shortUrl(entry.url),
       host: getHostname(entry.url) ?? "",
-      party: getRootDomain(entry.url) === documentRoot ? "first" : "third",
+      party: isThirdParty(entry, documentRoot) ? "third" : "first",
       resourceType: entry.resourceType,
       status: entry.status,
       fromCache: entry.fromCache,

@@ -11,7 +11,7 @@ import type {
 import { analyzeThirdParties } from "./third-parties.js";
 import { analyzeHops } from "./hops.js";
 import type { HostHop } from "./hops.js";
-import type { DeltaUnit } from "../utils/format.js";
+import { pluralCount, type DeltaUnit } from "../utils/format.js";
 import { getHostname } from "../utils/domain.js";
 import { networkRequests } from "./network-requests.js";
 import { SERVER_WAIT_LABEL, TTFB_LABEL, summarizePageMetrics } from "./metrics-summary.js";
@@ -366,8 +366,6 @@ function compareThirdParties(a: Flow, b: Flow): ThirdPartyComparison {
 // medians stop describing the same resources.
 const REQUEST_MIX_THRESHOLD = 0.2;
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
-
 function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
   const caveats: ComparisonCaveat[] = [];
   // The same count as the "requests" metric.
@@ -390,7 +388,7 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
     caveats.push({
       id: "inferred-cache-hits",
       affects: ["cacheHits", "browserCacheHitRatio"],
-      text: `${side}: ${plural(inferred, "browser-cache hit")} ${inferred === 1 ? "is" : "are"} inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.`,
+      text: `${side}: ${pluralCount(inferred, "browser-cache hit")} ${inferred === 1 ? "is" : "are"} inferred from the WebPageTest first view of the same run, since WebPageTest leaves cache hits out of repeat views.`,
     });
   }
   return caveats;

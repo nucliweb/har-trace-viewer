@@ -1,9 +1,14 @@
 import { renderBlockingUrls } from "./critical-path.js";
-import { medianTtfbByLoad } from "./host-ttfb.js";
-import { isBrowserCacheHit, networkRequests } from "./network-requests.js";
+import { isAfterLoad, medianTtfbByLoad } from "./host-ttfb.js";
+import {
+  hostsByRequests,
+  isBrowserCacheHit,
+  isThirdParty,
+  networkRequests,
+} from "./network-requests.js";
 import { identifyThirdParty, THIRD_PARTY_CATEGORY_LABEL } from "./third-party-entities.js";
-import { getHostname, getRootDomain } from "../utils/domain.js";
-import { formatBytes, pct } from "../utils/format.js";
+import { getRootDomain } from "../utils/domain.js";
+import { formatBytes, pct, pluralCount } from "../utils/format.js";
 import type {
   HarEntry,
   ParsedHar,
@@ -33,8 +38,6 @@ const BEFORE_LOAD_WARNING_BYTES = 300_000;
 // A consent manager this heavy is a warning even when it does not hold the first paint.
 const CONSENT_WARNING_BYTES = 100_000;
 
-const plural = (count: number, one: string, many = `${one}s`) =>
-  `${count} ${count === 1 ? one : many}`;
 const NO_COST: ThirdPartyCost = { requests: 0, bytes: 0 };
 
 function cost(entries: HarEntry[]): ThirdPartyCost {
@@ -42,16 +45,6 @@ function cost(entries: HarEntry[]): ThirdPartyCost {
     requests: entries.length,
     bytes: entries.reduce((sum, e) => sum + e.transferSize, 0),
   };
-}
-
-// Hostnames by request count, busiest first (first request on a tie).
-function hostsByRequests(entries: HarEntry[]): string[] {
-  const counts = new Map<string, number>();
-  for (const e of entries) {
-    const host = getHostname(e.url) ?? e.url;
-    counts.set(host, (counts.get(host) ?? 0) + 1);
-  }
-  return [...counts].sort((a, b) => b[1] - a[1]).map(([host]) => host);
 }
 
 // Main-thread time and blocking time by entity key, from the trace's scripts.
@@ -81,7 +74,7 @@ function describeEntity(
   mainThread: { ms: number; blockingMs: number } | undefined
 ): ThirdPartyEntity {
   const network = entries.filter((e) => !isBrowserCacheHit(e));
-  const afterLoad = (e: HarEntry) => onLoad !== null && e.startTime > onLoad;
+  const afterLoad = (e: HarEntry) => isAfterLoad(e, onLoad);
   return {
     ...identity,
     hosts: hostsByRequests(entries),
@@ -126,7 +119,7 @@ function entityResource(entity: ThirdPartyEntity, detail = ""): RecommendationRe
   return {
     url: `https://${entity.hosts[0]}/`,
     transferSize: entity.bytes,
-    detail: [entity.name, category, plural(entity.requests, "request"), detail]
+    detail: [entity.name, category, pluralCount(entity.requests, "request"), detail]
       .filter(Boolean)
       .join(" · "),
   };
@@ -146,7 +139,7 @@ function weightRecommendation(report: Omit<ThirdPartyReport, "recommendations">)
   if (report.byteShare < DOMINANT_BYTE_SHARE || totals.bytes < MIN_DOMINANT_BYTES) return null;
   return {
     label: "Third parties dominate the page weight",
-    description: `Third parties account for ${pct(report.byteShare)} of the bytes the page downloaded (${formatBytes(totals.bytes)} of ${formatBytes(page.bytes)}), over ${plural(totals.requests, "request")} to ${plural(entities.length, "service")}. Each one is a connection to another server, a script the page has to run and a dependency outside its control: load the ones that matter once the page is usable, drop the ones nobody reads, and self-host what the page's own CDN could serve.`,
+    description: `Third parties account for ${pct(report.byteShare)} of the bytes the page downloaded (${formatBytes(totals.bytes)} of ${formatBytes(page.bytes)}), over ${pluralCount(totals.requests, "request")} to ${pluralCount(entities.length, "service")}. Each one is a connection to another server, a script the page has to run and a dependency outside its control: load the ones that matter once the page is usable, drop the ones nobody reads, and self-host what the page's own CDN could serve.`,
     severity: report.byteShare >= CRITICAL_BYTE_SHARE ? "critical" : "warning",
     resources: entities.map((e) => entityResource(e)),
   } satisfies Recommendation;
@@ -161,10 +154,10 @@ function beforeLoadRecommendation(report: Omit<ThirdPartyReport, "recommendation
   const early = report.entities.filter((e) => e.beforeLoad.requests > 0);
   return {
     label: "Third-party requests before the load event",
-    description: `${plural(beforeLoad.requests, "third-party request")} (${formatBytes(beforeLoad.bytes)}) ran before onLoad: the browser spent connections, bandwidth and main-thread time on them while it was still loading the page. Load analytics, ads and widgets after the load event, or once the visitor consents, and keep before it only what the first paint needs.`,
+    description: `${pluralCount(beforeLoad.requests, "third-party request")} (${formatBytes(beforeLoad.bytes)}) ran before onLoad: the browser spent connections, bandwidth and main-thread time on them while it was still loading the page. Load analytics, ads and widgets after the load event, or once the visitor consents, and keep before it only what the first paint needs.`,
     severity: warning ? "warning" : "info",
     resources: early.map((e) =>
-      entityResource(e, `${plural(e.beforeLoad.requests, "request")} before onLoad`)
+      entityResource(e, `${pluralCount(e.beforeLoad.requests, "request")} before onLoad`)
     ),
   } satisfies Recommendation;
 }
@@ -175,14 +168,14 @@ function consentRecommendation(report: Omit<ThirdPartyReport, "recommendations">
   const held = cmp.renderBlocking > 0;
   const before =
     cmp.afterLoad.requests > 0
-      ? `, ${plural(cmp.beforeLoad.requests, "request")} before onLoad`
+      ? `, ${pluralCount(cmp.beforeLoad.requests, "request")} before onLoad`
       : "";
   const blocking = held
-    ? `, and ${plural(cmp.renderBlocking, "request")} held the first paint`
+    ? `, and ${pluralCount(cmp.renderBlocking, "request")} held the first paint`
     : "";
   return {
     label: "Consent manager on the page",
-    description: `${cmp.name} loaded ${plural(cmp.requests, "request")} (${formatBytes(cmp.bytes)})${before}${blocking}. A consent manager is the first third party on every visit from the EU, and the visitor's answer decides which other third parties load: load it async from a preconnected host so it never holds the first paint, and record the page before and after accepting (htv before.har --compare-with after.har) to see what consent adds.`,
+    description: `${cmp.name} loaded ${pluralCount(cmp.requests, "request")} (${formatBytes(cmp.bytes)})${before}${blocking}. A consent manager is the first third party on every visit from the EU, and the visitor's answer decides which other third parties load: load it async from a preconnected host so it never holds the first paint, and record the page before and after accepting (htv before.har --compare-with after.har) to see what consent adds.`,
     severity: held || cmp.bytes >= CONSENT_WARNING_BYTES ? "warning" : "info",
     resources: [entityResource(cmp, held ? "held the first paint" : "")],
   } satisfies Recommendation;
@@ -197,7 +190,7 @@ function lightRecommendation(report: Omit<ThirdPartyReport, "recommendations">) 
   if (!light) return null;
   return {
     label: "Third parties are light",
-    description: `${plural(entities.length, "third party", "third parties")} took ${pct(report.byteShare)} of the bytes and ${pct(report.requestShare)} of the requests, and none held the first paint.`,
+    description: `${pluralCount(entities.length, "third party", "third parties")} took ${pct(report.byteShare)} of the bytes and ${pct(report.requestShare)} of the requests, and none held the first paint.`,
     severity: "good",
   } satisfies Recommendation;
 }
@@ -215,7 +208,7 @@ export function analyzeThirdParties(
   const documentRoot = getRootDomain(har.documentEntry.url);
   const documentChain = new Set<HarEntry>([har.documentEntry, ...(har.documentRedirects ?? [])]);
   const thirdParty = har.entries.filter(
-    (e) => !documentChain.has(e) && getRootDomain(e.url) !== documentRoot
+    (e) => !documentChain.has(e) && isThirdParty(e, documentRoot)
   );
   const onLoad = har.pages[0]?.onLoad ?? null;
   const blocking = thirdParty.length === 0 ? new Set<string>() : renderBlockingUrls(har, trace);
