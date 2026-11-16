@@ -12,6 +12,7 @@ import {
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
   RESOURCE_QUERY_HELP,
+  RESOURCE_TYPE_ORDER,
   buildWaterfall,
   filterWaterfallRows,
   formatBytes,
@@ -35,6 +36,13 @@ import type {
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import { copyText, curlCommand } from "../lib/copy-request.js";
+import {
+  formatSort,
+  initialWaterfallState,
+  setHashParams,
+  writeWaterfallPrefs,
+} from "../lib/view-state.js";
+import type { WaterfallView } from "../lib/view-state.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -58,16 +66,6 @@ const LABEL_GAP_PCT = 9;
 // Labels and ticks this close to the end of the axis (in %) would run past it: mark labels
 // turn to its left, ticks are left out.
 const AXIS_END_PCT = 88;
-
-const TYPE_ORDER: ResourceType[] = [
-  "document",
-  "stylesheet",
-  "script",
-  "font",
-  "image",
-  "fetch",
-  "other",
-];
 
 const PHASES: (keyof WaterfallPhases)[] = [
   "blocked",
@@ -127,8 +125,6 @@ function cycleSort(current: ResourceSort, key: ResourceSortKey): ResourceSort {
   }
   return START_ORDER;
 }
-
-type View = "waterfall" | "table";
 
 const NONE = "—";
 
@@ -584,7 +580,9 @@ export function WaterfallPanel({
   const t = useMessages().waterfall;
   const lang = useCoreLang();
   const waterfall = useMemo(() => buildWaterfall(har, trace), [har, trace]);
-  const [filter, setFilterState] = useState<WaterfallFilter>({});
+  // The link's state first, then the last visit's: see view-state.ts.
+  const [initial] = useState(initialWaterfallState);
+  const [filter, setFilterState] = useState<WaterfallFilter>({ search: initial.search });
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [activeRow, setActiveRow] = useState<number | null>(null);
   const activateRow = useCallback((entryIndex: number) => setActiveRow(entryIndex), []);
@@ -604,7 +602,9 @@ export function WaterfallPanel({
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [activeRow]);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(() =>
+    waterfall.rows.some((row) => row.entryIndex === initial.selected) ? initial.selected! : null
+  );
   // The result of the last copy, said in a live region; null until one is made.
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const selectRow = useCallback((entryIndex: number) => {
@@ -624,20 +624,30 @@ export function WaterfallPanel({
     searchRef.current?.focus();
     onFilterFocused?.();
   }, [focusFilter, onFilterFocused]);
-  const [sort, setSort] = useState<ResourceSort>(START_ORDER);
-  const [view, setView] = useState<View>("waterfall");
+  const [sort, setSort] = useState<ResourceSort>(initial.sort ?? START_ORDER);
+  const [view, setView] = useState<WaterfallView>(initial.view ?? "waterfall");
   const searchId = useId();
   const partyId = useId();
   const hostId = useId();
   const axisId = useId();
   const [axis, setAxis] = useState<WaterfallAxis>("end");
 
+  // The link follows the view; the filter, sort and view also stay for the next visit.
+  const search = filter.search ?? "";
+  useEffect(() => {
+    setHashParams({ q: search, v: view, s: formatSort(sort) });
+    writeWaterfallPrefs({ search, view, sort });
+  }, [search, view, sort]);
+  useEffect(() => setHashParams({ r: selected === null ? null : String(selected) }), [selected]);
+  // A selection belongs to the open drawer: closing it leaves the link without the waterfall.
+  useEffect(() => () => setHashParams({ q: null, r: null, v: null, s: null }), []);
+
   const { rows: allRows } = waterfall;
   // The axis every bar and mark is drawn on: the whole recording, or zoomed on the load.
   const totalMs = waterfallAxisMs(waterfall, axis);
   const types = useMemo(() => {
     const present = new Set(allRows.map((r) => r.resourceType));
-    return TYPE_ORDER.filter((type) => present.has(type));
+    return RESOURCE_TYPE_ORDER.filter((type) => present.has(type));
   }, [allRows]);
   const hosts = useMemo(() => {
     const counts = new Map<string, number>();

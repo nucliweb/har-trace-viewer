@@ -33,6 +33,7 @@ import {
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
+import { LINKED_DRAWERS, parseViewState, setHashParams } from "../lib/view-state.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
@@ -68,7 +69,16 @@ export function DiagramView({ flow }: Props) {
   const analysis = flow.pageAnalyses[pageIndex];
   const page = flow.pages[pageIndex];
   // Every drawer docks on the right, so only one is open at a time: none hides behind another.
-  const [drawer, setDrawer] = useState<Drawer | null>(null);
+  // A link names the drawer to open with, and follows the one that is open; leaving the view
+  // takes the drawer out of the link.
+  const [drawer, setDrawer] = useState<Drawer | null>(
+    () => parseViewState(window.location.hash).drawer ?? null
+  );
+  useEffect(() => {
+    const linked = (LINKED_DRAWERS as readonly (Drawer | null)[]).includes(drawer);
+    setHashParams({ d: linked ? drawer : null });
+  }, [drawer]);
+  useEffect(() => () => setHashParams({ d: null }), []);
   const toggleDrawer = (name: Drawer) => setDrawer((open) => (open === name ? null : name));
   // Closing hands the focus back to the drawer's toggle, or to the diagram when the toggle is
   // gone (the resource list stays open on a step that requests nothing, without its button).

@@ -68,6 +68,34 @@ describe("App", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("so the diagram draws it");
   });
 
+  it("opens the drawer and the filter a link names, and the link follows the view", async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, "", "/#d=waterfall&q=css");
+    window.__HTV_FLOW__ = JSON.parse(JSON.stringify(makeFlow()));
+    render(<App />);
+
+    expect(await screen.findByRole("searchbox", { name: "Filter requests" })).toHaveValue("css");
+    expect(window.location.hash).toContain("d=waterfall");
+
+    await user.click(screen.getByRole("button", { name: "Close waterfall" }));
+    expect(window.location.hash).toBe("");
+    await user.click(screen.getByRole("button", { name: "Toggle metrics summary" }));
+    expect(window.location.hash).toBe("#d=metrics");
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(window.location.hash).toBe("");
+  });
+
+  it("ignores a link that names no drawer of the app", async () => {
+    window.history.replaceState(null, "", "/#d=bogus");
+    window.__HTV_FLOW__ = JSON.parse(JSON.stringify(makeFlow()));
+    render(<App />);
+
+    expect(await screen.findByText(/^Step 1 \//)).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    window.history.replaceState(null, "", "/");
+  });
+
   it("toggles the theme from the header", async () => {
     const user = userEvent.setup();
     render(<App />);

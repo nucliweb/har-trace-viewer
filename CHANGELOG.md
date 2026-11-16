@@ -6,6 +6,11 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Open the drawer, filter, view, sort and selected request that a link names, in the web app and in a report, and keep the address in step with them, so a copied link reopens the same view.
+- Remember the filter, sort order and chart or table view of the waterfall across reloads; a link takes precedence over the remembered values.
+
 ### Fixed
 
 - Return the focus to the Export button of the web app after an image export, where it was lost.
