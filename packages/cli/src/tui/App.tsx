@@ -11,12 +11,13 @@ import {
   sortWaterfallRows,
   stepAtPair,
 } from "@htv/core";
-import type { Flow, ResourceSort, WaterfallAxis, WaterfallParty } from "@htv/core";
+import type { Flow, ResourceSort, Waterfall, WaterfallAxis, WaterfallParty } from "@htv/core";
 import { findingsRegion, hasHiddenEvidence } from "./findings-view.js";
 import { helpRegion } from "./help-view.js";
 import { requestRegion } from "./request-view.js";
-import { SORT_CYCLE, nextSort, resourcesRegion } from "./resources-view.js";
-import { waterfallRegion } from "./waterfall-view.js";
+import { SORT_CYCLE, nextSort, resourcesList } from "./resources-view.js";
+import { waterfallList } from "./waterfall-view.js";
+import type { ListView } from "./waterfall-view.js";
 import { frame, lineWidth, padLine, seg, truncateLine } from "./lines.js";
 import type { Line } from "./lines.js";
 import {
@@ -64,6 +65,31 @@ interface Cursor {
   index: number;
 }
 const FIRST_ROW: Cursor = { entry: null, index: 0 };
+
+// The waterfall of a page, built once: it takes seconds on a capture of 100k requests, and the
+// tabs that list the requests come and go.
+const waterfalls = new WeakMap<Flow["pages"][number], Waterfall>();
+function waterfallOf(page: Flow["pages"][number]): Waterfall {
+  let waterfall = waterfalls.get(page);
+  if (!waterfall) {
+    waterfall = buildWaterfall(page.har, page.trace);
+    waterfalls.set(page, waterfall);
+  }
+  return waterfall;
+}
+
+/**
+ * What the tab shows, drawn on demand: `at(from, to)` gives the lines in that range, so that a
+ * list of 100k requests draws only the screen. `pinned` lines at the top stay in view.
+ */
+interface Region {
+  length: number;
+  at: (from: number, to: number) => Line[];
+}
+const regionOf = (lines: Line[]): Region => ({
+  length: lines.length,
+  at: (from, to) => lines.slice(from, to),
+});
 
 // The header block and the status bar around the scrolling region.
 const HEADER_LINES = 3;
@@ -221,10 +247,8 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   // The page the waterfall and the resources show: the current page, or the side picked in a
   // comparison.
   const shownPage = compare ? (side === "a" ? flow : compare).pages[0] : flow.pages[page];
-  const waterfall = useMemo(
-    () => (listing ? buildWaterfall(shownPage.har, shownPage.trace) : null),
-    [listing, shownPage]
-  );
+  const waterfall = useMemo(() => (listing ? waterfallOf(shownPage) : null), [listing, shownPage]);
+  const hasDocument = useMemo(() => pageDocument(shownPage.har) !== null, [shownPage]);
   const filtered = useMemo(() => {
     if (!waterfall) return null;
     const rows = filterWaterfallRows(waterfall.rows, { search, party: party ?? undefined });
@@ -243,36 +267,29 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const cursorRow = cursorIndex >= 0 ? listRows[cursorIndex] : null;
   const showDetail = detail && listing && cursorRow !== null;
 
-  const listView = useMemo(() => {
+  // The list tab, drawn on demand. It does not depend on the cursor, which moves on every key:
+  // the cursor goes in when the lines are drawn.
+  const listView = useMemo((): ListView | null => {
     if (!waterfall || !filtered) return null;
-    const state = {
-      search,
-      searching,
-      problems: filtered.problems,
-      party,
-      cursor: cursorIndex >= 0 ? cursorIndex : undefined,
-    };
+    const state = { search, searching, problems: filtered.problems, party };
     return current === "Resources"
-      ? resourcesRegion(waterfall.rows.length, listRows, { ...state, sort }, width, {
-          hasDocument: pageDocument(shownPage.har) !== null,
+      ? resourcesList(waterfall.rows.length, listRows, { ...state, sort }, width, {
+          hasDocument,
           hasLcp: waterfall.marks.lcp !== null,
         })
-      : waterfallRegion(waterfall, listRows, { ...state, axis }, width, {
-          hasDocument: pageDocument(shownPage.har) !== null,
-        });
+      : waterfallList(waterfall, listRows, { ...state, axis }, width, { hasDocument });
   }, [
     current,
     waterfall,
     filtered,
     listRows,
-    cursorIndex,
     search,
     searching,
     party,
     axis,
     sort,
     width,
-    shownPage,
+    hasDocument,
   ]);
 
   const hostsView = useMemo((): ColumnsRegion | null => {
@@ -283,39 +300,51 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   }, [current, comparison, names, flow, page, width, columnOffset]);
   const maxColumnOffset = hostsView?.maxOffset ?? 0;
 
-  const region = useMemo((): Line[] => {
-    if (help) return helpRegion(width);
+  const region = useMemo((): Region => {
+    if (help) return regionOf(helpRegion(width));
     if (showDetail && cursorRow) {
       const entry = shownPage.har.entries[cursorRow.entryIndex];
-      return requestRegion(cursorRow, entry, { index: cursorIndex, count: rowCount }, width);
+      return regionOf(
+        requestRegion(cursorRow, entry, { index: cursorIndex, count: rowCount }, width)
+      );
     }
     switch (current) {
       case "Findings":
-        return findingsRegion(pageFindings, width, expanded);
+        return regionOf(findingsRegion(pageFindings, width, expanded));
       case "Waterfall":
       case "Resources":
-        return listView?.lines ?? [];
+        return listView
+          ? {
+              length: listView.length,
+              at: (from, to) =>
+                listView.lines(from, to, cursorIndex >= 0 ? cursorIndex : undefined),
+            }
+          : regionOf([]);
       case "Overview":
-        return comparison
-          ? compareOverviewRegion(comparison, width)
-          : overviewRegion(flow, page, width);
+        return regionOf(
+          comparison ? compareOverviewRegion(comparison, width) : overviewRegion(flow, page, width)
+        );
       case "Steps":
         if (comparison && compare) {
           const views = {
             a: stepAtPair(comparison.pairs, step, "a"),
             b: stepAtPair(comparison.pairs, step, "b"),
           };
-          return pairStepsRegion(flow, compare, comparison.pairs, step, views, width, viewport);
+          return regionOf(
+            pairStepsRegion(flow, compare, comparison.pairs, step, views, width, viewport)
+          );
         }
-        return stepsRegion(flow, step, width, viewport);
+        return regionOf(stepsRegion(flow, step, width, viewport));
       case "Hosts":
-        return hostsView?.lines ?? [];
+        return regionOf(hostsView?.lines ?? []);
       case "Cache & network": {
         const shown = compare ? (side === "a" ? flow : compare) : flow;
         const pageIndex = compare ? 0 : page;
         const { cacheReport, networkReport } = shown.pageAnalyses[pageIndex];
-        const hasDocument = pageDocument(shown.pages[pageIndex].har) !== null;
-        return cacheRegion(cacheReport, width, networkReport, { hasDocument });
+        const shownHasDocument = pageDocument(shown.pages[pageIndex].har) !== null;
+        return regionOf(
+          cacheRegion(cacheReport, width, networkReport, { hasDocument: shownHasDocument })
+        );
       }
     }
   }, [
@@ -509,8 +538,11 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const pages =
     !compare && pageCount > 1 ? { names: flow.pages.map((p) => p.name), current: page } : null;
   const header = headerLines(width, version, context, tab, pages);
-  const scrolled = region.slice(pinned);
-  const visible = [...region.slice(0, pinned), ...scrolled.slice(offset, offset + rowsViewport)];
+  const scrolledLength = region.length - pinned;
+  const visible = [
+    ...region.at(0, pinned),
+    ...region.at(pinned + offset, pinned + offset + rowsViewport),
+  ];
 
   const scrollHint =
     maxScroll > 0 ? (narrow ? "↑/↓ scroll" : "↑/↓ PgUp/PgDn Home/End scroll") : null;
@@ -553,12 +585,12 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
             "? help",
             "q quit",
           ];
-  const shownRows = Math.min(rowsViewport, Math.max(0, scrolled.length - offset));
+  const shownRows = Math.min(rowsViewport, Math.max(0, scrolledLength - offset));
   const position =
     onList && rowCount > 0
       ? `${cursorIndex + 1}/${rowCount} `
       : maxScroll > 0
-        ? `${offset + 1}-${offset + shownRows}/${scrolled.length} `
+        ? `${offset + 1}-${offset + shownRows}/${scrolledLength} `
         : "";
   const shown = parts.filter(Boolean);
   // Narrow terminals, and keys too many for the wide separator, get a tighter one, so that the

@@ -44,8 +44,12 @@ export const DELTA_COLOR: Record<DeltaRating, string | undefined> = {
 
 type Align = "left" | "right";
 
+const PRINTABLE_ASCII = /^[ -~]*$/;
+
 /** The terminal columns a text takes: a CJK character or an emoji takes two. */
-const textWidth = (text: string): number => stringWidth(text);
+export const textWidth = (text: string): number =>
+  // Printable ASCII is one column a character; most of a capture's text is.
+  PRINTABLE_ASCII.test(text) ? text.length : stringWidth(text);
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
@@ -72,6 +76,12 @@ export function fit(text: string, width: number, options: { pad?: boolean } = {}
   return options.pad ? pad(text, width, "left") : text;
 }
 
+/** The columns `fit(text, width)` takes, without cutting a text that is plain ASCII. */
+export function fitWidth(text: string, width: number): number {
+  if (PRINTABLE_ASCII.test(text)) return Math.min(text.length, width);
+  return textWidth(fit(text, width));
+}
+
 /**
  * A table: a dim header and one line per row, each column as wide as its widest cell and
  * columns two spaces apart. Numbers align right by passing "right" for their column.
@@ -80,13 +90,36 @@ export function table(header: string[], rows: Cell[][], aligns: Align[] = []): L
   const widths = header.map((title, i) =>
     maxOf(rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth), textWidth(title))
   );
-  const render = (cells: Cell[]): Line =>
-    cells.flatMap((cell, i) => {
-      const segment = toSegment(cell);
-      const padded = { ...segment, text: pad(segment.text, widths[i], aligns[i] ?? "left") };
-      return i === 0 ? [padded] : [seg("  "), padded];
-    });
+  const render = (cells: Cell[]) => tableRow(cells, widths, aligns);
   return [render(header.map((title) => seg(title, { dim: true }))), ...rows.map(render)];
+}
+
+/** One line of a table: each cell padded to the width of its column, two spaces apart. */
+export function tableRow(cells: Cell[], widths: number[], aligns: Align[] = []): Line {
+  return cells.flatMap((cell, i) => {
+    const segment = toSegment(cell);
+    const padded = { ...segment, text: pad(segment.text, widths[i], aligns[i] ?? "left") };
+    return i === 0 ? [padded] : [seg("  "), padded];
+  });
+}
+
+/**
+ * The width of each column of a table: its widest cell, the header's title included, for a
+ * table of `count` rows whose cell widths are given by `widthsAt`. For a table too long to
+ * build whole, where the cells themselves are not built until they are drawn.
+ */
+export function tableWidths(
+  header: string[],
+  count: number,
+  widthsAt: (row: number) => number[]
+): number[] {
+  const widths = header.map(textWidth);
+  for (let row = 0; row < count; row++) {
+    widthsAt(row).forEach((width, column) => {
+      if (width > widths[column]) widths[column] = width;
+    });
+  }
+  return widths;
 }
 
 /**
@@ -199,6 +232,32 @@ const CURSOR = "▸";
 /** A piece of a frame: borders are dim so the content stands out. */
 export const frame = (text: string): Segment => seg(text, { dim: true });
 
+function panelTop(title: string, width: number): Line {
+  const titleText = title ? ` ${title} ` : "";
+  const fill = Math.max(0, width - 3 - textWidth(titleText));
+  return [
+    frame(`${FRAME.tl}${FRAME.h}`),
+    ...(title ? [seg(titleText, { bold: true, color: "cyan" })] : []),
+    frame(`${FRAME.h.repeat(fill)}${FRAME.tr}`),
+  ];
+}
+
+/** A body line between the side borders, with the pointer in the left one when `pointed`. */
+function panelRow(line: Line, width: number, pointed: boolean): Line {
+  const inner = width - 4;
+  return [
+    ...(pointed
+      ? [frame(FRAME.v), seg(CURSOR, { bold: true, color: "cyan" })]
+      : [frame(`${FRAME.v} `)]),
+    ...padLine(truncateLine(line, inner), inner),
+    frame(` ${FRAME.v}`),
+  ];
+}
+
+const panelBottom = (width: number): Line => [
+  frame(`${FRAME.bl}${FRAME.h.repeat(width - 2)}${FRAME.br}`),
+];
+
 /**
  * The body framed with rounded borders and the title in the top edge, Ratatui style. Lines
  * wider than the panel are truncated; `minHeight` pads the panel with blank rows and `cursor`
@@ -210,25 +269,33 @@ export function panel(
   width: number,
   options: { minHeight?: number; cursor?: number } = {}
 ): Line[] {
-  const inner = width - 4;
-  const titleText = title ? ` ${title} ` : "";
-  const fill = Math.max(0, width - 3 - textWidth(titleText));
-  const top: Line = [
-    frame(`${FRAME.tl}${FRAME.h}`),
-    ...(title ? [seg(titleText, { bold: true, color: "cyan" })] : []),
-    frame(`${FRAME.h.repeat(fill)}${FRAME.tr}`),
-  ];
-  const rows = body.map((line, i): Line => [
-    ...(i === options.cursor
-      ? [frame(FRAME.v), seg(CURSOR, { bold: true, color: "cyan" })]
-      : [frame(`${FRAME.v} `)]),
-    ...padLine(truncateLine(line, inner), inner),
-    frame(` ${FRAME.v}`),
-  ]);
+  const rows = body.map((line, i) => panelRow(line, width, i === options.cursor));
   const blank: Line = [frame(FRAME.v), seg(" ".repeat(width - 2)), frame(FRAME.v)];
   while (rows.length + 2 < (options.minHeight ?? 0)) rows.push(blank);
-  const bottom: Line = [frame(`${FRAME.bl}${FRAME.h.repeat(width - 2)}${FRAME.br}`)];
-  return [top, ...rows, bottom];
+  return [panelTop(title, width), ...rows, panelBottom(width)];
+}
+
+/**
+ * The lines of a panel of `count` body lines from `from` up to `to`, its two edges counted, for
+ * a body too long to draw whole: the lines `panel` draws for the same body, built only for that
+ * range. `pointer` is the body line the pointer marks.
+ */
+export function panelRange(
+  title: string,
+  count: number,
+  bodyAt: (index: number) => Line,
+  width: number,
+  [from, to]: [number, number],
+  pointer?: number
+): Line[] {
+  const length = count + 2;
+  const out: Line[] = [];
+  for (let i = Math.max(0, from); i < Math.min(length, to); i++) {
+    if (i === 0) out.push(panelTop(title, width));
+    else if (i === length - 1) out.push(panelBottom(width));
+    else out.push(panelRow(bodyAt(i - 1), width, i - 1 === pointer));
+  }
+  return out;
 }
 
 /** Blocks side by side, each padded to its width; a shorter block gets blank rows below. */

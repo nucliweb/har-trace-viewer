@@ -10,6 +10,14 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 - Show the file-loading errors of the web app (invalid JSON, not a HAR or a trace, a HAR without entries, a truncated gzip) in the language of the interface, and word them again when the language changes.
 
+### Fixed
+
+- Leave the header of the Resources table of the terminal report as it is when the filter matches no request, where it was drawn inverted.
+
+### Performance
+
+- Keep the terminal report responsive on captures of 100,000 requests or more: the Waterfall and Resources tabs draw only the visible rows. A key press on a capture of 150,000 requests answers in under half a second instead of about 9 s.
+
 ## [0.15.0] - 2026-11-15
 
 ### Added

@@ -7,7 +7,7 @@ import type {
   WaterfallParty,
   WaterfallRow,
 } from "@htv/core";
-import { BLANK, fit, panel, seg } from "./lines.js";
+import { BLANK, fit, panelRange, seg } from "./lines.js";
 import type { Line, Segment } from "./lines.js";
 
 /** The filter of a request list: its query, whether its prompt is open, what it could not read. */
@@ -67,8 +67,6 @@ const MIN_BAR = 10;
 // Lines above the rows that stay in view while they scroll: the panel's top edge, the
 // filter line, the column header with the time ticks and the axis with the marks.
 const PINNED = 4;
-// The body lines above the first request: the filter line, the header and the axis.
-const HEAD_ROWS = PINNED - 1;
 
 interface Layout {
   name: number;
@@ -272,21 +270,73 @@ function legendLines(marks: PlacedMark[], flags: { lcp: boolean; blocking: boole
 }
 
 /**
+ * A request list drawn on demand: the lines of the panel around it, of which `pinned` stay in
+ * view while the rest scroll, built only for the range asked for. `cursor` is the index of the
+ * request under the cursor, drawn inverted and pointed at.
+ */
+export interface ListView {
+  pinned: number;
+  length: number;
+  lines: (from: number, to: number, cursor?: number) => Line[];
+}
+
+/**
+ * The panel of a request list: `head` lines, one line per request (or `empty` when there is
+ * none), then `tail` lines, drawn on demand. `headRows` is how many lines sit above the first
+ * request in the panel, its top edge included.
+ */
+export function listView(
+  title: string,
+  parts: {
+    head: Line[];
+    count: number;
+    rowAt: (index: number, selected: boolean) => Line;
+    empty: Line;
+    tail: Line[];
+  },
+  width: number,
+  pinned: number
+): ListView {
+  const { head, count, rowAt, empty, tail } = parts;
+  const rows = Math.max(1, count);
+  const length = head.length + rows + tail.length + 2;
+  return {
+    pinned,
+    length,
+    lines: (from, to, cursor) =>
+      panelRange(
+        title,
+        length - 2,
+        (i) => {
+          if (i < head.length) return head[i];
+          if (i < head.length + rows)
+            return count === 0 ? empty : rowAt(i - head.length, i - head.length === cursor);
+          return tail[i - head.length - rows];
+        },
+        width,
+        [from, to],
+        cursor === undefined ? undefined : head.length + cursor
+      ),
+  };
+}
+
+/**
  * The page's requests on one time axis: a ruler with the time ticks and the marks (T TTFB,
  * F FCP, L LCP, D DCL, O onLoad), then one row per request with its name, type, status, size
  * and a bar of its phases scaled to the panel, on an axis that spans the whole recording or
  * ends at the page load (a `›` points at the requests after it). `rows` are the ones the filter
- * kept and `state.cursor` the index of the one under the cursor; the first `pinned` lines stay
- * in view while the rest scroll. The legend names the L and B flags only for a page that
- * `hasDocument` (the default), and L only with an LCP from a trace.
+ * kept; the first `pinned` lines stay in view while the rest scroll. The legend names the L and
+ * B flags only for a page that `hasDocument` (the default), and L only with an LCP from a
+ * trace. The rows are drawn only when `lines` asks for them, so that a screen of a long list
+ * costs a screen.
  */
-export function waterfallRegion(
+export function waterfallList(
   waterfall: Waterfall,
   rows: WaterfallRow[],
-  state: WaterfallViewState,
+  state: Omit<WaterfallViewState, "cursor">,
   width: number,
   options: { hasDocument?: boolean } = {}
-): { lines: Line[]; pinned: number } {
+): ListView {
   const layout = layoutFor(width - 4, waterfallAxisMs(waterfall, state.axis));
   const marks = placeMarks(waterfall.marks, layout);
   const total = waterfall.rows.length;
@@ -295,24 +345,43 @@ export function waterfallRegion(
     rows.length === total
       ? `Waterfall · ${total} requests`
       : `Waterfall · ${rows.length} of ${total} requests`;
-  const body: Line[] = [
-    filterLine(
-      state,
-      `Party: ${state.party ?? "all"}  Axis: ${state.axis}`,
-      "Enter details  / filter  f party  z axis  ? help"
-    ),
-    headerLine(layout),
-    axisLine(marks, layout),
-    ...(rows.length === 0
-      ? [[seg("No request matches", { dim: true })]]
-      : rows.map((row, i) => rowLine(row, layout, marks, i === state.cursor))),
-    BLANK,
-    ...legendLines(marks, {
-      // A page without a document holds no first paint, and only a trace names the LCP resource.
-      lcp: hasDocument && waterfall.marks.lcp !== null,
-      blocking: hasDocument,
-    }),
-  ];
-  const cursor = state.cursor === undefined ? undefined : HEAD_ROWS + state.cursor;
-  return { lines: panel(title, body, width, { cursor }), pinned: PINNED };
+  return listView(
+    title,
+    {
+      head: [
+        filterLine(
+          state,
+          `Party: ${state.party ?? "all"}  Axis: ${state.axis}`,
+          "Enter details  / filter  f party  z axis  ? help"
+        ),
+        headerLine(layout),
+        axisLine(marks, layout),
+      ],
+      count: rows.length,
+      rowAt: (i, selected) => rowLine(rows[i], layout, marks, selected),
+      empty: [seg("No request matches", { dim: true })],
+      tail: [
+        BLANK,
+        ...legendLines(marks, {
+          // A page without a document holds no first paint, and only a trace names the LCP resource.
+          lcp: hasDocument && waterfall.marks.lcp !== null,
+          blocking: hasDocument,
+        }),
+      ],
+    },
+    width,
+    PINNED
+  );
+}
+
+/** The whole waterfall panel, for a list short enough to draw whole; `state.cursor` as above. */
+export function waterfallRegion(
+  waterfall: Waterfall,
+  rows: WaterfallRow[],
+  state: WaterfallViewState,
+  width: number,
+  options: { hasDocument?: boolean } = {}
+): { lines: Line[]; pinned: number } {
+  const view = waterfallList(waterfall, rows, state, width, options);
+  return { lines: view.lines(0, view.length, state.cursor), pinned: view.pinned };
 }
