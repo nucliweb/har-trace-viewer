@@ -521,6 +521,5 @@ export const es: Messages = {
     copyFailed: "No se pudo copiar: esta página no tiene acceso al portapapeles.",
     requests: (n) => `Peticiones, ${n}`,
     empty: "Ninguna petición cumple los filtros.",
-    showMore: (next, left) => `Mostrar ${next} más (quedan ${left})`,
   },
 };

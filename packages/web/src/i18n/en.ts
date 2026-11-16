@@ -525,7 +525,6 @@ export const en = {
     copyFailed: "Could not copy: this page has no access to the clipboard.",
     requests: (n: number) => `Requests, ${n}`,
     empty: "No request matches the filters.",
-    showMore: (next: number, left: number) => `Show ${next} more (${left} left)`,
   },
 };
 

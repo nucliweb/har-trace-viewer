@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, KeyboardEvent } from "react";
+import type { CSSProperties, Ref } from "react";
 import {
   RESOURCE_QUERY_HELP,
   RESOURCE_TYPE_ORDER,
@@ -34,6 +34,7 @@ import type {
   WaterfallPhases,
   WaterfallRow,
 } from "@htv/core";
+import { useRowWindow } from "../hooks/useRowWindow.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import { copyText, curlCommand } from "../lib/copy-request.js";
 import {
@@ -43,6 +44,7 @@ import {
   writeWaterfallPrefs,
 } from "../lib/view-state.js";
 import type { WaterfallView } from "../lib/view-state.js";
+import type { WindowItem } from "../lib/row-window.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -58,8 +60,6 @@ interface Props {
 type CopyKind = "url" | "curl";
 type OnCopy = (row: WaterfallRow, kind: CopyKind) => void;
 
-// Rows rendered at once: a 10 000-request HAR renders its first rows and waits for "Show more".
-const PAGE_SIZE = 300;
 // Mark labels closer than this share of the axis (in %) go on separate lanes of the ruler;
 // marks at the same millisecond share one label ("FCP · LCP").
 const LABEL_GAP_PCT = 9;
@@ -256,26 +256,14 @@ function RequestActions({ row, onCopy }: { row: WaterfallRow; onCopy: OnCopy }) 
   );
 }
 
-/** Arrow keys, Home and End move the focus between the rows' buttons. */
-function focusSibling(event: KeyboardEvent<HTMLButtonElement>) {
-  const item = event.currentTarget.parentElement;
-  const list = item?.parentElement;
-  const target = {
-    ArrowDown: item?.nextElementSibling,
-    ArrowUp: item?.previousElementSibling,
-    Home: list?.firstElementChild,
-    End: list?.lastElementChild,
-  }[event.key];
-  if (target === undefined) return;
-  // Handled here, so the diagram's Home/End step shortcuts leave it alone.
-  event.preventDefault();
-  target?.querySelector("button")?.focus();
-}
-
 // Memoized with stable callbacks: a hover re-renders the two rows whose active state changed,
 // not every row on the page.
+// The arrow keys, Home, End, PageUp and PageDown move the focus between the rows' buttons: see
+// useRowWindow, which also renders a long list's rows near the view only.
 const Row = memo(function Row({
   row,
+  index,
+  setSize,
   totalMs,
   active,
   selected,
@@ -285,6 +273,10 @@ const Row = memo(function Row({
   onCopy,
 }: {
   row: WaterfallRow;
+  /** The row's position in the list. */
+  index: number;
+  /** The number of rows, when the list renders only some of them. */
+  setSize: number | undefined;
   totalMs: number;
   active: boolean;
   selected: boolean;
@@ -299,7 +291,12 @@ const Row = memo(function Row({
   // A button per row: the keyboard reaches the tooltip like the pointer does, and a tap shows
   // it on touch screens. The tooltip sits beside the button, out of its accessible name.
   return (
-    <li className={styles.item}>
+    <li
+      className={styles.item}
+      data-index={index}
+      aria-setsize={setSize}
+      aria-posinset={setSize === undefined ? undefined : index + 1}
+    >
       <button
         type="button"
         className={`${styles.row} ${active ? styles.rowActive : ""}`}
@@ -313,7 +310,6 @@ const Row = memo(function Row({
           activate();
           onSelect(row.entryIndex);
         }}
-        onKeyDown={focusSibling}
       >
         <span className={styles.name}>
           <span className={styles.nameText} data-name>
@@ -380,29 +376,49 @@ function Badges({ row }: { row: WaterfallRow }) {
   );
 }
 
-/** The requests as a table, one column per field, each header sorting the rows. */
+/**
+ * The requests as a table, one column per field, each header sorting the rows. A long list
+ * renders the rows of `items` only: the table then gives its true row count and each row its
+ * index (the header is row 1; the actions of the selected request are a row of their own).
+ */
 function Table({
   rows,
-  count,
+  items,
+  windowed,
+  selectedAt,
   sort,
   onSort,
   selected,
   onSelect,
   onCopy,
+  headerRef,
+  bodyRef,
 }: {
   rows: WaterfallRow[];
-  count: number;
+  items: WindowItem[];
+  windowed: boolean;
+  /** The position of the selected request, or -1. */
+  selectedAt: number;
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
   selected: number | null;
   onSelect: (entryIndex: number) => void;
   onCopy: OnCopy;
+  headerRef: Ref<HTMLTableSectionElement>;
+  bodyRef: Ref<HTMLTableSectionElement>;
 }) {
   const t = useMessages().waterfall;
+  // Row 1 is the header; the actions row of the selected request pushes the rows below it.
+  const rowIndex = (index: number) => index + 2 + (selectedAt !== -1 && index > selectedAt ? 1 : 0);
+  const aria = (index: number) => (windowed ? index : undefined);
   return (
-    <table className={styles.grid} aria-label={t.requests(count)}>
-      <thead>
-        <tr>
+    <table
+      className={styles.grid}
+      aria-label={t.requests(rows.length)}
+      aria-rowcount={aria(rows.length + 1 + (selectedAt === -1 ? 0 : 1))}
+    >
+      <thead ref={headerRef}>
+        <tr aria-rowindex={aria(1)}>
           {COLUMNS.map((column) => (
             <th
               key={column.key}
@@ -421,46 +437,56 @@ function Table({
           ))}
         </tr>
       </thead>
-      <tbody>
-        {rows.map((row) => (
-          <Fragment key={row.entryIndex}>
-            <tr>
-              <td className={styles.nameCell} title={row.url}>
-                <button
-                  type="button"
-                  className={styles.nameBtn}
-                  aria-expanded={selected === row.entryIndex}
-                  onClick={() => onSelect(row.entryIndex)}
-                >
-                  <span className={styles.name}>
-                    <span className={styles.nameText} data-name>
-                      {row.shortName}
-                    </span>
-                    <Badges row={row} />
-                  </span>
-                </button>
-              </td>
-              <td>{row.resourceType}</td>
-              <td className={row.status >= 400 ? styles.statusError : undefined}>
-                {row.status > 0 ? row.status : NONE}
-              </td>
-              <td>{row.priority ?? NONE}</td>
-              <td>{row.httpVersion && row.httpVersion !== "unknown" ? row.httpVersion : NONE}</td>
-              <td>{row.contentEncoding ?? NONE}</td>
-              <td className={styles.num}>{sizeText(row)}</td>
-              <td className={styles.num}>{formatMs(row.ttfbMs)}</td>
-              <td className={styles.num}>{formatMs(row.endMs - row.startMs)}</td>
-              <td className={styles.num}>{formatMs(row.startMs)}</td>
-            </tr>
-            {selected === row.entryIndex && (
-              <tr>
-                <td colSpan={COLUMNS.length}>
-                  <RequestActions row={row} onCopy={onCopy} />
-                </td>
+      <tbody ref={bodyRef}>
+        {items.map((item) => {
+          if (item.kind === "gap") {
+            return (
+              <tr key={item.key} className={styles.gap} aria-hidden="true">
+                <td colSpan={COLUMNS.length} style={{ height: item.height }} />
               </tr>
-            )}
-          </Fragment>
-        ))}
+            );
+          }
+          const row = rows[item.index];
+          return (
+            <Fragment key={row.entryIndex}>
+              <tr data-index={item.index} aria-rowindex={aria(rowIndex(item.index))}>
+                <td className={styles.nameCell} title={row.url}>
+                  <button
+                    type="button"
+                    className={styles.nameBtn}
+                    aria-expanded={selected === row.entryIndex}
+                    onClick={() => onSelect(row.entryIndex)}
+                  >
+                    <span className={styles.name}>
+                      <span className={styles.nameText} data-name>
+                        {row.shortName}
+                      </span>
+                      <Badges row={row} />
+                    </span>
+                  </button>
+                </td>
+                <td>{row.resourceType}</td>
+                <td className={row.status >= 400 ? styles.statusError : undefined}>
+                  {row.status > 0 ? row.status : NONE}
+                </td>
+                <td>{row.priority ?? NONE}</td>
+                <td>{row.httpVersion && row.httpVersion !== "unknown" ? row.httpVersion : NONE}</td>
+                <td>{row.contentEncoding ?? NONE}</td>
+                <td className={styles.num}>{sizeText(row)}</td>
+                <td className={styles.num}>{formatMs(row.ttfbMs)}</td>
+                <td className={styles.num}>{formatMs(row.endMs - row.startMs)}</td>
+                <td className={styles.num}>{formatMs(row.startMs)}</td>
+              </tr>
+              {selected === row.entryIndex && (
+                <tr data-index={item.index} aria-rowindex={aria(rowIndex(item.index) + 1)}>
+                  <td colSpan={COLUMNS.length}>
+                    <RequestActions row={row} onCopy={onCopy} />
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -511,11 +537,13 @@ function Ruler({
   totalMs,
   sort,
   onSort,
+  headerRef,
 }: {
   marks: PlacedMark[];
   totalMs: number;
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
+  headerRef: Ref<HTMLDivElement>;
 }) {
   const t = useMessages().waterfall;
   const lanes = Math.max(1, ...marks.map((m) => m.lane + 1));
@@ -526,7 +554,7 @@ function Ruler({
     }).join(", ")
   );
   return (
-    <div className={styles.rulerRow}>
+    <div className={styles.rulerRow} ref={headerRef}>
       {(["name", "type", "status", "size"] as const).map((key) => (
         <span key={key} className={`${styles.headCell} ${key === "size" ? styles.size : ""}`}>
           <SortButton column={key} sort={sort} onSort={onSort} />
@@ -566,8 +594,8 @@ function Ruler({
  * field language of parseResourceQuery), a ruler with the page's marks (TTFB, FCP, LCP, DCL,
  * onLoad) and one row per request, its bar split into phases, or the same requests as a
  * table with their priority, protocol, encoding and timings. The column headers sort the
- * rows. The axis spans the whole recording or zooms on the page load. Renders 300 rows at a
- * time.
+ * rows. The axis spans the whole recording or zooms on the page load. A list of more than 300
+ * requests renders the rows near its view only, every row a scroll away (see useRowWindow).
  */
 export function WaterfallPanel({
   har,
@@ -583,7 +611,6 @@ export function WaterfallPanel({
   // The link's state first, then the last visit's: see view-state.ts.
   const [initial] = useState(initialWaterfallState);
   const [filter, setFilterState] = useState<WaterfallFilter>({ search: initial.search });
-  const [limit, setLimit] = useState(PAGE_SIZE);
   const [activeRow, setActiveRow] = useState<number | null>(null);
   const activateRow = useCallback((entryIndex: number) => setActiveRow(entryIndex), []);
   const deactivateRow = useCallback(
@@ -665,12 +692,22 @@ export function WaterfallPanel({
     [deferredFilter.search]
   );
   const marks = useMemo(() => placeMarks(waterfall.marks, totalMs), [waterfall.marks, totalMs]);
-  const shown = rows.slice(0, limit);
+  const selectedAt = useMemo(
+    () => (selected === null ? -1 : rows.findIndex((row) => row.entryIndex === selected)),
+    [rows, selected]
+  );
+  // A new sort, filter or view shows the selected request, or starts from the top.
+  const shownRows = useMemo(() => ({ rows, view }), [rows, view]);
+  const { items, windowed, setScroller, setList, setHeader } = useRowWindow({
+    count: rows.length,
+    expanded: selectedAt === -1 ? null : selectedAt,
+    arrows: view === "waterfall",
+    resetKey: shownRows,
+    target: selectedAt === -1 ? null : selectedAt,
+  });
 
-  const setFilter = (change: Partial<WaterfallFilter>) => {
+  const setFilter = (change: Partial<WaterfallFilter>) =>
     setFilterState((current) => ({ ...current, ...change }));
-    setLimit(PAGE_SIZE);
-  };
   const onSort = (key: ResourceSortKey) => setSort((current) => cycleSort(current, key));
   const sortText =
     sort.key === START_ORDER.key && sort.direction === START_ORDER.direction
@@ -808,12 +845,24 @@ export function WaterfallPanel({
         </div>
       </div>
       {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
+      <div
+        ref={setScroller}
+        className={styles.body}
+        role="region"
+        aria-label={t.details}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+      >
         <div className={view === "table" ? styles.tableView : styles.table}>
           {view === "waterfall" && (
             <>
-              <Ruler marks={marks} totalMs={totalMs} sort={sort} onSort={onSort} />
+              <Ruler
+                marks={marks}
+                totalMs={totalMs}
+                sort={sort}
+                onSort={onSort}
+                headerRef={setHeader}
+              />
               <div className={styles.markLines} aria-hidden="true">
                 {marks.map((mark) => (
                   <span
@@ -829,42 +878,49 @@ export function WaterfallPanel({
             <p className={styles.empty}>{t.empty}</p>
           ) : view === "table" ? (
             <Table
-              rows={shown}
-              count={rows.length}
+              rows={rows}
+              items={items}
+              windowed={windowed}
+              selectedAt={selectedAt}
               sort={sort}
               onSort={onSort}
               selected={selected}
               onSelect={selectRow}
               onCopy={copy}
+              headerRef={setHeader}
+              bodyRef={setList}
             />
           ) : (
-            <ol className={styles.rows} aria-label={t.requests(rows.length)}>
-              {shown.map((row) => (
-                <Row
-                  key={row.entryIndex}
-                  row={row}
-                  totalMs={totalMs}
-                  active={activeRow === row.entryIndex}
-                  selected={selected === row.entryIndex}
-                  onActivate={activateRow}
-                  onDeactivate={deactivateRow}
-                  onSelect={selectRow}
-                  onCopy={copy}
-                />
-              ))}
+            <ol ref={setList} className={styles.rows} aria-label={t.requests(rows.length)}>
+              {items.map((item) => {
+                if (item.kind === "gap") {
+                  return (
+                    <li
+                      key={item.key}
+                      className={styles.gap}
+                      style={{ height: item.height }}
+                      aria-hidden="true"
+                    />
+                  );
+                }
+                const row = rows[item.index];
+                return (
+                  <Row
+                    key={row.entryIndex}
+                    row={row}
+                    index={item.index}
+                    setSize={windowed ? rows.length : undefined}
+                    totalMs={totalMs}
+                    active={activeRow === row.entryIndex}
+                    selected={selected === row.entryIndex}
+                    onActivate={activateRow}
+                    onDeactivate={deactivateRow}
+                    onSelect={selectRow}
+                    onCopy={copy}
+                  />
+                );
+              })}
             </ol>
-          )}
-          {rows.length > shown.length && (
-            <button
-              type="button"
-              className={styles.more}
-              onClick={() => setLimit((l) => l + PAGE_SIZE)}
-            >
-              {t.showMore(
-                Math.min(PAGE_SIZE, rows.length - shown.length),
-                rows.length - shown.length
-              )}
-            </button>
           )}
         </div>
       </div>

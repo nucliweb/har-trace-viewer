@@ -526,6 +526,5 @@ export const ca: Messages = {
     copyFailed: "No s'ha pogut copiar: aquesta pàgina no té accés al porta-retalls.",
     requests: (n) => `Peticions, ${n}`,
     empty: "Cap petició no compleix els filtres.",
-    showMore: (next, left) => `Mostra'n ${next} més (en queden ${left})`,
   },
 };

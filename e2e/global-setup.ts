@@ -51,6 +51,10 @@ const COMPARE_PAGES = [
   resolve(recordings, "WebPerf-Snippets-Cache_Trace-20260519T123746.json.gz"),
 ];
 
+// Ten thousand synthetic requests on one page: the waterfall renders the rows near its view only.
+const LARGE_HAR = resolve(OUTPUT, "large.har.json.gz");
+const LARGE_PAGE = ["--page", "Large", "--har", LARGE_HAR];
+
 function generate(dir: string, extraArgs: string[], page = HOME_PAGE) {
   execFileSync(process.execPath, [cli, ...page, "--output", dir, ...extraArgs], {
     stdio: "pipe",
@@ -68,4 +72,10 @@ export default function globalSetup() {
   generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
   generate(resolve(OUTPUT, "problems"), ["--bundle"], PROBLEMS_PAGE);
   generate(resolve(OUTPUT, "compare"), ["--compare", "--bundle"], COMPARE_PAGES);
+  execFileSync(
+    process.execPath,
+    [resolve(root, "packages/core/scripts/gen-large-har.mjs"), LARGE_HAR, "10000"],
+    { stdio: "pipe" }
+  );
+  generate(resolve(OUTPUT, "large"), ["--bundle"], LARGE_PAGE);
 }

@@ -6,6 +6,14 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Changed
+
+- Move the focus by one view of requests with PageUp and PageDown in the waterfall of the web app, and return to the selected request, or to the top, when the sort, the filter or the view changes.
+
+### Performance
+
+- Scroll through every request of a page with thousands of them in the waterfall of the web app, which renders only the rows near the view, instead of showing 300 at a time behind a "Show more" button. Sorting 10,000 requests answers in under 20 ms instead of more than 1.5 s.
+
 ## [0.17.1] - 2026-11-16
 
 ### Fixed

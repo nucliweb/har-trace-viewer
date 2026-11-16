@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ParsedTrace } from "@htv/core";
@@ -311,17 +311,24 @@ describe("WaterfallPanel", () => {
     expect(rowButton(4)).toHaveFocus();
   });
 
-  it("renders at most 300 rows at once, with a button for the next ones", () => {
-    // 650 entries plus the document need three pages of 300. A plain click event and a wide
-    // timeout keep the test about the paging, not about how fast an instrumented render runs.
+  it("renders the rows of a long list near the view only, the last one a scroll away", () => {
+    // 650 entries plus the document. jsdom has no layout: the rows count 24px each. A wide
+    // timeout keeps the test about the rows, not about how fast an instrumented render runs.
     const many = Array.from({ length: 650 }, (_, i) =>
       makeEntry({ url: `https://example.com/asset-${i}.js`, startTime: 100 + i / 10 })
     );
     renderPanel({ har: makeHar(many), trace: undefined });
 
-    expect(rows()).toHaveLength(300);
-    fireEvent.click(screen.getByRole("button", { name: "Show 300 more (351 left)" }));
-    expect(rows()).toHaveLength(600);
+    expect(rows().length).toBeLessThan(100);
+    expect(screen.queryByRole("button", { name: /more/ })).not.toBeInTheDocument();
+    const region = screen.getByRole("region", { name: "Waterfall details" });
+    act(() => {
+      region.scrollTop = 24 * 651;
+      fireEvent.scroll(region);
+    });
+    expect(rows().length).toBeLessThan(100);
+    expect(names().at(-1)).toBe("asset-649.js");
+    expect(rows().at(-1)).toHaveAttribute("aria-posinset", "651");
   }, 30_000);
 
   it("closes with its close button", async () => {

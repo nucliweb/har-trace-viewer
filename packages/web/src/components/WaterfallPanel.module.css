@@ -177,7 +177,6 @@
 .select:focus-visible,
 .search:focus-visible,
 .chip:focus-visible,
-.more:focus-visible,
 .body:focus-visible {
   outline-offset: 1px;
 }
@@ -665,21 +664,10 @@
   color: var(--color-text2);
 }
 
-.more {
-  margin: var(--space-sm) var(--row-pad) 0;
-  padding: 5px 12px;
-  border: 1px solid var(--color-border2);
-  border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  cursor: pointer;
-}
-
-.more:hover {
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
+/* What stands for the rows of a long list that are out of view: their height, nothing else. */
+.grid .gap td {
+  padding: 0;
+  border: none;
 }
 
 /* Phones: the diagram's canvas is too short for the rows, so the waterfall takes the screen
@@ -710,8 +698,7 @@
 
   .chip,
   .select,
-  .search,
-  .more {
+  .search {
     min-height: 32px;
   }
 }
