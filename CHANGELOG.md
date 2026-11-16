@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-16
+
 ### Fixed
 
 - Report a HAR saved with a `.json` name when it is given without `--har` (`htv capture.json`), where its name made it read as a trace and the report asked for a HAR.
@@ -342,7 +344,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...HEAD
+[0.17.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.14.0...v0.15.0
