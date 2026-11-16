@@ -1,14 +1,4 @@
 .panel {
-  /* Phase colours, after DevTools' network timing: queueing grey, DNS teal, connection orange,
-     TLS purple, request green, waiting green, download blue. */
-  --phase-blocked: light-dark(#8494a8, #4f6276);
-  --phase-dns: light-dark(#0b8a8c, #22c4c4);
-  --phase-connect: light-dark(#c25e00, #ff9f40);
-  --phase-ssl: light-dark(#7b3fc4, #b78dff);
-  --phase-send: light-dark(#6aa84f, #8fe388);
-  --phase-wait: light-dark(#2e7d32, #2fd17a);
-  --phase-receive: light-dark(#1565c0, #4da3ff);
-
   /* The request columns before the time axis, and where the axis starts in a row. */
   --col-name: 200px;
   --col-type: 72px;
@@ -60,7 +50,7 @@
   font-weight: inherit;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
   flex: 1;
   min-width: 0;
 }
@@ -92,7 +82,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
   transition:
     border-color var(--transition-fast),
@@ -127,13 +117,13 @@
 
 .chip {
   min-height: 24px;
-  padding: 2px 8px;
+  padding: var(--space-2xs) var(--space-sm);
   border: 1px solid var(--color-border2);
   border-radius: 10px;
   background: transparent;
   color: var(--color-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
   transition:
     border-color var(--transition-fast),
@@ -159,7 +149,7 @@
 }
 
 .fieldLabel {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
 }
 
@@ -172,7 +162,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
 }
 
 .select {
@@ -201,7 +191,7 @@
 .legendItem {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .swatch {
@@ -227,7 +217,7 @@
 
 .count {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-muted);
 }
@@ -235,7 +225,7 @@
 /* What the filter could not read. */
 .problems {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-orange);
 }
@@ -244,7 +234,7 @@
 
 .help {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
 }
 
@@ -275,7 +265,7 @@
 
 .helpTable th,
 .helpTable td {
-  padding: 2px 8px 2px 0;
+  padding: var(--space-2xs) var(--space-sm) var(--space-2xs) 0;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
@@ -331,7 +321,7 @@
 }
 
 .headCell {
-  padding-bottom: 4px;
+  padding-bottom: var(--space-xs);
   font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -371,7 +361,7 @@
 .grid {
   border-collapse: collapse;
   width: 100%;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-text);
 }
@@ -380,7 +370,7 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  padding: 6px 8px 4px 0;
+  padding: 6px var(--space-sm) var(--space-xs) 0;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   text-align: left;
@@ -392,7 +382,7 @@
 }
 
 .grid td {
-  padding: 3px 8px 3px 0;
+  padding: 3px var(--space-sm) 3px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   color: var(--color-text2);
   white-space: nowrap;
@@ -501,7 +491,7 @@
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   border-radius: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-text);
   text-align: left;
@@ -520,7 +510,7 @@
 .name {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
@@ -548,7 +538,7 @@
 
 .badge {
   flex-shrink: 0;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   border: 1px solid currentColor;
   border-radius: 3px;
   font-size: var(--fs-meta);
@@ -623,14 +613,14 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
   width: min(460px, calc(100vw - 4 * var(--row-pad)));
   padding: var(--space-sm);
   border: 1px solid var(--color-border2);
   border-radius: 6px;
   background: var(--color-panel);
   box-shadow: 0 4px 16px color-mix(in srgb, #000 20%, transparent);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text);
   pointer-events: none;
 }
@@ -654,7 +644,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--space-md);
-  margin-top: 4px;
+  margin-top: var(--space-xs);
 }
 
 .tooltipPhase {
@@ -671,7 +661,7 @@
 
 .empty {
   padding: var(--space-md);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
 }
 
@@ -683,7 +673,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
 }
 
@@ -763,7 +753,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
-  padding: 4px var(--row-pad);
+  padding: var(--space-xs) var(--row-pad);
 }
 
 .nameBtn {
@@ -784,7 +774,7 @@
 /* The result of the last copy; nothing takes room before one is made. */
 .copyMessage {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   color: var(--color-muted);
 }

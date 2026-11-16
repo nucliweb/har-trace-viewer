@@ -2,7 +2,7 @@
 .badgeMemory,
 .badgeUnknown,
 .badgeInferred {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 3px;

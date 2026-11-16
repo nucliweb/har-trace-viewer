@@ -9,7 +9,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.25);
+  box-shadow: var(--shadow-dialog);
   flex-direction: column;
 }
 
@@ -18,7 +18,7 @@
 }
 
 .dialog::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: var(--color-scrim);
 }
 
 .header {
@@ -49,7 +49,7 @@
   border-radius: 4px;
   background: transparent;
   color: var(--color-text2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
   transition:
     border-color var(--transition-fast),

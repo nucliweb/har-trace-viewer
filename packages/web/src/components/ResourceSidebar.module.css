@@ -12,7 +12,7 @@
   gap: var(--space-xs);
   padding: 3px var(--space-xs);
   border-radius: 3px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
 }
 
@@ -30,7 +30,7 @@
 }
 
 .preconnectBadge {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   font-weight: 700;
   padding: 1px 5px;
@@ -52,21 +52,21 @@
 .preconnectTip {
   display: flex;
   gap: 6px;
-  margin: 4px var(--space-sm) 6px;
-  padding: 6px 8px;
+  margin: var(--space-xs) var(--space-sm) 6px;
+  padding: 6px var(--space-sm);
   border-radius: 4px;
   background: color-mix(in srgb, var(--color-yellow) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-yellow) 25%, transparent);
 }
 
 .tipIcon {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   flex-shrink: 0;
   line-height: 1.5;
 }
 
 .tipText {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
   line-height: 1.5;
 }
@@ -82,8 +82,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-xs);
-  padding: 4px var(--space-xs) 2px;
-  font-size: 12px;
+  padding: var(--space-xs) var(--space-xs) var(--space-2xs);
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
 }
 

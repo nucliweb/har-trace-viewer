@@ -28,6 +28,20 @@
   --color-text: light-dark(#1a2535, #c8d8e8);
   --color-text2: light-dark(#4a6080, #7a90a8);
 
+  /* Waterfall phase colours, after DevTools' network timing: queueing grey, DNS teal,
+     connection orange, TLS purple, request green, waiting green, download blue. */
+  --phase-blocked: light-dark(#8494a8, #4f6276);
+  --phase-dns: light-dark(#0b8a8c, #22c4c4);
+  --phase-connect: light-dark(#c25e00, #ff9f40);
+  --phase-ssl: light-dark(#7b3fc4, #b78dff);
+  --phase-send: light-dark(#6aa84f, #8fe388);
+  --phase-wait: light-dark(#2e7d32, #2fd17a);
+  --phase-receive: light-dark(#1565c0, #4da3ff);
+
+  /* Dialog elevation and the scrim behind it */
+  --shadow-dialog: 0 16px 48px rgb(0 0 0 / 0.25);
+  --color-scrim: rgb(0 0 0 / 0.45);
+
   /* Node accent colors */
   --color-node-browser: var(--color-cyan);
   --color-node-edge: var(--color-cyan);
@@ -46,6 +60,7 @@
   --fs-body: 14px;
 
   /* Spacing */
+  --space-2xs: 2px;
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;

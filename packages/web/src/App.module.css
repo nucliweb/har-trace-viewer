@@ -39,7 +39,7 @@
 
 .version {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-muted);
   letter-spacing: 0.05em;
 }
@@ -56,7 +56,7 @@
 
 .resetButton {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
   background: transparent;
   border: 1px solid var(--color-border2);
@@ -75,7 +75,7 @@
 
 .traceButton {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-text2);
   background: transparent;
   border: 1px solid var(--color-border2);
@@ -105,7 +105,7 @@
 
 .traceError {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-error, var(--color-orange));
   max-width: 240px;
   white-space: nowrap;

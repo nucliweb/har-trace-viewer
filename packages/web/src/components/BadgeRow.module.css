@@ -16,7 +16,7 @@
   font-size: var(--fs-metric);
   font-weight: 700;
   font-family: var(--font-mono);
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   border-radius: 4px;
   border: 1.5px solid currentColor;
   animation: badgePop 200ms ease;
@@ -24,7 +24,7 @@
 }
 
 .badgeLabel {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 400;
   opacity: 0.75;
   letter-spacing: 0.05em;

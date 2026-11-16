@@ -70,7 +70,7 @@
   background: transparent;
   border: 1px solid var(--color-border2);
   border-radius: 3px;
-  padding: 2px 8px;
+  padding: var(--space-2xs) var(--space-sm);
 }
 
 .checklistToggle:hover {
@@ -118,7 +118,7 @@
 .rowOrder {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
   flex-shrink: 0;
 }
 
@@ -289,7 +289,7 @@
 
 .traceErrorText {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-red);
   max-width: 160px;
   white-space: nowrap;
@@ -612,7 +612,7 @@
 .guideSteps li {
   counter-increment: step;
   position: relative;
-  padding-left: 24px;
+  padding-left: var(--space-lg);
   font-size: var(--fs-meta);
   line-height: 1.5;
   color: var(--color-text2);
@@ -627,7 +627,7 @@
   height: 16px;
   border: 1px solid var(--color-border2);
   border-radius: 50%;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   line-height: 14px;
   text-align: center;
   color: var(--color-muted);
@@ -765,7 +765,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: var(--space-md);
   border: 3px dashed var(--color-cyan);
   background: color-mix(in srgb, var(--color-bg) 82%, transparent);
   pointer-events: none;
@@ -773,7 +773,7 @@
 
 .dropOverlayText {
   margin: 0;
-  padding: 16px 24px;
+  padding: var(--space-md) var(--space-lg);
   border: 1.5px solid var(--color-cyan);
   border-radius: 8px;
   background: var(--color-surface);

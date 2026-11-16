@@ -21,7 +21,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
   font-weight: 700;
   border: 1.5px solid var(--color-border2);
@@ -73,7 +73,7 @@
   font-size: var(--fs-meta);
   color: var(--color-muted);
   overflow-wrap: anywhere;
-  margin-bottom: 2px;
+  margin-bottom: var(--space-2xs);
 }
 
 .pageAddress {
@@ -85,14 +85,14 @@
   color: var(--color-muted);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  margin-bottom: var(--space-2xs);
 }
 
 .title {
   font-size: var(--fs-step-title);
   font-weight: 700;
   color: var(--color-cyan);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-xs);
 }
 
 .description {
@@ -219,7 +219,7 @@
   border: 1px solid var(--color-field-border);
   border-radius: 4px;
   color: var(--color-text2);
-  padding: 4px 8px;
+  padding: var(--space-xs) var(--space-sm);
   font-size: var(--fs-meta);
 }
 

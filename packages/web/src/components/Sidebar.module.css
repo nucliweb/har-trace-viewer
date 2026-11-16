@@ -63,7 +63,7 @@
 }
 
 .headerCount {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-muted);
   font-family: var(--font-mono);
 }
@@ -72,9 +72,9 @@
   background: none;
   border: none;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
-  padding: 2px 4px;
+  padding: var(--space-2xs) var(--space-xs);
   min-width: 24px;
   min-height: 24px;
   line-height: 1;
@@ -115,7 +115,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 4px var(--space-md);
+  padding: var(--space-xs) var(--space-md);
   position: sticky;
   top: 0;
   background: var(--color-surface);
@@ -131,7 +131,7 @@
 }
 
 .groupLabel {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -139,7 +139,7 @@
 }
 
 .groupCount {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--color-muted);
   font-family: var(--font-mono);
   background: var(--color-panel);
@@ -169,7 +169,7 @@
 }
 
 .rows {
-  padding: 0 var(--space-sm) 4px;
+  padding: 0 var(--space-sm) var(--space-xs);
 }
 
 .row {
@@ -179,7 +179,7 @@
   align-items: center;
   padding: 3px var(--space-xs);
   border-radius: 3px;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-family: var(--font-mono);
 }
 
@@ -204,14 +204,14 @@
 .more {
   display: block;
   width: 100%;
-  margin-top: 4px;
-  padding: 4px;
+  margin-top: var(--space-xs);
+  padding: var(--space-xs);
   border: 1px dashed var(--color-border2);
   border-radius: 3px;
   background: transparent;
   color: var(--color-cyan);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   cursor: pointer;
 }
 
