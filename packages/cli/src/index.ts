@@ -18,6 +18,7 @@ import {
 import { runChecks } from "./budget";
 import { runCompletionCommand } from "./completion";
 import { debug, startDebug } from "./debug";
+import { adoptMisnamedHars } from "./recording";
 import { formatCheckResult } from "./check-format";
 import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
 import type { RedactArgs } from "./redact";
@@ -58,6 +59,7 @@ async function main() {
     return;
   }
 
+  await adoptMisnamedHars(args.pages);
   const error = validateArgs(args);
   if (error !== null) {
     if (error) console.error(error);

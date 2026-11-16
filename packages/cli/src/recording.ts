@@ -88,3 +88,22 @@ export async function readHarJson(file: string): Promise<unknown> {
     throw readError(name, "har", error);
   }
 }
+
+/**
+ * A file given without its flag is a HAR or a trace by its name, and some tools save a HAR as
+ * `.json`. Where a page has a trace and no HAR, the content of that file decides: a HAR takes
+ * the HAR's place.
+ */
+export async function adoptMisnamedHars(pages: { har: string; trace?: string }[]): Promise<void> {
+  for (const page of pages) {
+    if (page.har || !page.trace || page.trace === STDIN) continue;
+    try {
+      readRecordingJson("har", await readInput(page.trace));
+    } catch {
+      // Not a HAR, or unreadable: the usual checks word the error.
+      continue;
+    }
+    page.har = page.trace;
+    delete page.trace;
+  }
+}

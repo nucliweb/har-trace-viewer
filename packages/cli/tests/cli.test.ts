@@ -337,6 +337,22 @@ describe("usage errors (built CLI)", () => {
   });
 });
 
+describe("a HAR saved with a .json name (built CLI)", () => {
+  it("reports a HAR given alone as .json, which its name alone would read as a trace", () => {
+    const output = join(makeTempDir(), "report.json");
+    const res = runCli([HAR, "--output", output]);
+    expect(res.stderr).not.toContain("is a Chrome trace");
+    expect(res.status).toBe(0);
+    expect(JSON.parse(readFileSync(output, "utf8")).flow.pages).toHaveLength(1);
+  });
+
+  it("still asks for the HAR when the lone .json file is a trace", () => {
+    const res = runCli([TRACE, "--output", join(makeTempDir(), "out")]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("is a Chrome trace: it needs the HAR of the same recording");
+  });
+});
+
 describe("unreadable recordings (built CLI)", () => {
   const fail = (args: string[]) => {
     const res = runCli(args);

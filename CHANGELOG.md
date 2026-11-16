@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Fixed
+
+- Report a HAR saved with a `.json` name when it is given without `--har` (`htv capture.json`), where its name made it read as a trace and the report asked for a HAR.
+
 ## [0.17.0] - 2026-11-16
 
 ### Added
