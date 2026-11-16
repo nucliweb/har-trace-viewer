@@ -509,7 +509,7 @@ The web app's empty state offers a "Load demo flow" button, and `htv --demo` rep
 
 ### Terminal recordings
 
-`python3 packages/cli/scripts/record-tui.py` records the two animations of the [terminal report](#terminal-report), `docs/tui-tour.gif` and `docs/tui-compare.gif`: it runs the built CLI in a pseudo-terminal over the recordings in `fixtures/`, presses a fixed list of keys and renders each session with [agg](https://github.com/asciinema/agg). Run it after `npm run build` when the terminal report changes; `record-tui.py tour` records one of them.
+`python3 packages/cli/scripts/record-tui.py` records the two animations of the [terminal report](#terminal-report), `docs/tui-tour.gif` and `docs/tui-compare.gif`: it runs the built CLI in a pseudo-terminal (the tour over the built-in example of `--demo`, the comparison over the recordings in `fixtures/`), presses a fixed list of keys, renders each session with [agg](https://github.com/asciinema/agg) and, when [gifsicle](https://www.lcdf.org/gifsicle/) is installed, compresses the result. Run it after `npm run build` when the terminal report changes; `record-tui.py tour` records one of them.
 
 ### Public site
 

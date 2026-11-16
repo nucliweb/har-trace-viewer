@@ -1,8 +1,9 @@
 """Records the terminal report as the animated GIFs of the README: docs/tui-tour.gif and
 docs/tui-compare.gif.
 
-Drives the built CLI (packages/cli/dist) in a pseudo-terminal with a fixed list of keys, over the
-recordings in fixtures/, and renders each session with agg (https://github.com/asciinema/agg).
+Drives the built CLI (packages/cli/dist) in a pseudo-terminal with a fixed list of keys: the tour
+over the built-in example (--demo), the comparison over the recordings in fixtures/. Each session
+is rendered with agg (https://github.com/asciinema/agg) and compressed with gifsicle when present.
 
 Usage, from the repository root after `npm run build`:
     python3 packages/cli/scripts/record-tui.py [tour|compare ...]
@@ -28,7 +29,6 @@ COLS, ROWS = 110, 30
 # Short names for the fixtures, as a session would type them.
 FILES = {
     "cold.har": "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har",
-    "cold-trace.json.gz": "WebPerf-Snippets-Disable-Cache_Trace-20260519T123602.json.gz",
     "warm.har": "webperf-snippets.nucliweb.net_Cache-20260519T123746.har",
 }
 
@@ -39,7 +39,7 @@ RIGHT, DOWN = ESC + "[C", ESC + "[B"
 # Keys are written whole: an escape sequence sent one character at a time reads as a bare Esc.
 SCENES = {
     "tour": {
-        "args": ["cold.har", "cold-trace.json.gz"],
+        "args": ["--demo"],
         "keys": [
             (3.5, DOWN, 0),  # Findings
             (0.3, DOWN, 0),
@@ -160,6 +160,9 @@ def main():
                 ["agg", "--font-size", "14", "--theme", "monokai", "--quiet", cast, gif],
                 check=True,
             )
+            if shutil.which("gifsicle"):
+                # Lossy recompression: about a quarter smaller, and the text stays sharp.
+                subprocess.run(["gifsicle", "-O3", "--lossy=80", "--batch", gif], check=True)
             print(f"{os.path.relpath(gif, ROOT)}: {os.path.getsize(gif) // 1024} KB")
 
 
