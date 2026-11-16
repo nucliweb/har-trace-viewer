@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-16
+
 ### Added
 
 - Open the drawer, filter, view, sort and selected request that a link names, in the web app and in a report, and keep the address in step with them, so a copied link reopens the same view.
@@ -336,7 +338,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.13.0...v0.14.0
