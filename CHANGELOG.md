@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-17
+
 ### Changed
 
 - Move the focus by one view of requests with PageUp and PageDown in the waterfall of the web app, and return to the selected request, or to the top, when the sort, the filter or the view changes.
@@ -352,7 +354,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.15.0...v0.16.0
