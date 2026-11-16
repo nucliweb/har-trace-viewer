@@ -1,4 +1,14 @@
-import { memo, useCallback, useDeferredValue, useEffect, useId, useMemo, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
   RESOURCE_QUERY_HELP,
@@ -24,6 +34,7 @@ import type {
   WaterfallRow,
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
+import { copyText, curlCommand } from "../lib/copy-request.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -31,7 +42,13 @@ interface Props {
   trace?: ParsedTrace;
   pageLabel: string;
   onClose: () => void;
+  /** Set to true to move the focus to the filter field once; `onFilterFocused` then resets it. */
+  focusFilter?: boolean;
+  onFilterFocused?: () => void;
 }
+
+type CopyKind = "url" | "curl";
+type OnCopy = (row: WaterfallRow, kind: CopyKind) => void;
 
 // Rows rendered at once: a 10 000-request HAR renders its first rows and waits for "Show more".
 const PAGE_SIZE = 300;
@@ -226,6 +243,23 @@ function Tooltip({ row, id }: { row: WaterfallRow; id: string }) {
   );
 }
 
+/**
+ * What a selected request offers: copy its URL, or a cURL command. Only the selected row has
+ * these buttons, so hundreds of rows keep one tab stop each.
+ */
+function RequestActions({ row, onCopy }: { row: WaterfallRow; onCopy: OnCopy }) {
+  const t = useMessages().waterfall;
+  return (
+    <div className={styles.actions} role="group" aria-label={t.requestActions}>
+      {(["url", "curl"] as const).map((kind) => (
+        <button key={kind} type="button" className={styles.chip} onClick={() => onCopy(row, kind)}>
+          {kind === "url" ? t.copyUrl : t.copyCurl}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Arrow keys, Home and End move the focus between the rows' buttons. */
 function focusSibling(event: KeyboardEvent<HTMLButtonElement>) {
   const item = event.currentTarget.parentElement;
@@ -248,14 +282,20 @@ const Row = memo(function Row({
   row,
   totalMs,
   active,
+  selected,
   onActivate,
   onDeactivate,
+  onSelect,
+  onCopy,
 }: {
   row: WaterfallRow;
   totalMs: number;
   active: boolean;
+  selected: boolean;
   onActivate: (entryIndex: number) => void;
   onDeactivate: (entryIndex: number) => void;
+  onSelect: (entryIndex: number) => void;
+  onCopy: OnCopy;
 }) {
   const tooltipId = useId();
   const activate = () => onActivate(row.entryIndex);
@@ -268,11 +308,15 @@ const Row = memo(function Row({
         type="button"
         className={`${styles.row} ${active ? styles.rowActive : ""}`}
         aria-describedby={active ? tooltipId : undefined}
+        aria-expanded={selected}
         onMouseEnter={activate}
         onMouseLeave={deactivate}
         onFocus={activate}
         onBlur={deactivate}
-        onClick={activate}
+        onClick={() => {
+          activate();
+          onSelect(row.entryIndex);
+        }}
         onKeyDown={focusSibling}
       >
         <span className={styles.name}>
@@ -290,6 +334,7 @@ const Row = memo(function Row({
           <Bar row={row} totalMs={totalMs} />
         </span>
       </button>
+      {selected && <RequestActions row={row} onCopy={onCopy} />}
       {active && <Tooltip row={row} id={tooltipId} />}
     </li>
   );
@@ -345,11 +390,17 @@ function Table({
   count,
   sort,
   onSort,
+  selected,
+  onSelect,
+  onCopy,
 }: {
   rows: WaterfallRow[];
   count: number;
   sort: ResourceSort;
   onSort: (key: ResourceSortKey) => void;
+  selected: number | null;
+  onSelect: (entryIndex: number) => void;
+  onCopy: OnCopy;
 }) {
   const t = useMessages().waterfall;
   return (
@@ -376,27 +427,43 @@ function Table({
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.entryIndex}>
-            <td className={styles.nameCell} title={row.url}>
-              <span className={styles.name}>
-                <span className={styles.nameText} data-name>
-                  {row.shortName}
-                </span>
-                <Badges row={row} />
-              </span>
-            </td>
-            <td>{row.resourceType}</td>
-            <td className={row.status >= 400 ? styles.statusError : undefined}>
-              {row.status > 0 ? row.status : NONE}
-            </td>
-            <td>{row.priority ?? NONE}</td>
-            <td>{row.httpVersion && row.httpVersion !== "unknown" ? row.httpVersion : NONE}</td>
-            <td>{row.contentEncoding ?? NONE}</td>
-            <td className={styles.num}>{sizeText(row)}</td>
-            <td className={styles.num}>{formatMs(row.ttfbMs)}</td>
-            <td className={styles.num}>{formatMs(row.endMs - row.startMs)}</td>
-            <td className={styles.num}>{formatMs(row.startMs)}</td>
-          </tr>
+          <Fragment key={row.entryIndex}>
+            <tr>
+              <td className={styles.nameCell} title={row.url}>
+                <button
+                  type="button"
+                  className={styles.nameBtn}
+                  aria-expanded={selected === row.entryIndex}
+                  onClick={() => onSelect(row.entryIndex)}
+                >
+                  <span className={styles.name}>
+                    <span className={styles.nameText} data-name>
+                      {row.shortName}
+                    </span>
+                    <Badges row={row} />
+                  </span>
+                </button>
+              </td>
+              <td>{row.resourceType}</td>
+              <td className={row.status >= 400 ? styles.statusError : undefined}>
+                {row.status > 0 ? row.status : NONE}
+              </td>
+              <td>{row.priority ?? NONE}</td>
+              <td>{row.httpVersion && row.httpVersion !== "unknown" ? row.httpVersion : NONE}</td>
+              <td>{row.contentEncoding ?? NONE}</td>
+              <td className={styles.num}>{sizeText(row)}</td>
+              <td className={styles.num}>{formatMs(row.ttfbMs)}</td>
+              <td className={styles.num}>{formatMs(row.endMs - row.startMs)}</td>
+              <td className={styles.num}>{formatMs(row.startMs)}</td>
+            </tr>
+            {selected === row.entryIndex && (
+              <tr>
+                <td colSpan={COLUMNS.length}>
+                  <RequestActions row={row} onCopy={onCopy} />
+                </td>
+              </tr>
+            )}
+          </Fragment>
         ))}
       </tbody>
     </table>
@@ -506,7 +573,14 @@ function Ruler({
  * rows. The axis spans the whole recording or zooms on the page load. Renders 300 rows at a
  * time.
  */
-export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
+export function WaterfallPanel({
+  har,
+  trace,
+  pageLabel,
+  onClose,
+  focusFilter,
+  onFilterFocused,
+}: Props) {
   const t = useMessages().waterfall;
   const lang = useCoreLang();
   const waterfall = useMemo(() => buildWaterfall(har, trace), [har, trace]);
@@ -530,6 +604,26 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [activeRow]);
+  const [selected, setSelected] = useState<number | null>(null);
+  // The result of the last copy, said in a live region; null until one is made.
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const selectRow = useCallback((entryIndex: number) => {
+    setSelected((current) => (current === entryIndex ? null : entryIndex));
+    setCopyMessage(null);
+  }, []);
+  const copy = useCallback<OnCopy>(
+    async (row, kind) => {
+      const ok = await copyText(kind === "url" ? row.url : curlCommand(row));
+      setCopyMessage(ok ? (kind === "url" ? t.urlCopied : t.curlCopied) : t.copyFailed);
+    },
+    [t]
+  );
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!focusFilter) return;
+    searchRef.current?.focus();
+    onFilterFocused?.();
+  }, [focusFilter, onFilterFocused]);
   const [sort, setSort] = useState<ResourceSort>(START_ORDER);
   const [view, setView] = useState<View>("waterfall");
   const searchId = useId();
@@ -653,6 +747,7 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
           </label>
           <input
             id={searchId}
+            ref={searchRef}
             className={styles.search}
             type="search"
             aria-label={t.filter}
@@ -679,6 +774,10 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
             {t.cacheHit}
           </span>
         </div>
+        <p className={styles.copyMessage} aria-live="polite">
+          {" "}
+          {copyMessage}
+        </p>
         <div className={styles.status}>
           <p className={styles.count} aria-live="polite">
             {`${t.count(rows.length, allRows.length)}${sortText}`}
@@ -719,7 +818,15 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
           {rows.length === 0 ? (
             <p className={styles.empty}>{t.empty}</p>
           ) : view === "table" ? (
-            <Table rows={shown} count={rows.length} sort={sort} onSort={onSort} />
+            <Table
+              rows={shown}
+              count={rows.length}
+              sort={sort}
+              onSort={onSort}
+              selected={selected}
+              onSelect={selectRow}
+              onCopy={copy}
+            />
           ) : (
             <ol className={styles.rows} aria-label={t.requests(rows.length)}>
               {shown.map((row) => (
@@ -728,8 +835,11 @@ export function WaterfallPanel({ har, trace, pageLabel, onClose }: Props) {
                   row={row}
                   totalMs={totalMs}
                   active={activeRow === row.entryIndex}
+                  selected={selected === row.entryIndex}
                   onActivate={activateRow}
                   onDeactivate={deactivateRow}
+                  onSelect={selectRow}
+                  onCopy={copy}
                 />
               ))}
             </ol>

@@ -1,16 +1,22 @@
 import { useEffect } from "react";
-import { isShortcutEvent } from "../lib/keyboard.js";
+import { isModalOpen, isShortcutEvent } from "../lib/keyboard.js";
 
-/** Runs the action bound to a key pressed anywhere in the page, unless a field takes the key. */
-export function useAppShortcuts(actions: Partial<Record<string, () => void>>): void {
+/**
+ * Runs the action bound to a key pressed anywhere in the page, unless a field takes the key.
+ * With `unlessModal`, a key pressed while a dialog is open is the dialog's.
+ */
+export function useAppShortcuts(
+  actions: Partial<Record<string, () => void>>,
+  unlessModal = false
+): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const action = actions[event.key];
-      if (!action || !isShortcutEvent(event)) return;
+      if (!action || !isShortcutEvent(event) || (unlessModal && isModalOpen())) return;
       event.preventDefault();
       action();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [actions]);
+  }, [actions, unlessModal]);
 }

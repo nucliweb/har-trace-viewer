@@ -22,6 +22,17 @@ export const SHORTCUT_GROUPS: { title: keyof Messages["help"]["groups"]; shortcu
       ],
     },
     {
+      title: "panels",
+      shortcuts: [
+        { keys: ["1"], action: "findings" },
+        { keys: ["2"], action: "waterfall" },
+        { keys: ["3"], action: "hops" },
+        { keys: ["4"], action: "metrics" },
+        { keys: ["5"], action: "cache" },
+        { keys: ["/"], action: "filter" },
+      ],
+    },
+    {
       title: "steps",
       shortcuts: [
         { keys: ["→"], action: "next" },

@@ -12,6 +12,7 @@ import type { Flow } from "@htv/core";
 import { useBottomEdge } from "../hooks/useBottomEdge.js";
 import { useDiagramState } from "../hooks/useDiagramState.js";
 import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
+import { useAppShortcuts } from "../hooks/useAppShortcuts.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { preloadWhenIdle } from "../lib/preloadable.js";
@@ -78,6 +79,25 @@ export function DiagramView({ flow }: Props) {
     setDrawer(null);
   }, [drawer]);
   useEscapeToClose(drawer !== null, closeDrawer);
+  // Digits toggle the drawers in the order of the toolbar, "/" goes to the waterfall's filter. The
+  // comparison leaves them unbound: its two panes each have drawers, and a key cannot pick one.
+  const [filterRequested, setFilterRequested] = useState(false);
+  const clearFilterRequest = useCallback(() => setFilterRequested(false), []);
+  const drawerKeys = useMemo(() => {
+    const toggleByKey = (name: Drawer) => () => (drawer === name ? closeDrawer() : setDrawer(name));
+    return {
+      "1": toggleByKey("findings"),
+      "2": toggleByKey("waterfall"),
+      "3": toggleByKey("hops"),
+      "4": toggleByKey("metrics"),
+      "5": toggleByKey("cache"),
+      "/": () => {
+        setDrawer("waterfall");
+        setFilterRequested(true);
+      },
+    };
+  }, [drawer, closeDrawer]);
+  useAppShortcuts(drawerKeys, true);
   useEffect(() => preloadWhenIdle(DRAWERS), []);
   // The resource list follows the steps that request something. Milestone steps (FCP, LCP)
   // request nothing, so the list stays on the last step that did, under that step's title.
@@ -230,6 +250,8 @@ export function DiagramView({ flow }: Props) {
               trace={page.trace}
               pageLabel={t.pageLabel(pageIndex + 1, page.name)}
               onClose={closeDrawer}
+              focusFilter={filterRequested}
+              onFilterFocused={clearFilterRequest}
             />
           )}
           {drawer === "hops" && (
