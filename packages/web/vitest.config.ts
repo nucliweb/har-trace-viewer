@@ -14,13 +14,15 @@ export default mergeConfig(
       css: { modules: { classNameStrategy: "non-scoped" } },
       coverage: {
         provider: "v8",
-        include: ["src/hooks/**", "src/lib/**"],
+        include: ["src/hooks/**", "src/lib/**", "src/components/**"],
         // export-browser.ts needs a real browser: covered by e2e/export.spec.ts.
         exclude: ["src/lib/parse-protocol.ts", "src/lib/export-browser.ts"],
         reporter: ["text", "lcov"],
         thresholds: {
           lines: 80,
           "src/hooks/**": { lines: 100 },
+          // A ratchet a few points under what the component tests reach.
+          "src/components/**": { statements: 94, branches: 87, functions: 94, lines: 95 },
         },
       },
     },

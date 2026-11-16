@@ -8,7 +8,7 @@
   "scripts": {
     "build": "npm run build -w @htv/core -w har-trace-viewer && npm run build:site -w @htv/web",
     "test": "npm run test --workspaces --if-present",
-    "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web",
+    "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web -w har-trace-viewer",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e -w @htv/web",
     "smoke": "npm run smoke -w har-trace-viewer",
     "size": "npm run size -w @htv/web",

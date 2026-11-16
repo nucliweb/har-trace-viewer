@@ -116,6 +116,12 @@ describe("junit", () => {
     expect(ok).toContain('failures="0"');
     expect(ok).not.toContain("<failure");
   });
+
+  it("records a passing case when --fail-on found nothing", () => {
+    const clean = formatCheckResult({ ...passing, failOn: "warning" }, "junit");
+    expect(clean).toContain('name="no warning or worse findings"');
+    expect(clean).toContain('failures="0"');
+  });
 });
 
 describe("github", () => {

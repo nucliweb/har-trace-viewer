@@ -6,7 +6,7 @@ import type { Flow } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { MetricsSummary } from "../src/components/MetricsSummary.js";
 import { harJson, makeFlow } from "./fixtures.js";
-import { makeHar } from "../../core/tests/helpers/synthetic-har";
+import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
 import { loadOnDemandModules } from "./lazy.js";
 
 const noop = () => undefined;
@@ -127,6 +127,20 @@ describe("MetricsSummary", () => {
     expect(cell("TTFB (from navigation)", 0).dataset.rating).toBe("good");
     expect(cell("Server wait", 0)).toHaveTextContent("50 ms");
     expect(cell("Server wait", 0).dataset.rating).toBe("none");
+  });
+
+  it("shows the requests that reached the network, the browser cache hits, the transfer and the hit ratios", () => {
+    const har = makeHar([
+      makeEntry({ url: "https://example.com/a.js", transferSize: 20_000 }),
+      makeEntry({ url: "https://example.com/b.js", transferSize: 0, fromCache: "disk" }),
+    ]);
+    render(<MetricsSummary flow={generateFlow([{ name: "Home", har }])} onClose={noop} />);
+
+    expect(cell("Requests", 0)).toHaveTextContent("2");
+    expect(cell("Browser cache hits", 0)).toHaveTextContent("1");
+    expect(cell("Transfer", 0)).toHaveTextContent("21 KB");
+    expect(cell("Browser cache hit ratio", 0)).toHaveTextContent("50%");
+    expect(cell("CDN hit ratio", 0)).toHaveTextContent("0%");
   });
 
   it("shows n/a for a page without a trace", () => {

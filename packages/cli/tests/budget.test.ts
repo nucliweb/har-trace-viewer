@@ -282,6 +282,23 @@ describe("runChecks", () => {
     expect(result.passed).toBe(false);
   });
 
+  it("refuses a delta budget without a comparison", () => {
+    const { flow } = report();
+    expect(() =>
+      runChecks(
+        { flow },
+        { budgets: [{ metric: "lcp", limit: 200, delta: "absolute" }], strict: false }
+      )
+    ).toThrow("A delta budget compares the two sides: use it with --compare or --compare-with.");
+  });
+
+  it("labels the findings of each side of a comparison with A and B", () => {
+    const result = runChecks(report(), { budgets: [], failOn: "warning", strict: false });
+    const sides = new Set(result.findings.map((f) => f.page.slice(0, 3)));
+    expect([...sides].every((side) => side === "A: " || side === "B: ")).toBe(true);
+    expect(sides.size).toBeGreaterThan(0);
+  });
+
   it("fails when a finding reaches --fail-on, and passes without one", () => {
     const { flow } = report();
     const worst = collectFindings(flow).some((f) => f.severity === "critical");
