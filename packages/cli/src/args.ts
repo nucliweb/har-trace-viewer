@@ -84,6 +84,10 @@ export interface Args {
   checkOutput?: string;
   /** Redacts the report before it is written or shown. */
   redact?: RedactOptions;
+  /** Starts the terminal report without the mouse reported; the m key turns it on. */
+  noMouse?: boolean;
+  /** Writes diagnostics to stderr. */
+  debug?: boolean;
   help?: boolean;
   version?: boolean;
 }
@@ -164,6 +168,8 @@ export function parseArgs(argv: string[]): Args {
       "check-format": { type: "string" },
       "check-output": { type: "string" },
       redact: { type: "boolean" },
+      "no-mouse": { type: "boolean" },
+      debug: { type: "boolean" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },
     },
@@ -181,6 +187,8 @@ export function parseArgs(argv: string[]): Args {
   let filter: string | undefined;
   let help = false;
   let version = false;
+  let noMouse = false;
+  let debug = false;
   let region: ClientRegion | undefined;
   let compareRegion: ClientRegion | undefined;
   let compare = false;
@@ -283,6 +291,12 @@ export function parseArgs(argv: string[]): Args {
       case "redact":
         redact ??= { hosts: "keep" };
         break;
+      case "no-mouse":
+        noMouse = true;
+        break;
+      case "debug":
+        debug = true;
+        break;
       case "help":
         help = true;
         break;
@@ -310,6 +324,8 @@ export function parseArgs(argv: string[]): Args {
     ...(checkFormat ? { checkFormat } : {}),
     ...(checkOutput ? { checkOutput } : {}),
     ...(redact ? { redact } : {}),
+    ...(noMouse ? { noMouse } : {}),
+    ...(debug ? { debug } : {}),
     ...(help ? { help } : {}),
     ...(version ? { version } : {}),
   };

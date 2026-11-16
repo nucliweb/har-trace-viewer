@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useApp, useInput, useWindowSize } from "ink";
 import type { Key } from "ink";
 import {
@@ -31,6 +31,7 @@ import {
   stepsRegion,
 } from "./views.js";
 import type { ColumnsRegion } from "./views.js";
+import type { MouseControl, MouseEvent } from "./mouse.js";
 
 interface Props {
   flow: Flow;
@@ -40,7 +41,12 @@ interface Props {
   /** Terminal size; the window size of stdout when omitted. */
   rows?: number;
   columns?: number;
+  /** The mouse: its reports, and the switch that turns the reporting on and off (m). */
+  mouse?: MouseControl;
 }
+
+// The columns each tab of the header covers, as [first, last], from 1 at the left edge.
+type TabColumns = [number, number][];
 
 const TABS = [
   "Findings",
@@ -95,6 +101,9 @@ const regionOf = (lines: Line[]): Region => ({
 const HEADER_LINES = 3;
 const STATUS_LINES = 1;
 const MIN_COLUMNS = 60;
+// The row of the screen the tabs are on, and the lines a click of the wheel moves.
+const TAB_ROW = 2;
+const WHEEL_LINES = 3;
 
 /** The terminal size, which re-renders on resize; `rows` and `columns` override it. */
 function useTerminalSize(rows?: number, columns?: number) {
@@ -109,7 +118,7 @@ function headerLines(
   context: string,
   tab: number,
   pages: { names: string[]; current: number } | null
-): Line[] {
+): { lines: Line[]; tabColumns: TabColumns } {
   const title = ` htv v${version} `;
   const ctx = context ? ` ${context} ` : "";
   const fill = Math.max(1, width - 4 - lineWidth([seg(title + ctx)]));
@@ -122,20 +131,29 @@ function headerLines(
   ];
   // Seven tabs and the pages of a flow share the line. The tabs sit two spaces apart; the
   // highlight of the current one takes the space on each side of it.
-  const tabLine = (short: boolean): Line => {
-    const out: Line = [];
+  // The columns each tab covers go with the line, from the first column inside the frame.
+  const tabLine = (short: boolean): { line: Line; columns: TabColumns } => {
+    const line: Line = [];
+    const columns: TabColumns = [];
+    let column = 3;
+    const push = (s: Line[number]) => {
+      line.push(s);
+      column += lineWidth([s]);
+    };
     TABS.forEach((name, i) => {
       const label = `${i + 1} ${short ? (SHORT_TABS[name] ?? name) : name}`;
       const selected = i === tab;
-      if (i > 0) out.push(seg(selected || i - 1 === tab ? " " : "  "));
-      out.push(
+      if (i > 0) push(seg(selected || i - 1 === tab ? " " : "  "));
+      const start = column;
+      push(
         seg(
           selected ? ` ${label} ` : label,
           selected ? { inverse: true, bold: true, color: "cyan" } : {}
         )
       );
+      columns.push([start, column - 1]);
     });
-    return out;
+    return { line, columns };
   };
   const pageStrip = (label: boolean): Line =>
     pages
@@ -152,12 +170,14 @@ function headerLines(
   // then goes (a convenience: the context names the page anyway), then the tabs shorten alone.
   const fits = (tabs: Line, strip: Line) =>
     lineWidth(tabs) + (strip.length > 0 ? 2 + lineWidth(strip) : 0) <= inner;
-  const [tabs, strip] = [
+  const options: [ReturnType<typeof tabLine>, Line][] = [
     [tabLine(false), pageStrip(true)],
     [tabLine(true), pageStrip(true)],
     [tabLine(true), pageStrip(false)],
     [tabLine(false), []],
-  ].find(([t, s]) => fits(t, s)) ?? [tabLine(true), []];
+  ];
+  const [shown, strip] = options.find(([t, s]) => fits(t.line, s)) ?? [tabLine(true), []];
+  const tabs = shown.line;
   const gap = strip.length > 0 ? Math.max(1, inner - lineWidth(tabs) - lineWidth(strip)) : 0;
   const mid: Line = [
     frame("│ "),
@@ -165,7 +185,7 @@ function headerLines(
     frame(" │"),
   ];
   const bottom: Line = [frame(`╰${"─".repeat(width - 2)}╯`)];
-  return [top, mid, bottom];
+  return { lines: [top, mid, bottom], tabColumns: shown.columns };
 }
 
 // Any non-empty NO_COLOR turns the colours off (no-color.org); bold, dim and inverse stay.
@@ -199,7 +219,7 @@ function LineView({ line }: { line: Line }) {
  * the field language of parseResourceQuery. A comparison shows both flows with their B − A
  * deltas. `?` shows the keys and the filter syntax.
  */
-export function TuiApp({ flow, compare, version, rows, columns }: Props) {
+export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) {
   const { exit } = useApp();
   const size = useTerminalSize(rows, columns);
   const comparison = useMemo(() => (compare ? compareFlows(flow, compare) : null), [flow, compare]);
@@ -222,6 +242,7 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
   const [listScroll, setListScroll] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [columnOffset, setColumnOffset] = useState(0);
+  const [mouseOn, setMouseOn] = useState(mouse?.enabled ?? false);
 
   const names = useMemo(
     () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
@@ -521,6 +542,9 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
       setExpanded((e) => !e);
     } else if ((input === "<" || input === ">") && current === "Hosts") {
       moveColumns(input === ">" ? 1 : -1);
+    } else if (input === "m" && mouse) {
+      mouse.setEnabled(!mouseOn);
+      setMouseOn(!mouseOn);
     } else if ((input === "p" || input === "P") && !compare && pageCount > 1) {
       movePage(input === "p" ? 1 : -1);
     } else if ((input === "a" || input === "b") && compare) {
@@ -537,7 +561,48 @@ export function TuiApp({ flow, compare, version, rows, columns }: Props) {
     : pageLabel(flow, page);
   const pages =
     !compare && pageCount > 1 ? { names: flow.pages.map((p) => p.name), current: page } : null;
-  const header = headerLines(width, version, context, tab, pages);
+  const { lines: header, tabColumns } = headerLines(width, version, context, tab, pages);
+
+  // The wheel moves the cursor of a list or scrolls the view; clicks pick a tab or a request.
+  const onMouse = (event: MouseEvent) => {
+    if (!mouseOn) return;
+    if (event.type === "wheel-up" || event.type === "wheel-down") {
+      wheel.current += event.type === "wheel-up" ? -WHEEL_LINES : WHEEL_LINES;
+      setWheelTick((n) => n + 1);
+      return;
+    }
+    // The help, the details and the filter being typed own the keys: a click does not leave them.
+    if (event.type !== "press" || event.button !== 0 || help || showDetail || searching) return;
+    if (event.y === TAB_ROW) {
+      const picked = tabColumns.findIndex(([first, last]) => event.x >= first && event.x <= last);
+      if (picked >= 0 && picked !== tab && event.x < width - 1) showTab(picked);
+      return;
+    }
+    if (!onList || !listView || rowCount === 0) return;
+    const onScreen = event.y - HEADER_LINES - 1;
+    if (onScreen < pinned || onScreen >= viewport) return;
+    const index = pinned + offset + (onScreen - pinned) - listView.firstRow;
+    if (index < 0 || index >= rowCount) return;
+    setCursor({ entry: listRows[index].entryIndex, index });
+    setScroll(offset);
+  };
+  // Events of a wheel that turns faster than the screen draws add up and apply in one render.
+  const wheel = useRef(0);
+  const [wheelTick, setWheelTick] = useState(0);
+  useEffect(() => {
+    const delta = wheel.current;
+    wheel.current = 0;
+    if (delta === 0) return;
+    if (onList) moveCursor(cursorIndex + delta, delta);
+    else scrollTo(offset + delta);
+    // Only a turn of the wheel applies it; the rest of what the render reads is current already.
+  }, [wheelTick]);
+  const latest = useRef(onMouse);
+  // Layout effect: a report that arrives right after a render must see that render's state.
+  useLayoutEffect(() => {
+    latest.current = onMouse;
+  });
+  useEffect(() => mouse?.subscribe((event) => latest.current(event)), [mouse]);
   const scrolledLength = region.length - pinned;
   const visible = [
     ...region.at(0, pinned),

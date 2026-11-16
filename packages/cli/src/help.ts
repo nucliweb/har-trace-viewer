@@ -3,6 +3,7 @@ import { CLIENT_REGIONS } from "@htv/core";
 export const USAGE = `Usage: htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
        htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--page <name> ...] [options]
        htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
+       htv completion bash|zsh|fish    (print a shell completion script)
        htv --demo    (the built-in example, no file needed)`;
 
 export const HELP = `${USAGE}
@@ -134,6 +135,15 @@ the report, or to stdout without --output instead of the terminal report):
                       (critical) or needing improvement (warning).
   Exit codes: 0 every check passed, 2 a check failed (the report is still
   written), 1 usage or input errors.
+
+Terminal report and diagnostics:
+  --no-mouse          Start the terminal report without mouse reporting, which leaves
+                      the terminal's own text selection alone. By default the wheel
+                      scrolls, a click picks a tab or a request, and the m key turns
+                      the mouse off and on.
+  --debug             Write diagnostics to stderr: the input detected (HAR or trace,
+                      gzip), the pages, the timings of the phases and the full stack
+                      trace of an error. stdout stays as it is.
 
 Other:
   --region <id>       Client network region: ${CLIENT_REGIONS.join(" | ")}. "cn" draws the

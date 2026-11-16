@@ -19,6 +19,10 @@ const KEYS: [string, string][] = [
   ["s/S", "the column the resources sort by, and its direction"],
   ["e", "all the evidence of the findings, or the first three rows of each"],
   ["< >", "scroll the columns of a table wider than the terminal (Hosts tab)"],
+  [
+    "m",
+    "the mouse on or off: the wheel scrolls, a click picks a tab or a request; off frees the terminal's text selection (Shift, or Option in iTerm2, + drag selects while it is on)",
+  ],
   ["?", "this help (scrolls like a list; ?, q or Esc closes it)"],
   ["q, Ctrl+C", "quit; q closes the help and the details first"],
 ];

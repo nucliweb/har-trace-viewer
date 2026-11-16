@@ -5,6 +5,7 @@ import { gunzipSync } from "node:zlib";
 import { parseRecording, readRecordingJson, RecordingFormatError } from "@htv/core";
 import type { RecordingKind, RecordingResult } from "@htv/core";
 import { readTextFile } from "@htv/core/node";
+import { debug } from "./debug";
 
 const RECORDING_NOUN: Record<RecordingKind, string> = { har: "a HAR", trace: "a Chrome trace" };
 const RECORDING_SHAPE: Record<RecordingKind, string> = {
@@ -67,7 +68,12 @@ export async function readRecording<K extends RecordingKind>(
 ): Promise<RecordingResult<K>> {
   const name = file === STDIN ? STDIN_NAME : file;
   try {
-    return parseRecording(kind, await readInput(file));
+    debug.input(kind, file);
+    return await debug.time(
+      `read and parse ${kind === "har" ? "HAR" : "trace"} ${name}`,
+      async () => parseRecording(kind, await readInput(file)),
+      true
+    );
   } catch (error) {
     throw readError(name, kind, error);
   }

@@ -9,6 +9,8 @@ const DIST_ENTRY = join(CLI_ROOT, "dist", "index.js");
 const HAR = join(CLI_ROOT, "..", "core", "tests", "fixtures", "webperf-snippets.har.fixture.json");
 
 const LEAVE_ALT_SCREEN = "\u001B[?1049l";
+const MOUSE_ON = "\u001B[?1000h\u001B[?1006h";
+const MOUSE_OFF = "\u001B[?1006l\u001B[?1000l";
 // "Cache & network" shortens to "Cache" on the 80 columns a pseudo-terminal defaults to.
 const TAB_NAMES = ["Findings", "Waterfall", "Resources", "Overview", "Steps", "Hosts", "Cache"];
 const TIMEOUT_MS = 10_000;
@@ -161,6 +163,80 @@ describe("htv in a pseudo-terminal", () => {
       expect(result.started).toBe(true);
       expect(closedAfterEsc).toBe(false);
       expect(result.code).toBe(0);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
+  runTty(
+    "reports the mouse while it runs and always turns the reporting off when it quits",
+    async () => {
+      const result = await session({}, (child) => void child.stdin.write("q"));
+      expect(result.code).toBe(0);
+      expect(result.output).toContain(MOUSE_ON);
+      expect(result.output.lastIndexOf(MOUSE_OFF)).toBeGreaterThan(result.output.indexOf(MOUSE_ON));
+      expect(result.output.indexOf(MOUSE_OFF + LEAVE_ALT_SCREEN)).toBeGreaterThan(-1);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
+  runTty(
+    "does not read a mouse report as keys: a wheel turn does not quit and Esc is not typed",
+    async () => {
+      let closedAfterReports: boolean | undefined;
+      const result = await session({}, async (child, state) => {
+        child.stdin.write("\u001B[<65;10;10M\u001B[<0;5;5M\u001B[<0;5;5m");
+        await new Promise((done) => setTimeout(done, 400));
+        closedAfterReports = state.closed;
+        child.stdin.write("q");
+      });
+      expect(closedAfterReports).toBe(false);
+      expect(result.code).toBe(0);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
+  runTty(
+    "leaves the mouse alone with --no-mouse, and still turns the reporting off on exit",
+    async () => {
+      const child = spawnInPty(["node", DIST_ENTRY, "--page", "Home", "--har", HAR, "--no-mouse"]);
+      let output = "";
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk: string) => {
+        output += chunk;
+        if (output.includes("q quit") && !output.includes("QUIT-SENT")) {
+          output += "QUIT-SENT";
+          child.stdin.write("q");
+        }
+        if (output.includes(LEAVE_ALT_SCREEN)) child.stdin.end();
+      });
+      const timer = setTimeout(() => child.kill("SIGKILL"), TIMEOUT_MS);
+      const code = await new Promise<number | null>((done) => child.on("close", done));
+      clearTimeout(timer);
+      expect(code).toBe(0);
+      expect(output).not.toContain(MOUSE_ON);
+      expect(output).toContain(MOUSE_OFF);
+    },
+    TIMEOUT_MS + 2_000
+  );
+
+  runTty(
+    "turns the reporting off when it is interrupted by a signal",
+    async () => {
+      // The shell signals the CLI itself: a signal sent to the pty's own child would miss it.
+      const command = `node ${quote(DIST_ENTRY)} --page Home --har ${quote(HAR)} <&0 & pid=$!; sleep 3; kill -INT $pid; wait $pid`;
+      const child = spawnInPty(["sh", "-c", command]);
+      let output = "";
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk: string) => {
+        output += chunk;
+        if (output.includes(MOUSE_OFF + LEAVE_ALT_SCREEN)) child.stdin.end();
+      });
+      const timer = setTimeout(() => child.kill("SIGKILL"), TIMEOUT_MS);
+      const code = await new Promise<number | null>((done) => child.on("close", done));
+      clearTimeout(timer);
+      expect(output).toContain(MOUSE_ON);
+      expect(output).toContain(MOUSE_OFF + LEAVE_ALT_SCREEN);
+      expect(code).toBe(130);
     },
     TIMEOUT_MS + 2_000
   );

@@ -16,6 +16,8 @@ import {
   checkOptions,
 } from "./cli";
 import { runChecks } from "./budget";
+import { runCompletionCommand } from "./completion";
+import { debug, startDebug } from "./debug";
 import { formatCheckResult } from "./check-format";
 import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
 import type { RedactArgs } from "./redact";
@@ -34,12 +36,15 @@ async function redactCommand(argv: string[]) {
 }
 
 async function main() {
+  startDebug(process.argv.slice(2));
+  if (process.argv[2] === "completion") return runCompletionCommand(process.argv.slice(3));
   if (process.argv[2] === "redact") return redactCommand(process.argv.slice(3));
   let args: Args;
   try {
     args = parseArgs(process.argv.slice(2));
   } catch (err) {
     console.error((err as Error).message);
+    debug.error(err);
     printUsage();
     process.exit(1);
   }
@@ -66,7 +71,10 @@ async function main() {
   }
 
   const target = outputTarget(args, process.stdout.isTTY === true && process.stdin.isTTY === true);
+  debug.phase("analyze");
   let report = await buildReport(args);
+  debug.log(`pages: ${report.flow.pages.length}${report.compare ? " (and a second side)" : ""}`);
+  debug.phase(`render ${target.kind}`);
   if (args.redact) {
     const redacted = redactReport(report, args.redact);
     report = redacted.report;
@@ -109,7 +117,7 @@ async function main() {
     case "tui": {
       // Loaded here alone: Ink and React cost startup time the other formats should not pay
       const { runTui } = await import("./tui/run.js");
-      await runTui(report, __HTV_VERSION__);
+      await runTui(report, __HTV_VERSION__, { mouse: !args.noMouse });
       return;
     }
     case "check":
@@ -141,5 +149,6 @@ async function main() {
 
 main().catch((err) => {
   console.error(err.message);
+  debug.error(err);
   process.exit(1);
 });

@@ -16,6 +16,7 @@ Analyzes HAR and Chrome trace files and shows the page load step by step, with i
 htv <file.har[.gz]> [<trace.json[.gz]>] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [options]
 htv --page <name> --har <file.har[.gz]> [--trace <file.json[.gz]>] [--select <id|text>] [--runs median|all|<N>] [--page <name> ...] [-o <dir|file.html|file.json>] [--format tui|html|json|findings|markdown|csv|mermaid] [--bundle] [--region default|cn] [--compare | --compare-with <file.har[.gz]> [--compare-trace <file>] [--compare-select <id|text>]] [--compare-region default|cn]
 htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
+htv completion bash|zsh|fish
 htv --demo
 ```
 
@@ -65,6 +66,8 @@ A first session, as in the recording above:
 4. On Resources (`3`), `s` cycles the column the table sorts by (start, size, time, TTFB, then the others) to find the heaviest or the slowest requests, and `S` reverses it.
 5. Overview (`4`) gathers the metrics, Steps (`5`) walks the load with `←`/`→`, and Hosts (`6`) and Cache & network (`7`) show where the time and the bytes went. `<` and `>` scroll the columns of a table wider than the terminal.
 6. `?` lists every key and the filter syntax on any tab, and `q` (or `Ctrl+C`) quits.
+
+The mouse works too: the wheel scrolls the view (on the waterfall and the resources it moves the cursor three requests at a time), and a click picks a tab or the request under the pointer. Mouse reporting takes over the terminal's own text selection, so `m` turns it off and on, `htv --no-mouse` starts without it, and holding `Shift` (`Option` in iTerm2) while dragging selects text in most terminals with it on. The terminal is always given back as it was, on `q`, `Ctrl+C`, an error or a signal.
 
 A comparison puts two recordings of the same page in one report, here with the browser cache off (`cold`) and on (`warm`):
 
@@ -209,8 +212,20 @@ The main-thread findings name the long tasks and the scripts that blocked the mo
 | `--check-format <format>`  | `text` (default), `json`, `junit` or `github`: the format of the check result. See [Check formats](#check-formats)                                                                                                                              |
 | `--check-output <path>`    | Also write the check result, in `--check-format`, to a file; the terminal keeps the text result                                                                                                                                                 |
 | `--fail-on <severity>`     | `critical` or `warning`: fail (exit 2) when a [finding](#findings) of that severity or worse exists                                                                                                                                             |
+| `--no-mouse`               | Start the terminal report without mouse reporting, which leaves the terminal's own text selection alone; `m` turns it on                                                                                                                        |
+| `--debug`                  | Write diagnostics to stderr: the input detected (HAR or trace, gzip), the pages, the timings of the parse, generate and render phases and the full stack trace of an error. stdout stays as it is                                               |
 | `-h, --help`               | Print the usage and exit                                                                                                                                                                                                                        |
 | `-v, --version`            | Print the version and exit                                                                                                                                                                                                                      |
+
+### Shell completion
+
+`htv completion bash|zsh|fish` prints a completion script that completes the flags, their values (the formats, the check formats, the severities, the regions) and the files, and the `redact` and `completion` commands:
+
+```bash
+source <(htv completion bash)          # bash: add it to ~/.bashrc
+source <(htv completion zsh)           # zsh: after compinit, in ~/.zshrc
+htv completion fish > ~/.config/fish/completions/htv.fish
+```
 
 ### Several runs
 

@@ -276,6 +276,8 @@ function legendLines(marks: PlacedMark[], flags: { lcp: boolean; blocking: boole
  */
 export interface ListView {
   pinned: number;
+  /** The index, among the lines of the panel, of the first request. */
+  firstRow: number;
   length: number;
   lines: (from: number, to: number, cursor?: number) => Line[];
 }
@@ -302,6 +304,7 @@ export function listView(
   const length = head.length + rows + tail.length + 2;
   return {
     pinned,
+    firstRow: head.length + 1,
     length,
     lines: (from, to, cursor) =>
       panelRange(

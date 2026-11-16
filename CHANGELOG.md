@@ -10,6 +10,9 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 - Open the drawer, filter, view, sort and selected request that a link names, in the web app and in a report, and keep the address in step with them, so a copied link reopens the same view.
 - Remember the filter, sort order and chart or table view of the waterfall across reloads; a link takes precedence over the remembered values.
+- Use the mouse in the terminal report: the wheel scrolls the view or moves the cursor, and a click picks a tab or a request. The `m` key turns the mouse off and on, `--no-mouse` starts without it, and the terminal is restored on exit, Ctrl+C, an error or a signal.
+- Print a shell completion script with `htv completion bash|zsh|fish`, covering the flags, their values and the `redact` and `completion` commands.
+- Write diagnostics to stderr with `--debug` (the input detected, the pages, the timings of the phases and the full stack trace of an error) while stdout stays as it is.
 
 ### Fixed
 
