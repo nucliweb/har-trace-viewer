@@ -1,4 +1,4 @@
 {
-  "site": { "initialJs": 123000, "totalJs": 216500, "worker": 37700, "css": 17750 },
-  "report": { "initialJs": 194500, "worker": 37700, "css": 12550 }
+  "site": { "initialJs": 125500, "totalJs": 222500, "worker": 38500, "css": 18500 },
+  "report": { "initialJs": 198000, "worker": 38500, "css": 13200 }
 }

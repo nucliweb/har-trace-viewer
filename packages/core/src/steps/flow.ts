@@ -32,7 +32,9 @@ import type {
 //    inferredCacheRefs), which light the hop to the browser cache like the HAR's own hits;
 //    a hit whose store the HAR does not record reads fromCache "unknown" (CacheReport.browser
 //    fromUnknownStore).
-export const FLOW_VERSION = 7;
+// 8: entries keep every request and response header, sensitive values masked
+//    (HarEntry.headers), and the compressed body size (HarEntry.encodedBodySize).
+export const FLOW_VERSION = 8;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 

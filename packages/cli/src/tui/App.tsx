@@ -324,9 +324,8 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   const region = useMemo((): Region => {
     if (help) return regionOf(helpRegion(width));
     if (showDetail && cursorRow) {
-      const entry = shownPage.har.entries[cursorRow.entryIndex];
       return regionOf(
-        requestRegion(cursorRow, entry, { index: cursorIndex, count: rowCount }, width)
+        requestRegion(cursorRow, shownPage.har, { index: cursorIndex, count: rowCount }, width)
       );
     }
     switch (current) {

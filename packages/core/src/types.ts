@@ -67,6 +67,21 @@ export interface HarEntry {
   // Who requested the resource, from Chrome's _initiator. Absent when the HAR has none, and in
   // flows parsed before it was kept.
   initiator?: HarInitiator;
+  // Every request and response header (see HeaderLists). Absent in flows before version 8.
+  headers?: HeaderLists;
+  // The response body's bytes on the wire, compressed (HAR response.bodySize). Absent when the
+  // HAR does not give it, for a browser-cache hit, and in flows before version 8.
+  encodedBodySize?: number;
+}
+
+// The headers of a request and of its response, each a `Name: value` line in the HAR's order,
+// repeated headers included. The parser masks the values of sensitive ones with the redaction
+// rules, so no secret reaches a flow: `[redacted]` for a credential header, `[redacted]` for a
+// sensitive query value in a URL, and the cookie names of Cookie and Set-Cookie with as many `*`
+// as their values had characters.
+export interface HeaderLists {
+  request: string[];
+  response: string[];
 }
 
 // The HTTP version a response came over; "unknown" when the HAR does not say.

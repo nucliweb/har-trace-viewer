@@ -90,7 +90,8 @@ export function windowItems(
 /**
  * The scroll position that shows a row (its top and height, in the scroller's content) in a view
  * whose top `header` pixels are covered by a sticky header: "nearest" scrolls only as far as
- * needed, "center" puts the row in the middle of the room below the header.
+ * needed, "center" puts the row in the middle of the room below the header. A row taller than
+ * that room (the selected request with its detail) shows its top right below the header.
  */
 export function revealTop({
   rowTop,
@@ -108,7 +109,9 @@ export function revealTop({
   align: "nearest" | "center";
 }): number {
   let top = scrollTop;
-  if (align === "center") {
+  if (rowHeight > viewHeight - header) {
+    top = rowTop - header;
+  } else if (align === "center") {
     top = rowTop - header - (viewHeight - header - rowHeight) / 2;
   } else if (rowTop < scrollTop + header) {
     top = rowTop - header;

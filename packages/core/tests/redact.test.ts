@@ -72,8 +72,9 @@ describe("redactHar", () => {
     expect(headerValue(doc.response.headers, "set-cookie")).toBe(
       "sid=[redacted]*********; Path=/; HttpOnly; Secure"
     );
-    // sid and theme in the cookie list and the Cookie header, sid in Set-Cookie and its list.
-    expect(report.cookies).toBe(6);
+    // sid and theme in the cookie list and the Cookie header, sid in Set-Cookie and its list,
+    // theme in the second Set-Cookie.
+    expect(report.cookies).toBe(7);
   });
 
   it("redacts the values of credential headers and keeps their names", () => {
@@ -144,8 +145,9 @@ describe("redactHar", () => {
   });
 
   it("counts the redacted header values", () => {
-    // cookie, set-cookie, authorization, x-api-key, x-csrf-token and the JWT header.
-    expect(redacted().report.headers).toBe(6);
+    // cookie, the two set-cookie, authorization, proxy-authorization, x-api-key, x-csrf-token,
+    // x-session-id and the JWT header.
+    expect(redacted().report.headers).toBe(9);
   });
 
   it("drops response bodies and redacts request bodies, keeping their sizes", () => {
@@ -226,7 +228,7 @@ describe("redactHar", () => {
     const { har } = redactHar(raw) as { har: RawHar };
 
     expect(har.log.entries[0].response.redirectURL).toBe(
-      "https://[redacted]@shop.example.com/cb#access_token=[redacted-3]&expires_in=3600"
+      "https://[redacted]@shop.example.com/cb#access_token=[redacted-4]&expires_in=3600"
     );
   });
 
@@ -281,7 +283,7 @@ describe("redactHar", () => {
     const urls = har.log.entries.map((e) => e.request.url);
 
     expect(urls[3]).toBe(
-      "https://host-1.redacted/pixel.gif?uid=[redacted-5]&sig=[redacted-6]&page=home"
+      "https://host-1.redacted/pixel.gif?uid=[redacted-6]&sig=[redacted-7]&page=home"
     );
     expect(urls[4]).toBe(FONT_URL.replace("assets.vendor-two.net", "host-2.redacted"));
     expect(urls[2]).toMatch(/^https:\/\/api\.example\.com\//);
@@ -290,8 +292,9 @@ describe("redactHar", () => {
     expect(headerValue(documentEntry(har).response.headers, "link")).toBe(
       "<https://host-2.redacted/fonts/brand.woff2>; rel=preload; as=font, <https://host-2.redacted>; rel=preconnect"
     );
-    expect(JSON.stringify(har)).not.toMatch(/vendor-one|vendor-two/);
-    expect(report.hosts).toBe(2);
+    // vendor-three only in the Referer and Origin of the login request.
+    expect(JSON.stringify(har)).not.toMatch(/vendor-one|vendor-two|vendor-three/);
+    expect(report.hosts).toBe(3);
   });
 
   it("redacts WebSocket messages", () => {
@@ -457,11 +460,11 @@ describe("redactFlow", () => {
     const { flow, report } = redactFlow(original(), { hosts: "mask" });
     const json = JSON.stringify(flow);
 
-    expect(json).not.toMatch(/vendor-one|vendor-two/);
+    expect(json).not.toMatch(/vendor-one|vendor-two|vendor-three/);
     expect(json).toContain("host-1.redacted");
     expect(json).toContain("shop.example.com");
     expect(json).toContain("www.googletagmanager.com");
-    expect(report.hosts).toBe(2);
+    expect(report.hosts).toBe(3);
   });
 
   it("does not change its input", () => {

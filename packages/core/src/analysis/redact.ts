@@ -2,6 +2,10 @@ import type { Flow } from "../types.js";
 import { parseHarPages } from "../parsers/har-parser.js";
 import { getHostname, getRootDomain } from "../utils/domain.js";
 import { pluralCount } from "../utils/format.js";
+import { PLACEHOLDER, SecretRules } from "./secret-rules.js";
+import type { Context, RedactionReport } from "./secret-rules.js";
+
+export type { RedactionReport } from "./secret-rules.js";
 
 /**
  * Redaction of a HAR, or of a flow already generated from one, before sharing it.
@@ -21,121 +25,9 @@ export interface RedactOptions {
   hosts?: "keep" | "mask";
 }
 
-/** How many values each rule replaced. */
-export interface RedactionReport {
-  /** Cookie values, in cookie lists and in Cookie and Set-Cookie headers. */
-  cookies: number;
-  /** Values of credential headers (Cookie, Authorization, *token*...) and JWTs in other headers. */
-  headers: number;
-  /** Query and fragment values, and credentials in URLs. */
-  queryParams: number;
-  /** Response bodies, request bodies and WebSocket messages. */
-  bodies: number;
-  /** Distinct hostnames masked. */
-  hosts: number;
-  /** Email addresses. */
-  emails: number;
-  /** JWTs outside query strings and headers (in paths, titles, descriptions). */
-  tokens: number;
-}
-
-const PLACEHOLDER = "[redacted]";
-const EMAIL_PLACEHOLDER = "[email]";
 const MASKED_HOST_SUFFIX = ".redacted";
 
-const emptyReport = (): RedactionReport => ({
-  cookies: 0,
-  headers: 0,
-  queryParams: 0,
-  bodies: 0,
-  hosts: 0,
-  emails: 0,
-  tokens: 0,
-});
-
-// ── What is sensitive ─────────────────────────────────────────────────────────
-
-// Credential headers; Cookie and Set-Cookie keep their cookie names (see cookieHeader).
-const SENSITIVE_HEADER =
-  /^(?:proxy-)?authorization$|^x-auth(?:-|$)|token|secret|session|passw|api-?key|credential/i;
-
-// Query parameter names whose value identifies or authenticates someone.
-const SENSITIVE_PARAMS = new Set([
-  "token",
-  "auth",
-  "key",
-  "apikey",
-  "api_key",
-  "api-key",
-  "session",
-  "sid",
-  "password",
-  "passwd",
-  "pwd",
-  "secret",
-  "access_token",
-  "id_token",
-  "code",
-  "state",
-  "email",
-  "user",
-  "username",
-  "user_id",
-  "userid",
-  "uid",
-  "cid",
-  "signature",
-  "sig",
-  "jwt",
-]);
-const SENSITIVE_PARAM_PATTERN = /token|secret|passw|session|signature|credential|api[-_]?key|auth/;
-
-// A JWT: base64url header (always `{"` → eyJ), payload and signature (empty for alg "none").
-const JWT = /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*/g;
-const HEX_RUN = /[0-9a-f]{32,}/i;
-const BASE64_RUN = /[A-Za-z0-9+/_-]{32,}/g;
-
-// A run of base64 long enough to be a secret: mixed case and digits, unlike a slug or a word.
-function looksLikeToken(value: string): boolean {
-  if (new RegExp(JWT.source).test(value) || HEX_RUN.test(value)) return true;
-  return (value.match(BASE64_RUN) ?? []).some(
-    (run) => /[a-z]/.test(run) && /[A-Z]/.test(run) && /\d/.test(run)
-  );
-}
-
-function isSensitiveParam(name: string, decodedValue: string): boolean {
-  const key = safeDecode(name.slice(name.lastIndexOf(";") + 1)).toLowerCase();
-  return (
-    SENSITIVE_PARAMS.has(key) || SENSITIVE_PARAM_PATTERN.test(key) || looksLikeToken(decodedValue)
-  );
-}
-
-// File extensions that follow an @ in asset names (logo@2x.png) and are no top-level domain.
-const FILE_EXTENSIONS = new Set(
-  "png jpg jpeg gif webp avif svg ico bmp js mjs cjs css json html htm xml txt woff woff2 ttf otf eot map mp4 webm mp3 wasm pdf zip gz br php asp aspx jsp".split(
-    " "
-  )
-);
-// A raw or percent-encoded (%40) @ between a local part and a domain.
-const EMAIL = /[A-Za-z0-9._%+-]+(?:@|%40)(?:[A-Za-z0-9-]+\.)+([A-Za-z]{2,})(?![A-Za-z0-9-])/g;
-const URL_CREDENTIALS = /(\b[a-z][a-z0-9+.-]*:\/\/)([^/\s?#@]+)@/gi;
-// A query or fragment parameter: name=value after ?, # or &.
-const QUERY_PAIR = /([?#&])([^=&#?\s"'<>]+)=([^&#\s"'<>)]*)/g;
-// A raw header line, as WebPageTest lists them: "Cookie: a=1".
-const HEADER_LINE = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+):(\s*)(.*)$/s;
-
 const SHORTENED_HOST = /…([A-Za-z0-9.-]+)/g;
-
-const isPlaceholder = (value: string) =>
-  value === EMAIL_PLACEHOLDER || /^\[redacted(?:-\d+)?\]$/.test(value);
-
-function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value.replace(/\+/g, " "));
-  } catch {
-    return value;
-  }
-}
 
 // Shared services whose hostnames say nothing about the site that loaded them. Hosts under
 // per-customer domains (*.vercel.app, *.cloudfront.net, *.azureedge.net) name their customer
@@ -218,16 +110,14 @@ const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\
 
 // ── The redactor ──────────────────────────────────────────────────────────────
 
-type Context = "text" | "headers";
-
-class Redactor {
-  readonly report = emptyReport();
-  private readonly placeholders = new Map<string, string>();
+class Redactor extends SecretRules {
   private readonly maskedHosts = new Map<string, string>();
   private hostPattern: RegExp | null = null;
   private readonly visited = new WeakSet<object>();
 
-  constructor(private readonly options: RedactOptions) {}
+  constructor(private readonly options: RedactOptions) {
+    super();
+  }
 
   /** Plans which hostnames to mask: every host requested outside the first party. */
   planHosts(urls: string[], firstPartyUrls: string[]): void {
@@ -287,8 +177,9 @@ class Redactor {
       } else node.value = this.text(node.value, "text");
       handled.add("name").add("value");
     } else if (context === "headers") {
-      // A header record, as flows keep the response headers: name → value.
-      // WebPageTest groups raw header lines instead: { request: ["Cookie: a=1"], response: [...] }.
+      // A header record, as flows keep the allow-listed response headers: name → value.
+      // WebPageTest and the header lists of flows group raw lines instead:
+      // { request: ["Cookie: a=1"], response: [...] }.
       for (const [name, value] of Object.entries(node)) {
         node[name] =
           typeof value === "string"
@@ -364,92 +255,7 @@ class Redactor {
     }
   }
 
-  private headerValue(name: string, value: string): string {
-    const lower = name.toLowerCase();
-    if (lower === "cookie" || lower === "set-cookie") return this.cookieHeader(lower, value);
-    if (SENSITIVE_HEADER.test(lower) && !lower.startsWith("access-control-")) {
-      if (value === "" || value === PLACEHOLDER) return value;
-      this.report.headers++;
-      return PLACEHOLDER;
-    }
-    return this.text(value, "headers");
-  }
-
-  private headerLine(line: string): string {
-    const [, name, gap, value] = HEADER_LINE.exec(line) ?? [];
-    if (name === undefined || gap === undefined || value === undefined) {
-      return this.text(line, "headers");
-    }
-    return `${name}:${gap}${this.headerValue(name, value)}`;
-  }
-
-  // Cookie: every name=value pair. Set-Cookie: the first pair of each line; attributes stay.
-  private cookieHeader(name: "cookie" | "set-cookie", value: string): string {
-    const before = this.report.cookies;
-    const pair = name === "cookie" ? /(^|;\s*)([^=;]+=)([^;]*)/g : /^(\s*)([^=;]+=)([^;\n]*)/gm;
-    const result = value.replace(
-      pair,
-      (_, separator: string, prefix: string, cookie: string) =>
-        `${separator}${prefix}${this.cookieValue(cookie)}`
-    );
-    if (this.report.cookies > before) this.report.headers++;
-    return result;
-  }
-
-  // As many characters as the value had: the cookie sizes the analysis reports stay the same.
-  private cookieValue(value: string): string {
-    if (value === "" || /^(?:\[redacted\])?\**$/.test(value)) return value;
-    this.report.cookies++;
-    return value.length >= PLACEHOLDER.length
-      ? PLACEHOLDER + "*".repeat(value.length - PLACEHOLDER.length)
-      : "*".repeat(value.length);
-  }
-
-  /** Redacts URLs and text: credentials, emails, query values, JWTs and masked hosts. */
-  text(value: string, context: Context): string {
-    let result = value.replace(URL_CREDENTIALS, (match, scheme: string, credentials: string) => {
-      if (credentials === PLACEHOLDER) return match;
-      this.report.queryParams++;
-      return `${scheme}${PLACEHOLDER}@`;
-    });
-    result = this.emails(result);
-    result = result.replace(
-      QUERY_PAIR,
-      (_, separator: string, name: string, paramValue: string) =>
-        `${separator}${name}=${this.param(name, paramValue)}`
-    );
-    result = result.replace(JWT, () => {
-      if (context === "headers") this.report.headers++;
-      else this.report.tokens++;
-      return PLACEHOLDER;
-    });
-    return this.hosts(result);
-  }
-
-  private emails(value: string): string {
-    return value.replace(EMAIL, (match, tld: string) => {
-      if (FILE_EXTENSIONS.has(tld.toLowerCase())) return match;
-      this.report.emails++;
-      return EMAIL_PLACEHOLDER;
-    });
-  }
-
-  // A query value: a numbered placeholder when sensitive, the same number for the same value,
-  // so requests that differed only by it still differ and equal URLs stay equal.
-  private param(name: string, value: string): string {
-    if (value === "" || isPlaceholder(value)) return this.hosts(value);
-    const decoded = safeDecode(value);
-    if (!isSensitiveParam(name, decoded)) return this.hosts(value);
-    let placeholder = this.placeholders.get(decoded);
-    if (placeholder === undefined) {
-      placeholder = `[redacted-${this.placeholders.size + 1}]`;
-      this.placeholders.set(decoded, placeholder);
-    }
-    this.report.queryParams++;
-    return placeholder;
-  }
-
-  private hosts(value: string): string {
+  protected override hosts(value: string): string {
     if (!this.hostPattern) return value;
     return value
       .replace(this.hostPattern, (host) => this.maskedHosts.get(host.toLowerCase()) ?? host)
@@ -468,7 +274,24 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 // ── HAR ───────────────────────────────────────────────────────────────────────
 
 interface RawHarShape {
-  log?: { entries?: { request?: { url?: unknown } }[] };
+  log?: {
+    entries?: {
+      request?: { url?: unknown; headers?: unknown };
+      response?: { headers?: unknown };
+    }[];
+  };
+}
+
+// The absolute URLs header values name (Referer, Origin, Location, Link...): a host that only a
+// header names, such as the site a navigation came from, is masked like a requested one.
+const HEADER_URL = /\bhttps?:\/\/[^\s,;"'<>]+/gi;
+
+function urlsInHeaders(headers: unknown): string[] {
+  if (!Array.isArray(headers)) return [];
+  return headers.flatMap((header: unknown) => {
+    const text = isRecord(header) ? header.value : header;
+    return typeof text === "string" ? (text.match(HEADER_URL) ?? []) : [];
+  });
 }
 
 // The documents of the HAR's pages, which make the first party; the first request without one.
@@ -494,10 +317,17 @@ export function redactHar<T>(
 ): { har: T; report: RedactionReport } {
   const har = structuredClone(rawHar);
   const redactor = new Redactor(options);
-  const urls = ((har as RawHarShape).log?.entries ?? [])
+  const entries = (har as RawHarShape).log?.entries ?? [];
+  const urls = entries
     .map((e) => e.request?.url)
     .filter((url): url is string => typeof url === "string");
-  if (options.hosts === "mask") redactor.planHosts(urls, documentUrls(har, urls));
+  if (options.hosts === "mask") {
+    const named = entries.flatMap((e) => [
+      ...urlsInHeaders(e.request?.headers),
+      ...urlsInHeaders(e.response?.headers),
+    ]);
+    redactor.planHosts([...urls, ...named], documentUrls(har, urls));
+  }
   redactor.value(har, "", "text");
   return { har, report: redactor.report };
 }
@@ -506,8 +336,9 @@ export function redactHar<T>(
 
 /**
  * Redacts flows already generated, for reports to share: the URL, query, email and JWT rules
- * over every string (entries, redirects, initiators, evidence, titles, step descriptions, page
- * names) and, with `hosts: "mask"`, third-party hostnames. The flows share placeholders and
+ * over every string (entries, their header lists, redirects, initiators, evidence, titles, step
+ * descriptions, page names) and, with `hosts: "mask"`, third-party hostnames, those that only a
+ * header names included. The flows share placeholders and
  * masked hosts, so the two sides of a comparison still match.
  */
 export function redactFlows(
@@ -526,8 +357,14 @@ function redactCopies(copies: Flow[], options: RedactOptions): RedactionReport {
       ...page.har.entries.map((e) => e.url),
       ...(page.trace?.requests ?? []).map((r) => r.url),
     ]);
+    const named = pages.flatMap((page) =>
+      page.har.entries.flatMap((e) => [
+        ...urlsInHeaders(e.headers?.request),
+        ...urlsInHeaders(e.headers?.response),
+      ])
+    );
     redactor.planHosts(
-      urls,
+      [...urls, ...named],
       pages.map((page) => page.har.documentEntry.url)
     );
   }

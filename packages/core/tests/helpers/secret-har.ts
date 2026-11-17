@@ -22,10 +22,28 @@ export const SECRETS = {
   headerJwt: jwt("SEFERVJfSldUX1NJR05BVFVSRQ"),
   bodyJwt: jwt("Qk9EWV9KV1RfU0lHTkFUVVJF"),
   hexSignature: "0123456789abcdef0123456789abcdef",
+  proxyAuth: "PROXY_AUTH_SECRET_13",
+  ssoCode: "SSO_CODE_SECRET_14",
+  sessionHeader: "SESSION_HEADER_SECRET_15",
 };
+
+// Secrets that only headers carry: a report without --redact leaves none of them either.
+export const HEADER_SECRETS = [
+  SECRETS.cookieSid,
+  SECRETS.setCookie,
+  SECRETS.bearer,
+  SECRETS.apiKey,
+  SECRETS.csrf,
+  SECRETS.headerJwt,
+  SECRETS.proxyAuth,
+  SECRETS.ssoCode,
+  SECRETS.sessionHeader,
+];
 
 export const DOCUMENT_URL = `https://shop.example.com/account?email=${SECRETS.email}&token=${SECRETS.pageToken}&lang=en`;
 const LOGIN_URL = `https://shop.example.com/login?session=${SECRETS.session}&next=%2Faccount`;
+// A sign-in page on another site, never requested: only the login request's Referer names it.
+export const SSO_URL = `https://sso.vendor-three.example/callback?code=${SECRETS.ssoCode}&lang=en`;
 const API_URL = `https://api.example.com/v1/profile?access_token=${SECRETS.accessToken}&lang=en`;
 export const PIXEL_URL = `https://tracker.vendor-one.io/pixel.gif?uid=${SECRETS.userId}&sig=${SECRETS.hexSignature}&page=home`;
 export const FONT_URL = "https://assets.vendor-two.net/fonts/brand.woff2";
@@ -120,6 +138,10 @@ export function secretHar() {
           mimeType: "text/html",
           resourceType: "document",
           redirectURL: DOCUMENT_URL,
+          requestHeaders: [
+            header("referer", SSO_URL),
+            header("origin", "https://sso.vendor-three.example"),
+          ],
           responseHeaders: [header("location", DOCUMENT_URL), header("cache-control", "no-store")],
         }),
         entry(DOCUMENT_URL, {
@@ -129,6 +151,7 @@ export function secretHar() {
           requestHeaders: [
             header("cookie", `sid=${SECRETS.cookieSid}; theme=dark`),
             header("authorization", `Bearer ${SECRETS.bearer}`),
+            header("proxy-authorization", `Basic ${SECRETS.proxyAuth}`),
             header("x-api-key", SECRETS.apiKey),
             header("x-csrf-token", SECRETS.csrf),
             header("x-request-context", `user=${SECRETS.headerJwt}`),
@@ -141,6 +164,8 @@ export function secretHar() {
           ],
           responseHeaders: [
             header("set-cookie", `sid=${SECRETS.setCookie}; Path=/; HttpOnly; Secure`),
+            header("set-cookie", "theme=dark; Path=/"),
+            header("x-session-id", SECRETS.sessionHeader),
             header("cache-control", "private, no-store"),
             header("content-type", "text/html; charset=utf-8"),
             header("server", "Vercel"),

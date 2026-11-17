@@ -2,6 +2,7 @@ import type {
   ContentEncoding,
   HarEntry,
   HarPage,
+  HeaderLists,
   InferredCacheHit,
   HarTiming,
   HttpVersion,
@@ -15,6 +16,7 @@ import type {
 import { ParseError } from "./errors.js";
 import { getRootDomain } from "../utils/domain.js";
 import { minOf } from "../utils/extent.js";
+import { headerLine, maskHeaders } from "../analysis/secret-rules.js";
 
 // HAR 1.2 makes blocked, dns, connect and ssl optional; exporters such as Playwright leave
 // them out instead of writing -1.
@@ -490,6 +492,13 @@ function parseTransferSize(e: RawHarEntry): number {
   return isSize(content?.size) ? content.size : 0;
 }
 
+// The compressed body as it crossed the network; nothing did for a browser-cache hit.
+function encodedBodySizeField(e: RawHarEntry): Pick<HarEntry, "encodedBodySize"> {
+  const bodySize = e.response?.bodySize;
+  if (!isSize(bodySize) || parseFromCache(e._fromCache, e.cache)) return {};
+  return { encodedBodySize: bodySize };
+}
+
 function parsePageTime(value: number | undefined): number | null {
   return typeof value === "number" && value >= 0 ? value : null;
 }
@@ -676,7 +685,13 @@ function buildParsedHar(
     const startTime = new Date(e.startedDateTime).getTime() - pageOrigin;
     const response = e.response ?? {};
     const allResponseHeaders = headersToRecord(response.headers ?? []);
-    const responseHeaders = pickResponseHeaders(allResponseHeaders);
+    const maskedResponse = maskHeaders(response.headers ?? []);
+    const headers: HeaderLists = {
+      request: maskHeaders(e.request.headers ?? []).map(headerLine),
+      response: maskedResponse.map(headerLine),
+    };
+    // From the masked values, so that no secret of a header reaches the flow through it either.
+    const responseHeaders = pickResponseHeaders(headersToRecord(maskedResponse));
     const mimeType = response.content?.mimeType ?? "";
     const redirectURL = redirectTarget(e);
 
@@ -704,6 +719,8 @@ function buildParsedHar(
       ...bypassFlag(e),
       ...transportFields(e, allResponseHeaders),
       ...initiatorField(e),
+      headers,
+      ...encodedBodySizeField(e),
     };
   });
 

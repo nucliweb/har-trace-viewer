@@ -1,0 +1,176 @@
+/* The detail of the selected request, under its row. The list scrolls sideways on a phone: the
+   detail stays at the left edge of the view and as wide as it, so that it never scrolls away. */
+.detail {
+  position: sticky;
+  left: 0;
+  /* Above the lines of the waterfall's marks, under its sticky ruler and the tooltips. */
+  z-index: 2;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(100vw - 2 * var(--row-pad, 8px));
+  padding: var(--space-sm) var(--row-pad, 8px) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-cyan) 4%, var(--color-surface));
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text);
+  white-space: normal;
+}
+
+.title,
+.partTitle {
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-cyan);
+}
+
+.url,
+.redirect,
+.note {
+  margin: var(--space-xs) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.url {
+  font-size: var(--fs-body);
+}
+
+.redirect,
+.note,
+.linkType,
+.fact dt,
+.phaseRow dt,
+.header dt {
+  color: var(--color-text2);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-2xs) var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.fact {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.fact dt {
+  white-space: nowrap;
+}
+
+.fact dt::after {
+  content: ":";
+}
+
+.fact dd,
+.phaseRow dd,
+.header dd {
+  margin: 0;
+  min-width: 0;
+}
+
+/* Initiator, timing, size and cache side by side when there is room; the headers full width. */
+.parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-md) var(--space-lg);
+  margin: var(--space-sm) 0;
+}
+
+.part {
+  min-width: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.partHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.chain,
+.timing,
+.headers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each link was requested by the one below it. */
+.chain li + li::before {
+  content: "← ";
+}
+
+.chain li,
+.fact dd,
+.header dt,
+.value {
+  overflow-wrap: anywhere;
+}
+
+/* A row per phase or header: the name, then the value. */
+.phaseRow,
+.header {
+  display: grid;
+  grid-template-columns: minmax(6rem, 30%) minmax(0, 1fr);
+  gap: var(--space-sm);
+  padding: var(--space-2xs) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.phaseRow dd {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.total * {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ms {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  height: 10px;
+}
+
+.phase {
+  position: absolute;
+  inset: 0 auto 0 var(--from);
+  width: var(--width);
+  min-width: 2px;
+  border-radius: 2px;
+}
+
+/* Said in words and drawn as a tag: the forced colors keep its border. */
+.masked {
+  display: inline-block;
+  margin-left: var(--space-sm);
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--color-yellow);
+  border-radius: 4px;
+  color: var(--color-yellow);
+  text-transform: uppercase;
+}
+
+/* The bars of the phases are data in color: they keep it, outlined. */
+@media (forced-colors: active) {
+  .phase {
+    forced-color-adjust: none;
+    outline: 1px solid CanvasText;
+  }
+}

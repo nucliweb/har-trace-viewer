@@ -666,3 +666,9 @@
 .copyMessage:empty {
   display: none;
 }
+
+/* The cell of the selected request's actions and detail, across every column. */
+.grid td.detailCell {
+  padding: 0;
+  white-space: normal;
+}

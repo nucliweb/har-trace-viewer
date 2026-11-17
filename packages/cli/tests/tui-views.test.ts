@@ -33,8 +33,24 @@ const script = makeEntry({
   httpVersion: "h2",
   contentEncoding: "br",
   transferSize: 12_000,
+  encodedBodySize: 11_000,
   bodySize: 48_000,
   responseHeaders: { "cache-control": "max-age=31536000, immutable", "x-cache": "HIT" },
+  initiator: { type: "parser", url: "https://example.com/", lineNumber: 9 },
+  headers: {
+    request: [
+      ":authority: cdn.example.com",
+      "accept: */*",
+      "cookie: sid=[redacted]******; theme=****",
+      "referer: https://example.com/",
+    ],
+    response: [
+      "cache-control: max-age=31536000, immutable",
+      "content-encoding: br",
+      "x-cache: HIT",
+      "x-trace: a-very-long-value-that-goes-past-the-width-of-the-panel-and-has-to-wrap-onto-a-second-line-of-text",
+    ],
+  },
 });
 
 function page() {
@@ -104,7 +120,7 @@ describe("the request detail", () => {
   const detail = (width: number) => {
     const { har, waterfall } = page();
     const row = waterfall.rows.find((r) => r.url === script.url)!;
-    return requestRegion(row, har.entries[row.entryIndex], { index: 2, count: 4 }, width);
+    return requestRegion(row, har, { index: 2, count: 4 }, width);
   };
 
   it("shows the whole URL, wrapped to the panel, and its position in the list", () => {
@@ -150,19 +166,89 @@ describe("the request detail", () => {
     expect(text(lines)).toMatch(/Total\s+100 ms/);
   });
 
-  it("lists the response headers the report keeps, and says that it keeps only some", () => {
-    const all = text(detail(100));
+  it("lists the request and response headers in their order, and marks the masked values", () => {
+    const lines = detail(100);
+    const all = text(lines);
+
+    expect(all).toContain("Request headers · 4");
+    expect(all).toContain("Response headers · 4");
+    const request = all.slice(all.indexOf("Request headers"), all.indexOf("Response headers"));
+    expect(request.indexOf(":authority: cdn.example.com")).toBeLessThan(
+      request.indexOf("accept: */*")
+    );
+    expect(lineText(lineWith(lines, "cookie:"))).toMatch(
+      /cookie: sid=\[redacted\]\*{6}; theme=\*{4}\s+masked/
+    );
+    expect(lineText(lineWith(lines, "accept:"))).not.toContain("masked");
+    expect(all).toContain("Masked values hide secrets");
+    expect(all).not.toContain("allow-list");
+  });
+
+  it("wraps a long header value within the panel", () => {
+    const lines = detail(80);
+
+    expect(text(lines).replace(/[│\s]+/g, "")).toContain(
+      "x-trace:a-very-long-value-that-goes-past-the-width-of-the-panel-and-has-to-wrap-onto-a-second-line-of-text"
+    );
+    for (const line of lines) expect(stringWidth(lineText(line))).toBe(80);
+  });
+
+  it("falls back to the allow-listed response headers of a report without header lists", () => {
+    const har = makeHar([{ ...script, headers: undefined }]);
+    const row = buildWaterfall(har).rows[1];
+    const all = text(requestRegion(row, har, { index: 1, count: 2 }, 100));
 
     expect(all).toContain("Response headers · 2");
     expect(all).toMatch(/cache-control: max-age=31536000, immutable/);
-    expect(all).toMatch(/x-cache: HIT/);
     expect(all).toContain("allow-list");
+    expect(all).not.toContain("Request headers");
+  });
+
+  it("gives the sizes on the wire and decompressed", () => {
+    const all = text(detail(100));
+
+    expect(all).toMatch(/Transfer\s+12 KB/);
+    expect(all).toMatch(/Compressed\s+11 KB/);
+    expect(all).toMatch(/Content\s+48 KB/);
+  });
+
+  it("shows the cache status: browser, revalidation, CDN and freshness", () => {
+    const all = text(detail(100));
+
+    expect(all).toMatch(/Browser\s+network/);
+    expect(all).toMatch(/CDN\s+hit/);
+    expect(all).toMatch(/Cache-Control\s+max-age=31536000, immutable/);
+  });
+
+  it("shows the initiator chain, closest first, with 1-based line numbers", () => {
+    const app = makeEntry({
+      url: "https://example.com/app.js",
+      resourceType: "script",
+      initiator: { type: "parser", url: "https://example.com/", lineNumber: 3 },
+    });
+    const image = makeEntry({
+      url: "https://example.com/hero.png",
+      resourceType: "image",
+      initiator: { type: "script", url: "https://example.com/app.js", lineNumber: 41 },
+    });
+    const har = makeHar([app, image]);
+    const row = buildWaterfall(har).rows.find((r) => r.url.endsWith("hero.png"))!;
+    const lines = requestRegion(row, har, { index: 2, count: 3 }, 100);
+    const all = text(lines);
+
+    expect(all).toContain("Initiator · script");
+    const first = all.indexOf("https://example.com/app.js:42");
+    const second = all.indexOf("https://example.com/:4");
+    expect(first).toBeGreaterThan(-1);
+    expect(second).toBeGreaterThan(first);
+    expect(lineText(lineWith(lines, "app.js:42"))).toMatch(/script\s+https/);
+    expect(lineText(lineWith(lines, "example.com/:4"))).toMatch(/parser\s+https/);
   });
 
   it("flags the LCP resource and the render-blocking requests", () => {
     const { har, waterfall } = page();
     const row = waterfall.rows.find((r) => r.url.endsWith("critical-100.css"))!;
-    const all = text(requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 4 }, 100));
+    const all = text(requestRegion(row, har, { index: 1, count: 4 }, 100));
 
     expect(all).toMatch(/Render blocking\s+yes/);
   });
@@ -171,7 +257,7 @@ describe("the request detail", () => {
     const har = makeHar([{ ...criticalCss(100), fromCache: "disk" as const }]);
     const waterfall = buildWaterfall(har);
     const row = waterfall.rows[1];
-    const all = text(requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 2 }, 80));
+    const all = text(requestRegion(row, har, { index: 1, count: 2 }, 80));
 
     expect(all).toMatch(/Cache\s+disk cache/);
     expect(all).toContain("Served from the browser's disk cache");
@@ -377,7 +463,7 @@ describe("the request names", () => {
     const url = "https://example.cn/%E9%9D%99/%E6%A0%B7%E5%BC%8F%E8%A1%A8.css?a=%2F";
     const har = makeHar([makeEntry({ url })]);
     const row = buildWaterfall(har).rows[1];
-    const shown = requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 2 }, 120)
+    const shown = requestRegion(row, har, { index: 1, count: 2 }, 120)
       .map(lineText)
       .map((l) => l.slice(2, -2).trimEnd())
       .join("");
@@ -394,7 +480,7 @@ describe("the timing phases of a request", () => {
       }),
     ]);
     const row = buildWaterfall(har).rows[1];
-    return requestRegion(row, har.entries[row.entryIndex], { index: 1, count: 2 }, 100);
+    return requestRegion(row, har, { index: 1, count: 2 }, 100);
   };
 
   it("reads a phase under a millisecond as <1 ms and still draws its cell", () => {

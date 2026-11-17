@@ -46,6 +46,8 @@ import {
 import type { WaterfallView } from "../lib/view-state.js";
 import type { WindowItem } from "../lib/row-window.js";
 import { Drawer, DrawerBody } from "./Drawer.js";
+import { RequestDetail } from "./RequestDetail.js";
+import type { OnCopyText } from "./RequestDetail.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -272,6 +274,8 @@ const Row = memo(function Row({
   onDeactivate,
   onSelect,
   onCopy,
+  har,
+  onCopyText,
 }: {
   row: WaterfallRow;
   /** The row's position in the list. */
@@ -285,6 +289,8 @@ const Row = memo(function Row({
   onDeactivate: (entryIndex: number) => void;
   onSelect: (entryIndex: number) => void;
   onCopy: OnCopy;
+  har: ParsedHar;
+  onCopyText: OnCopyText;
 }) {
   const tooltipId = useId();
   const activate = () => onActivate(row.entryIndex);
@@ -328,6 +334,7 @@ const Row = memo(function Row({
         </span>
       </button>
       {selected && <RequestActions row={row} onCopy={onCopy} />}
+      {selected && <RequestDetail row={row} har={har} onCopyText={onCopyText} />}
       {active && <Tooltip row={row} id={tooltipId} />}
     </li>
   );
@@ -392,6 +399,8 @@ function Table({
   selected,
   onSelect,
   onCopy,
+  har,
+  onCopyText,
   headerRef,
   bodyRef,
 }: {
@@ -405,6 +414,8 @@ function Table({
   selected: number | null;
   onSelect: (entryIndex: number) => void;
   onCopy: OnCopy;
+  har: ParsedHar;
+  onCopyText: OnCopyText;
   headerRef: Ref<HTMLTableSectionElement>;
   bodyRef: Ref<HTMLTableSectionElement>;
 }) {
@@ -480,8 +491,9 @@ function Table({
               </tr>
               {selected === row.entryIndex && (
                 <tr data-index={item.index} aria-rowindex={aria(rowIndex(item.index) + 1)}>
-                  <td colSpan={COLUMNS.length}>
+                  <td colSpan={COLUMNS.length} className={styles.detailCell}>
                     <RequestActions row={row} onCopy={onCopy} />
+                    <RequestDetail row={row} har={har} onCopyText={onCopyText} />
                   </td>
                 </tr>
               )}
@@ -643,6 +655,13 @@ export function WaterfallPanel({
     async (row, kind) => {
       const ok = await copyText(kind === "url" ? row.url : curlCommand(row));
       setCopyMessage(ok ? (kind === "url" ? t.urlCopied : t.curlCopied) : t.copyFailed);
+    },
+    [t]
+  );
+  const copyDetail = useCallback<OnCopyText>(
+    async (text, done) => {
+      const ok = await copyText(text);
+      setCopyMessage(ok ? done : t.copyFailed);
     },
     [t]
   );
@@ -879,6 +898,8 @@ export function WaterfallPanel({
               selected={selected}
               onSelect={selectRow}
               onCopy={copy}
+              har={har}
+              onCopyText={copyDetail}
               headerRef={setHeader}
               bodyRef={setList}
             />
@@ -909,6 +930,8 @@ export function WaterfallPanel({
                     onDeactivate={deactivateRow}
                     onSelect={selectRow}
                     onCopy={copy}
+                    har={har}
+                    onCopyText={copyDetail}
                   />
                 );
               })}

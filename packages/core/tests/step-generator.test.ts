@@ -764,7 +764,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(7);
+    expect(FLOW_VERSION).toBe(8);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 

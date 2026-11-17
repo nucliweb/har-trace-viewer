@@ -6,7 +6,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "../src/cli";
 import { parseRedactArgs } from "../src/redact";
-import { secretHar, SECRETS, JWT_HEADER } from "../../core/tests/helpers/secret-har";
+import {
+  secretHar,
+  SECRETS,
+  HEADER_SECRETS,
+  JWT_HEADER,
+} from "../../core/tests/helpers/secret-har";
 
 const CLI_ROOT = resolve(__dirname, "..");
 const DIST_ENTRY = join(CLI_ROOT, "dist", "index.js");
@@ -102,7 +107,7 @@ describe("htv redact", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(`Redacted HAR written: ${output}`);
     expect(result.stdout).toMatch(
-      /Redacted: 6 cookie values, 6 header values, \d+ query values, 3 bodies, \d+ emails/
+      /Redacted: 7 cookie values, 9 header values, \d+ query values, 3 bodies, \d+ emails/
     );
     const har = readFileSync(output, "utf-8");
     expect(leaks(readFileSync(input, "utf-8")).length).toBeGreaterThan(10);
@@ -126,9 +131,9 @@ describe("htv redact", () => {
     const result = runCli(["redact", writeSecretHar(), "-o", output, "--mask-hosts"]);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("2 hosts masked");
+    expect(result.stdout).toContain("3 hosts masked");
     const har = gunzipSync(readFileSync(output)).toString("utf-8");
-    expect(har).not.toMatch(/vendor-one|vendor-two/);
+    expect(har).not.toMatch(/vendor-one|vendor-two|vendor-three/);
     expect(har).toContain("host-1.redacted");
   });
 
@@ -138,7 +143,7 @@ describe("htv redact", () => {
     expect(result.status).toBe(0);
     expect(leaks(result.stdout)).toEqual([]);
     expect(JSON.parse(result.stdout).log.entries).toHaveLength(7);
-    expect(result.stderr).toMatch(/^Redacted: 6 cookie values/);
+    expect(result.stderr).toMatch(/^Redacted: 7 cookie values/);
   });
 
   it("fails without a HAR", () => {
@@ -208,6 +213,46 @@ describe("htv --redact", () => {
 
     expect(leaks(result.stdout)).toEqual(
       expect.arrayContaining([SECRETS.pageToken, SECRETS.session, SECRETS.email])
+    );
+  });
+
+  it("keeps every header with its secrets masked in the JSON and HTML reports, even without --redact", () => {
+    const har = writeSecretHar();
+    const output = join(makeTempDir(), "report.html");
+
+    const json = runCli([har, "--format", "json"]).stdout;
+    expect(runCli([har, "-o", output]).status).toBe(0);
+    const html = readFileSync(output, "utf-8");
+
+    for (const text of [json, html]) {
+      expect(HEADER_SECRETS.filter((secret) => text.includes(secret))).toEqual([]);
+    }
+    const doc = JSON.parse(json).flow.pages[0].har.documentEntry;
+    expect(doc.headers.request).toEqual(
+      expect.arrayContaining([
+        "authorization: [redacted]",
+        "proxy-authorization: [redacted]",
+        "x-api-key: [redacted]",
+      ])
+    );
+    expect(html).toContain("authorization: [redacted]");
+  });
+
+  it("masks third-party hosts in every header of the JSON and HTML reports", () => {
+    const har = writeSecretHar();
+    const output = join(makeTempDir(), "report.html");
+
+    const json = runCli([har, "--format", "json", "--redact=mask-hosts"]).stdout;
+    expect(runCli([har, "-o", output, "--redact=mask-hosts"]).status).toBe(0);
+    const html = readFileSync(output, "utf-8");
+
+    for (const text of [json, html]) {
+      expect(leaks(text)).toEqual([]);
+      expect(text).not.toMatch(/vendor-one|vendor-two|vendor-three/);
+    }
+    const login = JSON.parse(json).flow.pages[0].har.entries[0];
+    expect(login.headers.request).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^origin: https:\/\/host-\d+\.redacted$/)])
     );
   });
 

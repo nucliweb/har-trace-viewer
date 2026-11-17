@@ -155,4 +155,11 @@ describe("revealTop", () => {
   it("never scrolls above the top", () => {
     expect(revealTop({ ...view, rowTop: 10, rowHeight: 25, align: "center" })).toBe(0);
   });
+
+  it("shows the top of a row taller than the room below the header, its detail below", () => {
+    expect(revealTop({ ...view, rowTop: 5000, rowHeight: 900, align: "center" })).toBe(4960);
+    expect(revealTop({ ...view, rowTop: 1390, rowHeight: 900, align: "nearest" })).toBe(1350);
+    // Already at the top of the room: it stays.
+    expect(revealTop({ ...view, rowTop: 1040, rowHeight: 900, align: "nearest" })).toBe(1000);
+  });
 });
