@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import stringWidth from "string-width";
 import { buildWaterfall, collectFindings, generateFlow } from "@htv/core";
+import type { HarEntry } from "@htv/core";
 import { lineText } from "../src/tui/lines";
 import type { Line } from "../src/tui/lines";
 import { findingsRegion } from "../src/tui/findings-view";
@@ -511,5 +512,33 @@ describe("cacheRegion", () => {
     const shown = text(cacheRegion(report(), 80, undefined, { hasDocument: false }));
     expect(shown).toContain("─ Primary request ─");
     expect(shown).not.toContain("Document");
+  });
+});
+
+describe("TUI hosts view: the protocols of the page", () => {
+  const versions = (httpVersions: HarEntry["httpVersion"][]) =>
+    generateFlow([
+      {
+        name: "Home",
+        har: makeHar(
+          httpVersions.map((httpVersion, i) =>
+            makeEntry({ url: `https://host-${httpVersion}-${i % 2}.example.com/a.js`, httpVersion })
+          )
+        ),
+      },
+    ]);
+
+  it("explains each HTTP version the page used, with its hosts and requests", () => {
+    const all = text(hostsRegion(versions(["h2", "h2", "h3"]), 0, 100).lines);
+
+    expect(all).toContain("Protocols · Home");
+    expect(all).toMatch(/HTTP\/2 · 2 hosts, 2 requests/);
+    expect(all).toMatch(/HTTP\/3 · 1 host, 1 request/);
+    expect(all.replace(/[│\s]+/g, " ")).toContain("a lost packet holds up only its own request");
+    expect(all.indexOf("Protocols")).toBeLessThan(all.indexOf("Third parties"));
+  });
+
+  it("has no Protocols panel when the recording gives no HTTP version", () => {
+    expect(text(hostsRegion(versions(["unknown"]), 0, 100).lines)).not.toContain("Protocols");
   });
 });

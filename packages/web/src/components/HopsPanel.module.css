@@ -110,3 +110,22 @@
   white-space: normal;
   max-width: 320px;
 }
+
+/* One line per HTTP version: its use, then what it does. */
+.protocols {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.protocols li {
+  padding: var(--space-2xs) 0;
+}
+
+.protocolUse {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text);
+}

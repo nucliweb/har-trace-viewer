@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseHarJson } from "../src/parsers/har-parser.js";
-import { analyzeConnections } from "../src/analysis/connections.js";
+import { analyzeConnections, protocolsInUse } from "../src/analysis/connections.js";
 import type { ConnectionsReport, HarEntry, ParsedHar } from "../src/types.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
 import { readRecording, type Recording } from "./helpers/recordings.js";
@@ -262,5 +262,36 @@ describe("analyzeConnections — Chrome recordings of webperf-snippets", () => {
       ["data.debugbear.com", "h3", 1, 1, 1],
     ]);
     expect(report.recommendations).toEqual([]);
+  });
+});
+
+describe("protocolsInUse", () => {
+  it("counts the hosts and network requests of each HTTP version, oldest version first", () => {
+    const har = makeHar([
+      request("cdn.example.com", "h2", "1"),
+      request("cdn.example.com", "h2", "1"),
+      request("tags.example.io", "h3", "2"),
+      request("old.example.net", "h1", "3"),
+      // A host that switched to HTTP/3 counts under both versions.
+      request("api.example.org", "h2", "4"),
+      request("api.example.org", "h3", "5"),
+      // Neither a browser-cache hit nor an unknown version counts.
+      request("cdn.example.com", "h1", undefined, { fromCache: "disk" }),
+      request("img.example.com", "unknown", "6"),
+    ]);
+
+    expect(protocolsInUse(har)).toEqual([
+      { protocol: "h1", hosts: 1, requests: 1 },
+      { protocol: "h2", hosts: 2, requests: 3 },
+      { protocol: "h3", hosts: 2, requests: 2 },
+    ]);
+  });
+
+  it("is empty when the HAR gives no HTTP version", () => {
+    expect(protocolsInUse(makeHar([makeEntry()]))).toEqual([]);
+  });
+
+  it("finds HTTP/2 and HTTP/3 in the webperf-snippets recording", () => {
+    expect(protocolsInUse(recording("cold")).map((p) => p.protocol)).toEqual(["h2", "h3"]);
   });
 });

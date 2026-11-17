@@ -486,6 +486,14 @@ export const ca: Messages = {
         ...(consentManager ? [`gestor de consentiment: ${consentManager}`] : []),
       ].join(" · "),
     perEntity: "Tercers per entitat",
+    protocols: "Protocols",
+    protocolUse: (protocol, hosts, requests) =>
+      `${protocol} · ${plural(hosts, "host", "hosts")}, ${plural(requests, "petició", "peticions")}`,
+    protocolNotes: {
+      h1: "Una petició cada vegada per connexió: el navegador obre fins a sis connexions per host per descarregar en paral·lel, cadascuna amb el seu handshake.",
+      h2: "Moltes peticions alhora per una sola connexió TCP; un paquet perdut les reté totes fins que TCP el torna a enviar.",
+      h3: "HTTP sobre QUIC, en UDP: la connexió i el xifratge s'obren en un sol viatge d'anada i tornada, i un paquet perdut només reté la seva pròpia petició.",
+    },
     thirdParty: "Tercer",
     category: "Categoria",
     hosts: "Hosts",

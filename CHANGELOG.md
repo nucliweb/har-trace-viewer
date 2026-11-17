@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- List the HTTP versions a page used in the Hosts tab of the terminal and the Hops panel of the web app and the HTML report, each with its hosts and network requests and a sentence on what it does.
+
 ## [0.24.0] - 2026-11-18
 
 ### Added

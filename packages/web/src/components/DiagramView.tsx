@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import type { CSSProperties } from "react";
 import {
   analyzeHops,
+  protocolsInUse,
   collectFindings,
   getStepCacheResources,
   getStepInferredCacheHits,
@@ -135,6 +136,7 @@ export function DiagramView({ flow }: Props) {
   const listedPage = flow.pages[listedStep.pageIndex];
   const listedResources = useMemo(() => getStepResources(flow, listedStep), [flow, listedStep]);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
+  const protocols = useMemo(() => protocolsInUse(page.har), [page.har]);
   const allFindings = useMemo(() => collectFindings(flow), [flow]);
   const findings = useMemo(
     () => allFindings.filter((f) => f.page.index === pageIndex),
@@ -305,6 +307,7 @@ export function DiagramView({ flow }: Props) {
           {drawer === "hops" && (
             <HopsPanel
               hops={hops}
+              protocols={protocols}
               thirdParties={analysis.thirdPartyReport}
               pageLabel={t.pageLabel(pageIndex + 1, page.name)}
               onClose={closeDrawer}

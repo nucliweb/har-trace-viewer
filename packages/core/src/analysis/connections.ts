@@ -8,6 +8,7 @@ import type {
   HarEntry,
   HostConnections,
   HostProtocol,
+  HttpVersion,
   ParsedHar,
   Recommendation,
   RecommendationResource,
@@ -40,6 +41,29 @@ export function hostProtocol(network: HarEntry[]): HostProtocol {
 export function connectionCount(network: HarEntry[]): number | null {
   const ids = new Set(network.flatMap((e) => (e.connectionId ? [e.connectionId] : [])));
   return ids.size > 0 ? ids.size : null;
+}
+
+/** An HTTP version the page used: on how many hosts and for how many network requests. */
+export interface ProtocolUse {
+  protocol: Exclude<HttpVersion, "unknown">;
+  hosts: number;
+  requests: number;
+}
+
+const VERSIONS: readonly ProtocolUse["protocol"][] = ["h1", "h2", "h3"];
+
+/**
+ * The HTTP versions of the page's network requests, oldest first, each with its hosts and
+ * requests. A host that used two versions counts under both; an unknown version counts nowhere.
+ */
+export function protocolsInUse(har: ParsedHar): ProtocolUse[] {
+  const network = networkRequests(har);
+  return VERSIONS.flatMap((protocol) => {
+    const entries = network.filter((e) => e.httpVersion === protocol);
+    if (entries.length === 0) return [];
+    const hosts = new Set(entries.map((e) => getHostname(e.url) ?? e.url));
+    return [{ protocol, hosts: hosts.size, requests: entries.length }];
+  });
 }
 
 function analyzeHost(host: string, network: HarEntry[]): HostConnections {

@@ -48,15 +48,15 @@ The JSON holds the version of htv that wrote it and the flow the HTML report dra
 
 ![The terminal report of a page load: the findings, the waterfall filtered to the third parties and zoomed on the page load, the resources sorted by size, the overview, the steps, the hosts, the cache and the help](docs/tui-tour.gif)
 
-| Key | Tab             | What it shows                                                                                                                                                   |
-| --- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `1` | Findings        | What to fix first: the [findings](#findings) of the page by severity, each with its metric, what to do and its evidence                                         |
-| `2` | Waterfall       | Every request on one time axis, with the TTFB, FCP, LCP, DCL and onLoad marks, to filter, narrow to a party and zoom on the page load ([waterfall](#waterfall)) |
-| `3` | Resources       | The same requests as a table (type, status, priority, protocol, encoding, size, TTFB, time and start), sorted by any column                                     |
-| `4` | Overview        | The metrics rated against the web.dev thresholds, the network nodes (CDN, origin, third parties) and, with a trace, the [main thread](#main-thread)             |
-| `5` | Steps           | The page load step by step, from the connection to the load event, with the route, the metrics and the requests of each step                                    |
-| `6` | Hosts           | The requests, transfer, TTFB and connection reuse of each host, and the [third parties](#third-parties) by service                                              |
-| `7` | Cache & network | How the CDN and the browser cache the document and the static assets, and the network recommendations                                                           |
+| Key | Tab             | What it shows                                                                                                                                                           |
+| --- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `1` | Findings        | What to fix first: the [findings](#findings) of the page by severity, each with its metric, what to do and its evidence                                                 |
+| `2` | Waterfall       | Every request on one time axis, with the TTFB, FCP, LCP, DCL and onLoad marks, to filter, narrow to a party and zoom on the page load ([waterfall](#waterfall))         |
+| `3` | Resources       | The same requests as a table (type, status, priority, protocol, encoding, size, TTFB, time and start), sorted by any column                                             |
+| `4` | Overview        | The metrics rated against the web.dev thresholds, the network nodes (CDN, origin, third parties) and, with a trace, the [main thread](#main-thread)                     |
+| `5` | Steps           | The page load step by step, from the connection to the load event, with the route, the metrics and the requests of each step                                            |
+| `6` | Hosts           | The requests, transfer, TTFB, connection reuse and protocol of each host, what each HTTP version the page used does, and the [third parties](#third-parties) by service |
+| `7` | Cache & network | How the CDN and the browser cache the document and the static assets, and the network recommendations                                                                   |
 
 A first session, as in the recording above:
 
@@ -174,6 +174,8 @@ In the terminal, the Waterfall tab (`2`) draws the same rows with a bar scaled t
 htv groups every request outside the document's registrable domain by the service it belongs to, from a built-in catalogue of the third parties most pages load (Google Tag Manager, Google Analytics, Meta Pixel, OneTrust, Cookiebot, Didomi, YouTube, Google Fonts, Intercom, HubSpot, Cloudinary, reCAPTCHA, Stripe…), each with a category: tag manager, analytics, advertising, consent, social, video, fonts, customer success, CDN or utility. A host the catalogue does not know is reported by its domain. For each third party it counts the network requests, the bytes on the wire and the browser-cache hits, splits the requests at the load event (what ran before onLoad competed with the page for connections and bandwidth), counts the requests that held the first paint and gives the median TTFB of its hosts, with the share of the page's requests and bytes that third parties take in all.
 
 The findings say when third parties dominate the page weight (40% of the bytes or more; critical past 60%), when many of them ran before the load event, when a consent manager (CMP) is on the page and whether it held the first paint, and, on the good side, when the page has no third party or they stay light. The Hosts tab of the terminal report (`6`), the Hops panel of the HTML report and the web app, the Markdown report and the JSON (`pageAnalyses[].thirdPartyReport`) carry the table.
+
+Above the third parties, the Hosts tab and the Hops panel list the HTTP versions the page used (HTTP/1.1, HTTP/2, HTTP/3), each with its hosts and network requests and a sentence on what it does: one request at a time per connection, many requests on one TCP connection that a lost packet holds up, or QUIC on UDP with its one-round-trip setup and a lost packet that holds up only its own request.
 
 A consent manager decides which other third parties load, so the cost of consent is best read as a comparison: record the page before accepting and again after, then compare them (`htv before-consent.har --compare-with after-consent.har`). The Deltas panel in the HTML report, the Hosts tab in the terminal and the Markdown report list the third parties of both recordings joined by service, what B added first, with the requests and bytes each one added.
 

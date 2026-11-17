@@ -6,8 +6,8 @@ import {
   protocolLabel,
   summarizeHops,
 } from "@htv/core";
-import type { HostHop, ThirdPartyReport } from "@htv/core";
-import { useMemo } from "react";
+import type { HostHop, ProtocolUse, ThirdPartyReport } from "@htv/core";
+import { useId, useMemo } from "react";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import { Drawer, DrawerBody } from "./Drawer.js";
@@ -17,6 +17,8 @@ interface Props {
   hops: HostHop[];
   /** The page's third parties by entity; absent for flows generated before it existed. */
   thirdParties?: ThirdPartyReport;
+  /** The HTTP versions the page used; the section is left out without any. */
+  protocols?: ProtocolUse[];
   pageLabel: string;
   onClose: () => void;
 }
@@ -28,6 +30,35 @@ function formatConnection(hop: HostHop, t: Messages["hops"]): string {
 }
 
 const cost = (c: { requests: number; bytes: number }) => `${c.requests} (${formatBytes(c.bytes)})`;
+
+const PROTOCOL_NAMES: Record<ProtocolUse["protocol"], string> = {
+  h1: "HTTP/1.1",
+  h2: "HTTP/2",
+  h3: "HTTP/3",
+};
+
+/** Each HTTP version the page used, with its hosts and requests and what it does in a sentence. */
+function ProtocolsSection({ protocols }: { protocols: ProtocolUse[] }) {
+  const t = useMessages().hops;
+  const titleId = useId();
+  return (
+    <>
+      <h3 id={titleId} className={styles.sectionTitle}>
+        {t.protocols}
+      </h3>
+      <ul className={styles.protocols} aria-labelledby={titleId}>
+        {protocols.map(({ protocol, hosts, requests }) => (
+          <li key={protocol}>
+            <span className={styles.protocolUse}>
+              {t.protocolUse(PROTOCOL_NAMES[protocol], hosts, requests)}
+            </span>{" "}
+            {t.protocolNotes[protocol]}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
 
 function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
   const t = useMessages().hops;
@@ -96,7 +127,7 @@ function ThirdPartiesSection({ report }: { report: ThirdPartyReport }) {
   );
 }
 
-export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
+export function HopsPanel({ hops, thirdParties, protocols = [], pageLabel, onClose }: Props) {
   const t = useMessages().hops;
   const summary = useMemo(() => summarizeHops(hops), [hops]);
   // Stable sort keeps the requests order inside each party.
@@ -173,6 +204,7 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
             })}
           </tbody>
         </table>
+        {protocols.length > 0 && <ProtocolsSection protocols={protocols} />}
         {thirdParties && <ThirdPartiesSection report={thirdParties} />}
       </DrawerBody>
     </Drawer>

@@ -485,6 +485,14 @@ export const en = {
         ...(consentManager ? [`consent manager: ${consentManager}`] : []),
       ].join(" · "),
     perEntity: "Third parties per entity",
+    protocols: "Protocols",
+    protocolUse: (protocol: string, hosts: number, requests: number) =>
+      `${protocol} · ${plural(hosts, "host", "hosts")}, ${plural(requests, "request", "requests")}`,
+    protocolNotes: {
+      h1: "One request at a time on each connection: the browser opens up to six connections per host to fetch in parallel, each with its own handshake.",
+      h2: "Many requests at once on one TCP connection; a lost packet holds up all of them until TCP sends it again.",
+      h3: "HTTP over QUIC, on UDP: the connection and the encryption are set up in one round trip, and a lost packet holds up only its own request.",
+    },
     thirdParty: "Third party",
     category: "Category",
     hosts: "Hosts",

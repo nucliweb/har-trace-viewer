@@ -3,6 +3,8 @@ import {
   SCRIPT_PARTY_LABEL,
   THIRD_PARTY_CATEGORY_LABEL,
   analyzeHops,
+  plural,
+  protocolsInUse,
   analyzeThirdParties,
   browserCacheHitCount,
   compareStepMetrics,
@@ -35,6 +37,7 @@ import type {
   FlowComparison,
   HarEntry,
   HostHop,
+  ProtocolUse,
   InferredCacheHit,
   MainThreadReport,
   NetworkReport,
@@ -560,8 +563,12 @@ export function hostsRegion(
 ): ColumnsRegion {
   const { har } = flow.pages[pageIndex];
   const hops = analyzeHops(har, har.documentEntry.url);
+  const protocols = protocolsInUse(har);
   return stackColumns([
     hostsPanel(hops, `Hosts · ${pageLabel(flow, pageIndex)}`, width, offset),
+    ...(protocols.length > 0
+      ? [protocolsPanel(protocols, `Protocols · ${pageLabel(flow, pageIndex)}`, width)]
+      : []),
     thirdPartiesPanel(
       thirdPartiesOf(flow, pageIndex),
       `Third parties · ${pageLabel(flow, pageIndex)}`,
@@ -569,6 +576,33 @@ export function hostsRegion(
       offset
     ),
   ]);
+}
+
+const PROTOCOL_NAMES: Record<ProtocolUse["protocol"], string> = {
+  h1: "HTTP/1.1",
+  h2: "HTTP/2",
+  h3: "HTTP/3",
+};
+
+const PROTOCOL_NOTES: Record<ProtocolUse["protocol"], string> = {
+  h1: "One request at a time on each connection: the browser opens up to six connections per host to fetch in parallel, each with its own handshake.",
+  h2: "Many requests at once on one TCP connection; a lost packet holds up all of them until TCP sends it again.",
+  h3: "HTTP over QUIC, on UDP: the connection and the encryption are set up in one round trip, and a lost packet holds up only its own request.",
+};
+
+/** Each HTTP version the page used: its hosts and requests, then what it does, wrapped. */
+function protocolsPanel(protocols: ProtocolUse[], title: string, width: number): ColumnsRegion {
+  const inner = width - 4;
+  const body = protocols.flatMap(({ protocol, hosts, requests }): Line[] => [
+    line(
+      seg(
+        `${PROTOCOL_NAMES[protocol]} · ${hosts} ${plural(hosts, "host", "hosts")}, ${requests} ${plural(requests, "request", "requests")}`,
+        { bold: true }
+      )
+    ),
+    ...wrap(PROTOCOL_NOTES[protocol], inner, "  ").map((l) => l.map((s) => ({ ...s, dim: true }))),
+  ]);
+  return { lines: panel(title, body, width), maxOffset: 0 };
 }
 
 function hostsPanel(hops: HostHop[], title: string, width: number, offset: number): ColumnsRegion {

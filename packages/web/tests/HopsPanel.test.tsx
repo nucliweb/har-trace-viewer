@@ -1,11 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
-import { analyzeHops, analyzeThirdParties, generateFlow } from "@htv/core";
+import { analyzeHops, analyzeThirdParties, generateFlow, protocolsInUse } from "@htv/core";
 import type { Flow, HarEntry, ParsedHar } from "@htv/core";
 import { DiagramView } from "../src/components/DiagramView.js";
 import { HopsPanel } from "../src/components/HopsPanel.js";
 import { loadOnDemandModules } from "./lazy.js";
+import { MessagesContext } from "../src/i18n/context.js";
+import { es } from "../src/i18n/es.js";
 
 function entry(url: string, over: Partial<HarEntry> = {}): HarEntry {
   return {
@@ -251,5 +253,55 @@ describe("Hops toggle in DiagramView", () => {
     await user.click(screen.getByRole("button", { name: "Toggle hops" }));
     await user.click(screen.getByRole("button", { name: "Close hops" }));
     expect(screen.queryByRole("table", { name: "Hops per host" })).not.toBeInTheDocument();
+  });
+});
+
+describe("HopsPanel: the protocols of the page", () => {
+  const versions: ParsedHar = {
+    ...har,
+    entries: [
+      { ...doc, httpVersion: "h2" },
+      entry("https://static.example.com/a.js", { resourceType: "script", httpVersion: "h2" }),
+      entry("https://tags.example.io/t.js", { resourceType: "script", httpVersion: "h3" }),
+    ],
+  };
+  const panel = (messages?: typeof es) => {
+    const node = (
+      <HopsPanel
+        hops={analyzeHops(versions, doc.url)}
+        protocols={protocolsInUse(versions)}
+        pageLabel="Page 1"
+        onClose={noop}
+      />
+    );
+    render(
+      messages ? <MessagesContext.Provider value={messages}>{node}</MessagesContext.Provider> : node
+    );
+  };
+
+  it("explains each HTTP version the page used, with its hosts and requests", () => {
+    panel();
+    const list = screen.getByRole("list", { name: "Protocols" });
+    const items = within(list)
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+
+    expect(items).toEqual([
+      expect.stringMatching(/^HTTP\/2 · 2 hosts, 2 requests.*one TCP connection/),
+      expect.stringMatching(/^HTTP\/3 · 1 host, 1 request.*QUIC, on UDP/),
+    ]);
+  });
+
+  it("leaves the protocols out when the recording gives no HTTP version", () => {
+    render(<HopsPanel hops={analyzeHops(har, doc.url)} pageLabel="Page 1" onClose={noop} />);
+    expect(screen.queryByRole("list", { name: "Protocols" })).not.toBeInTheDocument();
+  });
+
+  it("speaks Spanish", () => {
+    panel(es);
+    const list = screen.getByRole("list", { name: "Protocolos" });
+    expect(within(list).getAllByRole("listitem")[0]).toHaveTextContent(
+      /^HTTP\/2 · 2 hosts, 2 peticiones/
+    );
   });
 });
