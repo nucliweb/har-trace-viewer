@@ -27,6 +27,14 @@ const PROBLEMS_PAGE = [
   resolve(fixtures, "network-problems.har.fixture.json"),
 ];
 
+// Three CDNs over HTTP/2 and HTTP/3, without a trace: the HAR's initiators say what blocks rendering.
+const MULTI_CDN_PAGE = [
+  "--page",
+  "Multi CDN",
+  "--har",
+  resolve(fixtures, "multi-cdn.har.fixture.json"),
+];
+
 // A repeat visit recorded with the browser cache enabled: its steps list cache hits.
 const CACHED_PAGE = [
   "--page",
@@ -71,6 +79,7 @@ export default function globalSetup() {
   generate(resolve(OUTPUT, "plain"), []);
   generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
   generate(resolve(OUTPUT, "problems"), ["--bundle"], PROBLEMS_PAGE);
+  generate(resolve(OUTPUT, "multi-cdn"), ["--bundle"], MULTI_CDN_PAGE);
   generate(resolve(OUTPUT, "compare"), ["--compare", "--bundle"], COMPARE_PAGES);
   execFileSync(
     process.execPath,

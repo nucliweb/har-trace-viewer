@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { analyzeCacheForHar } from "@htv/core";
 import { App } from "../src/App.js";
+import { AnalysisPanel } from "../src/components/AnalysisPanel.js";
 import { CachePanel } from "../src/components/CachePanel.js";
 import { ExportMenu } from "../src/components/ExportMenu.js";
 import { ca } from "../src/i18n/ca.js";
@@ -10,6 +11,7 @@ import { MessagesContext } from "../src/i18n/context.js";
 import { es } from "../src/i18n/es.js";
 import { LOCALE_STORAGE_KEY } from "../src/i18n/useLocale.js";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
+import { analysisJourney } from "./analysis-flow.js";
 import { harJson, makeFile, makeFlow } from "./fixtures.js";
 import { loadOnDemandModules } from "./lazy.js";
 
@@ -59,6 +61,39 @@ describe.each(languages)("translated strings in %s", (name, messages, locale) =>
     expect(screen.getByText(messages.cache.primaryRequest)).toBeInTheDocument();
     expect(screen.queryByText(messages.cache.document)).not.toBeInTheDocument();
     expect(messages.cache.primaryRequest).not.toBe("Primary request");
+  });
+
+  it(`words the analysis views, their tables and what a page lacks in ${name}`, async () => {
+    const user = userEvent.setup();
+    const flow = analysisJourney();
+    const panel = (view: "connections" | "render", page: number) => (
+      <MessagesContext.Provider value={messages}>
+        <AnalysisPanel
+          view={view}
+          onViewChange={() => undefined}
+          analysis={flow.pageAnalyses[page]}
+          hasDocument={page === 0}
+          hasTrace={page === 0}
+          pageLabel="Page"
+          onClose={() => undefined}
+        />
+      </MessagesContext.Provider>
+    );
+    const { rerender } = render(panel("connections", 0));
+    const t = messages.analysis;
+    expect(screen.getByRole("group", { name: t.views })).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: t.connections.caption });
+    expect(
+      within(table).getByRole("columnheader", { name: messages.hops.requests })
+    ).toBeInTheDocument();
+    expect(t.connections.caption).not.toBe("Connections per host");
+
+    rerender(panel("render", 0));
+    expect(screen.getByRole("table", { name: t.render.phasesCaption })).toBeInTheDocument();
+    rerender(panel("render", 1));
+    expect(screen.getByText(t.noDocument)).toBeInTheDocument();
+    expect(t.noDocument).not.toMatch(/^This page/);
+    await user.click(screen.getByRole("button", { name: t.close }));
   });
 
   it(`words the export menu and the redaction note in ${name}`, async () => {

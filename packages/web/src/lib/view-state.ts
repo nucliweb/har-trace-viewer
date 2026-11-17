@@ -1,7 +1,21 @@
 import type { ResourceSort, ResourceSortKey } from "@htv/core";
 
-/** The drawers a link can open: the toolbar's, in its order. */
-export const LINKED_DRAWERS = ["findings", "waterfall", "hops", "metrics", "cache"] as const;
+/** The views of the analysis drawer: each one opens it, from a key or a link, on that view. */
+export const ANALYSIS_VIEWS = ["connections", "compression", "render", "critical-path"] as const;
+export type AnalysisView = (typeof ANALYSIS_VIEWS)[number];
+
+export const isAnalysisView = (drawer: string | null): drawer is AnalysisView =>
+  (ANALYSIS_VIEWS as readonly (string | null)[]).includes(drawer);
+
+/** The drawers a link can open: the toolbar's, in its order, the analysis by its views. */
+export const LINKED_DRAWERS = [
+  "findings",
+  "waterfall",
+  "hops",
+  "metrics",
+  "cache",
+  ...ANALYSIS_VIEWS,
+] as const;
 type DrawerName = (typeof LINKED_DRAWERS)[number];
 export type WaterfallView = "waterfall" | "table";
 

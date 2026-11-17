@@ -40,6 +40,7 @@ describe("DiagramView in Spanish", () => {
       ["Mostrar u ocultar los saltos", "Cerrar los saltos"],
       ["Mostrar u ocultar el resumen de métricas", "Cerrar el resumen de métricas"],
       ["Mostrar u ocultar el análisis de caché", "Cerrar el análisis de caché"],
+      ["Mostrar u ocultar el panel de análisis", "Cerrar el panel de análisis"],
     ];
     for (const [toggle, close] of drawers) {
       await user.click(screen.getByRole("button", { name: new RegExp(`^${toggle}`) }));

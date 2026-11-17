@@ -304,6 +304,7 @@ test("no text is rendered smaller than 12px at 1280x800, in every drawer", async
     [/^Toggle hops$/, "Close hops"],
     [/^Toggle metrics summary$/, "Close metrics summary"],
     [/^Toggle cache analysis$/, "Close cache analysis"],
+    [/^Toggle analysis$/, "Close analysis"],
   ] as const) {
     await page.getByRole("button", { name: toggle }).click();
     // The findings' "more" disclosures and the cache's resource lists, opened.
@@ -647,6 +648,7 @@ test("the drawer controls are at least 24px each way", async ({ page }) => {
     [/^Toggle hops$/, "Close hops"],
     [/^Toggle metrics summary$/, "Close metrics summary"],
     [/^Toggle cache analysis$/, "Close cache analysis"],
+    [/^Toggle analysis$/, "Close analysis"],
   ] as const) {
     await page.getByRole("button", { name: toggle }).click();
     found.push(...(await targetsBelow24px(page, close)));

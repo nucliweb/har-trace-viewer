@@ -27,6 +27,7 @@ const DRAWERS: [RegExp, string][] = [
   [/^Toggle hops$/, "Close hops"],
   [/^Toggle metrics summary$/, "Close metrics summary"],
   [/^Toggle cache analysis$/, "Close cache analysis"],
+  [/^Toggle analysis$/, "Close analysis"],
 ];
 
 // Parts of the app load on demand: load them before the tests use them (see lazy.ts).
@@ -285,6 +286,7 @@ describe("headings to navigate by (A-12)", () => {
       [/^Toggle hops$/, `${en.hops.title} ${page1}`],
       [/^Toggle metrics summary$/, en.metrics.title],
       [/^Toggle cache analysis$/, `${en.cache.title} ${page1}`],
+      [/^Toggle analysis$/, `${en.analysis.title} ${page1}`],
     ];
     for (const [toggle, heading] of expected) {
       await user.click(screen.getByRole("button", { name: toggle }));

@@ -1,0 +1,151 @@
+/* The view switch: one pressed button per view, as the waterfall's chips. */
+.views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.chip {
+  min-height: 24px;
+  padding: var(--space-2xs) var(--space-sm);
+  border: 1px solid var(--color-border2);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.chip:hover,
+.chipActive {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.chipActive {
+  background: color-mix(in srgb, var(--color-cyan) 10%, transparent);
+}
+
+.body {
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.body p {
+  margin: var(--space-xs) 0;
+  line-height: 1.4;
+}
+
+.summary {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.title {
+  margin: var(--space-lg) 0 var(--space-xs);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.body > .title:first-child {
+  margin-top: var(--space-sm);
+}
+
+/* Wide tables scroll inside the drawer, never the page. */
+.scroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--color-text);
+  margin: var(--space-xs) 0 var(--space-sm);
+}
+
+.table caption {
+  caption-side: top;
+  text-align: left;
+  padding: var(--space-xs) 0;
+  color: var(--color-text2);
+}
+
+.table th,
+.table td {
+  padding: var(--space-xs) var(--space-sm);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.table tbody th {
+  font-weight: 400;
+}
+
+.table .num {
+  text-align: right;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2xs) var(--space-md);
+  margin: var(--space-xs) 0;
+}
+
+.details dt {
+  color: var(--color-muted);
+}
+
+.details dd {
+  margin: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.notes {
+  margin: var(--space-xs) 0;
+  padding-left: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .chip {
+    min-height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}
+
+/* Forced colors (Windows contrast themes) flatten fills to the Canvas: the pressed view is
+   drawn with the system's highlight instead. */
+@media (forced-colors: active) {
+  .chipActive,
+  .chipActive:hover {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+}

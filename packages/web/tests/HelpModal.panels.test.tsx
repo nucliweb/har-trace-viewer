@@ -22,7 +22,7 @@ describe("HelpModal: panel shortcuts", () => {
     const keys = within(section)
       .getAllByRole("term")
       .map((term) => term.textContent);
-    expect(keys).toEqual(["1", "2", "3", "4", "5", "/"]);
+    expect(keys).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9", "/"]);
     expect(within(section).getByText(filter)).toBeInTheDocument();
   });
 });

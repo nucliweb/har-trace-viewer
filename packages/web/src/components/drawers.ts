@@ -1,4 +1,5 @@
 // The drawers of the diagram and comparison views, one chunk on the public site (see lazy.ts).
+export { AnalysisPanel } from "./AnalysisPanel.js";
 export { CachePanel } from "./CachePanel.js";
 export { FindingsPanel } from "./FindingsPanel.js";
 export { HopsPanel } from "./HopsPanel.js";

@@ -25,7 +25,8 @@
   }
 }
 
-/* Toolbar: a right-aligned row above the diagram (Findings, Waterfall, Hops, Export, Metrics, Cache). */
+/* Toolbar: a right-aligned row above the diagram: the drawers in the order of their keys (Findings,
+   Waterfall, Hops, Metrics, Cache, Analysis), then Export. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;

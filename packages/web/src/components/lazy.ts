@@ -11,6 +11,7 @@ export const CompareView = preloadable(() =>
 );
 
 const drawers = () => import("./drawers.js");
+export const AnalysisPanel = preloadable(() => drawers().then((module) => module.AnalysisPanel));
 export const CachePanel = preloadable(() => drawers().then((module) => module.CachePanel));
 export const FindingsPanel = preloadable(() => drawers().then((module) => module.FindingsPanel));
 export const HopsPanel = preloadable(() => drawers().then((module) => module.HopsPanel));
@@ -21,6 +22,7 @@ export const ResourceSidebar = preloadable(() =>
 export const WaterfallPanel = preloadable(() => drawers().then((module) => module.WaterfallPanel));
 /** The views preload these once they show, so a drawer opens at once. */
 export const DRAWERS = [
+  AnalysisPanel,
   CachePanel,
   FindingsPanel,
   HopsPanel,

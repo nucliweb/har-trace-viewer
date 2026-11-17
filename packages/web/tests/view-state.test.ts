@@ -23,6 +23,12 @@ describe("parseViewState", () => {
     });
   });
 
+  it("reads each view of the analysis drawer as a drawer of its own", () => {
+    for (const view of ["connections", "compression", "render", "critical-path"]) {
+      expect(parseViewState(`#d=${view}`)).toEqual({ drawer: view });
+    }
+  });
+
   it("ignores unknown and malformed values", () => {
     expect(parseViewState("#d=resources&r=-1&v=grid&s=size&x=1")).toEqual({});
     // An empty filter is a statement: the link wants no filter, whatever the last visit left.

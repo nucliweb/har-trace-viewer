@@ -220,6 +220,21 @@ test("an API capture without an HTML document reads honestly in every drawer", a
   await page.getByRole("button", { name: /cache/i }).click();
   await expect(page.getByText("Primary request")).toBeVisible();
   await expect(page.getByText("Document", { exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Toggle analysis" }).click();
+  for (const view of ["Connections", "Compression", "Render", "Critical path"]) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    await readable();
+  }
+  const details = page.getByRole("region", { name: "Analysis details" });
+  await expect(details).toContainText("This page has no HTML document");
+  await page.getByRole("button", { name: "Connections", exact: true }).click();
+  await expect(details).toContainText("The HAR does not record the HTTP version");
+  await expect(details).toContainText("No HTML document: no Server-Timing to read.");
+  await page.getByRole("button", { name: "Compression", exact: true }).click();
+  await expect(details.getByRole("table", { name: "Text responses by type" })).toContainText(
+    "JSON"
+  );
   await expect(page.getByText(/something went wrong/i)).toHaveCount(0);
   expect(errors).toEqual([]);
 });

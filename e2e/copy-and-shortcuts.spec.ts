@@ -88,6 +88,10 @@ test.describe("drawer shortcuts", () => {
       ["3", "hops"],
       ["4", "metrics"],
       ["5", "cache"],
+      ["6", "analysis"],
+      ["7", "analysis"],
+      ["8", "analysis"],
+      ["9", "analysis"],
     ]) {
       await page.keyboard.press(key);
       await expect(drawerButton(page, drawer)).toHaveAttribute("aria-expanded", "true");

@@ -22,6 +22,7 @@ import { CacheSidebar } from "./CacheSidebar.js";
 import { FindingsButton } from "./FindingsButton.js";
 import { WaterfallButton } from "./WaterfallButton.js";
 import {
+  AnalysisPanel,
   CachePanel,
   DRAWERS,
   FindingsPanel,
@@ -33,14 +34,21 @@ import {
 import { ExportMenu } from "./ExportMenu.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
-import { LINKED_DRAWERS, parseViewState, setHashParams } from "../lib/view-state.js";
+import {
+  LINKED_DRAWERS,
+  isAnalysisView,
+  parseViewState,
+  setHashParams,
+} from "../lib/view-state.js";
+import type { AnalysisView } from "../lib/view-state.js";
 import styles from "./DiagramView.module.css";
 
 interface Props {
   flow: Flow;
 }
 
-type Drawer = "findings" | "waterfall" | "hops" | "metrics" | "cache" | "resources";
+// The analysis drawer is open under the name of the view it shows.
+type Drawer = "findings" | "waterfall" | "hops" | "metrics" | "cache" | "resources" | AnalysisView;
 
 export function DiagramView({ flow }: Props) {
   const t = useMessages().diagram;
@@ -80,11 +88,15 @@ export function DiagramView({ flow }: Props) {
   }, [drawer]);
   useEffect(() => () => setHashParams({ d: null }), []);
   const toggleDrawer = (name: Drawer) => setDrawer((open) => (open === name ? null : name));
+  // The analysis button opens the view shown last.
+  const [analysisView, setAnalysisView] = useState<AnalysisView>("connections");
+  if (isAnalysisView(drawer) && drawer !== analysisView) setAnalysisView(drawer);
   // Closing hands the focus back to the drawer's toggle, or to the diagram when the toggle is
   // gone (the resource list stays open on a step that requests nothing, without its button).
   const closeDrawer = useCallback(() => {
     const view = viewRef.current;
-    const toggle = view?.querySelector<HTMLElement>(`[data-drawer="${drawer}"]`);
+    const name = isAnalysisView(drawer) ? "analysis" : drawer;
+    const toggle = view?.querySelector<HTMLElement>(`[data-drawer="${name}"]`);
     (toggle ?? view)?.focus();
     setDrawer(null);
   }, [drawer]);
@@ -101,6 +113,10 @@ export function DiagramView({ flow }: Props) {
       "3": toggleByKey("hops"),
       "4": toggleByKey("metrics"),
       "5": toggleByKey("cache"),
+      "6": toggleByKey("connections"),
+      "7": toggleByKey("compression"),
+      "8": toggleByKey("render"),
+      "9": toggleByKey("critical-path"),
       "/": () => {
         setDrawer("waterfall");
         setFilterRequested(true);
@@ -173,12 +189,6 @@ export function DiagramView({ flow }: Props) {
         >
           {t.hops}
         </button>
-        <ExportMenu
-          flow={flow}
-          containerRef={viewRef}
-          pageName={page.name}
-          stepNumber={stepIndex + 1}
-        />
         <button
           className={`${styles.metricsBtn} ${drawer === "metrics" ? styles.cacheBtnActive : ""}`}
           onClick={() => toggleDrawer("metrics")}
@@ -199,6 +209,23 @@ export function DiagramView({ flow }: Props) {
         >
           {t.cache}
         </button>
+        <button
+          className={`${styles.cacheBtn} ${isAnalysisView(drawer) ? styles.cacheBtnActive : ""}`}
+          onClick={() => setDrawer((open) => (isAnalysisView(open) ? null : analysisView))}
+          data-drawer="analysis"
+          aria-label={t.toggleAnalysis}
+          aria-expanded={isAnalysisView(drawer)}
+          title={t.analysisTitle}
+        >
+          {t.analysis}
+        </button>
+        {/* Last: the menu and its notes hang from its right edge on a phone. */}
+        <ExportMenu
+          flow={flow}
+          containerRef={viewRef}
+          pageName={page.name}
+          stepNumber={stepIndex + 1}
+        />
       </div>
       <div className={styles.canvas}>
         {/* The cache list docks on the left: the diagram moves aside so the browser and the
@@ -262,6 +289,17 @@ export function DiagramView({ flow }: Props) {
               onClose={closeDrawer}
               focusFilter={filterRequested}
               onFilterFocused={clearFilterRequest}
+            />
+          )}
+          {isAnalysisView(drawer) && (
+            <AnalysisPanel
+              view={drawer}
+              onViewChange={setDrawer}
+              analysis={analysis}
+              hasDocument={pageDocument(page.har) !== null}
+              hasTrace={page.trace !== undefined}
+              pageLabel={t.pageLabel(pageIndex + 1, page.name)}
+              onClose={closeDrawer}
             />
           )}
           {drawer === "hops" && (
