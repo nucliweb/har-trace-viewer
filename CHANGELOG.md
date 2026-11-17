@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-11-17
+
 ### Changed
 
 - Slide in the metrics, hops and deltas drawers of the web app when they open, like the other drawers, and give every drawer the same square close button. No drawer animates when the system asks for reduced motion.
@@ -358,7 +360,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.16.0...v0.17.0
