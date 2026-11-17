@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-17
+
 ### Changed
 
 - Mask the secrets in URLs as the HAR and the trace are read, with or without `--redact`: sensitive query and fragment values, credentials, emails, JWTs and token-like path segments become `[redacted]` or `[email]` wherever a URL appears, in the waterfall, the request detail, Copy URL and Copy cURL, page titles, initiators, the requests, LCP image and scripts of the trace, the exports, the terminal report and the JSON. Hosts, paths and the other values stay as recorded. The web app masks a report of an earlier version the same way when it opens it.
@@ -398,7 +400,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...v0.18.1
