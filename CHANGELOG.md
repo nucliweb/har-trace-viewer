@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Tell each request as a sequence between the browser, the DNS resolver and the server, in the request detail of the web app and the HTML report and in the request view of the terminal: a step per phase with when it starts, how long it took and what happens in it (the queue, the DNS lookup, the TCP and TLS handshakes or the QUIC one of HTTP/3, the request, the server's wait and the response), whether the request opened its connection, reused one opened by another request or before the recording, or came from the browser cache, and, from the handshake, about one round trip to the server and how much of the TTFB the server took.
+
 ## [0.23.0] - 2026-11-17
 
 ### Added

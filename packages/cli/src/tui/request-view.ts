@@ -1,4 +1,4 @@
-import { formatBytes, formatMs, requestDetail } from "@htv/core";
+import { formatBytes, formatMs, requestDetail, requestSequence } from "@htv/core";
 import type {
   HarEntry,
   HeaderField,
@@ -10,6 +10,7 @@ import type {
 import { BLANK, breakText, hstack, panel, seg, wrap } from "./lines.js";
 import type { Line } from "./lines.js";
 import { BLOCKED, CONNECT, RECEIVE, WAIT } from "./waterfall-view.js";
+import { sequenceLines } from "./sequence-view.js";
 
 const NONE = "—";
 const LABEL = 16;
@@ -274,7 +275,7 @@ function headerPanels(
 /**
  * One request in full: its whole URL, what the report knows about it (method, status, type,
  * priority, protocol, host, party, cache, sizes, encoding, start, duration, whether it is the
- * LCP resource or render-blocking), what requested it, its timing phases each with a bar in the
+ * LCP resource or render-blocking), its sequence over the network, what requested it, its timing phases each with a bar in the
  * waterfall's characters, its cache status, and its request and response headers with the
  * values of sensitive ones masked. `position` is its place in the list.
  */
@@ -287,6 +288,7 @@ export function requestRegion(
   const inner = width - 4;
   const entry = har.entries[row.entryIndex];
   const detail = entry ? requestDetail(har, entry) : null;
+  const sequence = entry ? requestSequence(har, entry) : null;
   const url = breakText(row.url, inner).map((part): Line => [seg(part, { bold: true })]);
   const redirect = row.redirectURL
     ? breakText(`→ ${row.redirectURL}`, inner).map((part): Line => [seg(part, { dim: true })])
@@ -309,6 +311,13 @@ export function requestRegion(
       ],
       width
     ),
+    ...(sequence && entry
+      ? panel(
+          sequence.protocol === "unknown" ? "Sequence" : `Sequence · ${sequence.protocol}`,
+          sequenceLines(sequence, entry, har, inner),
+          width
+        )
+      : []),
     ...(detail?.initiator
       ? panel(
           `Initiator · ${detail.initiator.type}`,

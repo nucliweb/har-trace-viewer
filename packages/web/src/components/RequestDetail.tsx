@@ -1,8 +1,9 @@
 import { useId, useMemo } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { formatBytes, formatMs, requestDetail } from "@htv/core";
+import { formatBytes, formatMs, requestDetail, requestSequence } from "@htv/core";
 import type { HeaderField, ParsedHar, WaterfallPhases, WaterfallRow } from "@htv/core";
 import { useMessages } from "../i18n/context.js";
+import { RequestSequence } from "./RequestSequence.js";
 import waterfallStyles from "./WaterfallPanel.module.css";
 import styles from "./RequestDetail.module.css";
 
@@ -128,8 +129,8 @@ function Timing({ row }: { row: WaterfallRow }) {
 }
 
 /**
- * One request in full, under its row: its URL and facts, what requested it (the initiator
- * chain), its timing phases, sizes and cache status, and its request and response headers, the
+ * One request in full, under its row: its URL and facts, its sequence over the network, what
+ * requested it (the initiator chain), its timing phases, sizes and cache status, and its request and response headers, the
  * values the parser masked marked as such. A report from before the header lists shows the
  * allow-listed response headers it kept.
  */
@@ -147,7 +148,8 @@ export function RequestDetail({
   const titleId = useId();
   const entry = har.entries[row.entryIndex];
   const detail = useMemo(() => (entry ? requestDetail(har, entry) : null), [har, entry]);
-  if (!detail || !entry) return null;
+  const sequence = useMemo(() => (entry ? requestSequence(har, entry) : null), [har, entry]);
+  if (!detail || !sequence || !entry) return null;
   const { initiator, sizes, cache, headers } = detail;
   const kept: HeaderField[] = Object.keys(entry.responseHeaders)
     .sort()
@@ -184,6 +186,12 @@ export function RequestDetail({
         ]}
       />
       <div className={styles.parts}>
+        <Part
+          wide
+          title={d.sequence.title(sequence.protocol === "unknown" ? null : sequence.protocol)}
+        >
+          <RequestSequence sequence={sequence} entry={entry} har={har} />
+        </Part>
         <Part title={initiator ? `${d.initiator} · ${initiator.type}` : d.initiator}>
           {initiator === null ? (
             <p className={styles.note}>{d.noInitiator}</p>

@@ -722,6 +722,54 @@ export const en = {
       copyResponseHeaders: "Copy response headers",
       requestHeadersCopied: "Request headers copied",
       responseHeadersCopied: "Response headers copied",
+      sequence: {
+        title: (protocol: string | null) => (protocol ? `Sequence · ${protocol}` : "Sequence"),
+        browser: "Browser",
+        resolver: "DNS resolver",
+        steps: "Steps of the request",
+        label: {
+          queue: "Queued",
+          dns: "DNS lookup",
+          tcp: "TCP handshake",
+          tls: "TLS handshake",
+          quic: "QUIC handshake",
+          wait: "Server works",
+        },
+        explain: {
+          queue:
+            "Waits in the browser before it goes out: other requests go first, or no connection is free yet.",
+          dns: (host: string) => `Asks for the IP address of ${host}.`,
+          tcp: "SYN, SYN-ACK, ACK: the connection is ready after one round trip.",
+          tls: "Agrees on the encryption keys and checks the server's certificate.",
+          quic: "HTTP/3 sets up the connection and the encryption together, in one round trip.",
+          request: "The request leaves the browser.",
+          wait: (roundTrip: string | null, server: string | null) =>
+            roundTrip === null || server === null
+              ? "Time to first byte: the trip to the server and back, plus the time the server takes to answer."
+              : `Time to first byte: about ${roundTrip} are the round trip and ${server} the server.`,
+          response: "The response arrives, from its first byte to its last.",
+        },
+        roundTrip: (ms: string, host: string) => `About ${ms} per round trip to ${host}.`,
+        connection: {
+          new: (more: number) =>
+            more === 0
+              ? "Opens a new connection."
+              : `Opens a new connection; ${more} more ${more === 1 ? "request reuses" : "requests reuse"} it.`,
+          reusedFrom: (name: string) =>
+            `Reuses the connection ${name} opened: no DNS lookup or handshakes.`,
+          reusedBefore:
+            "Reuses a connection opened before the recording started: no DNS lookup or handshakes.",
+          reused: "Reuses an open connection: no DNS lookup or handshakes.",
+          shared: (n: number) => `${n} requests share it.`,
+        },
+        outcome: {
+          browserCache: "Served from the browser cache: it never reached the network.",
+          revalidated:
+            "The server answers 304 Not Modified: the browser's copy is still good, so no body comes back.",
+          redirect: (url: string) =>
+            `The server answers with a redirect to ${url}: the browser requests it next.`,
+        },
+      },
     },
   },
 };

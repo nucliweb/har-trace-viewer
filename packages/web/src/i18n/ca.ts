@@ -733,6 +733,56 @@ export const ca: Messages = {
       copyResponseHeaders: "Copia les capçaleres de la resposta",
       requestHeadersCopied: "Capçaleres de la petició copiades",
       responseHeadersCopied: "Capçaleres de la resposta copiades",
+      sequence: {
+        title: (protocol: string | null) => (protocol ? `Seqüència · ${protocol}` : "Seqüència"),
+        browser: "Navegador",
+        resolver: "Resolutor DNS",
+        steps: "Passos de la petició",
+        label: {
+          queue: "A la cua",
+          dns: "Consulta DNS",
+          tcp: "Handshake TCP",
+          tls: "Handshake TLS",
+          quic: "Handshake QUIC",
+          wait: "El servidor treballa",
+        },
+        explain: {
+          queue:
+            "Espera al navegador abans de sortir: altres peticions van primer, o encara no hi ha cap connexió lliure.",
+          dns: (host: string) => `Pregunta l'adreça IP de ${host}.`,
+          tcp: "SYN, SYN-ACK, ACK: la connexió és a punt després d'un viatge d'anada i tornada.",
+          tls: "Acorda les claus de xifratge i comprova el certificat del servidor.",
+          quic: "HTTP/3 obre la connexió i el xifratge alhora, en un sol viatge d'anada i tornada.",
+          request: "La petició surt del navegador.",
+          wait: (roundTrip: string | null, server: string | null) =>
+            roundTrip === null || server === null
+              ? "Temps fins al primer byte: el viatge al servidor i de tornada, més el que triga el servidor a respondre."
+              : `Temps fins al primer byte: uns ${roundTrip} són el viatge d'anada i tornada i ${server}, el servidor.`,
+          response: "Arriba la resposta, del primer byte a l'últim.",
+        },
+        roundTrip: (ms: string, host: string) =>
+          `Uns ${ms} per viatge d'anada i tornada a ${host}.`,
+        connection: {
+          new: (more: number) =>
+            more === 0
+              ? "Obre una connexió nova."
+              : `Obre una connexió nova; ${more === 1 ? "la reutilitza 1 petició més" : `la reutilitzen ${more} peticions més`}.`,
+          reusedFrom: (name: string) =>
+            `Reutilitza la connexió que va obrir ${name}: sense consulta DNS ni handshakes.`,
+          reusedBefore:
+            "Reutilitza una connexió oberta abans de començar la gravació: sense consulta DNS ni handshakes.",
+          reused: "Reutilitza una connexió oberta: sense consulta DNS ni handshakes.",
+          shared: (n: number) => `La comparteixen ${n} peticions.`,
+        },
+        outcome: {
+          browserCache:
+            "Servida des de la memòria cau del navegador: no va arribar a sortir a la xarxa.",
+          revalidated:
+            "El servidor respon 304 Not Modified: la còpia del navegador encara és vàlida, així que no torna cap cos.",
+          redirect: (url: string) =>
+            `El servidor respon amb una redirecció a ${url}: el navegador la demana tot seguit.`,
+        },
+      },
     },
   },
 };

@@ -22,7 +22,11 @@ function renderPanel(har = large) {
 }
 
 const list = () => screen.getByRole("list", { name: /^Requests/ });
-const items = () => within(list()).queryAllByRole("listitem");
+// The rows of the list, not the items of the lists inside a request's detail.
+const items = () =>
+  within(list())
+    .queryAllByRole("listitem")
+    .filter((li) => li.parentElement === list());
 const positions = () => items().map((item) => Number(item.getAttribute("aria-posinset")));
 const item = (position: number) =>
   items().find((li) => li.getAttribute("aria-posinset") === String(position));

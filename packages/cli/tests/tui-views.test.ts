@@ -152,7 +152,9 @@ describe("the request detail", () => {
   });
 
   it("draws each timing phase with its duration and a bar in the waterfall's glyphs", () => {
-    const lines = detail(100);
+    const all = detail(100);
+    // The Timing panel: the Sequence panel above it names the phases too.
+    const lines = all.slice(all.findIndex((l) => lineText(l).includes(" Timing ")));
     const phase = (name: string) => lineText(lineWith(lines, `${name} `));
 
     expect(phase("Blocked")).toMatch(/Blocked\s+4 ms\s+░+/);

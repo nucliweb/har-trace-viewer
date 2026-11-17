@@ -34,3 +34,4 @@ export * from "./utils/presentation.js";
 export * from "./analysis/export.js";
 export * from "./analysis/redact.js";
 export * from "./analysis/request-detail.js";
+export * from "./analysis/request-sequence.js";

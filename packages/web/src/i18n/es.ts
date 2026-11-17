@@ -726,6 +726,54 @@ export const es: Messages = {
       copyResponseHeaders: "Copiar las cabeceras de la respuesta",
       requestHeadersCopied: "Cabeceras de la petición copiadas",
       responseHeadersCopied: "Cabeceras de la respuesta copiadas",
+      sequence: {
+        title: (protocol: string | null) => (protocol ? `Secuencia · ${protocol}` : "Secuencia"),
+        browser: "Navegador",
+        resolver: "Resolver DNS",
+        steps: "Pasos de la petición",
+        label: {
+          queue: "En cola",
+          dns: "Consulta DNS",
+          tcp: "Handshake TCP",
+          tls: "Handshake TLS",
+          quic: "Handshake QUIC",
+          wait: "El servidor trabaja",
+        },
+        explain: {
+          queue:
+            "Espera en el navegador antes de salir: otras peticiones van primero, o aún no hay ninguna conexión libre.",
+          dns: (host: string) => `Pregunta la dirección IP de ${host}.`,
+          tcp: "SYN, SYN-ACK, ACK: la conexión está lista tras un viaje de ida y vuelta.",
+          tls: "Acuerda las claves de cifrado y comprueba el certificado del servidor.",
+          quic: "HTTP/3 abre la conexión y el cifrado a la vez, en un solo viaje de ida y vuelta.",
+          request: "La petición sale del navegador.",
+          wait: (roundTrip: string | null, server: string | null) =>
+            roundTrip === null || server === null
+              ? "Tiempo hasta el primer byte: el viaje al servidor y de vuelta, más lo que tarda el servidor en responder."
+              : `Tiempo hasta el primer byte: unos ${roundTrip} son el viaje de ida y vuelta y ${server}, el servidor.`,
+          response: "Llega la respuesta, de su primer byte al último.",
+        },
+        roundTrip: (ms: string, host: string) => `Unos ${ms} por viaje de ida y vuelta a ${host}.`,
+        connection: {
+          new: (more: number) =>
+            more === 0
+              ? "Abre una conexión nueva."
+              : `Abre una conexión nueva; ${more === 1 ? "la reutiliza 1 petición más" : `la reutilizan ${more} peticiones más`}.`,
+          reusedFrom: (name: string) =>
+            `Reutiliza la conexión que abrió ${name}: sin consulta DNS ni handshakes.`,
+          reusedBefore:
+            "Reutiliza una conexión abierta antes de empezar la grabación: sin consulta DNS ni handshakes.",
+          reused: "Reutiliza una conexión abierta: sin consulta DNS ni handshakes.",
+          shared: (n: number) => `La comparten ${n} peticiones.`,
+        },
+        outcome: {
+          browserCache: "Servida desde la caché del navegador: no llegó a salir a la red.",
+          revalidated:
+            "El servidor responde 304 Not Modified: la copia del navegador sigue valiendo, así que no vuelve ningún cuerpo.",
+          redirect: (url: string) =>
+            `El servidor responde con una redirección a ${url}: el navegador la pide a continuación.`,
+        },
+      },
     },
   },
 };

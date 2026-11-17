@@ -1,0 +1,179 @@
+/* The sequence of a request: a row per step, with when it starts, an arrow between the lanes of
+   the browser, the DNS resolver and the server, and what happens in it. */
+.note {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-text2);
+  overflow-wrap: anywhere;
+}
+
+.head,
+.step {
+  display: grid;
+  grid-template-columns: 4rem minmax(7rem, 2fr) minmax(0, 3fr);
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.head {
+  margin-top: var(--space-sm);
+  color: var(--color-text2);
+}
+
+/* The lane names sit over the drawing: the first at its left edge, the last at its right. */
+.lanes {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+/* Browser and DNS resolver break between words only; the host, one long word, anywhere. */
+.actor {
+  min-width: 0;
+  text-align: center;
+}
+
+.actor:first-child {
+  text-align: left;
+}
+
+.actor:last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: var(--space-2xs) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.at,
+.ms {
+  white-space: nowrap;
+}
+
+.at {
+  text-align: right;
+  color: var(--color-text2);
+}
+
+/* The lanes run down the drawing; the mark of the step sits across them. Inset so that a dot on
+   the first or last lane stays whole. */
+.drawing {
+  position: relative;
+  align-self: stretch;
+  min-height: 1.5rem;
+  margin: 0 6px;
+}
+
+.lane {
+  position: absolute;
+  inset: 0 auto 0 var(--x);
+  border-left: 1px dashed var(--color-border);
+}
+
+.mark {
+  position: absolute;
+  top: 50%;
+}
+
+/* An arrow from one lane to another, its head drawn by ::after; both ends for a handshake. */
+.right,
+.left,
+.both {
+  left: var(--left);
+  right: calc(100% - var(--right));
+  border-top: 2px solid var(--color);
+  transform: translateY(-1px);
+}
+
+.both {
+  height: 3px;
+  border-bottom: 2px solid var(--color);
+  transform: translateY(-50%);
+}
+
+.right::after,
+.left::after,
+.both::before,
+.both::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: var(--color);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.right::after,
+.both::after {
+  right: -2px;
+  transform: translateY(-50%);
+}
+
+.left::after,
+.both::before {
+  left: -2px;
+  transform: translateY(-50%) scaleX(-1);
+}
+
+.right::after,
+.left::after {
+  top: -1px;
+}
+
+/* A step on one lane: waiting in the browser, the server working. */
+.dot {
+  left: var(--left);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color);
+  transform: translate(-50%, -50%);
+}
+
+.what {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.label {
+  font-weight: 700;
+}
+
+.explain {
+  display: block;
+  color: var(--color-text2);
+}
+
+/* On a phone, what happens goes under the time and the drawing. */
+@media (max-width: 36rem) {
+  .head,
+  .step {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+  }
+
+  .what {
+    grid-column: 2;
+  }
+}
+
+/* The marks are data in color: they keep it, outlined. */
+@media (forced-colors: active) {
+  .mark,
+  .mark::before,
+  .mark::after {
+    forced-color-adjust: none;
+  }
+
+  .dot {
+    outline: 1px solid CanvasText;
+  }
+}

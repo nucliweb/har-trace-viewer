@@ -13,7 +13,13 @@ const quoted = makeEntry({
 const plain = makeEntry({ url: "https://example.com/main.css", startTime: 200, duration: 40 });
 const har = makeHar([quoted, plain], { onContentLoad: 300, onLoad: 520 });
 
-const items = () => within(screen.getByRole("list", { name: /Requests/ })).getAllByRole("listitem");
+// The rows of the list, not the items of the lists inside a request's detail.
+const items = () => {
+  const list = screen.getByRole("list", { name: /Requests/ });
+  return within(list)
+    .getAllByRole("listitem")
+    .filter((li) => li.parentElement === list);
+};
 
 function renderPanel() {
   render(<WaterfallPanel har={har} pageLabel="Page 1" onClose={() => undefined} />);
