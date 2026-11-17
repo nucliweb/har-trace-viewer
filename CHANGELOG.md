@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-17
+
 ### Added
 
 - Show the data behind the findings in an Analysis drawer of the web app, for the page of the step on screen: the connections per host (HTTP version, connections, DNS, TCP and TLS handshakes, HTTP/3 offered in Alt-Svc, cookies and the Server-Timing of the document), the compression (bytes per text type and encoding, and the responses and images each saving comes from), the render (the LCP phases and resource, and the render-blocking resources with the source of their status) and the critical request chains. The keys 6 to 9 open each view, and a link opens one with `#d=connections`, `#d=compression`, `#d=render` or `#d=critical-path`.
@@ -369,7 +371,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...v0.18.0
 [0.17.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.0...v0.17.1
