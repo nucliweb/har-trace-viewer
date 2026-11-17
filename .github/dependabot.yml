@@ -7,6 +7,13 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # The types follow the oldest supported Node (engines >=22), so no API of a newer Node slips in.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # The terminal report measures text with the same string-width major that Ink uses.
+      - dependency-name: string-width
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
