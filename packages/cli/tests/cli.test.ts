@@ -353,6 +353,141 @@ describe("a HAR saved with a .json name (built CLI)", () => {
   });
 });
 
+describe("files given without a flag are classified by content (built CLI)", () => {
+  const stage = (names: Record<string, string>, gzip = false) => {
+    const dir = makeTempDir();
+    for (const [name, source] of Object.entries(names)) {
+      const data = readFileSync(source);
+      writeFileSync(join(dir, name), gzip ? gzipSync(data) : data);
+    }
+    return dir;
+  };
+  const report = (args: string[]) => {
+    const res = runCli([...args, "--format", "json"]);
+    expect(res.stderr).toBe("");
+    expect(res.status).toBe(0);
+    const [page] = JSON.parse(res.stdout).flow.pages;
+    return page;
+  };
+
+  it.each([
+    ["HAR first", ["capture.json", "trace.json"]],
+    ["trace first", ["trace.json", "capture.json"]],
+  ])("takes a HAR and a trace both named .json by content, %s", (_label, order) => {
+    const dir = stage({ "capture.json": HAR, "trace.json": TRACE });
+    const page = report(order.map((name) => join(dir, name)));
+    expect(page.har.entries.length).toBeGreaterThan(0);
+    expect(page.trace).toBeTruthy();
+  });
+
+  it.each([
+    ["not valid JSON", "not json", "broken.json: expected a HAR, but the file is not valid JSON"],
+    [
+      "neither recording",
+      '{"foo":1}',
+      "other.json: expected a HAR (log.entries) but found neither a HAR nor a Chrome trace",
+    ],
+  ])("says what is wrong with a lone .json that is %s", (_label, text, message) => {
+    const dir = makeTempDir();
+    const file = join(dir, message.split(":")[0]);
+    writeFileSync(file, text);
+    const res = runCli([file, "--format", "json"]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(`${dir}/${message}`);
+    expect(res.stderr).not.toContain("is a Chrome trace");
+  });
+
+  it("takes gzipped files by content too", () => {
+    const dir = stage({ "capture.json.gz": HAR, "trace.json.gz": TRACE }, true);
+    const page = report([join(dir, "trace.json.gz"), join(dir, "capture.json.gz")]);
+    expect(page.trace).toBeTruthy();
+  });
+
+  it("keeps a .har with a .json trace working", () => {
+    const dir = stage({ "page.har": HAR, "trace.json": TRACE });
+    expect(report([join(dir, "page.har"), join(dir, "trace.json")]).trace).toBeTruthy();
+  });
+
+  it("names both files when two .json files are traces", () => {
+    const dir = stage({ "a.json": TRACE, "b.json": TRACE });
+    const res = runCli([join(dir, "a.json"), join(dir, "b.json")]);
+    expect(res.status).toBe(1);
+    expect(res.stdout).toBe("");
+    expect(res.stderr).toContain(`${join(dir, "a.json")} is a Chrome trace`);
+    expect(res.stderr).toContain(`${join(dir, "b.json")} is a Chrome trace`);
+  });
+
+  it("names both files when two .json files are HARs", () => {
+    const dir = stage({ "a.json": HAR, "b.json": HAR });
+    const res = runCli([join(dir, "a.json"), join(dir, "b.json")]);
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain(`${join(dir, "a.json")} is a HAR`);
+    expect(res.stderr).toContain(`${join(dir, "b.json")} is a HAR`);
+  });
+
+  it("keeps one pair per --page", () => {
+    const dir = stage({ "a.json": HAR, "at.json": TRACE, "b.json": HAR });
+    const res = runCli([
+      "--page",
+      "A",
+      join(dir, "at.json"),
+      join(dir, "a.json"),
+      "--page",
+      "B",
+      join(dir, "b.json"),
+      "--format",
+      "json",
+    ]);
+    expect(res.status).toBe(0);
+    const pages = JSON.parse(res.stdout).flow.pages;
+    expect(pages.map((p: { trace?: unknown }) => Boolean(p.trace))).toEqual([true, false]);
+  });
+
+  it("reports three .json files for one page as too many", () => {
+    const dir = stage({ "a.json": HAR, "b.json": TRACE, "c.json": TRACE });
+    const res = runCli(["a.json", "b.json", "c.json"].map((n) => join(dir, n)));
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain("3 .json files");
+  });
+
+  describe("a missing file is reported as missing", () => {
+    const missing = (args: (dir: string) => string[], file: string) => {
+      const dir = stage({ "page.har": HAR });
+      const res = runCli(args(dir));
+      expect(res.status).toBe(1);
+      expect(res.stdout).toBe("");
+      expect(res.stderr.trim()).toBe(`${join(dir, file)}: no such file or directory`);
+    };
+    it("for a .json given alone", () =>
+      missing((d) => [join(d, "gone.json"), "--format", "json"], "gone.json"));
+    it("for a .har", () => missing((d) => [join(d, "gone.har"), "--format", "json"], "gone.har"));
+    it("for --trace", () =>
+      missing((d) => ["--trace", join(d, "gone.json"), "--format", "json"], "gone.json"));
+    it("for the trace of a page", () =>
+      missing((d) => [join(d, "page.har"), join(d, "gone.json"), "--format", "json"], "gone.json"));
+    it("for --har", () =>
+      missing((d) => ["--har", join(d, "gone.json"), "--format", "json"], "gone.json"));
+    it("for --compare-with", () =>
+      missing(
+        (d) => [join(d, "page.har"), "--compare-with", join(d, "gone.json"), "--format", "json"],
+        "gone.json"
+      ));
+    it("for --compare-trace", () =>
+      missing(
+        (d) => [
+          join(d, "page.har"),
+          "--compare-with",
+          join(d, "page.har"),
+          "--compare-trace",
+          join(d, "gone.json"),
+          "--format",
+          "json",
+        ],
+        "gone.json"
+      ));
+  });
+});
+
 describe("unreadable recordings (built CLI)", () => {
   const fail = (args: string[]) => {
     const res = runCli(args);

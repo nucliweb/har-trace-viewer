@@ -61,12 +61,49 @@ function readError(file: string, kind: RecordingKind, error: unknown): Error {
   );
 }
 
+type Classified =
+  { kind: RecordingKind; result: RecordingResult<RecordingKind> } | { kind: null; error: Error };
+
+// Files parsed to learn what they are: the report takes them from here instead of reading again.
+const classified = new Map<string, RecordingResult<RecordingKind>>();
+const classifiedKey = (kind: RecordingKind, file: string) => `${kind}\0${file}`;
+
+/**
+ * What a file holds, by its content: parsed as a HAR, or as a trace when it is one. A missing or
+ * unreadable file throws; a file that is neither comes back with the error that words it.
+ */
+async function classify(file: string): Promise<Classified> {
+  let text: string;
+  try {
+    text = await readInput(file);
+  } catch (error) {
+    throw readError(file, "har", error);
+  }
+  for (const kind of ["har", "trace"] as const) {
+    try {
+      const result = parseRecording(kind, text);
+      classified.set(classifiedKey(kind, file), result);
+      return { kind, result };
+    } catch (error) {
+      if (error instanceof RecordingFormatError && error.reason === "wrong-kind") continue;
+      return { kind: null, error: readError(file, "har", error) };
+    }
+  }
+  return { kind: null, error: readError(file, "har", new Error("not a recording")) };
+}
+
 /** Reads and parses a HAR or a trace. */
 export async function readRecording<K extends RecordingKind>(
   kind: K,
   file: string
 ): Promise<RecordingResult<K>> {
   const name = file === STDIN ? STDIN_NAME : file;
+  const key = classifiedKey(kind, file);
+  const known = classified.get(key);
+  if (known) {
+    classified.delete(key);
+    return known as RecordingResult<K>;
+  }
   try {
     debug.input(kind, file);
     return await debug.time(
@@ -91,19 +128,44 @@ export async function readHarJson(file: string): Promise<unknown> {
 
 /**
  * A file given without its flag is a HAR or a trace by its name, and some tools save a HAR as
- * `.json`. Where a page has a trace and no HAR, the content of that file decides: a HAR takes
- * the HAR's place.
+ * `.json`. Where a page has no HAR, the content of its `.json` files decides: a HAR takes the
+ * HAR's place, and of two files the one that is a HAR is the HAR whatever their order. A file
+ * that does not exist is reported as missing.
  */
-export async function adoptMisnamedHars(pages: { har: string; trace?: string }[]): Promise<void> {
+export async function adoptMisnamedHars(
+  pages: { name?: string; har: string; trace?: string; jsonFiles?: string[] }[]
+): Promise<void> {
   for (const page of pages) {
+    const files = page.jsonFiles;
+    delete page.jsonFiles;
     if (page.har || !page.trace || page.trace === STDIN) continue;
-    try {
-      readRecordingJson("har", await readInput(page.trace));
-    } catch {
-      // Not a HAR, or unreadable: the usual checks word the error.
+    if (!files) {
+      // A trace keeps its place and the usual checks ask for its HAR; a file that is neither
+      // says why here, rather than being called a trace.
+      const one = await classify(page.trace);
+      if (one.kind === null) throw one.error;
+      if (one.kind === "har") {
+        page.har = page.trace;
+        delete page.trace;
+      }
       continue;
     }
-    page.har = page.trace;
-    delete page.trace;
+    if (files.length > 2) {
+      throw new Error(
+        `Page "${page.name}" has ${files.length} .json files (${files.join(", ")}): give one HAR and one trace per page, or start another page with --page.`
+      );
+    }
+    const found = await Promise.all(files.map(classify));
+    for (const one of found) if (one.kind === null) throw one.error;
+    const kinds = found.map((one) => one.kind);
+    if (kinds[0] === kinds[1]) {
+      const noun = RECORDING_NOUN[kinds[0] as RecordingKind];
+      throw new Error(
+        `${files[0]} is ${noun} and ${files[1]} is ${noun} too: a page takes one HAR and one trace, e.g. htv page.har trace.json.`
+      );
+    }
+    const harAt = kinds.indexOf("har");
+    page.har = files[harAt];
+    page.trace = files[1 - harAt];
   }
 }

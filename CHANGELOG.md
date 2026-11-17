@@ -6,6 +6,12 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Fixed
+
+- Tell a HAR saved with a `.json` name from its trace by their content when both are given without flags (`htv capture.json trace.json`, in either order, gzipped or not), where the second file replaced the first.
+- Name each file and what it is when two `.json` files given without flags are both traces or both HARs, or when a page gets more than two of them.
+- Report a file that does not exist as `<file>: no such file or directory`, and a `.json` that is not a recording as what it is, where both were called a Chrome trace that needs a HAR.
+
 ## [0.22.0] - 2026-11-17
 
 ### Changed

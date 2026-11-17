@@ -24,7 +24,7 @@ htv --demo
 
 `htv --demo` opens the built-in example, with no file needed: one page of a real site with its Chrome trace, to look around the [terminal report](#terminal-report) before recording anything. It goes to every output too (`htv --demo -o demo.html`, `htv --demo --format markdown`).
 
-A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, so a HAR saved with another extension needs `--har`.
+A HAR can be given on its own (`htv page.har`), followed by its Chrome trace (`htv page.har trace.json.gz`); files are told apart by extension, and a `.json` file is read to see whether it is a HAR or a trace, so a HAR saved as `.json` works alone or next to its trace in either order. A HAR saved with any other extension needs `--har`.
 
 ### Output
 

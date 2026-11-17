@@ -17,6 +17,11 @@ export interface PageArg {
   name: string;
   har: string;
   trace?: string;
+  /**
+   * The files given as `.json` without a flag, when there are two or more: their content, not
+   * their order, tells which is the HAR and which the trace.
+   */
+  jsonFiles?: string[];
   /** Page id(s) or text selecting which pages of a multi-page HAR to expand. */
   select?: string;
   /** Which runs of a WebPageTest HAR of several runs to keep. */
@@ -212,11 +217,17 @@ export function parseArgs(argv: string[]): Args {
     if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
     return pages[pages.length - 1];
   };
+  const jsonGiven = new Map<PageArg, string[]>();
   // A file given without its flag: a HAR by its extension, a trace by its own.
   const addPositional = (value: string) => {
     if (value === STDIN || HAR_FILE.test(value)) lastPage().har = value;
-    else if (TRACE_FILE.test(value)) lastPage().trace = value;
-    else {
+    else if (TRACE_FILE.test(value)) {
+      const page = lastPage();
+      const given = (jsonGiven.get(page) ?? []).concat(value);
+      jsonGiven.set(page, given);
+      if (given.length > 1) page.jsonFiles = given;
+      page.trace = value;
+    } else {
       throw new Error(
         `Unexpected argument "${value}": pass HAR files as .har or .har.gz (or - for stdin) and traces as .json or .json.gz, or use --har and --trace.`
       );
