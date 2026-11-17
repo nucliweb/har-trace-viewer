@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-17
+
 ### Added
 
 - Compare two recordings request by request: the Deltas drawer of the web app has a Requests view that pairs the requests of A and B, shows the time and size of each side, B − A of time, TTFB and size, and any change of status, cache, protocol or priority, and lists the requests only one side made. It opens with the biggest change of time first, sorts by column and filters to the changed, added or removed requests. A pair matched by a similar URL (a hashed file name, a cache-busting query) is marked ≈.
@@ -386,7 +388,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.17.1...v0.18.0
