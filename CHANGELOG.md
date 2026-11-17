@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-17
+
 ### Added
 
 - Carry the step on screen in the link of the web app and the HTML report, so a link opens on that step and its page, with the drawer and the selected request in place.
@@ -423,7 +425,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...v0.20.0
