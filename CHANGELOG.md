@@ -6,6 +6,16 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Changed
+
+- Mask the page names given with `--page` like the rest of the report, so a name that holds an email or a token does not reach a report.
+- Mask the third-party hostnames of a report with `--mask-hosts`, as `htv redact --mask-hosts` does with a HAR.
+- Offer one "Mask third-party hosts" checkbox in the Export menu of the web app in place of the three levels of redaction: the exports always carry masked secrets, and a stored choice of masking the hosts stays checked.
+
+### Deprecated
+
+- `--redact`, which adds nothing to the masking every report has, and `--redact=mask-hosts`, which is `--mask-hosts`. Both print a notice on stderr and will be removed.
+
 ## [0.21.0] - 2026-11-17
 
 ### Changed

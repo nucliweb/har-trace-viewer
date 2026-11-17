@@ -1,3 +1,4 @@
+import { maskText } from "../analysis/secret-rules.js";
 import { defaultPageName } from "../parsers/har-parser.js";
 import type { PageFlow, ParsedHar, ParsedTrace } from "../types.js";
 import { pageOf } from "./page-context.js";
@@ -159,11 +160,13 @@ export function expandPageFlows({
   select,
 }: ExpandPageFlowsInput): PageFlow[] {
   const har = select ? selectPages(allPages, select) : allPages;
-  const chosen = name?.trim() && !isPlaceholderName(name.trim()) ? name.trim() : undefined;
+  // A name may hold anything the user typed: it is masked as the rest of the report is.
+  const given = name === undefined ? undefined : maskText(name.trim());
+  const chosen = given && !isPlaceholderName(given) ? given : undefined;
 
   const [only] = har;
   if (allPages.length === 1 && only) {
-    return [{ name: name?.trim() || "Page 1", har: only, ...(trace ? { trace } : {}) }];
+    return [{ name: given || "Page 1", har: only, ...(trace ? { trace } : {}) }];
   }
 
   let traceIndex = 0;

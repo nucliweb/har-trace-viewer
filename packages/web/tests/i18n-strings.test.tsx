@@ -132,15 +132,14 @@ describe.each(languages)("translated strings in %s", (name, messages, locale) =>
     );
     await user.click(screen.getByRole("button", { name: messages.export.button }));
     const menu = screen.getByRole("menu", { name: messages.export.menu });
-    const group = within(menu).getByRole("group", { name: messages.export.redactGroup });
-    expect(within(group).getAllByRole("menuitemradio")).toHaveLength(3);
+    const group = within(menu).getByRole("group", { name: messages.export.maskHostsGroup });
     await user.click(
-      within(group).getByRole("menuitemradio", { name: messages.export.redactSecrets })
+      within(group).getByRole("menuitemcheckbox", { name: messages.export.maskHosts })
     );
     await user.click(within(menu).getByRole("menuitem", { name: messages.export.csv }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(`${messages.export.redacted} `);
-    expect(messages.export.redacted).not.toBe("Redacted:");
+    expect(screen.getByRole("status")).toHaveTextContent(`${messages.export.masked} `);
+    expect(messages.export.masked).not.toBe("Masked:");
   });
 
   it(`tells a failed generation in ${name}`, async () => {

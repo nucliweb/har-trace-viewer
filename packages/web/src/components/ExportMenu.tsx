@@ -10,8 +10,7 @@ import {
 } from "../lib/export-diagram.js";
 import { TEXT_EXPORTS, textExport, textExportFilename } from "../lib/export-text.js";
 import type { TextExport } from "../lib/export-text.js";
-import { useRedaction } from "../hooks/useRedaction.js";
-import type { RedactionLevel } from "../hooks/useRedaction.js";
+import { useMaskHosts } from "../hooks/useMaskHosts.js";
 import { useMessages } from "../i18n/context.js";
 import styles from "./ExportMenu.module.css";
 
@@ -30,12 +29,6 @@ interface Props {
 }
 
 const TEXT_KINDS = Object.keys(TEXT_EXPORTS) as TextExport[];
-const REDACTION_LABELS = {
-  off: "redactOff",
-  secrets: "redactSecrets",
-  "mask-hosts": "redactHosts",
-} as const;
-const REDACTION_LEVELS = Object.keys(REDACTION_LABELS) as RedactionLevel[];
 
 export function ExportMenu({
   flow,
@@ -51,7 +44,7 @@ export function ExportMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [redaction, setRedaction] = useRedaction();
+  const [maskHosts, setMaskHosts] = useMaskHosts();
   const [summary, setSummary] = useState<string | null>(null);
   const groupId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -108,8 +101,8 @@ export function ExportMenu({
 
   const runText = (kind: TextExport) => {
     setOpen(false);
-    const { blob, summary: redacted } = textExport(kind, flow, compare, redaction);
-    setSummary(redacted);
+    const { blob, summary: masked } = textExport(kind, flow, compare, maskHosts);
+    setSummary(masked);
     download(blob, textExportFilename(flow, compare, kind));
     buttonRef.current?.focus();
   };
@@ -123,7 +116,9 @@ export function ExportMenu({
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
     const items = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        '[role="menuitem"], [role="menuitemcheckbox"]'
+      )
     );
     const index = items.indexOf(document.activeElement as HTMLElement);
     const step = event.key === "ArrowDown" ? 1 : -1;
@@ -177,27 +172,24 @@ export function ExportMenu({
           ))}
           <div role="group" aria-labelledby={groupId} className={styles.group}>
             <span id={groupId} className={styles.groupLabel}>
-              {t.redactGroup}
+              {t.maskHostsGroup}
             </span>
-            {REDACTION_LEVELS.map((level) => (
-              <button
-                key={level}
-                role="menuitemradio"
-                aria-checked={redaction === level}
-                className={styles.item}
-                onClick={() => setRedaction(level)}
-              >
-                {t[REDACTION_LABELS[level]]}
-              </button>
-            ))}
+            <button
+              role="menuitemcheckbox"
+              aria-checked={maskHosts}
+              className={styles.item}
+              onClick={() => setMaskHosts(!maskHosts)}
+            >
+              {t.maskHosts}
+            </button>
           </div>
         </div>
       )}
-      {redaction !== "off" && (
+      {maskHosts && (
         <span role="status" className={styles.note}>
           {summary !== null && (
             <>
-              {t.redacted} <span lang="en">{summary}</span>
+              {t.masked} <span lang="en">{summary}</span>
             </>
           )}
         </span>

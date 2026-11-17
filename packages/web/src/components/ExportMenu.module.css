@@ -85,6 +85,10 @@
   border-radius: 50%;
 }
 
+.item[role="menuitemcheckbox"]::before {
+  border-radius: 2px;
+}
+
 .item[aria-checked="true"]::before {
   background: currentColor;
 }

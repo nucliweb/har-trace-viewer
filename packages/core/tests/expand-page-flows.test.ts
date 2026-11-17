@@ -22,6 +22,17 @@ const trace = (url: string | null): ParsedTrace => ({
 });
 
 describe("expandPageFlows", () => {
+  it("masks the secrets of the given name, for one page and for several", () => {
+    const name = "Account?token=TOKEN_SECRET_1 of jane.doe@example.org";
+    const single = expandPageFlows({ name, har: parseHarPages(firefoxHar()) });
+    expect(single[0].name).toBe("Account?token=[redacted] of [email]");
+    const several = expandPageFlows({ name, har: parseHarPages(twoPageHar()) });
+    expect(several.map((f) => f.name)).toEqual([
+      "Account?token=[redacted] of [email] · Home",
+      "Account?token=[redacted] of [email] · Checkout",
+    ]);
+  });
+
   it("keeps the given name for a single-page HAR", () => {
     const flows = expandPageFlows({ name: "Landing", har: parseHarPages(firefoxHar()) });
     expect(flows.map((f) => f.name)).toEqual(["Landing"]);

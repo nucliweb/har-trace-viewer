@@ -20,7 +20,7 @@ import { runCompletionCommand } from "./completion";
 import { debug, startDebug } from "./debug";
 import { adoptMisnamedHars } from "./recording";
 import { formatCheckResult } from "./check-format";
-import { parseRedactArgs, redactReport, REDACT_USAGE, runRedactCommand } from "./redact";
+import { maskReportHosts, parseRedactArgs, REDACT_USAGE, runRedactCommand } from "./redact";
 import type { RedactArgs } from "./redact";
 import type { Args } from "./cli";
 
@@ -50,6 +50,8 @@ async function main() {
     process.exit(1);
   }
 
+  for (const notice of args.deprecations ?? []) console.error(notice);
+
   if (args.help) {
     console.log(HELP);
     return;
@@ -77,10 +79,10 @@ async function main() {
   let report = await buildReport(args);
   debug.log(`pages: ${report.flow.pages.length}${report.compare ? " (and a second side)" : ""}`);
   debug.phase(`render ${target.kind}`);
-  if (args.redact) {
-    const redacted = redactReport(report, args.redact);
-    report = redacted.report;
-    console.error(redacted.note);
+  if (args.maskHosts) {
+    const masked = maskReportHosts(report);
+    report = masked.report;
+    console.error(masked.note);
   }
   switch (target.kind) {
     case "json":

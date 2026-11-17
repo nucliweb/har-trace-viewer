@@ -34,22 +34,20 @@ Output (where the report goes):
                       request per page (Browser, CDN edge, origin), to stdout or a
                       .md, .mmd or .mermaid --output.
   --bundle            For a directory --output: inline every asset into index.html.
-  --redact[=mask-hosts]
-                      Every report masks the secrets of URLs, titles and headers
-                      as the files are read: query values with a sensitive name
-                      (token, session, email...) or that look like a token,
-                      credentials in URLs, emails and JWTs. --redact applies the
-                      same rules once more to all the report holds, page names
-                      included, before it is written or shown, in every format,
-                      numbering what it masks. =mask-hosts also replaces
-                      third-party hostnames with host-N.redacted. Prints the
-                      counts on stderr. Timings, sizes and the analysis stay the
-                      same.
+  --mask-hosts        Replace third-party hostnames with host-N.redacted in the
+                      report, in every format. Every report masks its secrets as the
+                      files are read: query values with a sensitive name (token,
+                      session, email...) or that look like a token, credentials in
+                      URLs, emails, JWTs, sensitive headers, cookie values and the
+                      page names. Prints the count of masked hosts on stderr.
+                      Timings, sizes and the analysis stay the same. --redact and
+                      --redact=mask-hosts are deprecated aliases (the first does
+                      nothing, the second is --mask-hosts) that print a notice.
   htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
                       Write a redacted copy of the HAR itself, still a valid HAR:
                       bodies dropped (sizes kept), cookie values masked, credential
                       headers (Authorization, *token*, *session*...) replaced, and
-                      the rules of --redact on URLs, headers and titles. Prints the
+                      the secret rules of every report on URLs, headers and titles. Prints the
                       HAR to stdout without -o.
 
 Input:

@@ -6,7 +6,7 @@ import {
   parseRunMetric,
   RUN_METRIC_CHOICES,
 } from "@htv/core";
-import type { ClientRegion, RedactOptions, RunMetric } from "@htv/core";
+import type { ClientRegion, RunMetric } from "@htv/core";
 import { STDIN } from "./recording";
 import { parseBudgets, parseFailOn } from "./budget";
 import { parseCheckFormat } from "./check-format";
@@ -82,8 +82,10 @@ export interface Args {
   checkFormat?: CheckFormat;
   /** Writes the check result, in --check-format, to this file. */
   checkOutput?: string;
-  /** Redacts the report before it is written or shown. */
-  redact?: RedactOptions;
+  /** Replaces third-party hostnames with placeholders in the report (--mask-hosts). */
+  maskHosts?: boolean;
+  /** One line per deprecated option given, for stderr. */
+  deprecations?: string[];
   /** Starts the terminal report without the mouse reported; the m key turns it on. */
   noMouse?: boolean;
   /** Writes diagnostics to stderr. */
@@ -126,22 +128,28 @@ function parseRegion(value: string | undefined, flag = "--region"): ClientRegion
   throw new Error(`Invalid ${flag} "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
 }
 
-// --redact takes an optional level, which node:util's parser cannot express: "=mask-hosts".
+// --redact took an optional level, which node:util's parser cannot express: "=mask-hosts".
 const REDACT_WITH_LEVEL = "--redact=";
 
-function parseRedact(level: string): RedactOptions {
-  if (level === "mask-hosts") return { hosts: "mask" };
-  throw new Error(
-    `Invalid --redact "${level}". Use --redact, or --redact=mask-hosts to also mask third-party hosts.`
-  );
-}
+const REDACT_DEPRECATION =
+  "--redact is deprecated and will be removed: every report masks its secrets already.";
+const REDACT_HOSTS_DEPRECATION =
+  "--redact=mask-hosts is deprecated and will be removed: use --mask-hosts.";
 
 export function parseArgs(argv: string[]): Args {
-  let redact: RedactOptions | undefined;
+  let maskHosts = false;
+  const deprecations: string[] = [];
   const { tokens } = nodeParseArgs({
     args: argv.filter((arg) => {
       if (!arg.startsWith(REDACT_WITH_LEVEL)) return true;
-      redact = parseRedact(arg.slice(REDACT_WITH_LEVEL.length));
+      const level = arg.slice(REDACT_WITH_LEVEL.length);
+      if (level !== "mask-hosts") {
+        throw new Error(
+          `Invalid --redact "${level}". --redact is deprecated: every report masks its secrets already; use --mask-hosts to mask third-party hosts.`
+        );
+      }
+      maskHosts = true;
+      deprecations.push(REDACT_HOSTS_DEPRECATION);
       return false;
     }),
     options: {
@@ -168,6 +176,7 @@ export function parseArgs(argv: string[]): Args {
       "check-format": { type: "string" },
       "check-output": { type: "string" },
       redact: { type: "boolean" },
+      "mask-hosts": { type: "boolean" },
       "no-mouse": { type: "boolean" },
       debug: { type: "boolean" },
       help: { type: "boolean", short: "h" },
@@ -289,7 +298,10 @@ export function parseArgs(argv: string[]): Args {
         checkOutput = value;
         break;
       case "redact":
-        redact ??= { hosts: "keep" };
+        deprecations.push(REDACT_DEPRECATION);
+        break;
+      case "mask-hosts":
+        maskHosts = true;
         break;
       case "no-mouse":
         noMouse = true;
@@ -323,7 +335,8 @@ export function parseArgs(argv: string[]): Args {
     ...(budgetStrict ? { budgetStrict } : {}),
     ...(checkFormat ? { checkFormat } : {}),
     ...(checkOutput ? { checkOutput } : {}),
-    ...(redact ? { redact } : {}),
+    ...(maskHosts ? { maskHosts } : {}),
+    ...(deprecations.length > 0 ? { deprecations } : {}),
     ...(noMouse ? { noMouse } : {}),
     ...(debug ? { debug } : {}),
     ...(help ? { help } : {}),

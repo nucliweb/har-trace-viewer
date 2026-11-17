@@ -259,7 +259,7 @@ describe("--help, --version and --output (built CLI)", () => {
       "--budget",
       "--budget-strict",
       "--fail-on",
-      "--redact",
+      "--mask-hosts",
       "--help",
       "--version",
     ]) {

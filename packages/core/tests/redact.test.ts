@@ -540,6 +540,32 @@ describe("redactFlows", () => {
   });
 });
 
+describe("redactFlows with secrets: false", () => {
+  it("masks the third-party hosts alone, without a second pass over the secrets", () => {
+    const flow = flowOf(secretHar());
+    const before = JSON.stringify(flow);
+    const { flows, report } = redactFlows([flow], { hosts: "mask", secrets: false });
+    const json = JSON.stringify(flows);
+
+    expect(json).not.toMatch(/vendor-one|vendor-two|vendor-three/);
+    expect(json).toContain("host-1.redacted");
+    // Parse-time placeholders stay as they are: nothing is renumbered.
+    expect(json).not.toMatch(/\[redacted-\d+\]/);
+    expect(json.replace(/host-\d+\.redacted/g, "")).toContain("[redacted]");
+    expect(report).toMatchObject({ hosts: 3, queryParams: 0, emails: 0, tokens: 0, headers: 0 });
+    expect(before).toContain("vendor-one");
+  });
+
+  it("leaves a secret alone: masking it is the parsers' job", () => {
+    const flow = flowOf(secretHar());
+    flow.pages[0].har.entries[6].url = "https://shop.example.com/x?token=LATE_SECRET";
+    const { flows } = redactFlows([flow], { hosts: "mask", secrets: false });
+    expect(flows[0].pages[0].har.entries[6].url).toBe(
+      "https://shop.example.com/x?token=LATE_SECRET"
+    );
+  });
+});
+
 describe("describeRedaction", () => {
   it("names each count, leaving out the zeros", () => {
     expect(

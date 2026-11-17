@@ -58,26 +58,40 @@ beforeAll(() => {
   }
 });
 
-describe("parseArgs --redact", () => {
-  it("redacts secrets and keeps hosts with --redact", () => {
-    expect(parseArgs(["a.har", "--redact"]).redact).toEqual({ hosts: "keep" });
-  });
-
-  it("also masks third-party hosts with --redact=mask-hosts", () => {
-    expect(parseArgs(["a.har", "--redact=mask-hosts", "-o", "r.html"])).toMatchObject({
+describe("parseArgs --mask-hosts and the deprecated --redact", () => {
+  it("masks third-party hosts with --mask-hosts", () => {
+    expect(parseArgs(["a.har", "--mask-hosts", "-o", "r.html"])).toMatchObject({
       pages: [{ har: "a.har" }],
       output: "r.html",
-      redact: { hosts: "mask" },
+      maskHosts: true,
     });
   });
 
-  it("leaves the report as is without --redact", () => {
-    expect(parseArgs(["a.har"]).redact).toBeUndefined();
+  it("leaves the hosts alone by default", () => {
+    const args = parseArgs(["a.har"]);
+    expect(args.maskHosts).toBeUndefined();
+    expect(args.deprecations).toBeUndefined();
+  });
+
+  it("accepts --redact as an alias that changes nothing and says so", () => {
+    const args = parseArgs(["a.har", "--redact"]);
+    expect(args.maskHosts).toBeUndefined();
+    expect(args.deprecations).toEqual([
+      "--redact is deprecated and will be removed: every report masks its secrets already.",
+    ]);
+  });
+
+  it("accepts --redact=mask-hosts as an alias of --mask-hosts and says so", () => {
+    const args = parseArgs(["a.har", "--redact=mask-hosts"]);
+    expect(args.maskHosts).toBe(true);
+    expect(args.deprecations).toEqual([
+      "--redact=mask-hosts is deprecated and will be removed: use --mask-hosts.",
+    ]);
   });
 
   it("rejects an unknown --redact level", () => {
     expect(() => parseArgs(["a.har", "--redact=all"])).toThrow(
-      'Invalid --redact "all". Use --redact, or --redact=mask-hosts to also mask third-party hosts.'
+      'Invalid --redact "all". --redact is deprecated: every report masks its secrets already; use --mask-hosts to mask third-party hosts.'
     );
   });
 });
@@ -205,23 +219,40 @@ describe("htv redact", () => {
   });
 });
 
-describe("htv --redact", () => {
-  it("redacts the JSON report on top of what reading the HAR masked, and notes the counts on stderr", () => {
+const MASKED_DOCUMENT_URL =
+  "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en";
+const VENDORS = /vendor-one|vendor-two|vendor-three/;
+
+describe("htv reports mask their secrets by default", () => {
+  it("masks the page name given with --page, unnumbered, and prints no notice", () => {
     const name = `Account?token=${SECRETS.pageToken} of ${SECRETS.email}`;
-    const result = runCli(["--page", name, writeSecretHar(), "--format", "json", "--redact"]);
+    const result = runCli(["--page", name, writeSecretHar(), "--format", "json"]);
 
     expect(result.status).toBe(0);
     expect(leaks(result.stdout)).toEqual([]);
     const page = JSON.parse(result.stdout).flow.pages[0];
-    // Masked as the HAR was read, unnumbered; --redact numbers what it masks itself.
-    expect(page.har.entries[1].url).toBe(
-      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
-    );
-    expect(page.name).toBe("Account?token=[redacted-1] of [email]");
-    expect(result.stderr).toMatch(/^Redacted the report: 1 query value, 1 email\n/m);
+    expect(page.har.entries[1].url).toBe(MASKED_DOCUMENT_URL);
+    expect(page.name).toBe("Account?token=[redacted] of [email]");
+    expect(result.stderr).toBe("");
   });
 
-  it("leaves no secret of the HAR or its trace in the JSON and HTML reports, even without --redact", () => {
+  it("masks the page name of the second side of a comparison", () => {
+    const har = writeSecretHar();
+    const result = runCli([
+      "--page",
+      `A ${SECRETS.email}`,
+      har,
+      "--compare-with",
+      har,
+      "--format",
+      "json",
+    ]);
+    expect(result.status).toBe(0);
+    expect(leaks(result.stdout)).toEqual([]);
+    expect(JSON.parse(result.stdout).a.pages[0].name).toBe("A [email]");
+  });
+
+  it("leaves no secret of the HAR or its trace in the JSON and HTML reports", () => {
     const har = writeSecretHar();
     const trace = writeSecretTrace();
     const output = join(makeTempDir(), "report.html");
@@ -237,14 +268,13 @@ describe("htv --redact", () => {
     expect(leaks(json.stdout)).toEqual([]);
     expect(leaks(readFileSync(output, "utf-8"))).toEqual([]);
     const page = JSON.parse(json.stdout).flow.pages[0];
-    expect(page.har.documentEntry.url).toBe(
-      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
-    );
+    expect(page.har.documentEntry.url).toBe(MASKED_DOCUMENT_URL);
     expect(page.trace.url).toBe(page.har.documentEntry.url);
+    expect(json.stdout).toMatch(VENDORS);
   });
 
   for (const format of ["findings", "markdown", "csv", "mermaid"]) {
-    it(`leaves no secret of the HAR or its trace in the ${format} output, even without --redact`, () => {
+    it(`leaves no secret of the HAR or its trace in the ${format} output`, () => {
       const result = runCli([writeSecretHar(), writeSecretTrace(), "--format", format]);
 
       expect(result.status).toBe(0);
@@ -252,7 +282,7 @@ describe("htv --redact", () => {
     });
   }
 
-  it("keeps every header with its secrets masked in the JSON and HTML reports, even without --redact", () => {
+  it("keeps every header with its secrets masked in the JSON and HTML reports", () => {
     const har = writeSecretHar();
     const output = join(makeTempDir(), "report.html");
 
@@ -273,37 +303,45 @@ describe("htv --redact", () => {
     );
     expect(html).toContain("authorization: [redacted]");
   });
+});
 
-  it("masks third-party hosts in every header of the JSON and HTML reports", () => {
+describe("htv --mask-hosts", () => {
+  it("masks third-party hosts in every header of the JSON and HTML reports, and counts them on stderr", () => {
     const har = writeSecretHar();
     const output = join(makeTempDir(), "report.html");
 
-    const json = runCli([har, "--format", "json", "--redact=mask-hosts"]).stdout;
-    expect(runCli([har, "-o", output, "--redact=mask-hosts"]).status).toBe(0);
+    const jsonRun = runCli([har, "--format", "json", "--mask-hosts"]);
+    expect(runCli([har, "-o", output, "--mask-hosts"]).status).toBe(0);
     const html = readFileSync(output, "utf-8");
 
-    for (const text of [json, html]) {
+    for (const text of [jsonRun.stdout, html]) {
       expect(leaks(text)).toEqual([]);
-      expect(text).not.toMatch(/vendor-one|vendor-two|vendor-three/);
+      expect(text).not.toMatch(VENDORS);
     }
-    const login = JSON.parse(json).flow.pages[0].har.entries[0];
+    expect(jsonRun.stderr).toBe("Masked 3 third-party hosts in the report.\n");
+    const login = JSON.parse(jsonRun.stdout).flow.pages[0].har.entries[0];
     expect(login.headers.request).toEqual(
       expect.arrayContaining([expect.stringMatching(/^origin: https:\/\/host-\d+\.redacted$/)])
     );
   });
 
-  it("redacts the HTML report", () => {
-    const output = join(makeTempDir(), "report.html");
-
-    const result = runCli([writeSecretHar(), "-o", output, "--redact"]);
-
-    expect(result.status).toBe(0);
-    expect(leaks(readFileSync(output, "utf-8"))).toEqual([]);
+  it("masks the page name and keeps parse-time placeholders unnumbered", () => {
+    const result = runCli([
+      "--page",
+      `Account ${SECRETS.email}`,
+      writeSecretHar(),
+      "--format",
+      "json",
+      "--mask-hosts",
+    ]);
+    const page = JSON.parse(result.stdout).flow.pages[0];
+    expect(page.name).toBe("Account [email]");
+    expect(page.har.entries[1].url).toBe(MASKED_DOCUMENT_URL);
   });
 
   for (const format of ["findings", "markdown", "csv", "mermaid"]) {
-    it(`redacts the ${format} output`, () => {
-      const result = runCli([writeSecretHar(), "--format", format, "--redact=mask-hosts"]);
+    it(`masks the hosts of the ${format} output`, () => {
+      const result = runCli([writeSecretHar(), "--format", format, "--mask-hosts"]);
 
       expect(result.status).toBe(0);
       expect(leaks(result.stdout)).toEqual([]);
@@ -311,16 +349,66 @@ describe("htv --redact", () => {
     });
   }
 
-  it("redacts both sides of a comparison with the same placeholders", () => {
+  it("masks both sides of a comparison with the same hosts", () => {
     const har = writeSecretHar();
 
-    const result = runCli([har, "--compare-with", har, "--format", "json", "--redact"]);
+    const result = runCli([har, "--compare-with", har, "--format", "json", "--mask-hosts"]);
 
     expect(result.status).toBe(0);
     expect(leaks(result.stdout)).toEqual([]);
+    expect(result.stdout).not.toMatch(VENDORS);
     const { a, b } = JSON.parse(result.stdout);
     expect(b.pages[0].har.entries.map((e: { url: string }) => e.url)).toEqual(
       a.pages[0].har.entries.map((e: { url: string }) => e.url)
     );
+  });
+});
+
+describe("htv --redact, deprecated", () => {
+  it("changes nothing, and says on stderr that secrets are always masked", () => {
+    const har = writeSecretHar();
+    const plain = runCli([har, "--format", "json"]);
+    const result = runCli([har, "--format", "json", "--redact"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(plain.stdout);
+    expect(leaks(result.stdout)).toEqual([]);
+    expect(result.stdout).toMatch(VENDORS);
+    expect(result.stderr).toBe(
+      "--redact is deprecated and will be removed: every report masks its secrets already.\n"
+    );
+  });
+
+  it("behaves as --mask-hosts with --redact=mask-hosts, and names its replacement", () => {
+    const har = writeSecretHar();
+    const masked = runCli([har, "--format", "json", "--mask-hosts"]);
+    const result = runCli([har, "--format", "json", "--redact=mask-hosts"]);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(masked.stdout);
+    expect(result.stdout).not.toMatch(VENDORS);
+    expect(result.stderr).toBe(
+      "--redact=mask-hosts is deprecated and will be removed: use --mask-hosts.\n" +
+        "Masked 3 third-party hosts in the report.\n"
+    );
+  });
+
+  it("keeps the exit code of a failed check", () => {
+    const result = runCli([
+      writeSecretHar(),
+      "--redact",
+      "--fail-on",
+      "warning",
+      "--format",
+      "json",
+    ]);
+    const plain = runCli([writeSecretHar(), "--fail-on", "warning", "--format", "json"]);
+    expect(result.status).toBe(plain.status);
+  });
+
+  it("rejects an unknown level with exit 1", () => {
+    const result = runCli([writeSecretHar(), "--redact=all"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Invalid --redact "all"');
   });
 });

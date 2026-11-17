@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { generateFlow, parseHarJson } from "@htv/core";
-import { parseRedactArgs, redactReport, runRedactCommand } from "../src/redact";
+import { maskReportHosts, parseRedactArgs, runRedactCommand } from "../src/redact";
 import { secretHar, SECRETS } from "../../core/tests/helpers/secret-har";
 
 const dirs: string[] = [];
@@ -93,28 +93,25 @@ describe("htv redact in process", () => {
   });
 });
 
-describe("redactReport", () => {
-  // A page named after a URL with a token: the one secret reading the HAR does not mask.
+describe("maskReportHosts", () => {
   const flow = () =>
-    generateFlow([
-      {
-        name: `Home?token=${SECRETS.pageToken}`,
-        har: parseHarJson(JSON.stringify(secretHar())),
-      },
-    ]);
+    generateFlow([{ name: "Home", har: parseHarJson(JSON.stringify(secretHar())) }]);
 
-  it("redacts one flow and notes the counts", () => {
-    const { report, note } = redactReport({ flow: flow() }, { hosts: "keep" });
+  it("masks the third-party hosts of one flow and counts them", () => {
+    const { report, note } = maskReportHosts({ flow: flow() });
+    const json = JSON.stringify(report);
 
-    expect(leaks(JSON.stringify(report))).toEqual([]);
+    expect(json).not.toContain("vendor-one");
+    expect(json).toContain("shop.example.com");
+    expect(leaks(json)).toEqual([]);
     expect(report.compare).toBeUndefined();
-    expect(note).toMatch(/^Redacted the report: \d+ query values?$/);
+    expect(note).toBe("Masked 3 third-party hosts in the report.");
   });
 
-  it("redacts both sides of a comparison", () => {
-    const { report } = redactReport({ flow: flow(), compare: flow() }, { hosts: "mask" });
+  it("masks both sides of a comparison with the same placeholders", () => {
+    const { report } = maskReportHosts({ flow: flow(), compare: flow() });
 
-    expect(leaks(JSON.stringify(report.flow))).toEqual([]);
-    expect(leaks(JSON.stringify(report.compare))).toEqual([]);
+    expect(JSON.stringify(report.flow)).not.toContain("vendor-one");
+    expect(JSON.stringify(report.compare)).toBe(JSON.stringify(report.flow));
   });
 });

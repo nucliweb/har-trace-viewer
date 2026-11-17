@@ -117,7 +117,7 @@ test("the compare report exports both sides as text only", async ({ page }, test
   expect(sides).toEqual(new Set(["a", "b"]));
 });
 
-test("redacts the text exports, says what changed and leaves the images alone", async ({
+test("masks secrets in every text export, hosts on request, and leaves the images alone", async ({
   page,
 }, testInfo) => {
   const errors = await openAtFcp(page);
@@ -131,17 +131,21 @@ test("redacts the text exports, says what changed and leaves the images alone", 
   await expect(page.getByRole("status")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Export" }).click();
-  await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
+  const hosts = page.getByRole("menuitemcheckbox", { name: "Mask third-party hosts" });
+  await expect(hosts).not.toBeChecked();
+  await hosts.click();
   await expect(page.getByRole("menu")).toBeVisible();
-  await expect(page.getByRole("menuitemradio", { name: "Secrets", exact: true })).toBeChecked();
+  await expect(hosts).toBeChecked();
   const downloading = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Download CSV" }).click();
   const download = await downloading;
-  const path = testInfo.outputPath("redacted.csv");
+  const path = testInfo.outputPath("masked-hosts.csv");
   await download.saveAs(path);
-  // Nothing is left for the redaction: it says so, and the export is the plain one.
-  expect(await readFile(path, "utf8")).toBe(plainCsv);
-  await expect(page.getByRole("status")).toHaveText("Redacted: nothing to redact");
+  // The secrets stay masked, and the status says how many hosts the checkbox masked.
+  const maskedCsv = await readFile(path, "utf8");
+  expect(maskedCsv).not.toContain(analyticsId);
+  expect(maskedCsv).toContain("cid=[redacted]");
+  await expect(page.getByRole("status")).toHaveText(/^Masked: \d+ hosts?$/);
 
   const svg = await exportAs(page, "Download SVG", testInfo);
   expect(await readFile(svg.path, "utf8")).toContain("<svg");
@@ -150,18 +154,17 @@ test("redacts the text exports, says what changed and leaves the images alone", 
 });
 
 for (const scheme of ["light", "dark"] as const) {
-  test(`the open export menu and the redaction note have no axe violations: ${scheme} theme`, async ({
+  test(`the open export menu and the masking note have no axe violations: ${scheme} theme`, async ({
     browser,
   }) => {
     const context = await browser.newContext({ colorScheme: scheme });
     const page = await context.newPage();
     await openAtFcp(page);
     await page.getByRole("button", { name: "Export" }).click();
-    await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Mask third-party hosts" }).click();
     await page.getByRole("menuitem", { name: "Download CSV" }).click();
-    await expect(page.getByRole("status")).toContainText("Redacted:");
+    await expect(page.getByRole("status")).toContainText("Masked:");
     await page.getByRole("button", { name: "Export" }).click();
-    await page.getByRole("menuitemradio", { name: "Secrets", exact: true }).click();
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -172,12 +175,14 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
-test("the second redaction level also masks third-party hosts", async ({ page }, testInfo) => {
+test("the Mask third-party hosts checkbox masks the hosts of the export", async ({
+  page,
+}, testInfo) => {
   await page.context().setOffline(true);
   await page.goto(pathToFileURL(resolve(output, "problems/index.html")).href);
   await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
   await page.getByRole("button", { name: "Export" }).click();
-  await page.getByRole("menuitemradio", { name: "Secrets and third-party hosts" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Mask third-party hosts" }).click();
   const downloading = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Download CSV" }).click();
   const path = testInfo.outputPath("masked.csv");
@@ -186,5 +191,21 @@ test("the second redaction level also masks third-party hosts", async ({ page },
   expect(csv).not.toContain("example-cdn.net");
   expect(csv).toContain("host-1.redacted");
   expect(csv).toContain("www.example.com");
-  await expect(page.getByRole("status")).toContainText("1 host masked");
+  await expect(page.getByRole("status")).toContainText("Masked: 1 host");
 });
+
+for (const [stored, checked] of [
+  ["mask-hosts", true],
+  ["secrets", false],
+] as const) {
+  test(`a stored htv-redact of "${stored}" reads as ${checked ? "checked" : "unchecked"}`, async ({
+    page,
+  }) => {
+    await page.addInitScript((value) => window.localStorage.setItem("htv-redact", value), stored);
+    await openAtFcp(page);
+    await page.getByRole("button", { name: "Export" }).click();
+    const hosts = page.getByRole("menuitemcheckbox", { name: "Mask third-party hosts" });
+    if (checked) await expect(hosts).toBeChecked();
+    else await expect(hosts).not.toBeChecked();
+  });
+}

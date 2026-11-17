@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs as nodeParseArgs } from "node:util";
 import { gzipSync } from "node:zlib";
-import { describeRedaction, redactFlows, redactHar } from "@htv/core";
+import { describeRedaction, pluralCount, redactFlows, redactHar } from "@htv/core";
 import type { RedactOptions } from "@htv/core";
 import type { Report } from "./cli";
 import { readHarJson } from "./recording";
@@ -56,14 +56,17 @@ export async function runRedactCommand(args: RedactArgs): Promise<void> {
   console.log(counts);
 }
 
-/** The report with its flows redacted, and the one-line note that says what changed. */
-export function redactReport(
-  { flow, compare }: Report,
-  options: RedactOptions
-): { report: Report; note: string } {
-  const { flows, report } = redactFlows(compare ? [flow, compare] : [flow], options);
+/**
+ * The report with the hostnames of third parties masked, and the one-line note that says how many.
+ * Its secrets are masked as the files are read, so only the hosts are left to do.
+ */
+export function maskReportHosts({ flow, compare }: Report): { report: Report; note: string } {
+  const { flows, report } = redactFlows(compare ? [flow, compare] : [flow], {
+    hosts: "mask",
+    secrets: false,
+  });
   return {
     report: flows.length === 2 ? { flow: flows[0], compare: flows[1] } : { flow: flows[0] },
-    note: `Redacted the report: ${describeRedaction(report)}`,
+    note: `Masked ${pluralCount(report.hosts, "third-party host")} in the report.`,
   };
 }

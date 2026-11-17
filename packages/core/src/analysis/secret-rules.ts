@@ -335,6 +335,14 @@ export function maskSecrets<T>(value: T): T {
   return value;
 }
 
+/**
+ * Masks the secrets of a text a user gave (a page name), with the same unnumbered rules as
+ * maskSecrets.
+ */
+export function maskText(text: string): string {
+  return new SecretRules(false).text(text, "text");
+}
+
 /** A header as a line of HeaderLists: `Name: value`. */
 export const headerLine = ({ name, value }: Header): string => `${name}: ${value}`;
 

@@ -32,10 +32,7 @@ export const FLAGS: readonly Flag[] = [
   },
   { name: "format", description: "The format of the report", value: OUTPUT_FORMATS },
   { name: "bundle", description: "Inline every asset into index.html of a directory report" },
-  {
-    name: "redact",
-    description: "Redact the report (--redact=mask-hosts also masks third-party hosts)",
-  },
+  { name: "mask-hosts", description: "Replace third-party hostnames in the report" },
   { name: "demo", description: "Report the built-in example" },
   { name: "page", description: "Start a page of the report", value: "text" },
   { name: "har", description: "The HAR of the preceding page", value: "file" },
@@ -159,31 +156,24 @@ complete -o filenames -F _htv htv
 const zshText = (text: string) => text.replace(/[\][\\:]/g, "\\$&");
 
 function zsh(): string {
-  const spec = (flag: Flag, redact = false) => {
+  const spec = (flag: Flag) => {
     const label = zshText(flag.description);
-    const value =
-      redact && flag.name === "mask-hosts"
-        ? ""
-        : flag.name === "redact" && !redact
-          ? "::level:(mask-hosts)"
-          : choices(flag)
-            ? `:${flag.name}:(${choices(flag)!.join(" ")})`
-            : flag.value === "file" || flag.value === "path"
-              ? `:${flag.value}:_files`
-              : flag.value === "text"
-                ? `:${flag.name}: `
-                : "";
-    const equals = flag.value || flag.name === "redact" ? "=" : "";
-    const dash = flag.name === "redact" && !redact ? "-" : "";
-    const long = `--${flag.name}${equals}${dash}`;
+    const value = choices(flag)
+      ? `:${flag.name}:(${choices(flag)!.join(" ")})`
+      : flag.value === "file" || flag.value === "path"
+        ? `:${flag.value}:_files`
+        : flag.value === "text"
+          ? `:${flag.name}: `
+          : "";
+    const equals = flag.value ? "=" : "";
+    const long = `--${flag.name}${equals}`;
     if (flag.short) {
       return `'(-${flag.short} --${flag.name})'{-${flag.short},--${flag.name}${equals}}'[${label}]${value}'`;
     }
     if (flag.name === "help" || flag.name === "version") return `'(- *)${long}[${label}]'`;
     return `'${long}[${label}]${value}'`;
   };
-  const lines = (flags: readonly Flag[], redact = false) =>
-    flags.map((f) => `    ${spec(f, redact)} \\`).join("\n");
+  const lines = (flags: readonly Flag[]) => flags.map((f) => `    ${spec(f)} \\`).join("\n");
   return `#compdef htv
 # htv completion for zsh. Load it with: source <(htv completion zsh), after compinit.
 _htv_first() {
@@ -195,7 +185,7 @@ _htv() {
     redact)
       if (( CURRENT > 2 )); then
         _arguments -s \\
-${lines(REDACT_FLAGS, true)}
+${lines(REDACT_FLAGS)}
           '2:HAR file:_files'
         return
       fi

@@ -22,7 +22,7 @@ async function visibleControls(page: Page, except: Locator[]) {
   const skip = await Promise.all(except.map((locator) => locator.elementHandle()));
   return page.evaluate((skipped) => {
     const controls = document.querySelectorAll<HTMLElement>(
-      'button, a[href], input, select, textarea, [role="tab"], [role="menuitem"], [role="menuitemradio"]'
+      'button, a[href], input, select, textarea, [role="tab"], [role="menuitem"], [role="menuitemcheckbox"]'
     );
     return [...controls]
       .filter((el) => !skipped.some((s) => s === el || (s as Element).contains(el)))
@@ -38,7 +38,7 @@ async function visibleControls(page: Page, except: Locator[]) {
 
 for (const kind of ["diagram", "compare"] as const) {
   for (const width of [360, 400, 640]) {
-    test(`the redaction note and the export menu fit a ${width}px screen: ${kind}`, async ({
+    test(`the masking note and the export menu fit a ${width}px screen: ${kind}`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 800 });
@@ -49,9 +49,9 @@ for (const kind of ["diagram", "compare"] as const) {
       const exportButton = page.getByRole("button", { name: "Export" });
       await exportButton.click();
       const menu = page.getByRole("menu", { name: "Export report" });
-      await menu.getByRole("menuitemradio", { name: "Secrets and third-party hosts" }).click();
+      await menu.getByRole("menuitemcheckbox", { name: "Mask third-party hosts" }).click();
       await menu.getByRole("menuitem", { name: "Download CSV" }).click();
-      const note = page.getByRole("status").filter({ hasText: "Redacted:" });
+      const note = page.getByRole("status").filter({ hasText: "Masked:" });
       await expect(note).toBeVisible();
 
       const noteBox = (await note.boundingBox())!;

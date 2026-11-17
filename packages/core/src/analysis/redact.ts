@@ -23,6 +23,11 @@ export interface RedactOptions {
    * the same N. Default: "keep".
    */
   hosts?: "keep" | "mask";
+  /**
+   * false leaves the secrets alone and only masks hostnames: for a flow, whose secrets the
+   * parsers already masked. Default: true.
+   */
+  secrets?: boolean;
 }
 
 const MASKED_HOST_SUFFIX = ".redacted";
@@ -147,6 +152,31 @@ class Redactor extends SecretRules {
             `(?:(?<![A-Za-z0-9.-])|(?<=%2[Ff])|(?<=\\*\\.))(?:${alternatives.join("|")})(?![A-Za-z0-9-]|\\.[A-Za-z0-9])`,
             "gi"
           );
+  }
+
+  // Without the secret rules these only mask hostnames.
+  override text(value: string, context: Context): string {
+    return this.options.secrets === false ? this.hosts(value) : super.text(value, context);
+  }
+
+  override headerValue(name: string, value: string): string {
+    return this.options.secrets === false ? this.hosts(value) : super.headerValue(name, value);
+  }
+
+  override headerLine(line: string): string {
+    return this.options.secrets === false ? this.hosts(line) : super.headerLine(line);
+  }
+
+  override cookieValue(value: string): string {
+    return this.options.secrets === false ? value : super.cookieValue(value);
+  }
+
+  override emails(value: string): string {
+    return this.options.secrets === false ? value : super.emails(value);
+  }
+
+  override param(name: string, value: string): string {
+    return this.options.secrets === false ? this.hosts(value) : super.param(name, value);
   }
 
   // A raw HAR's bodies go before the rules walk the rest of the entry.

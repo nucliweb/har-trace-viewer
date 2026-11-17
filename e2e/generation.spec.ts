@@ -309,7 +309,7 @@ test("switching to Spanish on the site loads the locale and words the export men
   await page.getByRole("button", { name: "Exportar" }).click();
   await expect(page.getByRole("menu", { name: "Exportar el informe" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Descargar CSV" })).toBeVisible();
-  await page.getByRole("menuitemradio", { name: "Secretos", exact: true }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Ocultar hosts de terceros" }).click();
   await page.getByRole("menuitem", { name: "Descargar CSV" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Ocultado:" })).toBeVisible();
 });
