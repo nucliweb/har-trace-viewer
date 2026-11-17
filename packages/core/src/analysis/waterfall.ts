@@ -44,6 +44,11 @@ function phasesOf(entry: HarEntry): WaterfallPhases {
 const phasesTotal = (phases: WaterfallPhases): number =>
   Object.values(phases).reduce<number>((sum, ms) => sum + (ms ?? 0), 0);
 
+/** How long a request took on the waterfall: its duration, or its phases when they add up to more. */
+export function requestDurationMs(entry: HarEntry): number {
+  return Math.max(entry.duration || 0, phasesTotal(phasesOf(entry)));
+}
+
 function marksOf(har: ParsedHar, trace: ParsedTrace | undefined): WaterfallMarks {
   const page = har.pages[0];
   return {
@@ -154,7 +159,7 @@ export function buildWaterfall(
 
   const rows = har.entries.map((entry, entryIndex): WaterfallRow => {
     const phases = phasesOf(entry);
-    const duration = Math.max(entry.duration || 0, phasesTotal(phases));
+    const duration = requestDurationMs(entry);
     return {
       entryIndex,
       url: entry.url,

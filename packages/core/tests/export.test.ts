@@ -162,6 +162,69 @@ describe("markdownReport", () => {
     expect(out[third + 4]).toBe("| example.net | Other | 1 | 1 | 0 | 1.0 KB | 1.0 KB | 0 B |");
   });
 
+  it("lists the requests that changed most, then the added and the removed ones", () => {
+    const side = (name: string, entries: Parameters<typeof makeHar>[0]) =>
+      generateFlow([{ name, har: makeHar(entries) }]);
+    const cold = side("Cold", [
+      makeEntry({
+        url: "https://example.com/app-93d7eb3c1c216c38.js",
+        duration: 300,
+        transferSize: 40_000,
+      }),
+      makeEntry({ url: "https://example.com/old.css", startTime: 150 }),
+    ]);
+    const warm = side("Warm", [
+      makeEntry({
+        url: "https://example.com/app-0a1b2c3d4e5f6789.js",
+        duration: 20,
+        transferSize: 0,
+        fromCache: "disk",
+      }),
+      makeEntry({ url: "https://example.com/new.css", startTime: 160, transferSize: 2_000 }),
+    ]);
+
+    const out = markdownReport(cold, warm).split("\n");
+
+    const at = out.indexOf("## Requests A vs B");
+    expect(at).toBeGreaterThan(out.indexOf("## Third parties A vs B"));
+    expect(at).toBeLessThan(out.indexOf("## A: Cold"));
+    expect(out[at + 2]).toBe("2 paired (1 by a similar URL) · 1 added in B · 1 removed from A");
+    expect(out[at + 4]).toBe(
+      "| Request | Time A | Time B | Δ time | Size A | Size B | Δ size | Changes |"
+    );
+    expect(out[at + 6]).toBe(
+      "| app-0a1b2c3d4e5f6789.js ≈ | 300 ms | 20 ms | −280 ms | 40 KB | 0 B | −40 KB | cache: network → browser |"
+    );
+    expect(out).toContain(
+      "≈ paired by a similar URL: a hash in the file name or a query parameter differs."
+    );
+    expect(out).toContain("| Added in B | Type | Start | Time | Size |");
+    expect(out).toContain("| new.css | stylesheet | 160 ms | 50 ms | 2.0 KB |");
+    expect(out).toContain("| Removed from A | Type | Start | Time | Size |");
+    expect(out).toContain("| old.css | stylesheet | 150 ms | 50 ms | 1.0 KB |");
+  });
+
+  it("keeps the request tables short", () => {
+    const many = (name: string, prefix: string) =>
+      generateFlow([
+        {
+          name,
+          har: makeHar(
+            Array.from({ length: 13 }, (_, i) =>
+              makeEntry({ url: `https://example.com/${prefix}${i}.css`, startTime: 100 + i })
+            )
+          ),
+        },
+      ]);
+
+    const out = markdownReport(many("A", "a"), many("B", "b")).split("\n");
+
+    expect(out).toContain("1 paired · 13 added in B · 13 removed from A");
+    expect(out.filter((l) => /^\| b\d+\.css \|/.test(l))).toHaveLength(10);
+    expect(out).toContain("…and 3 more added in B.");
+    expect(out).toContain("…and 3 more removed from A.");
+  });
+
   it("shows the page's value and the min–max of each metric for the median of several runs", () => {
     const flow = flowNamed("Run 2 · First view (median of 3 runs)");
     const runSpread = {

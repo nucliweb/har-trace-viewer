@@ -1,0 +1,128 @@
+/* The chips come from DeltasPanel.module.css, the delta cells from HopsPanel.module.css. */
+
+/* No side padding: the request column sticks to the left edge as the table scrolls sideways. */
+.body {
+  padding: 0 0 var(--space-md);
+  container-type: inline-size;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+}
+
+/* The notes stay in view, at the drawer's width, as the table scrolls sideways. */
+.summary {
+  position: sticky;
+  left: var(--space-md);
+  margin: var(--space-sm) var(--space-md);
+  max-width: min(760px, calc(100cqi - 2 * var(--space-md)));
+  line-height: 1.5;
+  color: var(--color-text2);
+}
+
+.table {
+  border-collapse: collapse;
+  min-width: 100%;
+  color: var(--color-text);
+}
+
+.table th,
+.table td {
+  padding: 3px var(--space-sm);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 6px;
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.table tbody th {
+  font-weight: 400;
+}
+
+.table tbody tr:hover > * {
+  background: color-mix(in srgb, var(--color-cyan) 7%, var(--color-surface));
+}
+
+.table .num {
+  text-align: right;
+}
+
+/* The request names the row wherever the table has scrolled to. */
+.table .name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  max-width: 280px;
+  padding-left: var(--space-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.table thead .name {
+  z-index: 3;
+}
+
+/* On a phone the request column leaves room for the numbers beside it. */
+@media (max-width: 640px) {
+  .table .name {
+    max-width: 150px;
+  }
+}
+
+.badge {
+  padding: 0 var(--space-xs);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-weight: 700;
+  color: var(--color-yellow);
+}
+
+.added {
+  color: var(--color-orange);
+}
+
+.removed {
+  color: var(--color-muted);
+}
+
+.changed {
+  color: var(--color-yellow);
+  font-weight: 700;
+}
+
+.sortBtn {
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sortBtn:hover,
+.sortBtnActive {
+  color: var(--color-cyan);
+}
+
+.gap td {
+  padding: 0;
+  border: none;
+}
+
+/* Forced colours drop the tints: a change keeps an underline. */
+@media (forced-colors: active) {
+  .changed {
+    text-decoration: underline;
+  }
+}

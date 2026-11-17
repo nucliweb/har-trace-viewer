@@ -87,4 +87,6 @@ export default function globalSetup() {
     { stdio: "pipe" }
   );
   generate(resolve(OUTPUT, "large"), ["--bundle"], LARGE_PAGE);
+  // The large page against itself: a comparison of ten thousand pairs of requests.
+  generate(resolve(OUTPUT, "large-compare"), ["--bundle", "--compare-with", LARGE_HAR], LARGE_PAGE);
 }

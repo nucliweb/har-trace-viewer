@@ -28,6 +28,7 @@ export * from "./analysis/findings.js";
 export * from "./analysis/waterfall.js";
 export * from "./analysis/resource-query.js";
 export * from "./analysis/compare.js";
+export * from "./analysis/request-diff.js";
 export * from "./utils/format.js";
 export * from "./utils/presentation.js";
 export * from "./analysis/export.js";

@@ -16,6 +16,8 @@ import { getHostname } from "../utils/domain.js";
 import { networkRequests } from "./network-requests.js";
 import { SERVER_WAIT_LABEL, TTFB_LABEL, summarizePageMetrics } from "./metrics-summary.js";
 import type { PageMetricsSummary } from "./metrics-summary.js";
+import { compareRequests } from "./request-diff.js";
+import type { RequestComparison } from "./request-diff.js";
 
 /** One position of a comparison: the step of each flow showing `kind`, when it has one. */
 export interface StepPair {
@@ -99,11 +101,17 @@ export interface ThirdPartyComparison {
   entities: ThirdPartyPair[];
 }
 
+/** The requests of the pages a comparison pairs, with the name of each page. */
+export interface PageRequestComparison extends RequestComparison {
+  pages: { a: string; b: string };
+}
+
 export interface FlowComparison {
   pairs: StepPair[];
   metrics: MetricDelta[];
   hops: HopPair[];
   thirdParties: ThirdPartyComparison;
+  requests: PageRequestComparison;
   caveats: ComparisonCaveat[];
 }
 
@@ -394,11 +402,18 @@ function compareCaveats(a: Flow, b: Flow): ComparisonCaveat[] {
   return caveats;
 }
 
+/** The requests of the first page of each flow, request by request. */
+export function compareFlowRequests(a: Flow, b: Flow): PageRequestComparison {
+  const pageA = firstPage(a);
+  const pageB = firstPage(b);
+  return { pages: { a: pageA.name, b: pageB.name }, ...compareRequests(pageA.har, pageB.har) };
+}
+
 /**
  * Compares the first page of two flows, A the baseline and B the candidate (for instance a
  * first view and a repeat view): their steps paired by kind, the metrics summary of each
- * with B − A deltas, their hosts and their third parties joined by name, and the caveats that
- * change how the deltas read.
+ * with B − A deltas, their hosts and their third parties joined by name, their requests one
+ * by one, and the caveats that change how the deltas read.
  */
 export function compareFlows(a: Flow, b: Flow): FlowComparison {
   return {
@@ -406,6 +421,7 @@ export function compareFlows(a: Flow, b: Flow): FlowComparison {
     metrics: compareMetrics(a, b),
     hops: compareHops(a, b),
     thirdParties: compareThirdParties(a, b),
+    requests: compareFlowRequests(a, b),
     caveats: compareCaveats(a, b),
   };
 }

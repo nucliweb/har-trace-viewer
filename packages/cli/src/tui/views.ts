@@ -21,7 +21,11 @@ import {
   protocolLabel,
   rateDelta,
   rateMetric,
+  requestChangesText,
+  requestCountsText,
+  requestPairChanged,
   shortUrl,
+  SIMILAR_URL_NOTE,
   summarizeFlowMetrics,
 } from "@htv/core";
 import type {
@@ -35,6 +39,7 @@ import type {
   MainThreadReport,
   NetworkReport,
   Recommendation,
+  RequestSnapshot,
   StepPair,
   ThirdPartyReport,
 } from "@htv/core";
@@ -666,10 +671,96 @@ function thirdPartyDeltaPanel(
   );
 }
 
+// Rows of each request table on the Hosts tab of a comparison; the rest are counted.
+const MAX_REQUEST_ROWS = 15;
+
+const requestListRows = (requests: RequestSnapshot[]) =>
+  requests
+    .slice(0, MAX_REQUEST_ROWS)
+    .map((r) => [
+      seg(shortUrl(r.url), { bold: true }),
+      r.resourceType,
+      formatMs(r.startMs),
+      formatMs(r.durationMs),
+      formatBytes(r.transferBytes),
+    ]);
+
+/**
+ * The requests of both flows one by one: the pairs that changed most (time, then bytes), then
+ * the requests only B made and only A made, each table cut at MAX_REQUEST_ROWS.
+ */
+function requestDeltaPanel(
+  comparison: FlowComparison,
+  names: { a: string; b: string },
+  width: number,
+  offset: number
+): ColumnsRegion {
+  const { requests } = comparison;
+  const body: Line[] = [line(seg(requestCountsText(requests), { dim: true }))];
+  let maxOffset = 0;
+  const addTable = (
+    header: string[],
+    rows: (Segment | string)[][],
+    aligns: ("left" | "right")[],
+    total: number,
+    what: string
+  ) => {
+    if (total === 0) return;
+    const shown = scrollTable(header, rows, aligns, width - 4, offset);
+    body.push(BLANK, ...shown.lines);
+    if (total > MAX_REQUEST_ROWS) {
+      body.push(line(seg(`…and ${total - MAX_REQUEST_ROWS} more ${what}`, { dim: true })));
+    }
+    maxOffset = Math.max(maxOffset, shown.maxOffset);
+  };
+  const changed = requests.pairs.filter(requestPairChanged);
+  const shownPairs = changed.slice(0, MAX_REQUEST_ROWS);
+  addTable(
+    ["Request", "Time A", "Time B", "Δ time", "Size A", "Size B", "Δ size", "Changes"],
+    shownPairs.map((pair) => {
+      const time = Math.round(pair.delta.durationMs);
+      const bytes = pair.delta.transferBytes;
+      return [
+        seg(`${shortUrl(pair.b.url)}${pair.match === "similar" ? " ≈" : ""}`, { bold: true }),
+        formatMs(pair.a.durationMs),
+        formatMs(pair.b.durationMs),
+        seg(formatDelta(time, "ms"), { color: DELTA_COLOR[rateDelta(time)] }),
+        formatBytes(pair.a.transferBytes),
+        formatBytes(pair.b.transferBytes),
+        seg(formatDelta(bytes, "bytes"), { color: DELTA_COLOR[rateDelta(bytes)] }),
+        requestChangesText(pair),
+      ];
+    }),
+    ["left", "right", "right", "right", "right", "right", "right", "left"],
+    changed.length,
+    "changed"
+  );
+  if (shownPairs.some((pair) => pair.match === "similar")) {
+    body.push(BLANK, line(seg(SIMILAR_URL_NOTE, { dim: true })));
+  }
+  const listAligns: ("left" | "right")[] = ["left", "left", "right", "right", "right"];
+  const listHeader = ["Type", "Start", "Time", "Size"];
+  addTable(
+    ["Added in B", ...listHeader],
+    requestListRows(requests.added),
+    listAligns,
+    requests.added.length,
+    "added in B"
+  );
+  addTable(
+    ["Removed from A", ...listHeader],
+    requestListRows(requests.removed),
+    listAligns,
+    requests.removed.length,
+    "removed from A"
+  );
+  return { lines: panel(`Requests · A ${names.a} vs B ${names.b}`, body, width), maxOffset };
+}
+
 /**
  * The hosts of both flows joined by name; the TTFB delta covers the URLs both requested. Below
- * them, the third parties of both flows joined by entity. Tables wider than the terminal keep
- * their first column and show the others from `offset` on.
+ * them, the third parties of both flows joined by entity, and their requests one by one. Tables
+ * wider than the terminal keep their first column and show the others from `offset` on.
  */
 export function hostDeltaRegion(
   comparison: FlowComparison,
@@ -680,6 +771,7 @@ export function hostDeltaRegion(
   return stackColumns([
     hostDeltaPanel(comparison, names, width, offset),
     thirdPartyDeltaPanel(comparison, names, width, offset),
+    requestDeltaPanel(comparison, names, width, offset),
   ]);
 }
 

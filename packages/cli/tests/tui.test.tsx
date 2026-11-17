@@ -368,6 +368,21 @@ describe("TuiApp — a flow", () => {
     expect(lastFrame()).toMatch(/third\.com\s+Other\s+1\s+0\s+−1\s+1\.0 KB\s+0 B\s+−1\.0 KB/);
   });
 
+  it("compares the requests of both sides one by one on the Hosts tab", async () => {
+    const { lastFrame, press } = renderTui(
+      <TuiApp flow={firstView()} compare={repeatView()} version="1.0.0" rows={120} />
+    );
+
+    await press("6");
+    expect(lastFrame()).toMatch(/Requests · A First view vs B Repeat view/);
+    expect(lastFrame()).toContain("3 paired · 0 added in B · 2 removed from A");
+    expect(lastFrame()).toMatch(
+      /critical-100\.css\s+50 ms\s+50 ms\s+0 ms\s+1\.0 KB\s+1\.0 KB\s+0 B\s+cache: network → browser/
+    );
+    expect(lastFrame()).toMatch(/Removed from A\s+Type\s+Start\s+Time\s+Size/);
+    expect(lastFrame()).toMatch(/chunk-47TTPNLV\.js\s+stylesheet\s+150 ms\s+50 ms\s+20 KB/);
+  });
+
   it("captions the third parties with their median TTFB", async () => {
     const { lastFrame, press } = renderTui(<TuiApp flow={firstView()} version="1.0.0" rows={40} />);
 

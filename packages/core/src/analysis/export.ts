@@ -7,11 +7,19 @@ import {
   formatMetricValue,
   formatMs,
   pct,
+  shortUrl,
 } from "../utils/format.js";
 import type { DeltaUnit } from "../utils/format.js";
 import { phaseMs, tcpConnectMs } from "../utils/timing.js";
 import { compareFlows } from "./compare.js";
 import type { ComparedMetric } from "./compare.js";
+import {
+  SIMILAR_URL_NOTE,
+  requestChangesText,
+  requestCountsText,
+  requestPairChanged,
+} from "./request-diff.js";
+import type { RequestSnapshot } from "./request-diff.js";
 import { collectFindings } from "./findings.js";
 import { analyzeHops, protocolLabel } from "./hops.js";
 import { analyzeThirdParties } from "./third-parties.js";
@@ -389,6 +397,69 @@ function thirdPartyComparisonSection(a: Flow, b: Flow): string[] {
   ];
 }
 
+// Rows of each request table in a Markdown comparison; the rest are counted.
+const MAX_REQUEST_ROWS = 10;
+
+const moreLine = (count: number, what: string): string[] =>
+  count > MAX_REQUEST_ROWS ? ["", `…and ${count - MAX_REQUEST_ROWS} more ${what}.`] : [];
+
+function requestListSection(title: string, requests: RequestSnapshot[], what: string): string[] {
+  if (requests.length === 0) return [];
+  return [
+    ...table(
+      [title, "Type", "Start", "Time", "Size"],
+      requests
+        .slice(0, MAX_REQUEST_ROWS)
+        .map((r) => [
+          shortUrl(r.url),
+          r.resourceType,
+          formatMs(r.startMs),
+          formatMs(r.durationMs),
+          formatBytes(r.transferBytes),
+        ])
+    ),
+    ...moreLine(requests.length, what),
+    "",
+  ];
+}
+
+function requestComparisonSection(a: Flow, b: Flow): string[] {
+  const requests = compareFlows(a, b).requests;
+  const { pairs, added, removed } = requests;
+  const changed = pairs.filter(requestPairChanged);
+  const shown = changed.slice(0, MAX_REQUEST_ROWS);
+  const changes =
+    shown.length === 0
+      ? ["No paired request changed."]
+      : [
+          ...table(
+            ["Request", "Time A", "Time B", "Δ time", "Size A", "Size B", "Δ size", "Changes"],
+            shown.map((pair) => [
+              `${shortUrl(pair.b.url)}${pair.match === "similar" ? " ≈" : ""}`,
+              formatMs(pair.a.durationMs),
+              formatMs(pair.b.durationMs),
+              formatDelta(pair.delta.durationMs, "ms"),
+              formatBytes(pair.a.transferBytes),
+              formatBytes(pair.b.transferBytes),
+              formatDelta(pair.delta.transferBytes, "bytes"),
+              requestChangesText(pair),
+            ])
+          ),
+          ...moreLine(changed.length, "changed"),
+          ...(shown.some((p) => p.match === "similar") ? ["", SIMILAR_URL_NOTE] : []),
+        ];
+  return [
+    "## Requests A vs B",
+    "",
+    requestCountsText(requests),
+    "",
+    ...changes,
+    "",
+    ...requestListSection("Added in B", added, "added in B"),
+    ...requestListSection("Removed from A", removed, "removed from A"),
+  ];
+}
+
 function comparisonSection(a: Flow, b: Flow): string[] {
   const rows = compareFlows(a, b).metrics.map((m) => {
     const unit = UNIT_OF.get(m.key) ?? "count";
@@ -407,14 +478,18 @@ function comparisonSection(a: Flow, b: Flow): string[] {
 /**
  * A report to paste into a ticket or a doc, GitHub-flavoured Markdown without HTML: per page
  * its metrics, findings (by severity, with the recommendation and up to five evidence rows),
- * hosts, third parties and main thread. A comparison opens with a table of the metrics of A and B
- * and one of their third parties.
+ * hosts, third parties and main thread. A comparison opens with a table of the metrics of A and B,
+ * one of their third parties and the requests that changed most, were added or were removed.
  */
 export function markdownReport(flow: Flow, compare?: Flow): string {
   const sides = sidesOf(flow, compare);
   const lines = ["# HAR Trace Viewer report", ""];
   if (compare) {
-    lines.push(...comparisonSection(flow, compare), ...thirdPartyComparisonSection(flow, compare));
+    lines.push(
+      ...comparisonSection(flow, compare),
+      ...thirdPartyComparisonSection(flow, compare),
+      ...requestComparisonSection(flow, compare)
+    );
   }
   for (const side of sides) {
     side.flow.pages.forEach((page, index) => lines.push(...pageSection(side, page, index)));

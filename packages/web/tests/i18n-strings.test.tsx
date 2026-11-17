@@ -5,6 +5,7 @@ import { analyzeCacheForHar } from "@htv/core";
 import { App } from "../src/App.js";
 import { AnalysisPanel } from "../src/components/AnalysisPanel.js";
 import { CachePanel } from "../src/components/CachePanel.js";
+import { CompareView } from "../src/components/CompareView.js";
 import { ExportMenu } from "../src/components/ExportMenu.js";
 import { ca } from "../src/i18n/ca.js";
 import { MessagesContext } from "../src/i18n/context.js";
@@ -12,7 +13,7 @@ import { es } from "../src/i18n/es.js";
 import { LOCALE_STORAGE_KEY } from "../src/i18n/useLocale.js";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
 import { analysisJourney } from "./analysis-flow.js";
-import { harJson, makeFile, makeFlow } from "./fixtures.js";
+import { harJson, makeCompareFlows, makeFile, makeFlow } from "./fixtures.js";
 import { loadOnDemandModules } from "./lazy.js";
 
 const analysis = vi.hoisted(() => ({ fail: false }));
@@ -94,6 +95,31 @@ describe.each(languages)("translated strings in %s", (name, messages, locale) =>
     expect(screen.getByText(t.noDocument)).toBeInTheDocument();
     expect(t.noDocument).not.toMatch(/^This page/);
     await user.click(screen.getByRole("button", { name: t.close }));
+  });
+
+  it(`words the requests of a comparison in ${name}`, async () => {
+    const user = userEvent.setup();
+    const [a, b] = makeCompareFlows();
+    render(
+      <MessagesContext.Provider value={messages}>
+        <CompareView a={a} b={b} />
+      </MessagesContext.Provider>
+    );
+    const t = messages.deltas;
+    await user.click(screen.getByRole("button", { name: messages.compare.toggleDeltas }));
+    const views = screen.getByRole("group", { name: t.views });
+    await user.click(within(views).getByRole("button", { name: t.view.requests }));
+
+    const table = screen.getByRole("table", { name: t.requestsCaption });
+    expect(within(table).getByRole("columnheader", { name: t.timeA })).toBeInTheDocument();
+    expect(
+      within(table).getAllByText(`${t.source.network} → ${t.source.browser}`, { exact: false })
+    ).toHaveLength(2);
+    const filters = screen.getByRole("group", { name: t.requestFilters });
+    await user.click(within(filters).getByRole("button", { name: `${t.requestFilter.removed} 2` }));
+    expect(within(table).getAllByText(t.removed)).toHaveLength(2);
+    expect(screen.getByText(t.pairedRequests(3, 0))).toBeInTheDocument();
+    expect(t.requestsCaption).not.toBe("Request deltas");
   });
 
   it(`words the export menu and the redaction note in ${name}`, async () => {

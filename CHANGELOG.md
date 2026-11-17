@@ -6,6 +6,11 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Compare two recordings request by request: the Deltas drawer of the web app has a Requests view that pairs the requests of A and B, shows the time and size of each side, B − A of time, TTFB and size, and any change of status, cache, protocol or priority, and lists the requests only one side made. It opens with the biggest change of time first, sorts by column and filters to the changed, added or removed requests. A pair matched by a similar URL (a hashed file name, a cache-busting query) is marked ≈.
+- Carry the same comparison in the `requestDiff` field of `--format json`, in a "Requests A vs B" section of `--format markdown` (the counts, the ten biggest changes, and the added and removed requests) and in the Hosts tab of the terminal report.
+
 ## [0.19.0] - 2026-11-17
 
 ### Added

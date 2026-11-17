@@ -150,6 +150,12 @@ describe("visible text inside the accessible name, in every language (A-03)", ()
       unmount();
       render(inLanguage(messages, <CompareView a={a} b={b} />));
       check();
+      await user.click(screen.getByRole("button", { name: messages.compare.toggleDeltas }));
+      await user.click(screen.getByRole("button", { name: messages.deltas.view.requests }));
+      expect(
+        screen.getByRole("table", { name: messages.deltas.requestsCaption })
+      ).toBeInTheDocument();
+      check();
     });
   }
 });

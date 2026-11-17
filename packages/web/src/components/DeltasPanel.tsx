@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Ref } from "react";
 import {
   COMPARED_METRICS,
@@ -22,7 +23,9 @@ import type {
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import { Drawer, DrawerBody } from "./Drawer.js";
+import { RequestDeltas } from "./RequestDeltas.js";
 import { RATING_CLASS } from "./MetricsSummary.js";
+import chipStyles from "./AnalysisPanel.module.css";
 import metricsStyles from "./MetricsSummary.module.css";
 import hopsStyles from "./HopsPanel.module.css";
 import styles from "./DeltasPanel.module.css";
@@ -177,12 +180,16 @@ function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison
   );
 }
 
-/** Metrics summary, hosts and third parties of two flows side by side, with B − A for each. */
+type DeltasView = "summary" | "requests";
+const VIEWS: DeltasView[] = ["summary", "requests"];
+
+/**
+ * Two flows side by side, with B − A for each: the summary (metrics, hosts and third parties) or
+ * their requests one by one, picked in the drawer.
+ */
 export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
-  const messages = useMessages();
-  const t = messages.deltas;
-  const lang = useCoreLang();
-  const { metrics, hops, thirdParties, caveats } = comparison;
+  const t = useMessages().deltas;
+  const [view, setView] = useState<DeltasView>("summary");
   return (
     <Drawer
       ref={ref}
@@ -192,99 +199,125 @@ export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
       width="1040px"
       className={styles.panel}
     >
-      <DrawerBody label={t.details} className={metricsStyles.body}>
-        <h3 className={styles.sectionTitle}>{t.metrics}</h3>
-        <table className={`${metricsStyles.table} ${styles.table} ${styles.metricsTable}`}>
-          <caption className={metricsStyles.caption}>{t.metricsCaption}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t.metric}</th>
-              <th scope="col">A · {names.a}</th>
-              <th scope="col">B · {names.b}</th>
-              <th scope="col">Δ</th>
-              <th scope="col">Δ %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {metrics.map((m) => {
-              const unit = UNITS[m.key];
-              return (
-                <tr key={m.key}>
-                  <th scope="row" lang={lang}>
-                    {m.label}
-                    <NoteRefs caveats={caveats} target={m.key} />
-                  </th>
-                  {[m.a, m.b].map((value, i) => {
-                    const rating = rateMetric(m.key, value);
-                    return (
-                      <td
-                        key={i}
-                        className={`${hopsStyles.num} ${RATING_CLASS[rating]}`}
-                        data-rating={rating}
-                      >
-                        {formatMetricValue(value, unit)}
-                        {rating !== "none" && (
-                          <span
-                            className={metricsStyles.srOnly}
-                          >{` (${messages.metrics.rating[rating]})`}</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <DeltaCell text={formatDelta(m.delta, unit)} rating={m.rating} />
-                  <td className={`${hopsStyles.num} ${styles.pct}`}>
-                    {formatDeltaPct(m.deltaPct)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {caveats.length > 0 && (
-          <ol className={styles.notes} aria-label={t.notes}>
-            {caveats.map((c) => (
-              <li key={c.id + c.text} lang={lang}>
-                {c.text}
-              </li>
-            ))}
-          </ol>
-        )}
-
-        <h3 className={styles.sectionTitle}>
-          {t.hosts}
-          <NoteRefs caveats={caveats} target="hosts" />
-        </h3>
-        <table className={`${hopsStyles.table} ${styles.table}`}>
-          <caption className={hopsStyles.caption}>{t.hostsCaption}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t.host}</th>
-              <th scope="col">{t.requestsA}</th>
-              <th scope="col">{t.requestsB}</th>
-              <th scope="col">Δ</th>
-              <th scope="col">{t.medianTtfbA}</th>
-              <th scope="col">{t.medianTtfbB}</th>
-              <th scope="col" title={t.sameUrlsTitle}>
-                {t.sameUrls}
-              </th>
-              <th scope="col" title={t.ttfbDeltaTitle}>
-                {t.ttfbDelta}
-              </th>
-              <th scope="col" className={styles.left}>
-                {t.provider}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {hops.map((pair) => (
-              <HopRow key={pair.host} pair={pair} />
-            ))}
-          </tbody>
-        </table>
-
-        <h3 className={styles.sectionTitle}>{t.thirdParties}</h3>
-        <ThirdPartyDeltas thirdParties={thirdParties} />
-      </DrawerBody>
+      <div className={chipStyles.views} role="group" aria-label={t.views}>
+        {VIEWS.map((name) => (
+          <button
+            key={name}
+            type="button"
+            className={`${chipStyles.chip} ${view === name ? chipStyles.chipActive : ""}`}
+            aria-pressed={view === name}
+            onClick={() => setView(name)}
+          >
+            {t.view[name]}
+          </button>
+        ))}
+      </div>
+      {view === "summary" ? (
+        <SummaryDeltas comparison={comparison} names={names} />
+      ) : (
+        <RequestDeltas requests={comparison.requests} />
+      )}
     </Drawer>
+  );
+}
+
+/** Metrics summary, hosts and third parties of two flows side by side, with B − A for each. */
+function SummaryDeltas({ comparison, names }: Pick<Props, "comparison" | "names">) {
+  const messages = useMessages();
+  const t = messages.deltas;
+  const lang = useCoreLang();
+  const { metrics, hops, thirdParties, caveats } = comparison;
+  return (
+    <DrawerBody label={t.details} className={metricsStyles.body}>
+      <h3 className={styles.sectionTitle}>{t.metrics}</h3>
+      <table className={`${metricsStyles.table} ${styles.table} ${styles.metricsTable}`}>
+        <caption className={metricsStyles.caption}>{t.metricsCaption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t.metric}</th>
+            <th scope="col">A · {names.a}</th>
+            <th scope="col">B · {names.b}</th>
+            <th scope="col">Δ</th>
+            <th scope="col">Δ %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {metrics.map((m) => {
+            const unit = UNITS[m.key];
+            return (
+              <tr key={m.key}>
+                <th scope="row" lang={lang}>
+                  {m.label}
+                  <NoteRefs caveats={caveats} target={m.key} />
+                </th>
+                {[m.a, m.b].map((value, i) => {
+                  const rating = rateMetric(m.key, value);
+                  return (
+                    <td
+                      key={i}
+                      className={`${hopsStyles.num} ${RATING_CLASS[rating]}`}
+                      data-rating={rating}
+                    >
+                      {formatMetricValue(value, unit)}
+                      {rating !== "none" && (
+                        <span
+                          className={metricsStyles.srOnly}
+                        >{` (${messages.metrics.rating[rating]})`}</span>
+                      )}
+                    </td>
+                  );
+                })}
+                <DeltaCell text={formatDelta(m.delta, unit)} rating={m.rating} />
+                <td className={`${hopsStyles.num} ${styles.pct}`}>{formatDeltaPct(m.deltaPct)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {caveats.length > 0 && (
+        <ol className={styles.notes} aria-label={t.notes}>
+          {caveats.map((c) => (
+            <li key={c.id + c.text} lang={lang}>
+              {c.text}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <h3 className={styles.sectionTitle}>
+        {t.hosts}
+        <NoteRefs caveats={caveats} target="hosts" />
+      </h3>
+      <table className={`${hopsStyles.table} ${styles.table}`}>
+        <caption className={hopsStyles.caption}>{t.hostsCaption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t.host}</th>
+            <th scope="col">{t.requestsA}</th>
+            <th scope="col">{t.requestsB}</th>
+            <th scope="col">Δ</th>
+            <th scope="col">{t.medianTtfbA}</th>
+            <th scope="col">{t.medianTtfbB}</th>
+            <th scope="col" title={t.sameUrlsTitle}>
+              {t.sameUrls}
+            </th>
+            <th scope="col" title={t.ttfbDeltaTitle}>
+              {t.ttfbDelta}
+            </th>
+            <th scope="col" className={styles.left}>
+              {t.provider}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {hops.map((pair) => (
+            <HopRow key={pair.host} pair={pair} />
+          ))}
+        </tbody>
+      </table>
+
+      <h3 className={styles.sectionTitle}>{t.thirdParties}</h3>
+      <ThirdPartyDeltas thirdParties={thirdParties} />
+    </DrawerBody>
   );
 }

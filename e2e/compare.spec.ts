@@ -70,28 +70,77 @@ test("the Deltas panel shows the repeat visit loading less", async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+async function openRequests(page: Page) {
+  await page.getByRole("button", { name: "Toggle deltas" }).click();
+  // A click on a drawer still sliding in would scroll the pane sideways to reach its target.
+  await animationsSettled(page);
+  await page
+    .getByRole("group", { name: "Deltas views" })
+    .getByRole("button", { name: "Requests" })
+    .click();
+  const table = page.getByRole("table", { name: "Request deltas" });
+  await expect(table).toBeVisible();
+  return table;
+}
+
+test("the Requests view pairs every request of the cold load with the warm one", async ({
+  page,
+}) => {
+  const errors = await open(page);
+  const table = await openRequests(page);
+
+  // Both loads made the same 34 requests: all paired, none added or removed.
+  const filters = page.getByRole("group", { name: "Filter requests" });
+  await expect(filters.getByRole("button", { name: "All 34" })).toBeVisible();
+  await expect(filters.getByRole("button", { name: "Added 0" })).toBeVisible();
+  await expect(filters.getByRole("button", { name: "Removed 0" })).toBeVisible();
+  await expect(table.getByRole("row")).toHaveCount(35);
+  // The warm load revalidated the document and served the framework from the browser cache.
+  const documentRow = table.getByRole("row", { name: /^webperf-snippets\.nucliweb\.net / });
+  await expect(documentRow.getByRole("cell").nth(8)).toHaveText("200 → 304 (changed)");
+  const framework = table.getByRole("row", { name: /^framework-9387e000915d7b64\.js / });
+  await expect(framework.getByRole("cell").nth(9)).toHaveText("network → browser cache (changed)");
+  await expect(framework.getByRole("cell").nth(7)).toHaveText(/^−47 KB/);
+
+  // The biggest change of time first; a header sorts by another column.
+  const first = () => table.getByRole("row").nth(1).getByRole("rowheader");
+  await expect(first()).toHaveText("591-937c757170f2c1cd.js");
+  await page.getByRole("button", { name: "Sort by Δ size" }).click();
+  await expect(first()).toHaveText("js?id=G-NNX9SYKEV2");
+  expect(errors).toEqual([]);
+});
+
 test("HTML text stays at 12px or larger", async ({ page }) => {
   await open(page);
-  await page.getByRole("button", { name: "Toggle deltas" }).click();
+  await openRequests(page);
 
-  const small = await page.evaluate(() =>
-    [...document.body.querySelectorAll("*")]
-      .filter(
-        (el) =>
-          !(el instanceof SVGElement) &&
-          !el.closest("svg") &&
-          [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) &&
-          el.getBoundingClientRect().width > 0 &&
-          parseFloat(getComputedStyle(el).fontSize) < 12
-      )
-      .map((el) => (el.textContent ?? "").trim().slice(0, 30))
-  );
-  expect(small).toEqual([]);
+  const smallText = () =>
+    page.evaluate(() =>
+      [...document.body.querySelectorAll("*")]
+        .filter(
+          (el) =>
+            !(el instanceof SVGElement) &&
+            !el.closest("svg") &&
+            [...el.childNodes].some(
+              (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()
+            ) &&
+            el.getBoundingClientRect().width > 0 &&
+            parseFloat(getComputedStyle(el).fontSize) < 12
+        )
+        .map((el) => (el.textContent ?? "").trim().slice(0, 30))
+    );
+  expect(await smallText()).toEqual([]);
+  await page
+    .getByRole("group", { name: "Deltas views" })
+    .getByRole("button", { name: "Summary" })
+    .click();
+  await expect(page.getByRole("table", { name: "Metric deltas" })).toBeVisible();
+  expect(await smallText()).toEqual([]);
 });
 
 for (const scheme of ["light", "dark"] as const) {
-  for (const deltas of [false, true]) {
-    test(`axe wcag2a/aa has no violations: ${scheme} theme, ${deltas ? "deltas open" : "third-party step"}`, async ({
+  for (const deltas of [false, "summary", "requests"] as const) {
+    test(`axe wcag2a/aa has no violations: ${scheme} theme, ${deltas ? `deltas open on ${deltas}` : "third-party step"}`, async ({
       browser,
     }) => {
       const context = await browser.newContext({ colorScheme: scheme });
@@ -100,9 +149,11 @@ for (const scheme of ["light", "dark"] as const) {
       const tab = page.getByRole("tab", { name: /Third-party requests/ });
       await tab.click();
       await expect(tab).toHaveAttribute("aria-selected", "true");
-      if (deltas) {
+      if (deltas === "summary") {
         await page.getByRole("button", { name: "Toggle deltas" }).click();
         await expect(page.getByRole("table", { name: "Metric deltas" })).toBeVisible();
+      } else if (deltas === "requests") {
+        await openRequests(page);
       }
       await animationsSettled(page);
       const results = await new AxeBuilder({ page })
@@ -131,5 +182,52 @@ test.describe("mobile", () => {
     const b = await page.locator("#b-diagram-svg").boundingBox();
     expect(a!.height).toBeGreaterThan(100);
     expect(b!.y).toBeGreaterThan(a!.y + a!.height - 1);
+  });
+
+  test("scrolls the request table inside the drawer, its request column in view", async ({
+    page,
+  }) => {
+    await open(page);
+    const table = await openRequests(page);
+    const region = page.getByRole("region", { name: "Request deltas" });
+    await animationsSettled(page);
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390
+    );
+    const box = await region.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(await region.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+
+    await region.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+    const name = table.getByRole("row").nth(1).getByRole("rowheader");
+    const nameBox = await name.boundingBox();
+    expect(nameBox!.x).toBeGreaterThanOrEqual(box!.x - 1);
+    expect(nameBox!.x).toBeLessThan(box!.x + 8);
+  });
+});
+
+test.describe("a comparison of ten thousand requests", () => {
+  const largeUrl = pathToFileURL(
+    resolve(import.meta.dirname, ".output/large-compare/index.html")
+  ).href;
+
+  test("renders the request rows near the view only, and the last ones once scrolled to", async ({
+    page,
+  }) => {
+    await page.goto(largeUrl);
+    await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+    const table = await openRequests(page);
+
+    const count = Number(await table.getAttribute("aria-rowcount")) - 1;
+    expect(count).toBeGreaterThanOrEqual(10_000);
+    const rendered = table.locator("tbody tr[data-index]");
+    expect(await rendered.count()).toBeLessThan(200);
+
+    const region = page.getByRole("region", { name: "Request deltas" });
+    await region.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await expect(table.locator(`tbody tr[data-index="${count - 1}"]`)).toBeVisible();
+    expect(await rendered.count()).toBeLessThan(200);
   });
 });

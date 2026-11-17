@@ -1013,6 +1013,26 @@ describe("JSON output (built CLI)", () => {
     expect(report.kind).toBe("comparison");
     expect(report.a.pages[0].name).toBe("Run 1 · First view");
     expect(report.b.pages[0].name).toBe("Run 1 · Repeat view");
+    // The repeat view requested the document and a1.js again, and not a2.js.
+    const { requestDiff } = report;
+    expect(requestDiff.pages).toEqual({ a: "Run 1 · First view", b: "Run 1 · Repeat view" });
+    expect(
+      requestDiff.pairs.map((p: { match: string; a: { url: string } }) => [p.match, p.a.url])
+    ).toEqual(
+      expect.arrayContaining([
+        ["url", "https://example.com/"],
+        ["url", "https://example.com/a1.js"],
+      ])
+    );
+    expect(requestDiff.pairs[0]).toMatchObject({
+      a: { method: "GET", status: 200, cache: "network" },
+      delta: { startMs: expect.any(Number), durationMs: expect.any(Number) },
+      changes: [],
+    });
+    expect(requestDiff.added).toEqual([]);
+    expect(requestDiff.removed.map((r: { url: string }) => r.url)).toEqual([
+      "https://example.com/a2.js",
+    ]);
   });
 
   it("prints only the JSON to stdout with --format json, notes going to stderr", () => {
@@ -1159,6 +1179,9 @@ describe("text exports (built CLI)", () => {
     const lines = md.stdout.split("\n");
     expect(lines).toContain("## Comparison");
     expect(lines).toContain("| Metric | A | B | Delta | Rating |");
+    expect(lines).toContain("## Requests A vs B");
+    expect(lines).toContain("2 paired · 0 added in B · 1 removed from A");
+    expect(lines).toContain("| Removed from A | Type | Start | Time | Size |");
 
     const csv = runCli([...args, "--format", "csv"]);
     expect(csv.status, csv.stderr).toBe(0);

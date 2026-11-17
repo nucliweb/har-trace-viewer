@@ -10,7 +10,13 @@ import {
 import { tmpdir } from "node:os";
 import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findingsDocument, markdownReport, mermaidReport, requestsCsv } from "@htv/core";
+import {
+  compareFlowRequests,
+  findingsDocument,
+  markdownReport,
+  mermaidReport,
+  requestsCsv,
+} from "@htv/core";
 import type { Flow } from "@htv/core";
 import { buildFlowInjection } from "./serialize";
 import type { TextFormat } from "./args";
@@ -65,12 +71,19 @@ export function bundleHtml(outputDir: string): void {
 }
 
 /**
- * The report as JSON for other tools: the full flow (or both flows of a comparison), with the
- * htv version that produced it. Each flow carries its own data-model version.
+ * The report as JSON for other tools: the full flow (or both flows of a comparison, with their
+ * requests compared one by one), with the htv version that produced it. Each flow carries its
+ * own data-model version.
  */
 export function reportJson({ flow, compare }: Report, htvVersion: string): string {
   const body = compare
-    ? { htvVersion, kind: "comparison", a: flow, b: compare }
+    ? {
+        htvVersion,
+        kind: "comparison",
+        a: flow,
+        b: compare,
+        requestDiff: compareFlowRequests(flow, compare),
+      }
     : { htvVersion, kind: "flow", flow };
   return JSON.stringify(body, null, 2);
 }
