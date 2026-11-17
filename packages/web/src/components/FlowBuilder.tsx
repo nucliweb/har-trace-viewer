@@ -3,6 +3,7 @@ import { isClientRegion } from "@htv/core";
 import type { ClientRegion, Flow, FlowOptions, PageFlow } from "@htv/core";
 import { useFileDrop } from "../hooks/useFileDrop.js";
 import { useMessages } from "../i18n/context.js";
+import controls from "./flow-builder/PageControls.module.css";
 import styles from "./FlowBuilder.module.css";
 import { CompareTarget } from "./flow-builder/CompareTarget.js";
 import { DemoGlyph, Guide } from "./flow-builder/Guide.js";
@@ -170,7 +171,7 @@ export function FlowBuilder({
             </label>
             <select
               id={regionSelectId}
-              className={styles.regionSelect}
+              className={controls.regionSelect}
               value={clientRegion}
               onChange={(e) => {
                 const value = e.target.value;

@@ -1,0 +1,105 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-panel);
+  border: 1px solid var(--color-border2);
+  border-radius: 8px;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.rowDragging {
+  border-color: var(--color-cyan);
+  background: color-mix(in srgb, var(--color-cyan) 5%, var(--color-panel));
+}
+
+.removeBtn {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.removeBtn:not(:disabled):hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.removeBtn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.regionSelect {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text);
+  background: var(--color-panel);
+  border: 1px solid var(--color-field-border);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  transition: border-color var(--transition-fast);
+}
+
+.regionSelect:hover,
+.regionSelect:focus-visible {
+  border-color: var(--color-cyan);
+}
+
+.pairField {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.pairLabel {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-text2);
+}
+
+.regionSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .row {
+    display: grid;
+    grid-template-columns: auto 1fr 44px;
+    grid-template-areas:
+      "order name remove"
+      "har har har"
+      "trace trace trace";
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+  }
+
+  .removeBtn {
+    grid-area: remove;
+    width: 44px;
+    height: 44px;
+  }
+
+  .regionSelect {
+    height: 44px;
+    width: 100%;
+  }
+}

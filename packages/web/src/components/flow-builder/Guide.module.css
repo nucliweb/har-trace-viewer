@@ -1,0 +1,95 @@
+.demoGlyph {
+  width: 72px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.demoGlyphPath {
+  fill: none;
+  stroke: var(--color-cyan);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.demoGlyphNode {
+  fill: var(--color-panel);
+  stroke: var(--color-cyan);
+  stroke-width: 1.5;
+}
+
+.demoGlyphOrigin {
+  fill: var(--color-panel);
+  stroke: var(--color-green);
+  stroke-width: 1.5;
+}
+
+.guide {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.guideHeading {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.guideColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.guideTitle {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--color-cyan);
+  margin-bottom: var(--space-xs);
+}
+
+.guideSteps {
+  list-style: none;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.guideSteps li {
+  counter-increment: step;
+  position: relative;
+  padding-left: var(--space-lg);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--color-text2);
+}
+
+.guideSteps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-border2);
+  border-radius: 50%;
+  font-size: var(--fs-meta);
+  line-height: 14px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+@media (max-width: 640px) {
+  .demoGlyph {
+    display: none;
+  }
+
+  .guideColumns {
+    grid-template-columns: 1fr;
+  }
+}

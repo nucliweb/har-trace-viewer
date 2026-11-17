@@ -21,6 +21,7 @@ import type {
   ThirdPartyComparison,
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import { RATING_CLASS } from "./MetricsSummary.js";
 import metricsStyles from "./MetricsSummary.module.css";
 import hopsStyles from "./HopsPanel.module.css";
@@ -183,16 +184,15 @@ export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
   const lang = useCoreLang();
   const { metrics, hops, thirdParties, caveats } = comparison;
   return (
-    <div ref={ref} className={`${metricsStyles.panel} ${styles.panel}`}>
-      <div className={metricsStyles.header}>
-        <h2 className={metricsStyles.title}>{t.title}</h2>
-        <button className={metricsStyles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
-      {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={metricsStyles.body} role="region" aria-label={t.details} tabIndex={0}>
+    <Drawer
+      ref={ref}
+      title={t.title}
+      closeLabel={t.close}
+      onClose={onClose}
+      width="1040px"
+      className={styles.panel}
+    >
+      <DrawerBody label={t.details} className={metricsStyles.body}>
         <h3 className={styles.sectionTitle}>{t.metrics}</h3>
         <table className={`${metricsStyles.table} ${styles.table} ${styles.metricsTable}`}>
           <caption className={metricsStyles.caption}>{t.metricsCaption}</caption>
@@ -284,7 +284,7 @@ export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
 
         <h3 className={styles.sectionTitle}>{t.thirdParties}</h3>
         <ThirdPartyDeltas thirdParties={thirdParties} />
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

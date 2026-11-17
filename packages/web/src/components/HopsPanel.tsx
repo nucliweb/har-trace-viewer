@@ -10,6 +10,7 @@ import type { HostHop, ThirdPartyReport } from "@htv/core";
 import { useMemo } from "react";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import styles from "./HopsPanel.module.css";
 
 interface Props {
@@ -105,22 +106,17 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
   );
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.headerText}>
-          <span className={styles.title}>{t.title}</span>{" "}
-          <span className={styles.pageLabel}>{pageLabel}</span>
-        </h2>
-        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
+    <Drawer
+      title={t.title}
+      subtitle={pageLabel}
+      closeLabel={t.close}
+      onClose={onClose}
+      width="1160px"
+    >
       <p className={styles.summary}>
         {t.summary(hops.length, summary.providers.length, summary.regions.length)}
       </p>
-      {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
+      <DrawerBody label={t.details} className={styles.body}>
         <table className={styles.table}>
           <caption className={styles.caption}>{t.caption}</caption>
           <thead>
@@ -178,7 +174,7 @@ export function HopsPanel({ hops, thirdParties, pageLabel, onClose }: Props) {
           </tbody>
         </table>
         {thirdParties && <ThirdPartiesSection report={thirdParties} />}
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

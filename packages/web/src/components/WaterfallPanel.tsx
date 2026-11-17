@@ -45,6 +45,7 @@ import {
 } from "../lib/view-state.js";
 import type { WaterfallView } from "../lib/view-state.js";
 import type { WindowItem } from "../lib/row-window.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import styles from "./WaterfallPanel.module.css";
 
 interface Props {
@@ -721,16 +722,15 @@ export function WaterfallPanel({
   };
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.headerText}>
-          <span className={styles.headerTitle}>{t.title}</span>{" "}
-          <span className={styles.pageLabel}>{pageLabel}</span>
-        </h2>
-        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
+    <Drawer
+      title={t.title}
+      subtitle={pageLabel}
+      closeLabel={t.close}
+      onClose={onClose}
+      width="1040px"
+      coversPhone
+      className={styles.panel}
+    >
       <div className={styles.filters}>
         <div className={styles.chips} role="group" aria-label={t.types}>
           {types.map((type) => {
@@ -844,15 +844,7 @@ export function WaterfallPanel({
           </div>
         </div>
       </div>
-      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
-      <div
-        ref={setScroller}
-        className={styles.body}
-        role="region"
-        aria-label={t.details}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-        tabIndex={0}
-      >
+      <DrawerBody ref={setScroller} label={t.details}>
         <div className={view === "table" ? styles.tableView : styles.table}>
           {view === "waterfall" && (
             <>
@@ -923,7 +915,7 @@ export function WaterfallPanel({
             </ol>
           )}
         </div>
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

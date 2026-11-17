@@ -22,313 +22,11 @@
   margin: 0;
 }
 
-/* ── Page list ─────────────────────────────────────────────────────────────── */
-
 .pages {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
-
-/* ── Page selection ────────────────────────────────────────────────────────── */
-
-.needsHar {
-  margin: 0;
-  padding: 0 var(--space-md);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text);
-}
-
-.rowGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs, 4px);
-}
-
-.checklist {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px dashed var(--color-border2);
-  border-radius: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text2);
-}
-
-.checklistLegend {
-  padding: 0 var(--space-xs, 4px);
-}
-
-.checklistToggle {
-  font: inherit;
-  color: var(--color-cyan);
-  background: transparent;
-  border: 1px solid var(--color-border2);
-  border-radius: 3px;
-  padding: var(--space-2xs) var(--space-sm);
-}
-
-.checklistToggle:hover {
-  border-color: var(--color-cyan);
-}
-
-.checklistItems {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs, 4px) var(--space-md);
-}
-
-.checklistItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
-/* ── Row ───────────────────────────────────────────────────────────────────── */
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-panel);
-  border: 1px solid var(--color-border2);
-  border-radius: 8px;
-  transition:
-    border-color var(--transition-fast),
-    background var(--transition-fast);
-}
-
-.rowDragging {
-  border-color: var(--color-cyan);
-  background: color-mix(in srgb, var(--color-cyan) 5%, var(--color-panel));
-}
-
-/* ── Order buttons ─────────────────────────────────────────────────────────── */
-
-.rowOrder {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  flex-shrink: 0;
-}
-
-.orderBtn {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--color-text2);
-  background: transparent;
-  border: 1px solid var(--color-border2);
-  border-radius: 3px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.orderBtn:not(:disabled):hover {
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-}
-
-.orderBtn:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-
-/* ── Name input ────────────────────────────────────────────────────────────── */
-
-.nameInput {
-  font-family: var(--font-mono);
-  font-size: var(--fs-body);
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-field-border);
-  border-radius: 4px;
-  padding: 0 var(--space-sm);
-  height: 34px;
-  width: 160px;
-  flex-shrink: 0;
-  transition: border-color var(--transition-fast);
-}
-
-.nameInput:focus-visible {
-  border-color: var(--color-cyan);
-}
-
-.nameInput::placeholder {
-  color: var(--color-muted);
-}
-
-/* ── HAR zone ──────────────────────────────────────────────────────────────── */
-
-.harZone {
-  flex: 1;
-  min-width: 0;
-}
-
-.harBtn {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text2);
-  background: var(--color-surface);
-  border: 1px dashed var(--color-border2);
-  border-radius: 4px;
-  height: 34px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-xs);
-  padding: 0 var(--space-sm);
-  cursor: pointer;
-  transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast),
-    background var(--transition-fast);
-  overflow: hidden;
-}
-
-.harBtn:hover {
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-  border-style: solid;
-}
-
-.harLoaded {
-  border-style: solid;
-  border-color: var(--color-green);
-  color: var(--color-green);
-}
-
-.harLoaded:hover {
-  border-color: var(--color-green);
-  color: var(--color-green);
-  opacity: 0.8;
-}
-
-.harError {
-  border-style: solid;
-  border-color: var(--color-red);
-  color: var(--color-red);
-  background: color-mix(in srgb, var(--color-red) 6%, var(--color-surface));
-}
-
-.harIcon {
-  font-size: 14px;
-  color: var(--color-muted);
-}
-
-.harName {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.errorText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Trace zone ────────────────────────────────────────────────────────────── */
-
-.traceZone {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-.traceBtn {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text2);
-  background: transparent;
-  border: 1px solid var(--color-border2);
-  border-radius: 4px;
-  padding: 0 var(--space-sm);
-  height: 34px;
-  white-space: nowrap;
-  transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.traceBtn:not(:disabled):hover {
-  border-color: var(--color-cyan);
-  color: var(--color-cyan);
-}
-
-.traceBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.traceLoaded {
-  border-color: var(--color-green);
-  color: var(--color-green);
-}
-
-.traceLoaded:hover {
-  opacity: 0.8;
-}
-
-.traceErrorText {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-red);
-  max-width: 160px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Remove button ─────────────────────────────────────────────────────────── */
-
-.removeBtn {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  line-height: 1;
-  color: var(--color-muted);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.removeBtn:not(:disabled):hover {
-  border-color: var(--color-red);
-  color: var(--color-red);
-}
-
-.removeBtn:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-}
-
-/* ── Footer actions ─────────────────────────────────────────────────────────── */
 
 .footer {
   display: flex;
@@ -354,23 +52,6 @@
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   color: var(--color-text2);
-}
-
-.regionSelect {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text);
-  background: var(--color-panel);
-  border: 1px solid var(--color-field-border);
-  border-radius: 4px;
-  padding: 0 var(--space-sm);
-  height: 34px;
-  transition: border-color var(--transition-fast);
-}
-
-.regionSelect:hover,
-.regionSelect:focus-visible {
-  border-color: var(--color-cyan);
 }
 
 .addBtn {
@@ -419,68 +100,6 @@
   cursor: not-allowed;
 }
 
-/* ── Comparison ─────────────────────────────────────────────────────────────── */
-
-.compare {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md) var(--space-md);
-  border: 1px dashed var(--color-border2);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.compareLegend {
-  padding: 0 var(--space-xs);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  color: var(--color-text2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.compareHint {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-text2);
-}
-
-.pairField {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.pairLabel {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  color: var(--color-text2);
-}
-
-.regionSelect:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ── Shared ─────────────────────────────────────────────────────────────────── */
-
-.hiddenInput {
-  display: none;
-}
-
-.progressText {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--color-cyan);
-  white-space: nowrap;
-}
-
-/* ── Demo callout ───────────────────────────────────────────────────────────── */
-
 .demo {
   display: flex;
   align-items: center;
@@ -492,31 +111,6 @@
   border: 1px solid var(--color-border2);
   border-left: 3px solid var(--color-cyan);
   border-radius: 8px;
-}
-
-.demoGlyph {
-  width: 72px;
-  height: 32px;
-  flex-shrink: 0;
-}
-
-.demoGlyphPath {
-  fill: none;
-  stroke: var(--color-cyan);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 3;
-}
-
-.demoGlyphNode {
-  fill: var(--color-panel);
-  stroke: var(--color-cyan);
-  stroke-width: 1.5;
-}
-
-.demoGlyphOrigin {
-  fill: var(--color-panel);
-  stroke: var(--color-green);
-  stroke-width: 1.5;
 }
 
 .demoText {
@@ -570,71 +164,6 @@
   cursor: progress;
 }
 
-/* ── How to get the files ───────────────────────────────────────────────────── */
-
-.guide {
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-md);
-}
-
-.guideHeading {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-bottom: var(--space-sm);
-}
-
-.guideColumns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-}
-
-.guideTitle {
-  font-family: var(--font-mono);
-  font-size: var(--fs-body);
-  font-weight: 700;
-  color: var(--color-cyan);
-  margin-bottom: var(--space-xs);
-}
-
-.guideSteps {
-  list-style: none;
-  counter-reset: step;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.guideSteps li {
-  counter-increment: step;
-  position: relative;
-  padding-left: var(--space-lg);
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--color-text2);
-}
-
-.guideSteps li::before {
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 1px;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--color-border2);
-  border-radius: 50%;
-  font-size: var(--fs-meta);
-  line-height: 14px;
-  text-align: center;
-  color: var(--color-muted);
-}
-
-/* ── Mobile ─────────────────────────────────────────────────────────────────── */
-
 @media (max-width: 640px) {
   .builder {
     gap: var(--space-md);
@@ -649,79 +178,12 @@
     padding: var(--space-md);
   }
 
-  .demoGlyph {
-    display: none;
-  }
-
   .demoText {
     flex-basis: 100%;
   }
 
   .demoBtn {
     width: 100%;
-  }
-
-  .guideColumns {
-    grid-template-columns: 1fr;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: auto 1fr 44px;
-    grid-template-areas:
-      "order name remove"
-      "har har har"
-      "trace trace trace";
-    gap: var(--space-sm);
-    padding: var(--space-sm);
-  }
-
-  .rowOrder {
-    grid-area: order;
-    flex-direction: row;
-    gap: var(--space-xs);
-  }
-
-  .orderBtn {
-    width: 44px;
-    height: 44px;
-  }
-
-  .nameInput {
-    grid-area: name;
-    width: 100%;
-    min-width: 0;
-    height: 44px;
-    font-size: 16px; /* keeps iOS from zooming on focus */
-  }
-
-  .removeBtn {
-    grid-area: remove;
-    width: 44px;
-    height: 44px;
-  }
-
-  .harZone {
-    grid-area: har;
-  }
-
-  .traceZone {
-    grid-area: trace;
-    flex-wrap: wrap;
-  }
-
-  .harBtn {
-    height: 44px;
-  }
-
-  .traceBtn {
-    height: 44px;
-    padding: 0 var(--space-md);
-  }
-
-  .traceErrorText {
-    max-width: none;
-    white-space: normal;
   }
 
   .footer {
@@ -742,11 +204,6 @@
     gap: var(--space-xs);
   }
 
-  .regionSelect {
-    height: 44px;
-    width: 100%;
-  }
-
   .addBtn {
     height: 44px;
   }
@@ -755,8 +212,6 @@
     height: 48px;
   }
 }
-
-/* ── Drop anywhere ─────────────────────────────────────────────────────────── */
 
 .dropOverlay {
   position: fixed;

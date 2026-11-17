@@ -595,7 +595,7 @@ test("bundled report falls back to main-thread parsing when the worker chunk is 
 // The drawers dock on the right; the ones with most to read open widest.
 const drawerTitled = (page: Page, title: string | RegExp) =>
   page
-    .locator('[class*="_panel_"], [class*="_sidebar_"]')
+    .locator('[class*="_drawer_"]')
     .filter({ has: page.getByText(title, { exact: true }) })
     .last();
 

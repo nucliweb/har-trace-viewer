@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useCoreLang, useMessages } from "../../i18n/context.js";
-import styles from "../FlowBuilder.module.css";
+import styles from "./FileZones.module.css";
 import {
   describeEntryError,
   describeProgress,

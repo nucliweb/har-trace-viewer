@@ -10,89 +10,6 @@
     var(--row-pad) + var(--col-name) + var(--col-type) + var(--col-status) + var(--col-size) + 4 *
       var(--col-gap)
   );
-
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 1040px;
-  max-width: 100%;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border2);
-  display: flex;
-  flex-direction: column;
-  z-index: 20;
-  animation: slideIn 180ms ease;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.headerText {
-  font-size: inherit;
-  font-weight: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  flex: 1;
-  min-width: 0;
-}
-
-.headerTitle {
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  color: var(--color-cyan);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.pageLabel {
-  font-size: var(--fs-meta);
-  font-weight: 400;
-  color: var(--color-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.closeBtn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border2);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--color-muted);
-  font-size: var(--fs-meta);
-  cursor: pointer;
-  transition:
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.closeBtn:hover {
-  border-color: var(--color-red);
-  color: var(--color-red);
 }
 
 /* ── Filter bar ─────────────────────────────────────────────────────────────── */
@@ -176,8 +93,7 @@
 
 .select:focus-visible,
 .search:focus-visible,
-.chip:focus-visible,
-.body:focus-visible {
+.chip:focus-visible {
   outline-offset: 1px;
 }
 
@@ -286,13 +202,6 @@
 /* ── Rows ───────────────────────────────────────────────────────────────────── */
 
 /* Scrolls both ways: on a phone the rows keep their columns and the axis its width. */
-.body {
-  overflow: auto;
-  flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border2) transparent;
-}
-
 .table {
   position: relative;
   min-width: calc(var(--info) + 360px + var(--row-pad));
@@ -677,13 +586,6 @@
   .panel {
     --col-name: 140px;
     --col-type: 64px;
-
-    position: fixed;
-    /* Never above the screen, once the view has scrolled the toolbar out of it. */
-    inset: max(var(--toolbar-bottom, 0px), 0px) 0 0;
-    width: 100%;
-    border-left: none;
-    z-index: 50;
   }
 
   .chips {
@@ -704,12 +606,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel {
-    animation: none;
-  }
-
-  .chip,
-  .closeBtn {
+  .chip {
     transition: none;
   }
 }

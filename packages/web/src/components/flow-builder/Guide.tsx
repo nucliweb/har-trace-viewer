@@ -1,5 +1,5 @@
 import { useMessages } from "../../i18n/context.js";
-import styles from "../FlowBuilder.module.css";
+import styles from "./Guide.module.css";
 
 /** Mini diagram motif: browser, edge and origin joined by a dashed request path. */
 export function DemoGlyph() {

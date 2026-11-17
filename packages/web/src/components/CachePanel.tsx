@@ -10,6 +10,7 @@ import type {
 } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import { SEVERITY_ICON } from "../lib/severity-icons.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import styles from "./CachePanel.module.css";
 
 interface Props {
@@ -149,20 +150,14 @@ export function CachePanel({ report, network, pageLabel, hasDocument = true, onC
     .join(", ");
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.headerText}>
-          <span className={styles.headerTitle}>{t.title}</span>{" "}
-          <span className={styles.pageLabel}>{pageLabel}</span>
-        </h2>
-        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
-
-      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
+    <Drawer
+      title={t.title}
+      subtitle={pageLabel}
+      closeLabel={t.close}
+      onClose={onClose}
+      width="520px"
+    >
+      <DrawerBody label={t.details}>
         {/* Document, or the primary request of a page without one */}
         <section className={styles.section}>
           <div className={styles.sectionTitle}>{hasDocument ? t.document : t.primaryRequest}</div>
@@ -298,7 +293,7 @@ export function CachePanel({ report, network, pageLabel, hasDocument = true, onC
             )}
           </section>
         )}
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Changed
+
+- Slide in the metrics, hops and deltas drawers of the web app when they open, like the other drawers, and give every drawer the same square close button. No drawer animates when the system asks for reduced motion.
+
 ## [0.18.0] - 2026-11-17
 
 ### Changed

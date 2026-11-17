@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
 import { listHarPages } from "@htv/core";
 import { useMessages } from "../../i18n/context.js";
-import styles from "../FlowBuilder.module.css";
+import controls from "./PageControls.module.css";
+import styles from "./CompareTarget.module.css";
 import { FileZones, NeedsHarNote } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
@@ -25,7 +26,7 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
       <legend className={styles.compareLegend}>{t.compareLegend}</legend>
       <p className={styles.compareHint}>{t.compareHint}</p>
       <div
-        className={`${styles.row} ${dragging ? styles.rowDragging : ""}`}
+        className={`${controls.row} ${dragging ? controls.rowDragging : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -48,7 +49,7 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
           traceInputLabel={t.traceToCompare}
         />
         <button
-          className={styles.removeBtn}
+          className={controls.removeBtn}
           onClick={onRemove}
           disabled={!entry.har && !entry.harError && !entry.trace && !entry.traceError}
           title={t.removeComparison}
@@ -59,13 +60,13 @@ export function CompareTarget({ entry, onHarFile, onTraceFile, onPageChange, onR
       </div>
       <NeedsHarNote entry={entry} />
       {pages && (
-        <span className={styles.pairField}>
-          <label className={styles.pairLabel} htmlFor={pageSelectId}>
+        <span className={controls.pairField}>
+          <label className={controls.pairLabel} htmlFor={pageSelectId}>
             {t.page}
           </label>
           <select
             id={pageSelectId}
-            className={styles.regionSelect}
+            className={controls.regionSelect}
             value={entry.selectedPageIds[0]}
             onChange={(e) => onPageChange(e.target.value)}
           >

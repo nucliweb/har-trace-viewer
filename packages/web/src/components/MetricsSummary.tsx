@@ -13,6 +13,7 @@ import type { Flow, MainThreadReport, MetricRating, PageMetricsSummary } from "@
 import { useMemo } from "react";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import styles from "./MetricsSummary.module.css";
 
 interface Props {
@@ -144,16 +145,8 @@ export function MetricsSummary({ flow, onClose }: Props) {
   );
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>{t.title}</h2>
-        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
-      {/* Scrollable region must be keyboard focusable (axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
+    <Drawer title={t.title} closeLabel={t.close} onClose={onClose} width="520px">
+      <DrawerBody label={t.details} className={styles.body}>
         <table className={styles.table}>
           <caption className={styles.caption}>{t.caption}</caption>
           <thead>
@@ -190,7 +183,7 @@ export function MetricsSummary({ flow, onClose }: Props) {
         {mainThreads.map(({ report, label }) => (
           <MainThreadSection key={label} report={report} label={label} />
         ))}
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

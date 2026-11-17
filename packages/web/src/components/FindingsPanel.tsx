@@ -11,6 +11,7 @@ import type { Finding, FindingEvidence, FindingSeverity } from "@htv/core";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import { SEVERITY_ICON } from "../lib/severity-icons.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import styles from "./FindingsPanel.module.css";
 
 interface Props {
@@ -124,19 +125,14 @@ function SeverityGroup({ severity, findings }: { severity: FindingSeverity; find
 export function FindingsPanel({ findings, pageLabel, onClose }: Props) {
   const t = useMessages().findings;
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.headerText}>
-          <span className={styles.headerTitle}>{t.title}</span>{" "}
-          <span className={styles.pageLabel}>{pageLabel}</span>
-        </h2>
-        <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-          ✕
-        </button>
-      </div>
-      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={t.details} tabIndex={0}>
+    <Drawer
+      title={t.title}
+      subtitle={pageLabel}
+      closeLabel={t.close}
+      onClose={onClose}
+      width="560px"
+    >
+      <DrawerBody label={t.details}>
         {findings.length === 0 ? (
           <p className={styles.empty}>{t.empty}</p>
         ) : (
@@ -147,7 +143,7 @@ export function FindingsPanel({ findings, pageLabel, onClose }: Props) {
             ) : null;
           })
         )}
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }

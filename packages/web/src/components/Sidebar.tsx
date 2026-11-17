@@ -1,7 +1,8 @@
 import { useState } from "react";
-import type { CSSProperties, ElementType, ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 import type { ResourceType } from "@htv/core";
 import { useMessages } from "../i18n/context.js";
+import { Drawer, DrawerBody } from "./Drawer.js";
 import { ResourceTypeIcon } from "./ResourceTypeIcon.js";
 import styles from "./Sidebar.module.css";
 
@@ -24,25 +25,18 @@ export function Sidebar({
 }: SidebarProps) {
   const t = useMessages().sidebar;
   return (
-    <div
-      className={`${styles.sidebar} ${side === "left" ? styles.left : styles.right}`}
-      style={{ "--sidebar-width": `${width}px` } as CSSProperties}
+    <Drawer
+      title={title}
+      note={subtitle}
+      closeLabel={t.close}
+      onClose={onClose}
+      side={side}
+      width={`${width}px`}
     >
-      <div className={styles.header}>
-        <h2 className={styles.headerTitle}>{title}</h2>
-        {subtitle && <span className={styles.headerCount}>{subtitle}</span>}
-        {onClose && (
-          <button className={styles.closeBtn} onClick={onClose} aria-label={t.close}>
-            ✕
-          </button>
-        )}
-      </div>
-      {/* Scrollable region must be keyboard focusable (WCAG 2.1.1, axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className={styles.body} role="region" aria-label={title} tabIndex={0}>
+      <DrawerBody label={title} className={styles.body}>
         {children}
-      </div>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }
 

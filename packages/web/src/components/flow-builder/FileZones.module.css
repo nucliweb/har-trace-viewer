@@ -1,0 +1,163 @@
+.needsHar {
+  margin: 0;
+  padding: 0 var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text);
+}
+
+.harZone {
+  flex: 1;
+  min-width: 0;
+}
+
+.harBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border2);
+  border-radius: 4px;
+  height: 34px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    background var(--transition-fast);
+  overflow: hidden;
+}
+
+.harBtn:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  border-style: solid;
+}
+
+.harLoaded {
+  border-style: solid;
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.harLoaded:hover {
+  border-color: var(--color-green);
+  color: var(--color-green);
+  opacity: 0.8;
+}
+
+.harError {
+  border-style: solid;
+  border-color: var(--color-red);
+  color: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 6%, var(--color-surface));
+}
+
+.harIcon {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.harName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.errorText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traceZone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.traceBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  white-space: nowrap;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.traceBtn:not(:disabled):hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.traceBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.traceLoaded {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.traceLoaded:hover {
+  opacity: 0.8;
+}
+
+.traceErrorText {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-red);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.progressText {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-cyan);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .harZone {
+    grid-area: har;
+  }
+
+  .traceZone {
+    grid-area: trace;
+    flex-wrap: wrap;
+  }
+
+  .harBtn {
+    height: 44px;
+  }
+
+  .traceBtn {
+    height: 44px;
+    padding: 0 var(--space-md);
+  }
+
+  .traceErrorText {
+    max-width: none;
+    white-space: normal;
+  }
+}

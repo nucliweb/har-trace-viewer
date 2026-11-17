@@ -1,0 +1,146 @@
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: min(var(--drawer-width), 100%);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+/* The drawers dock on the right; the one that docks on the left sits under them. */
+.right {
+  right: 0;
+  border-left: 1px solid var(--color-border2);
+  z-index: 20;
+  animation: slideInRight 180ms ease;
+}
+
+.left {
+  left: 0;
+  border-right: 1px solid var(--color-border2);
+  z-index: 10;
+  animation: slideInLeft 180ms ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.heading {
+  font-size: inherit;
+  font-weight: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--color-cyan);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+/* A target of 24 by 24 pixels, the minimum of WCAG 2.5.8. */
+.closeBtn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--fs-meta);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.body {
+  overflow: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border2) transparent;
+}
+
+.body:focus-visible {
+  outline-offset: 1px;
+}
+
+/* Phones: the pane is too short for a drawer that needs rows, so it takes the screen below the
+   toolbar (the whole screen where the view sets no --toolbar-bottom). */
+@media (max-width: 640px) {
+  .coversPhone {
+    position: fixed;
+    /* Never above the screen, once the view has scrolled the toolbar out of it. */
+    inset: max(var(--toolbar-bottom, 0px), 0px) 0 0;
+    width: 100%;
+    border-left: none;
+    z-index: 50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
+
+  .closeBtn {
+    transition: none;
+  }
+}

@@ -2,7 +2,8 @@ import { useId } from "react";
 import { listHarPages } from "@htv/core";
 import type { ParsedHar } from "@htv/core";
 import { useMessages } from "../../i18n/context.js";
-import styles from "../FlowBuilder.module.css";
+import controls from "./PageControls.module.css";
+import styles from "./PageRow.module.css";
 import { FileZones, NeedsHarNote } from "./FileZones.js";
 import { isEntryParsing, pageOptionLabel } from "./page-entry.js";
 import type { PageEntry } from "./page-entry.js";
@@ -59,7 +60,7 @@ export function PageRow({
   return (
     <div className={styles.rowGroup}>
       <div
-        className={`${styles.row} ${isDraggingOver ? styles.rowDragging : ""}`}
+        className={`${controls.row} ${isDraggingOver ? controls.rowDragging : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           onDragOver();
@@ -104,7 +105,7 @@ export function PageRow({
 
         {journey && (
           <button
-            className={styles.removeBtn}
+            className={controls.removeBtn}
             onClick={onRemove}
             disabled={total === 1}
             title={t.removePage}
@@ -167,13 +168,13 @@ function ComparePagesPicker({ har, pair, enabled, onChange }: ComparePagesPicker
       {/* The page selectors show once the comparison is asked for, never greyed out. */}
       {enabled &&
         ([0, 1] as const).map((side) => (
-          <span key={side} className={styles.pairField}>
-            <label className={styles.pairLabel} htmlFor={side === 0 ? idA : idB}>
+          <span key={side} className={controls.pairField}>
+            <label className={controls.pairLabel} htmlFor={side === 0 ? idA : idB}>
               {side === 0 ? "A" : "B"}
             </label>
             <select
               id={side === 0 ? idA : idB}
-              className={styles.regionSelect}
+              className={controls.regionSelect}
               value={pair[side]}
               onChange={(e) => pick(side, e.target.value)}
             >

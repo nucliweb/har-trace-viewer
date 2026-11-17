@@ -1,0 +1,129 @@
+.rowGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 4px);
+}
+
+.checklist {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px dashed var(--color-border2);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--color-text2);
+}
+
+.checklistLegend {
+  padding: 0 var(--space-xs, 4px);
+}
+
+.checklistToggle {
+  font: inherit;
+  color: var(--color-cyan);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 3px;
+  padding: var(--space-2xs) var(--space-sm);
+}
+
+.checklistToggle:hover {
+  border-color: var(--color-cyan);
+}
+
+.checklistItems {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs, 4px) var(--space-md);
+}
+
+.checklistItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.rowOrder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  flex-shrink: 0;
+}
+
+.orderBtn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text2);
+  background: transparent;
+  border: 1px solid var(--color-border2);
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.orderBtn:not(:disabled):hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+}
+
+.orderBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.nameInput {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-field-border);
+  border-radius: 4px;
+  padding: 0 var(--space-sm);
+  height: 34px;
+  width: 160px;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.nameInput:focus-visible {
+  border-color: var(--color-cyan);
+}
+
+.nameInput::placeholder {
+  color: var(--color-muted);
+}
+
+@media (max-width: 640px) {
+  .rowOrder {
+    grid-area: order;
+    flex-direction: row;
+    gap: var(--space-xs);
+  }
+
+  .orderBtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nameInput {
+    grid-area: name;
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    font-size: 16px; /* keeps iOS from zooming on focus */
+  }
+}
