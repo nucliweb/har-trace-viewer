@@ -3,6 +3,7 @@ import { ParseError } from "./errors.js";
 import { profileMainThread } from "./main-thread.js";
 import type { RawTraceEvent } from "./main-thread.js";
 import { computeCls, computeInp } from "./web-vitals.js";
+import { maskSecrets } from "../analysis/secret-rules.js";
 
 interface RawTrace {
   traceEvents: RawTraceEvent[];
@@ -273,8 +274,13 @@ function collectRequests(
   return lastPaintMs === null ? sent : sent.filter((r) => r.sentAtMs <= lastPaintMs);
 }
 
+/**
+ * The trace's metrics, requests and main-thread profile, with the secrets of what it keeps
+ * (URLs, node names) masked by the rules the HAR parser applies: a request masks the same way
+ * in both, so the two still match.
+ */
 export function parseTrace(raw: RawTrace): ParsedTrace {
-  return parseTraceEvents(raw.traceEvents);
+  return maskSecrets(parseTraceEvents(raw.traceEvents));
 }
 
 export function parseTraceJson(json: string): ParsedTrace {

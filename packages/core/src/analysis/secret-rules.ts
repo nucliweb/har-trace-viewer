@@ -1,7 +1,8 @@
 /**
  * The rules that say what is a secret in a header or a URL, and how it is masked: one set,
- * shared by the parser (which masks the header lists it keeps) and the redaction of a HAR or a
- * flow (redact.ts), which adds bodies, cookie lists and hostnames.
+ * shared by the parsers (which mask everything they keep of a HAR or a trace) and the redaction
+ * of a HAR or a flow (redact.ts), which adds bodies, cookie lists, numbered placeholders and
+ * hostnames.
  */
 
 /** How many values each rule replaced. */
@@ -18,7 +19,10 @@ export interface RedactionReport {
   hosts: number;
   /** Email addresses. */
   emails: number;
-  /** JWTs outside query strings and headers (in paths, titles, descriptions). */
+  /**
+   * JWTs outside query strings and headers (in paths, titles, descriptions), and path segments
+   * that look like a token.
+   */
   tokens: number;
 }
 
@@ -77,12 +81,13 @@ const JWT = /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*/g;
 const HEX_RUN = /[0-9a-f]{32,}/i;
 const BASE64_RUN = /[A-Za-z0-9+/_-]{32,}/g;
 
+// Mixed case and digits, as a random token has; a word, a slug or a hex hash has not.
+const isRandomRun = (run: string) => /[a-z]/.test(run) && /[A-Z]/.test(run) && /\d/.test(run);
+
 // A run of base64 long enough to be a secret: mixed case and digits, unlike a slug or a word.
 function looksLikeToken(value: string): boolean {
   if (new RegExp(JWT.source).test(value) || HEX_RUN.test(value)) return true;
-  return (value.match(BASE64_RUN) ?? []).some(
-    (run) => /[a-z]/.test(run) && /[A-Z]/.test(run) && /\d/.test(run)
-  );
+  return (value.match(BASE64_RUN) ?? []).some(isRandomRun);
 }
 
 function isSensitiveParam(name: string, decodedValue: string): boolean {
@@ -103,6 +108,11 @@ const EMAIL = /[A-Za-z0-9._%+-]+(?:@|%40)(?:[A-Za-z0-9-]+\.)+([A-Za-z]{2,})(?![A
 const URL_CREDENTIALS = /(\b[a-z][a-z0-9+.-]*:\/\/)([^/\s?#@]+)@/gi;
 // A query or fragment parameter: name=value after ?, # or &.
 const QUERY_PAIR = /([?#&])([^=&#?\s"'<>]+)=([^&#\s"'<>)]*)/g;
+// A whole path segment of 32 or more base64url characters (a reset or invite token), not a
+// hostname after "//"; a segment with a dot or anything else in it (a hashed asset name) is not.
+const PATH_SEGMENT = /(?<=[^/]\/)[A-Za-z0-9_-]{32,}(?=[/?#\s"'<>)]|$)/g;
+// What any of the rules above needs to find something: most strings have none of it.
+const MAY_HOLD_SECRET = /[?#&@]|%40|eyJ|[A-Za-z0-9_-]{32}/;
 // A raw header line, as WebPageTest lists them and flows keep them: "Cookie: a=1".
 const HEADER_LINE = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+):(\s*)(.*)$/s;
 
@@ -137,12 +147,73 @@ export type Context = "text" | "headers";
 export class SecretRules {
   readonly report = emptyReport();
   private readonly placeholders = new Map<string, string>();
+  private readonly visited = new WeakSet<object>();
 
   constructor(private readonly numbered = true) {}
 
   /** Hostnames are kept here; the redaction of a report masks third-party ones. */
   protected hosts(value: string): string {
     return value;
+  }
+
+  /** Walks any JSON value in place, masking each string by the key it sits under. */
+  value(node: unknown, key: string, context: Context): unknown {
+    if (typeof node === "string") {
+      return context === "headers" ? this.headerLine(node) : this.text(node, "text");
+    }
+    if (Array.isArray(node)) {
+      for (let i = 0; i < node.length; i++) node[i] = this.value(node[i], key, context);
+      return node;
+    }
+    if (node !== null && typeof node === "object")
+      this.object(node as Record<string, unknown>, key, context);
+    return node;
+  }
+
+  protected object(node: Record<string, unknown>, key: string, context: Context): void {
+    if (this.visited.has(node)) return;
+    this.visited.add(node);
+    const nameValue = typeof node.name === "string" && typeof node.value === "string";
+
+    if (nameValue) {
+      const { name, value } = node as { name: string; value: string };
+      if (context === "headers") node.value = this.headerValue(name, value);
+      else if (key === "cookies") node.value = this.cookieValue(value);
+      else if (key === "queryString" || key === "params") {
+        node.value = this.param(name, this.emails(value));
+      } else node.value = this.text(value, "text");
+    } else if (context === "headers") {
+      // A header record, as flows keep the allow-listed response headers: name → value.
+      // WebPageTest and the header lists of flows group raw lines instead:
+      // { request: ["Cookie: a=1"], response: [...] }.
+      for (const [name, value] of Object.entries(node)) {
+        node[name] =
+          typeof value === "string"
+            ? this.headerValue(name, value)
+            : this.value(value, name, context);
+      }
+      return;
+    }
+
+    for (const childKey of Object.keys(node)) {
+      if (nameValue && (childKey === "name" || childKey === "value")) continue;
+      node[childKey] = this.value(
+        node[childKey],
+        childKey,
+        /headers$/i.test(childKey) ? "headers" : context
+      );
+    }
+    if (context === "text") this.renameKeys(node);
+  }
+
+  // Keys may hold hostnames or URLs too (the preconnect hints of a flow).
+  private renameKeys(node: Record<string, unknown>): void {
+    const keys = Object.keys(node);
+    const renamed = keys.map((key) => this.text(key, "text"));
+    if (renamed.every((newKey, i) => newKey === keys[i])) return;
+    const values = keys.map((key) => node[key]);
+    for (const key of keys) Reflect.deleteProperty(node, key);
+    renamed.forEach((newKey, i) => (node[newKey] = values[i]));
   }
 
   headerValue(name: string, value: string): string {
@@ -188,6 +259,7 @@ export class SecretRules {
 
   /** Redacts URLs and text: credentials, emails, query values, JWTs and masked hosts. */
   text(value: string, context: Context): string {
+    if (!MAY_HOLD_SECRET.test(value)) return this.hosts(value);
     let result = value.replace(URL_CREDENTIALS, (match, scheme: string, credentials: string) => {
       if (credentials === PLACEHOLDER) return match;
       this.report.queryParams++;
@@ -199,11 +271,14 @@ export class SecretRules {
       (_, separator: string, name: string, paramValue: string) =>
         `${separator}${name}=${this.param(name, paramValue)}`
     );
-    result = result.replace(JWT, () => {
+    const token = () => {
       if (context === "headers") this.report.headers++;
       else this.report.tokens++;
       return PLACEHOLDER;
-    });
+    };
+    result = result
+      .replace(JWT, token)
+      .replace(PATH_SEGMENT, (segment) => (isRandomRun(segment) ? token() : segment));
     return this.hosts(result);
   }
 
@@ -246,6 +321,18 @@ export function maskHeaders(headers: readonly Header[]): Header[] {
   // Unnumbered: a report redacted later numbers its own placeholders, which these must not match.
   const rules = new SecretRules(false);
   return headers.map(({ name, value }) => ({ name, value: rules.headerValue(name, value) }));
+}
+
+/**
+ * Masks in place, and returns, every secret of a parsed HAR or trace, or of a flow: in URLs
+ * (sensitive query values, credentials, emails, JWTs and token-like path segments), page titles,
+ * initiators, Server-Timing descriptions, trace node names and header lists. Unnumbered, as the
+ * headers: the same URL always masks the same way, so URLs that were equal (a HAR entry and the
+ * trace event of the same request) stay equal. Hosts, paths and other values stay as recorded.
+ */
+export function maskSecrets<T>(value: T): T {
+  new SecretRules(false).value(value, "", "text");
+  return value;
 }
 
 /** A header as a line of HeaderLists: `Name: value`. */

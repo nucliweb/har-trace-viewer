@@ -34,7 +34,12 @@ import type {
 //    fromUnknownStore).
 // 8: entries keep every request and response header, sensitive values masked
 //    (HarEntry.headers), and the compressed body size (HarEntry.encodedBodySize).
-export const FLOW_VERSION = 8;
+// 9: the same shape, with the secrets of everything kept from the HAR and the trace masked
+//    (URLs, titles, initiators, Server-Timing descriptions, trace node names): older flows are
+//    masked as they are read.
+export const FLOW_VERSION = 9;
+// The first version whose recordings were masked as they were read.
+export const MASKED_FLOW_VERSION = 9;
 
 export const CLIENT_REGIONS: readonly ClientRegion[] = ["default", "cn"];
 

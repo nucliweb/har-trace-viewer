@@ -8,6 +8,7 @@ import { parseArgs } from "../src/cli";
 import { parseRedactArgs } from "../src/redact";
 import {
   secretHar,
+  secretTrace,
   SECRETS,
   HEADER_SECRETS,
   JWT_HEADER,
@@ -42,6 +43,12 @@ const leaks = (text: string) =>
 function writeSecretHar(): string {
   const path = join(makeTempDir(), "secret.har");
   writeFileSync(path, JSON.stringify(secretHar()));
+  return path;
+}
+
+function writeSecretTrace(): string {
+  const path = join(makeTempDir(), "secret.trace.json");
+  writeFileSync(path, JSON.stringify(secretTrace()));
   return path;
 }
 
@@ -122,7 +129,9 @@ describe("htv redact", () => {
     const result = runCli([output, "--format", "json"]);
 
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).flow.pages[0].har.entries).toHaveLength(7);
+    expect(JSON.parse(result.stdout).flow.pages[0].har.entries).toHaveLength(
+      secretHar().log.entries.length
+    );
   });
 
   it("masks third-party hosts with --mask-hosts and gzips a .gz output", () => {
@@ -142,7 +151,7 @@ describe("htv redact", () => {
 
     expect(result.status).toBe(0);
     expect(leaks(result.stdout)).toEqual([]);
-    expect(JSON.parse(result.stdout).log.entries).toHaveLength(7);
+    expect(JSON.parse(result.stdout).log.entries).toHaveLength(secretHar().log.entries.length);
     expect(result.stderr).toMatch(/^Redacted: 7 cookie values/);
   });
 
@@ -197,24 +206,51 @@ describe("htv redact", () => {
 });
 
 describe("htv --redact", () => {
-  it("redacts the JSON report and notes the counts on stderr", () => {
-    const result = runCli([writeSecretHar(), "--format", "json", "--redact"]);
+  it("redacts the JSON report on top of what reading the HAR masked, and notes the counts on stderr", () => {
+    const name = `Account?token=${SECRETS.pageToken} of ${SECRETS.email}`;
+    const result = runCli(["--page", name, writeSecretHar(), "--format", "json", "--redact"]);
 
     expect(result.status).toBe(0);
     expect(leaks(result.stdout)).toEqual([]);
-    expect(JSON.parse(result.stdout).flow.pages[0].har.entries[1].url).toMatch(
-      /^https:\/\/shop\.example\.com\/account\?email=\[email\]&token=\[redacted-\d+\]&lang=en$/
+    const page = JSON.parse(result.stdout).flow.pages[0];
+    // Masked as the HAR was read, unnumbered; --redact numbers what it masks itself.
+    expect(page.har.entries[1].url).toBe(
+      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
     );
-    expect(result.stderr).toMatch(/^Redacted the report: \d+ query values, \d+ emails\n/m);
+    expect(page.name).toBe("Account?token=[redacted-1] of [email]");
+    expect(result.stderr).toMatch(/^Redacted the report: 1 query value, 1 email\n/m);
   });
 
-  it("leaves the secrets of URLs in the report without --redact", () => {
-    const result = runCli([writeSecretHar(), "--format", "json"]);
-
-    expect(leaks(result.stdout)).toEqual(
-      expect.arrayContaining([SECRETS.pageToken, SECRETS.session, SECRETS.email])
+  it("leaves no secret of the HAR or its trace in the JSON and HTML reports, even without --redact", () => {
+    const har = writeSecretHar();
+    const trace = writeSecretTrace();
+    const output = join(makeTempDir(), "report.html");
+    expect(leaks(readFileSync(har, "utf-8") + readFileSync(trace, "utf-8"))).toEqual(
+      expect.arrayContaining(Object.values(SECRETS))
     );
+
+    const json = runCli([har, trace, "--format", "json"]);
+    const html = runCli([har, trace, "-o", output]);
+
+    expect(json.status).toBe(0);
+    expect(html.status).toBe(0);
+    expect(leaks(json.stdout)).toEqual([]);
+    expect(leaks(readFileSync(output, "utf-8"))).toEqual([]);
+    const page = JSON.parse(json.stdout).flow.pages[0];
+    expect(page.har.documentEntry.url).toBe(
+      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
+    );
+    expect(page.trace.url).toBe(page.har.documentEntry.url);
   });
+
+  for (const format of ["findings", "markdown", "csv", "mermaid"]) {
+    it(`leaves no secret of the HAR or its trace in the ${format} output, even without --redact`, () => {
+      const result = runCli([writeSecretHar(), writeSecretTrace(), "--format", format]);
+
+      expect(result.status).toBe(0);
+      expect(leaks(result.stdout)).toEqual([]);
+    });
+  }
 
   it("keeps every header with its secrets masked in the JSON and HTML reports, even without --redact", () => {
     const har = writeSecretHar();

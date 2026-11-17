@@ -283,7 +283,7 @@ describe("redactHar", () => {
     const urls = har.log.entries.map((e) => e.request.url);
 
     expect(urls[3]).toBe(
-      "https://host-1.redacted/pixel.gif?uid=[redacted-6]&sig=[redacted-7]&page=home"
+      "https://host-1.redacted/pixel.gif?uid=[redacted-7]&sig=[redacted-8]&page=home"
     );
     expect(urls[4]).toBe(FONT_URL.replace("assets.vendor-two.net", "host-2.redacted"));
     expect(urls[2]).toMatch(/^https:\/\/api\.example\.com\//);
@@ -412,11 +412,22 @@ function normalizePlaceholders(flow: Flow): unknown {
   return JSON.parse(plain(JSON.stringify(flow)));
 }
 
-describe("redactFlow", () => {
-  const original = () => flowOf(secretHar());
+// A flow whose URLs and page title are the recorded ones, as flows generated before the parser
+// masked them hold.
+function unmaskedFlow(): Flow {
+  const raw = secretHar();
+  const flow = flowOf(secretHar());
+  const har = flow.pages[0].har;
+  har.entries.forEach((entry, i) => (entry.url = raw.log.entries[i].request.url));
+  har.pages[0].title = raw.log.pages[0].title;
+  return flow;
+}
 
-  it("leaves none of the URL secrets in a generated flow", () => {
-    // Bodies, cookies and credential headers never reach a flow; URLs, titles and evidence do.
+describe("redactFlow", () => {
+  const original = unmaskedFlow;
+
+  it("leaves none of the URL secrets in a flow", () => {
+    // Bodies, cookies and credential headers never reach a flow; URLs, titles and evidence did.
     expect(leaks(original())).toEqual(
       expect.arrayContaining([
         SECRETS.pageToken,
@@ -492,7 +503,7 @@ describe("redactFlow", () => {
   });
 
   it("redacts a JWT outside the query string and counts it as a token", () => {
-    const flow = original();
+    const flow = flowOf(secretHar());
     flow.pages[0].har.entries[6].url = `https://shop.example.com/reset/${SECRETS.headerJwt}`;
     const { flow: result, report } = redactFlow(flow);
 

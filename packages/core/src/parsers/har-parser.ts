@@ -16,7 +16,7 @@ import type {
 import { ParseError } from "./errors.js";
 import { getRootDomain } from "../utils/domain.js";
 import { minOf } from "../utils/extent.js";
-import { headerLine, maskHeaders } from "../analysis/secret-rules.js";
+import { headerLine, maskHeaders, maskSecrets } from "../analysis/secret-rules.js";
 
 // HAR 1.2 makes blocked, dns, connect and ssl optional; exporters such as Playwright leave
 // them out instead of writing -1.
@@ -829,7 +829,7 @@ export function parseHar(raw: RawHar): ParsedHar {
   const source = harSource(raw);
   const [first, ...rest] = pages;
   const page = anchorAtNavigation(startingWith(first, entries), entries, source);
-  return buildParsedHar([page, ...rest], entries, source)!;
+  return maskSecrets(buildParsedHar([page, ...rest], entries, source)!);
 }
 
 // Seconds a response may be reused without asking the server, from Cache-Control max-age,
@@ -1057,7 +1057,9 @@ export function parseHarPages(raw: RawHar): ParsedHar[] {
       if (firstView) repeatView.parsed.inferredCacheHits = inferCacheHits(firstView, repeatView);
     }
   }
-  return [...parsedPages.values()].map(({ parsed }) => parsed);
+  // Masked once every page is built: the matches above (redirects, documents, cache hits)
+  // read the URLs as recorded.
+  return maskSecrets([...parsedPages.values()].map(({ parsed }) => parsed));
 }
 
 export function parseHarJson(json: string): ParsedHar {

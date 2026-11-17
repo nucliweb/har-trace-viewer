@@ -6,6 +6,16 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Changed
+
+- Mask the secrets in URLs as the HAR and the trace are read, with or without `--redact`: sensitive query and fragment values, credentials, emails, JWTs and token-like path segments become `[redacted]` or `[email]` wherever a URL appears, in the waterfall, the request detail, Copy URL and Copy cURL, page titles, initiators, the requests, LCP image and scripts of the trace, the exports, the terminal report and the JSON. Hosts, paths and the other values stay as recorded. The web app masks a report of an earlier version the same way when it opens it.
+- Mask with `--redact`, `htv redact` and the redaction of the exports a whole path segment of 32 or more mixed-case letters and digits, such as a reset or invite token.
+
+### Fixed
+
+- Leave out of the Server-Timing descriptions a secret that the masked `Server-Timing` header hid.
+- Leave out of the node name of the LCP element in the trace an email or a token it carried.
+
 ## [0.20.0] - 2026-11-17
 
 ### Added

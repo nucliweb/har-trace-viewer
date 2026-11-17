@@ -764,7 +764,7 @@ describe("generateFlow — client region", () => {
   it("stamps the flow with the current data-model version", () => {
     const flow = generateFlow([{ name: "Home", har: loadHar() }]);
 
-    expect(FLOW_VERSION).toBe(8);
+    expect(FLOW_VERSION).toBe(9);
     expect(flow.version).toBe(FLOW_VERSION);
   });
 
@@ -891,7 +891,7 @@ describe("normalizeFlow", () => {
     expect(normalized.version).toBe(0);
     expect(normalized.clientRegion).toBe("default");
     expect(normalized.hints).toEqual({});
-    expect(normalized.pageAnalyses[0].nodes).toBe(nodes);
+    expect(normalized.pageAnalyses[0].nodes).toEqual(nodes);
   });
 
   // Shape of a version-1 flow: one shared topology, steps without pageIndex.
@@ -926,9 +926,9 @@ describe("normalizeFlow", () => {
     expect(normalized.version).toBe(1);
     expect(normalized.pageAnalyses).toHaveLength(3);
     for (const analysis of normalized.pageAnalyses) {
-      expect(analysis.nodes).toBe(legacy.nodes);
-      expect(analysis.paths).toBe(legacy.paths);
-      expect(analysis.cacheReport).toBe(legacy.cacheReport);
+      expect(analysis.nodes).toEqual(legacy.nodes);
+      expect(analysis.paths).toEqual(legacy.paths);
+      expect(analysis.cacheReport).toEqual(legacy.cacheReport);
     }
   });
 

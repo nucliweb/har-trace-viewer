@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import { normalizeFlow } from "../src/steps/flow-migrations.js";
+import { maskSecrets } from "../src/analysis/secret-rules.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import { summarizeFlowMetrics } from "../src/analysis/metrics-summary.js";
 import type { DiagramStep, Flow, HarEntry, StepKind } from "../src/types.js";
@@ -44,6 +45,8 @@ const EXPECTED_KINDS: [number, StepKind][] = [
 ];
 
 const entryKey = (entry: HarEntry) => `${entry.startTime} ${entry.url}`;
+// The key of a stored copy as reading the flow masks it.
+const maskedKey = (entry: HarEntry) => entryKey(maskSecrets(structuredClone(entry)));
 
 describe.each(["flow-v0", "flow-v2"] as const)("normalizeFlow — stored %s", (name) => {
   it("derives the page and kind of every step from its title", () => {
@@ -79,10 +82,10 @@ describe.each(["flow-v0", "flow-v2"] as const)("normalizeFlow — stored %s", (n
       expect(step).not.toHaveProperty("resources");
       expect(step).not.toHaveProperty("cacheResources");
       expect(getStepResources(normalized, step).map(entryKey)).toEqual(
-        (original.resources ?? []).map(entryKey)
+        (original.resources ?? []).map(maskedKey)
       );
       expect(getStepCacheResources(normalized, step).map(entryKey)).toEqual(
-        (original.cacheResources ?? []).map(entryKey)
+        (original.cacheResources ?? []).map(maskedKey)
       );
       referenced += (step.resourceRefs?.length ?? 0) + (step.cacheResourceRefs?.length ?? 0);
     });

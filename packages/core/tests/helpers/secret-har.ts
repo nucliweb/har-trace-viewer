@@ -25,6 +25,12 @@ export const SECRETS = {
   proxyAuth: "PROXY_AUTH_SECRET_13",
   ssoCode: "SSO_CODE_SECRET_14",
   sessionHeader: "SESSION_HEADER_SECRET_15",
+  serverTiming: "SERVER_TIMING_SECRET_16",
+  // A reset token as a whole path segment: 34 letters and digits of mixed case.
+  resetPath: "ResetPathSecret17XyZ0123456789AbCd",
+  traceStyle: "TRACE_STYLE_SECRET_18",
+  lcpImage: "LCP_IMAGE_SECRET_19",
+  traceScript: "TRACE_SCRIPT_SECRET_20",
 };
 
 // Secrets that only headers carry: a report without --redact leaves none of them either.
@@ -50,6 +56,12 @@ export const FONT_URL = "https://assets.vendor-two.net/fonts/brand.woff2";
 const AVATAR_URL = "https://shop.example.com/avatars/jane.doe%40example.org/logo@2x.png";
 export const GTAG_URL = "https://www.googletagmanager.com/gtag/js?id=G-ABC123";
 const APP_JS_URL = `https://shop.example.com/app.js?key=${SECRETS.initiatorKey}`;
+// Requested by the HAR and named by the trace: the render-blocking stylesheet and the LCP image.
+const STYLE_URL = `https://shop.example.com/styles.css?token=${SECRETS.traceStyle}`;
+const HERO_URL = `https://shop.example.com/hero.jpg?auth=${SECRETS.lcpImage}&w=1200`;
+const RESET_URL = `https://shop.example.com/reset/${SECRETS.resetPath}`;
+// A script only initiators and the trace name: it ran the main thread's long task.
+const CHUNK_URL = `https://shop.example.com/chunk.js?sig=${SECRETS.traceScript}`;
 
 const header = (name: string, value: string) => ({ name, value });
 
@@ -166,6 +178,7 @@ export function secretHar() {
             header("set-cookie", `sid=${SECRETS.setCookie}; Path=/; HttpOnly; Secure`),
             header("set-cookie", "theme=dark; Path=/"),
             header("x-session-id", SECRETS.sessionHeader),
+            header("server-timing", `app;dur=25;desc="/account?session=${SECRETS.serverTiming}"`),
             header("cache-control", "private, no-store"),
             header("content-type", "text/html; charset=utf-8"),
             header("server", "Vercel"),
@@ -227,7 +240,128 @@ export function secretHar() {
           resourceType: "script",
           responseHeaders: [header("cache-control", "private, max-age=900")],
         }),
+        entry(STYLE_URL, {
+          startMs: 190,
+          mimeType: "text/css",
+          resourceType: "stylesheet",
+          responseHeaders: [header("cache-control", "public, max-age=600")],
+          initiator: { type: "parser", url: DOCUMENT_URL },
+        }),
+        entry(HERO_URL, {
+          startMs: 200,
+          mimeType: "image/jpeg",
+          resourceType: "image",
+          responseHeaders: [header("cache-control", "public, max-age=600")],
+          initiator: { type: "parser", url: DOCUMENT_URL },
+        }),
+        entry(RESET_URL, {
+          startMs: 210,
+          mimeType: "application/json",
+          resourceType: "fetch",
+          initiator: {
+            type: "script",
+            stack: {
+              callFrames: [],
+              parent: { callFrames: [{ functionName: "reset", url: CHUNK_URL, lineNumber: 1 }] },
+            },
+          },
+        }),
       ],
     },
+  };
+}
+
+// ── The trace of the same load ────────────────────────────────────────────────
+
+const NAV_US = 1_000_000;
+const MAIN = { pid: 1, tid: 2 };
+const at = (ms: number) => NAV_US + ms * 1000;
+
+function sendRequest(requestId: string, url: string, ms: number, data: Record<string, unknown>) {
+  return {
+    name: "ResourceSendRequest",
+    ts: at(ms),
+    ...MAIN,
+    args: { data: { requestId, frame: "F1", url, priority: "High", ...data } },
+  };
+}
+
+// A complete event on the main thread, at `ms` for `durMs`.
+function task(name: string, ms: number, durMs: number, data: Record<string, unknown> = {}) {
+  return { name, ph: "X", ts: at(ms), dur: durMs * 1000, ...MAIN, args: { data } };
+}
+
+/**
+ * A Chrome trace of the same load, with a secret in every URL a parsed trace keeps: the
+ * navigation's document, the requests and their initiators, the LCP image (and a node name
+ * with an email), and the scripts of the main thread's tasks. A fresh object on every call.
+ */
+export function secretTrace() {
+  return {
+    traceEvents: [
+      { name: "thread_name", ph: "M", ts: 0, ...MAIN, args: { name: "CrRendererMain" } },
+      {
+        name: "navigationStart",
+        ph: "R",
+        ts: NAV_US,
+        ...MAIN,
+        args: {
+          frame: "F1",
+          data: { isOutermostMainFrame: true, documentLoaderURL: DOCUMENT_URL, navigationId: "N" },
+        },
+      },
+      sendRequest("r1", DOCUMENT_URL, 1, { resourceType: "Document", renderBlocking: "blocking" }),
+      sendRequest("r2", STYLE_URL, 60, {
+        resourceType: "Stylesheet",
+        renderBlocking: "blocking",
+        initiator: { type: "parser", url: DOCUMENT_URL },
+      }),
+      sendRequest("r3", HERO_URL, 70, {
+        resourceType: "Image",
+        renderBlocking: "non_blocking",
+        initiator: { type: "script", stack: { callFrames: [{ url: CHUNK_URL, lineNumber: 4 }] } },
+      }),
+      task("RunTask", 100, 120),
+      task("FunctionCall", 100, 110, { url: CHUNK_URL, functionName: "render" }),
+      task("RunTask", 230, 80),
+      task("EvaluateScript", 230, 70, { url: APP_JS_URL }),
+      {
+        name: "firstContentfulPaint",
+        ts: at(300),
+        ...MAIN,
+        args: { frame: "F1", data: { navigationId: "N" } },
+      },
+      {
+        name: "LargestImagePaint::Candidate",
+        ts: at(400),
+        ...MAIN,
+        args: {
+          frame: "F1",
+          data: {
+            DOMNodeId: 10,
+            candidateIndex: 1,
+            imageUrl: HERO_URL,
+            nodeName: `IMG id='${SECRETS.email}'`,
+            isOutermostMainFrame: true,
+          },
+        },
+      },
+      {
+        name: "largestContentfulPaint::Candidate",
+        ts: at(400),
+        ...MAIN,
+        args: {
+          frame: "F1",
+          data: {
+            navigationId: "N",
+            isOutermostMainFrame: true,
+            nodeId: 10,
+            candidateIndex: 1,
+            type: "image",
+            size: 50_000,
+          },
+        },
+      },
+    ],
   };
 }

@@ -113,7 +113,6 @@ const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\
 class Redactor extends SecretRules {
   private readonly maskedHosts = new Map<string, string>();
   private hostPattern: RegExp | null = null;
-  private readonly visited = new WeakSet<object>();
 
   constructor(private readonly options: RedactOptions) {
     super();
@@ -150,66 +149,13 @@ class Redactor extends SecretRules {
           );
   }
 
-  /** Walks any JSON value in place, redacting by the key each value sits under. */
-  value(node: unknown, key: string, context: Context): unknown {
-    if (typeof node === "string") {
-      return context === "headers" ? this.headerLine(node) : this.text(node, "text");
-    }
-    if (Array.isArray(node)) {
-      for (let i = 0; i < node.length; i++) node[i] = this.value(node[i], key, context);
-      return node;
-    }
-    if (node !== null && typeof node === "object")
-      this.object(node as Record<string, unknown>, key, context);
-    return node;
-  }
-
-  private object(node: Record<string, unknown>, key: string, context: Context): void {
-    if (this.visited.has(node)) return;
-    this.visited.add(node);
-    const handled = new Set<string>();
-
-    if (typeof node.name === "string" && typeof node.value === "string") {
-      if (context === "headers") node.value = this.headerValue(node.name, node.value);
-      else if (key === "cookies") node.value = this.cookieValue(node.value);
-      else if (key === "queryString" || key === "params") {
-        node.value = this.param(node.name, this.emails(node.value));
-      } else node.value = this.text(node.value, "text");
-      handled.add("name").add("value");
-    } else if (context === "headers") {
-      // A header record, as flows keep the allow-listed response headers: name → value.
-      // WebPageTest and the header lists of flows group raw lines instead:
-      // { request: ["Cookie: a=1"], response: [...] }.
-      for (const [name, value] of Object.entries(node)) {
-        node[name] =
-          typeof value === "string"
-            ? this.headerValue(name, value)
-            : this.value(value, name, context);
-      }
-      return;
-    }
-
-    for (const [childKey, child] of Object.entries(node)) {
-      if (handled.has(childKey)) continue;
-      if (childKey === "postData" && isRecord(child)) this.postData(child);
-      else if (childKey === "content" && isRecord(child)) this.content(child);
-      else if (childKey === "_webSocketMessages" && Array.isArray(child)) this.messages(child);
-      node[childKey] = this.value(
-        child,
-        childKey,
-        /headers$/i.test(childKey) ? "headers" : context
-      );
-    }
-    if (context === "text") this.renameKeys(node);
-  }
-
-  // Keys may hold hostnames or URLs too (the preconnect hints of a flow).
-  private renameKeys(node: Record<string, unknown>): void {
-    const entries = Object.entries(node);
-    const renamed = entries.map(([key, v]) => [key, this.text(key, "text"), v] as const);
-    if (renamed.every(([key, newKey]) => key === newKey)) return;
-    for (const [key] of renamed) Reflect.deleteProperty(node, key);
-    for (const [, newKey, v] of renamed) node[newKey] = v;
+  // A raw HAR's bodies go before the rules walk the rest of the entry.
+  protected override object(node: Record<string, unknown>, key: string, context: Context): void {
+    const { postData, content, _webSocketMessages: messages } = node;
+    if (isRecord(postData)) this.postData(postData);
+    if (isRecord(content)) this.content(content);
+    if (Array.isArray(messages)) this.messages(messages);
+    super.object(node, key, context);
   }
 
   private postData(postData: Record<string, unknown>): void {

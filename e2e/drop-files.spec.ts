@@ -4,6 +4,8 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { extname, join, resolve } from "node:path";
+import { everythingShown, leaks } from "./secrets";
+import { secretHar, secretTrace } from "../packages/core/tests/helpers/secret-har";
 
 // The public site's build: a real drop, with the parse and generation running in the worker.
 const root = resolve(import.meta.dirname, "../packages/web/dist-site");
@@ -86,6 +88,35 @@ test("a HAR and its trace dropped anywhere on the screen land in one row and gen
 
   await page.getByRole("button", { name: "Generate diagram" }).click();
   await expect(page.locator("#diagram-svg")).toBeVisible({ timeout: 90_000 });
+});
+
+test.describe("a HAR and a trace that carry secrets", () => {
+  // Tall enough for the waterfall drawer to show a request's detail with its copy buttons.
+  test.use({
+    permissions: ["clipboard-read", "clipboard-write"],
+    viewport: { width: 1280, height: 1800 },
+  });
+
+  test("show none of them once dropped: in any step, drawer, request or copy", async ({ page }) => {
+    await page.goto(baseUrl);
+    await dropFiles(page, [
+      { name: "secret.har", content: JSON.stringify(secretHar()) },
+      { name: "secret.trace.json", content: JSON.stringify(secretTrace()) },
+    ]);
+    await expect(page.getByRole("button", { name: "Trace ✓" })).toBeVisible();
+    await page.getByRole("button", { name: "Generate diagram" }).click();
+    await expect(page.locator("#diagram-svg")).toBeVisible({ timeout: 90_000 });
+
+    const { html, clipboard } = await everythingShown(page);
+
+    // The URL and the cURL command of every request.
+    expect(clipboard).toHaveLength(secretHar().log.entries.length * 2);
+
+    expect(clipboard).toContain(
+      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
+    );
+    expect(leaks([...html, ...clipboard])).toEqual([]);
+  });
 });
 
 test("the whole screen shows it takes the drop while files are dragged over it", async ({

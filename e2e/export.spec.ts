@@ -123,8 +123,11 @@ test("redacts the text exports, says what changed and leaves the images alone", 
   const errors = await openAtFcp(page);
   const analyticsId = "1403848601.1770921786";
 
+  // The client id of the analytics beacon was masked as the HAR was read.
   const plain = await exportAs(page, "Download CSV", testInfo);
-  expect(await readFile(plain.path, "utf8")).toContain(analyticsId);
+  const plainCsv = await readFile(plain.path, "utf8");
+  expect(plainCsv).not.toContain(analyticsId);
+  expect(plainCsv).toContain("cid=[redacted]");
   await expect(page.getByRole("status")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Export" }).click();
@@ -136,11 +139,9 @@ test("redacts the text exports, says what changed and leaves the images alone", 
   const download = await downloading;
   const path = testInfo.outputPath("redacted.csv");
   await download.saveAs(path);
-  const redacted = await readFile(path, "utf8");
-  expect(redacted).not.toContain(analyticsId);
-  expect(redacted).toContain("[redacted-1]");
-  expect(redacted).toContain("region1.google-analytics.com");
-  await expect(page.getByRole("status")).toContainText(/^Redacted: \d+ query values?/);
+  // Nothing is left for the redaction: it says so, and the export is the plain one.
+  expect(await readFile(path, "utf8")).toBe(plainCsv);
+  await expect(page.getByRole("status")).toHaveText("Redacted: nothing to redact");
 
   const svg = await exportAs(page, "Download SVG", testInfo);
   expect(await readFile(svg.path, "utf8")).toContain("<svg");

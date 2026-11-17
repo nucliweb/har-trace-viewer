@@ -35,12 +35,16 @@ Output (where the report goes):
                       .md, .mmd or .mermaid --output.
   --bundle            For a directory --output: inline every asset into index.html.
   --redact[=mask-hosts]
-                      Redact the report before it is written or shown, in every
-                      format: query values with a sensitive name (token, session,
-                      email...) or that look like a token, credentials in URLs,
-                      emails and JWTs. =mask-hosts also replaces third-party
-                      hostnames with host-N.redacted. Prints the counts on stderr.
-                      Timings, sizes and the analysis stay the same.
+                      Every report masks the secrets of URLs, titles and headers
+                      as the files are read: query values with a sensitive name
+                      (token, session, email...) or that look like a token,
+                      credentials in URLs, emails and JWTs. --redact applies the
+                      same rules once more to all the report holds, page names
+                      included, before it is written or shown, in every format,
+                      numbering what it masks. =mask-hosts also replaces
+                      third-party hostnames with host-N.redacted. Prints the
+                      counts on stderr. Timings, sizes and the analysis stay the
+                      same.
   htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
                       Write a redacted copy of the HAR itself, still a valid HAR:
                       bodies dropped (sizes kept), cookie values masked, credential

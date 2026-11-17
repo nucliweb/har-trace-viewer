@@ -94,15 +94,21 @@ describe("htv redact in process", () => {
 });
 
 describe("redactReport", () => {
+  // A page named after a URL with a token: the one secret reading the HAR does not mask.
   const flow = () =>
-    generateFlow([{ name: "Home", har: parseHarJson(JSON.stringify(secretHar())) }]);
+    generateFlow([
+      {
+        name: `Home?token=${SECRETS.pageToken}`,
+        har: parseHarJson(JSON.stringify(secretHar())),
+      },
+    ]);
 
   it("redacts one flow and notes the counts", () => {
     const { report, note } = redactReport({ flow: flow() }, { hosts: "keep" });
 
     expect(leaks(JSON.stringify(report))).toEqual([]);
     expect(report.compare).toBeUndefined();
-    expect(note).toMatch(/^Redacted the report: .*query values/);
+    expect(note).toMatch(/^Redacted the report: \d+ query values?$/);
   });
 
   it("redacts both sides of a comparison", () => {

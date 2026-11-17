@@ -3,9 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { animationsSettled } from "./animations";
-import { HEADER_SECRETS } from "../packages/core/tests/helpers/secret-har";
+import { everythingShown, leaks } from "./secrets";
+import { secretHar } from "../packages/core/tests/helpers/secret-har";
 
-// A report of a synthetic HAR with a secret in every header that can carry one (global-setup.ts).
+// A report of a synthetic HAR and trace with a secret in every header and URL that can carry one
+// (global-setup.ts).
 const reportUrl = pathToFileURL(resolve(import.meta.dirname, ".output/secrets/index.html")).href;
 
 const region = (page: Page) => page.getByRole("region", { name: "Waterfall details" });
@@ -52,8 +54,36 @@ test.describe("the detail of a request", () => {
     await expect(value("cookie")).toContainText("sid=[redacted]");
     await expect(value("cookie").getByText("masked")).toBeVisible();
     await expect(value("accept")).toHaveText("text/html");
-    const html = await page.content();
-    expect(HEADER_SECRETS.filter((secret) => html.includes(secret))).toEqual([]);
+    await expect(detail(page)).toContainText(
+      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
+    );
+    expect(leaks([await page.content()])).toEqual([]);
+  });
+
+  test.describe("with the clipboard", () => {
+    // Tall enough for the waterfall drawer to show a request's detail with its copy buttons.
+    test.use({
+      permissions: ["clipboard-read", "clipboard-write"],
+      viewport: { width: 1280, height: 1800 },
+    });
+
+    test("leaves no secret of the HAR or its trace in any step, drawer, request or copy", async ({
+      page,
+    }) => {
+      await page.goto(reportUrl);
+      await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+
+      const { html, clipboard } = await everythingShown(page);
+
+      // The URL and the cURL command of every request.
+      expect(clipboard).toHaveLength(secretHar().log.entries.length * 2);
+
+      expect(clipboard).toContain(
+        "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
+      );
+      expect(clipboard).toContain("curl 'https://shop.example.com/reset/[redacted]'");
+      expect(leaks([...html, ...clipboard])).toEqual([]);
+    });
   });
 
   test("keeps the keyboard on the rows: arrows move between them, Tab goes through the detail", async ({

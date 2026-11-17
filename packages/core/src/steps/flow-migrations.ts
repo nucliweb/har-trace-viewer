@@ -1,5 +1,6 @@
-import { isClientRegion } from "./flow.js";
+import { isClientRegion, MASKED_FLOW_VERSION } from "./flow.js";
 import { TRANSITION_TITLE_PREFIX } from "./page-steps.js";
+import { maskSecrets } from "../analysis/secret-rules.js";
 import type { DiagramStep, Flow, HarEntry, PageFlow, StepKind } from "../types.js";
 
 // Readers of embedded flows bring every older shape up to the current one here. Each
@@ -144,7 +145,10 @@ function inlineResourcesToRefs(
 // Version ≤ 2 steps carried copies of their entries: they become references.
 // Version ≤ 3 analyses have no third-party clusters: their single third-parties node stays.
 // Version ≤ 4 steps have no kind: it is read from their title.
-export function normalizeFlow(flow: Flow): Flow {
+// Version ≤ 8 flows hold the URLs as recorded: a copy is masked by the rules the parsers apply.
+export function normalizeFlow(stored: Flow): Flow {
+  const flow =
+    (stored.version ?? 0) < MASKED_FLOW_VERSION ? maskSecrets(structuredClone(stored)) : stored;
   const indexed = flow.steps.every((step) => typeof step.pageIndex === "number")
     ? flow.steps
     : withDerivedPageIndex(flow.steps);

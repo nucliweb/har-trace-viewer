@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { secretHar } from "../packages/core/tests/helpers/secret-har";
+import { secretHar, secretTrace } from "../packages/core/tests/helpers/secret-har";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = resolve(root, "packages/cli/dist/index.js");
@@ -64,10 +64,11 @@ const COMPARE_PAGES = [
 const LARGE_HAR = resolve(OUTPUT, "large.har.json.gz");
 const LARGE_PAGE = ["--page", "Large", "--har", LARGE_HAR];
 
-// A synthetic HAR with a secret in every header that can carry one: the detail of a request
-// shows its headers with those values masked.
+// A synthetic HAR and trace with a secret in every header and URL that can carry one: the
+// report shows them masked.
 const SECRET_HAR = resolve(OUTPUT, "secret.har");
-const SECRET_PAGE = ["--page", "Secrets", "--har", SECRET_HAR];
+const SECRET_TRACE = resolve(OUTPUT, "secret.trace.json");
+const SECRET_PAGE = ["--page", "Secrets", "--har", SECRET_HAR, "--trace", SECRET_TRACE];
 
 function generate(dir: string, extraArgs: string[], page = HOME_PAGE) {
   execFileSync(process.execPath, [cli, ...page, "--output", dir, ...extraArgs], {
@@ -96,5 +97,6 @@ export default function globalSetup() {
   // The large page against itself: a comparison of ten thousand pairs of requests.
   generate(resolve(OUTPUT, "large-compare"), ["--bundle", "--compare-with", LARGE_HAR], LARGE_PAGE);
   writeFileSync(SECRET_HAR, JSON.stringify(secretHar()));
+  writeFileSync(SECRET_TRACE, JSON.stringify(secretTrace()));
   generate(resolve(OUTPUT, "secrets"), ["--bundle"], SECRET_PAGE);
 }

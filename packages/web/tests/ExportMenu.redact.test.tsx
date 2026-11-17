@@ -65,9 +65,13 @@ describe("ExportMenu redaction", () => {
     expect(screen.getByRole("menuitem", { name: "Download CSV" })).toHaveFocus();
   });
 
-  it("exports the secrets untouched while redaction is off", async () => {
+  it("exports the URLs as reading the HAR masked them while redaction is off", async () => {
     const { text } = await downloadCsv(null, secretFlow("Account"));
-    expect(leaks(text).length).toBeGreaterThan(0);
+    expect(leaks(text)).toEqual([]);
+    expect(text).toContain(
+      "https://shop.example.com/account?email=[email]&token=[redacted]&lang=en"
+    );
+    expect(text).toContain("tracker.vendor-one.io");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 

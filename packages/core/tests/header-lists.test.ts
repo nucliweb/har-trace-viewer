@@ -129,6 +129,7 @@ describe("the header lists of an entry", () => {
       "cache-control": "private, no-store",
       "content-type": "text/html; charset=utf-8",
       server: "Vercel",
+      "server-timing": 'app;dur=25;desc="/account?session=[redacted]"',
       "x-vercel-cache": "MISS",
       "x-vercel-id": "cdg1::iad1::abcde-1767225600000-0123456789ab",
       link: "<https://assets.vendor-two.net/fonts/brand.woff2>; rel=preload; as=font, <https://assets.vendor-two.net>; rel=preconnect",
@@ -176,9 +177,9 @@ describe("the header lists in a redacted report", () => {
 });
 
 describe("the flow version", () => {
-  it("is 8, the first with header lists", () => {
-    expect(FLOW_VERSION).toBe(8);
-    expect(flowOf(secretHar()).version).toBe(8);
+  it("has header lists since 8", () => {
+    expect(FLOW_VERSION).toBeGreaterThanOrEqual(8);
+    expect(flowOf(secretHar()).version).toBe(FLOW_VERSION);
   });
 
   it("reads a flow of version 7, whose entries have no header lists", () => {
@@ -198,7 +199,7 @@ describe("the flow version", () => {
 });
 
 describe("secrets outside the headers", () => {
-  it("are still in the URLs of a report that is not redacted", () => {
-    expect(leaks(flowOf(secretHar()), [SECRETS.pageToken])).toEqual([SECRETS.pageToken]);
+  it("are masked too as the HAR is read, in a report that is not redacted", () => {
+    expect(leaks(flowOf(secretHar()), Object.values(SECRETS))).toEqual([]);
   });
 });
