@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-17
+
 ### Changed
 
 - Mask the page names given with `--page` like the rest of the report, so a name that holds an email or a token does not reach a report.
@@ -410,7 +412,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.18.1...v0.19.0
