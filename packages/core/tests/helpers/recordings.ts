@@ -10,8 +10,8 @@ const ROOT_FIXTURES = fileURLToPath(new URL("../../../../fixtures/", import.meta
  * browser cache disabled (cold) and enabled (warm).
  */
 export const RECORDINGS = {
-  cold: "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har",
-  warm: "webperf-snippets.nucliweb.net_Cache-20260519T123746.har",
+  cold: "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har.gz",
+  warm: "webperf-snippets.nucliweb.net_Cache-20260519T123746.har.gz",
 } as const;
 
 export type Recording = keyof typeof RECORDINGS;

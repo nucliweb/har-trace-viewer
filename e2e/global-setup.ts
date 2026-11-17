@@ -41,7 +41,7 @@ const CACHED_PAGE = [
   "--page",
   "Cached",
   "--har",
-  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har"),
+  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har.gz"),
 ];
 
 // The same site recorded with the browser cache disabled (A) and enabled (B), with traces.
@@ -49,13 +49,13 @@ const COMPARE_PAGES = [
   "--page",
   "Without cache",
   "--har",
-  resolve(recordings, "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"),
+  resolve(recordings, "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har.gz"),
   "--trace",
   resolve(recordings, "WebPerf-Snippets-Disable-Cache_Trace-20260519T123602.json.gz"),
   "--page",
   "With cache",
   "--har",
-  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har"),
+  resolve(recordings, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har.gz"),
   "--trace",
   resolve(recordings, "WebPerf-Snippets-Cache_Trace-20260519T123746.json.gz"),
 ];

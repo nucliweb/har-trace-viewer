@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 const cliDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixtures = resolve(cliDir, "../../fixtures");
 const { version } = JSON.parse(readFileSync(join(cliDir, "package.json"), "utf8"));
-const har = join(fixtures, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har");
+const har = join(fixtures, "webperf-snippets.nucliweb.net_Cache-20260519T123746.har.gz");
 const trace = join(fixtures, "WebPerf-Snippets-Cache_Trace-20260519T123746.json.gz");
 
 const MIN_HTML_BYTES = 100_000;

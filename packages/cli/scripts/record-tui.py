@@ -11,6 +11,7 @@ Usage, from the repository root after `npm run build`:
 
 import codecs
 import fcntl
+import gzip
 import json
 import os
 import select
@@ -26,10 +27,11 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 ENTRY = os.path.join(ROOT, "packages", "cli", "dist", "index.js")
 COLS, ROWS = 110, 30
 
-# Short names for the fixtures, as a session would type them.
+# Short names for the fixtures, as a session would type them. The fixtures are gzipped; each is
+# written out uncompressed under its short name.
 FILES = {
-    "cold.har": "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har",
-    "warm.har": "webperf-snippets.nucliweb.net_Cache-20260519T123746.har",
+    "cold.har": "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har.gz",
+    "warm.har": "webperf-snippets.nucliweb.net_Cache-20260519T123746.har.gz",
 }
 
 ESC = "\x1b"
@@ -151,7 +153,10 @@ def main():
     scenes = sys.argv[1:] or list(SCENES)
     with tempfile.TemporaryDirectory() as workdir:
         for name, fixture in FILES.items():
-            os.symlink(os.path.join(ROOT, "fixtures", fixture), os.path.join(workdir, name))
+            with gzip.open(os.path.join(ROOT, "fixtures", fixture), "rb") as src, open(
+                os.path.join(workdir, name), "wb"
+            ) as dst:
+                shutil.copyfileobj(src, dst)
         for scene in scenes:
             cast = os.path.join(workdir, f"{scene}.cast")
             gif = os.path.join(ROOT, "docs", f"tui-{scene}.gif")
