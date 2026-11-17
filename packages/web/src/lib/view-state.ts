@@ -19,6 +19,13 @@ export const LINKED_DRAWERS = [
 type DrawerName = (typeof LINKED_DRAWERS)[number];
 export type WaterfallView = "waterfall" | "table";
 
+/** The views of the comparison's Deltas drawer and the filters of its Requests view. */
+export const DELTAS_VIEWS = ["summary", "requests"] as const;
+export type DeltasView = (typeof DELTAS_VIEWS)[number];
+export const REQUEST_FILTERS = ["all", "changed", "added", "removed"] as const;
+export type RequestFilter = (typeof REQUEST_FILTERS)[number];
+export type Side = "a" | "b";
+
 /** The view state a link carries, each part absent when the link does not say it. */
 export interface ViewState {
   drawer?: DrawerName;
@@ -28,11 +35,18 @@ export interface ViewState {
   selected?: number;
   view?: WaterfallView;
   sort?: ResourceSort;
+  /** The step on screen, 1-based as people read it; the step alone identifies its page. */
+  step?: number;
+  /** The pane of a comparison the drawer belongs to. */
+  side?: Side;
+  /** The comparison's Deltas drawer is open, on this view and filter when the link says them. */
+  deltas?: { view?: DeltasView; filter?: RequestFilter };
 }
 
-// The hash is `#d=waterfall&q=text&r=3&v=table&s=size.desc`: a hash works from file:// and under
-// any sub-path, and is never sent to a server.
-type Key = "d" | "q" | "r" | "v" | "s";
+// The hash is `#d=waterfall&q=text&r=3&v=table&s=size.desc&p=4`: a hash works from file:// and
+// under any sub-path, and is never sent to a server. A comparison adds `side=b` (the pane of the
+// drawer) and, for the Deltas drawer, `d=deltas&dv=requests&df=added`.
+type Key = "d" | "q" | "r" | "v" | "s" | "p" | "side" | "dv" | "df";
 
 const SORT_KEYS: Record<ResourceSortKey, true> = {
   start: true,
@@ -65,6 +79,22 @@ export function parseViewState(params: string): ViewState {
   if ((LINKED_DRAWERS as readonly string[]).includes(drawer ?? "")) {
     state.drawer = drawer as DrawerName;
   }
+  if (drawer === "deltas") {
+    const view = query.get("dv");
+    const filter = query.get("df");
+    state.deltas = {
+      ...((DELTAS_VIEWS as readonly string[]).includes(view ?? "") && {
+        view: view as DeltasView,
+      }),
+      ...((REQUEST_FILTERS as readonly string[]).includes(filter ?? "") && {
+        filter: filter as RequestFilter,
+      }),
+    };
+  }
+  const side = query.get("side");
+  if (side === "a" || side === "b") state.side = side;
+  const step = query.get("p");
+  if (step !== null && /^\d{1,9}$/.test(step) && Number(step) > 0) state.step = Number(step);
   const search = query.get("q");
   if (search !== null) state.search = search;
   const selected = query.get("r");

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Flow } from "@htv/core";
+import { parseViewState, setHashParams } from "../lib/view-state.js";
 
 export type Speed = 400 | 800 | 1400 | 2000;
 
@@ -25,7 +26,13 @@ export function useDiagramState(flow: Flow): DiagramState {
 }
 
 export function useStepNavigation(totalSteps: number): StepNavigation {
-  const [stepIndex, setStepIndex] = useState(0);
+  // A link opens on its step (1-based; one past the end lands on the last), playback never.
+  const [stepIndex, setStepIndex] = useState(() =>
+    Math.min((parseViewState(window.location.hash).step ?? 1) - 1, totalSteps - 1)
+  );
+  // The link follows the step: the first step is the default and stays out of it.
+  useEffect(() => setHashParams({ p: stepIndex > 0 ? String(stepIndex + 1) : null }), [stepIndex]);
+  useEffect(() => () => setHashParams({ p: null }), []);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>(1400);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

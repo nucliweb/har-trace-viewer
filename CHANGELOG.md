@@ -6,6 +6,11 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Carry the step on screen in the link of the web app and the HTML report, so a link opens on that step and its page, with the drawer and the selected request in place.
+- Carry in the link of a comparison the open drawer and its side (A or B), or the Deltas drawer with its Summary or Requests view and its filter, and the step.
+
 ### Fixed
 
 - Tell a HAR saved with a `.json` name from its trace by their content when both are given without flags (`htv capture.json trace.json`, in either order, gzipped or not), where the second file replaced the first.

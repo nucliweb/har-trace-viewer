@@ -23,6 +23,24 @@ describe("parseViewState", () => {
     });
   });
 
+  it("reads the step, 1-based, and drops what is not a positive count", () => {
+    expect(parseViewState("#p=4")).toEqual({ step: 4 });
+    for (const bad of ["0", "-1", "x", "1.5", "1e2", "", "9999999999"]) {
+      expect(parseViewState(`#p=${bad}`)).toEqual({});
+    }
+  });
+
+  it("reads the side of a comparison and the Deltas drawer with its view and filter", () => {
+    expect(parseViewState("#d=waterfall&side=b")).toEqual({ drawer: "waterfall", side: "b" });
+    expect(parseViewState("#side=c")).toEqual({});
+    expect(parseViewState("#d=deltas&dv=requests&df=added")).toEqual({
+      deltas: { view: "requests", filter: "added" },
+    });
+    expect(parseViewState("#d=deltas")).toEqual({ deltas: {} });
+    expect(parseViewState("#d=deltas&dv=grid&df=none")).toEqual({ deltas: {} });
+    expect(parseViewState("#dv=requests&df=added")).toEqual({});
+  });
+
   it("reads each view of the analysis drawer as a drawer of its own", () => {
     for (const view of ["connections", "compression", "render", "critical-path"]) {
       expect(parseViewState(`#d=${view}`)).toEqual({ drawer: view });

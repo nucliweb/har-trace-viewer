@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   formatBytes,
   formatDelta,
@@ -12,13 +12,15 @@ import { useRowWindow } from "../hooks/useRowWindow.js";
 import { useMessages } from "../i18n/context.js";
 import type { Messages } from "../i18n/en.js";
 import { DeltaCell } from "./DeltasPanel.js";
+import { REQUEST_FILTERS, parseViewState, setHashParams } from "../lib/view-state.js";
+import type { RequestFilter } from "../lib/view-state.js";
 import { DrawerBody } from "./Drawer.js";
 import chipStyles from "./AnalysisPanel.module.css";
 import metricsStyles from "./MetricsSummary.module.css";
 import styles from "./RequestDeltas.module.css";
 
-type Filter = "all" | "changed" | "added" | "removed";
-const FILTERS: Filter[] = ["all", "changed", "added", "removed"];
+type Filter = RequestFilter;
+const FILTERS = REQUEST_FILTERS;
 
 type SortKey = "name" | "start" | "time" | "ttfb" | "size";
 interface Sort {
@@ -253,7 +255,15 @@ function SortHeader({
  */
 export function RequestDeltas({ requests }: { requests: PageRequestComparison }) {
   const t = useMessages().deltas;
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(
+    () => parseViewState(window.location.hash).deltas?.filter ?? "all"
+  );
+  // The link follows the filter; "all" is the default and stays out of it.
+  useEffect(
+    () => setHashParams({ d: "deltas", side: null, df: filter === "all" ? null : filter }),
+    [filter]
+  );
+  useEffect(() => () => setHashParams({ df: null }), []);
   const [sort, setSort] = useState<Sort>(BIGGEST_CHANGE);
   const all = useMemo(() => rowsOf(requests), [requests]);
   const rows = useMemo(

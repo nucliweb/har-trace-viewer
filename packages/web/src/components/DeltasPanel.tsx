@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Ref } from "react";
 import {
   COMPARED_METRICS,
@@ -21,6 +21,8 @@ import type {
   HopPair,
   ThirdPartyComparison,
 } from "@htv/core";
+import { DELTAS_VIEWS, parseViewState, setHashParams } from "../lib/view-state.js";
+import type { DeltasView } from "../lib/view-state.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
 import { Drawer, DrawerBody } from "./Drawer.js";
 import { RequestDeltas } from "./RequestDeltas.js";
@@ -180,8 +182,7 @@ function ThirdPartyDeltas({ thirdParties }: { thirdParties: ThirdPartyComparison
   );
 }
 
-type DeltasView = "summary" | "requests";
-const VIEWS: DeltasView[] = ["summary", "requests"];
+const VIEWS = DELTAS_VIEWS;
 
 /**
  * Two flows side by side, with B − A for each: the summary (metrics, hosts and third parties) or
@@ -189,7 +190,14 @@ const VIEWS: DeltasView[] = ["summary", "requests"];
  */
 export function DeltasPanel({ ref, comparison, names, onClose }: Props) {
   const t = useMessages().deltas;
-  const [view, setView] = useState<DeltasView>("summary");
+  const [view, setView] = useState<DeltasView>(
+    () => parseViewState(window.location.hash).deltas?.view ?? "summary"
+  );
+  // The link follows the view; the summary is the default and stays out of it.
+  useEffect(
+    () => setHashParams({ d: "deltas", side: null, dv: view === "summary" ? null : view }),
+    [view]
+  );
   return (
     <Drawer
       ref={ref}

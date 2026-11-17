@@ -231,3 +231,49 @@ test.describe("a comparison of ten thousand requests", () => {
     expect(await rendered.count()).toBeLessThan(200);
   });
 });
+
+test("a comparison link reopens a drawer in pane B, the step and the Deltas Requests view", async ({
+  page,
+  context,
+}) => {
+  await open(page);
+  await page.getByRole("tab").nth(2).click();
+  await pane(page, "B").getByRole("button", { name: "Toggle waterfall" }).click();
+  await expect.poll(() => new URL(page.url()).hash).toContain("d=waterfall&side=b");
+  expect(new URL(page.url()).hash).toContain("p=3");
+
+  const fresh = await context.newPage();
+  await fresh.goto(page.url());
+  await expect(fresh.getByRole("tab", { selected: true })).toHaveText(/^3/);
+  await expect(pane(fresh, "B").getByRole("region", { name: "Waterfall details" })).toBeVisible();
+  await expect(pane(fresh, "A").getByRole("region", { name: "Waterfall details" })).toHaveCount(0);
+  await fresh.close();
+
+  // The Deltas drawer on its Requests view, narrowed to the changed requests.
+  await page.goto("about:blank");
+  await page.goto(compareUrl);
+  await openRequests(page);
+  await page
+    .getByRole("group", { name: "Filter requests" })
+    .getByRole("button", { name: /^Changed/ })
+    .click();
+  await expect.poll(() => new URL(page.url()).hash).toBe("#d=deltas&dv=requests&df=changed");
+  const link = page.url();
+
+  const reopened = await context.newPage();
+  await reopened.goto(link);
+  await expect(reopened.getByRole("table", { name: "Request deltas" })).toBeVisible();
+  await expect(
+    reopened
+      .getByRole("group", { name: "Filter requests" })
+      .getByRole("button", { name: /^Changed/ })
+  ).toHaveAttribute("aria-pressed", "true");
+  await reopened.reload();
+  await expect(reopened.getByRole("table", { name: "Request deltas" })).toBeVisible();
+});
+
+test("a malformed comparison link opens the comparison as it is", async ({ page }) => {
+  await page.goto(`${compareUrl}#d=hops&side=z&dv=grid&p=-2`);
+  await expect(page.getByText(/^Step 1 \/ \d+$/)).toBeVisible();
+  await expect(page.getByRole("region", { name: /details/ })).toHaveCount(0);
+});

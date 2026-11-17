@@ -86,6 +86,8 @@ export default function globalSetup() {
   generate(resolve(OUTPUT, "plain"), []);
   generate(resolve(OUTPUT, "cached"), ["--bundle"], CACHED_PAGE);
   generate(resolve(OUTPUT, "problems"), ["--bundle"], PROBLEMS_PAGE);
+  // Two pages: a link to a later step opens on the second one.
+  generate(resolve(OUTPUT, "two-pages"), ["--bundle"], [...HOME_PAGE, ...PROBLEMS_PAGE]);
   generate(resolve(OUTPUT, "multi-cdn"), ["--bundle"], MULTI_CDN_PAGE);
   generate(resolve(OUTPUT, "compare"), ["--compare", "--bundle"], COMPARE_PAGES);
   execFileSync(

@@ -13,6 +13,8 @@ import { useEscapeToClose } from "../hooks/useEscapeToClose.js";
 import { useStepKeyboard } from "../hooks/useStepKeyboard.js";
 import { computeHistoricalPaths } from "../lib/historical-paths.js";
 import { preloadWhenIdle } from "../lib/preloadable.js";
+import { parseViewState, setHashParams } from "../lib/view-state.js";
+import type { Side } from "../lib/view-state.js";
 import { BadgeRow } from "./BadgeRow.js";
 import { FindingsButton } from "./FindingsButton.js";
 import { WaterfallButton } from "./WaterfallButton.js";
@@ -33,7 +35,6 @@ interface Props {
   b: Flow;
 }
 
-type Side = "a" | "b";
 const SIDES: Side[] = ["a", "b"];
 const TAG: Record<Side, string> = { a: "A", b: "B" };
 
@@ -49,7 +50,18 @@ interface SideView {
   current: boolean;
 }
 
-type PaneDrawer = "findings" | "waterfall" | "cache";
+const PANE_DRAWERS = ["findings", "waterfall", "cache"] as const;
+type PaneDrawer = (typeof PANE_DRAWERS)[number];
+
+/**
+ * The drawer a link opens in a pane: the link names one drawer and, by `side`, its pane (A when it
+ * does not say). Drawers a comparison does not have are left out.
+ */
+function linkedPaneDrawer(side: Side): PaneDrawer | null {
+  const link = parseViewState(window.location.hash);
+  const drawer = PANE_DRAWERS.find((name) => name === link.drawer);
+  return drawer && (link.side ?? "a") === side ? drawer : null;
+}
 
 function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const messages = useMessages();
@@ -57,7 +69,12 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const { flow, name, stepIndex, current } = view;
   const paneRef = useRef<HTMLElement>(null);
   // One drawer per pane at a time; closing hands the focus back to its toggle.
-  const [drawer, setDrawer] = useState<PaneDrawer | null>(null);
+  const [drawer, setDrawer] = useState<PaneDrawer | null>(() => linkedPaneDrawer(side));
+  // The link follows the last drawer opened, with its pane; this pane's close takes it out.
+  useEffect(() => {
+    if (drawer) setHashParams({ d: drawer, side, dv: null, df: null });
+    else if (linkedPaneDrawer(side)) setHashParams({ d: null, side: null });
+  }, [drawer, side]);
   const toggleDrawer = (next: PaneDrawer) => setDrawer((open) => (open === next ? null : next));
   const closeDrawer = useCallback(() => {
     paneRef.current?.querySelector<HTMLElement>(`[data-drawer="${drawer}"]`)?.focus();
@@ -295,7 +312,16 @@ export function CompareView({ a, b }: Props) {
   const nav = useStepNavigation(pairs.length);
   const viewRef = useRef<HTMLDivElement>(null);
   useStepKeyboard(viewRef, nav);
-  const [showDeltas, setShowDeltas] = useState(false);
+  const [showDeltas, setShowDeltas] = useState(
+    () => parseViewState(window.location.hash).deltas !== undefined
+  );
+  // The Deltas drawer writes its own view and filter; closing it takes them out of the link.
+  useEffect(() => {
+    if (!showDeltas && parseViewState(window.location.hash).deltas) {
+      setHashParams({ d: null, dv: null, df: null });
+    }
+  }, [showDeltas]);
+  useEffect(() => () => setHashParams({ d: null, side: null, dv: null, df: null }), []);
   const deltasButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const deltasRef = useRef<HTMLDivElement>(null);
