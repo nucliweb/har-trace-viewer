@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-18
+
 ### Added
 
 - Tell each request as a sequence between the browser, the DNS resolver and the server, in the request detail of the web app and the HTML report and in the request view of the terminal: a step per phase with when it starts, how long it took and what happens in it (the queue, the DNS lookup, the TCP and TLS handshakes or the QUIC one of HTTP/3, the request, the server's wait and the response), whether the request opened its connection, reused one opened by another request or before the recording, or came from the browser cache, and, from the handshake, about one round trip to the server and how much of the TTFB the server took.
@@ -429,7 +431,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.20.0...v0.21.0
