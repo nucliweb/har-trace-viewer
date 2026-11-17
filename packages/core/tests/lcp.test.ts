@@ -14,10 +14,11 @@ import type {
   TraceLcpCandidate,
 } from "../src/types.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const rootFixture = (name: string) => join(__dirname, "../../../fixtures", name);
-const readHar = (name: string) => parseHarJson(readFileSync(rootFixture(name), "utf8"));
+const readHar = (name: Recording) => parseHarJson(readRecording(name));
 
 const LCP_IMAGE =
   "https://res.cloudinary.com/nucliweb/image/upload/c_scale,f_auto,q_auto,w_1200/v1685735993/webperf-snippets/DevTools-Snippets.png";
@@ -27,7 +28,7 @@ const sumOfPhases = ({ phases }: LcpAttribution) =>
   phases.ttfb + phases.resourceLoadDelay + phases.resourceLoadDuration + phases.elementRenderDelay;
 
 describe("attributeLcp — the disable-cache run", () => {
-  const har = readHar("webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har");
+  const har = readHar("cold");
   const trace = parseTraceJson(
     readFileSync(join(__dirname, "fixtures/webperf-snippets-render.trace.fixture.json"), "utf8")
   );
@@ -72,7 +73,7 @@ describe("attributeLcp — the disable-cache run", () => {
 });
 
 describe("attributeLcp — the cached run", async () => {
-  const har = readHar("webperf-snippets.nucliweb.net_Cache-20260519T123746.har");
+  const har = readHar("warm");
   const trace = await parseTraceFile(
     rootFixture("WebPerf-Snippets-Cache_Trace-20260519T123746.json.gz")
   );

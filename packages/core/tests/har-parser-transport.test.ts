@@ -1,13 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { parseHar, pickResponseHeaders } from "../src/parsers/har-parser.js";
 import { firefoxEntry, firefoxHar } from "./helpers/firefox-har.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const recording = (name: string) =>
-  parseHar(JSON.parse(readFileSync(join(__dirname, `../../../fixtures/${name}`), "utf8")));
+const recording = (name: Recording) => parseHar(JSON.parse(readRecording(name)));
 
 // One entry appended to a Firefox-style HAR, with the given request and response fields.
 function parseEntry(
@@ -167,7 +163,7 @@ describe("pickResponseHeaders — transport headers", () => {
 });
 
 describe("parseHar — transport fields of a Chrome recording", () => {
-  const { entries } = recording("webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har");
+  const { entries } = recording("cold");
 
   it("reads the protocol of every request: h2 to the site and Cloudinary, h3 elsewhere", () => {
     const protocols = new Map(entries.map((e) => [new URL(e.url).host, e.httpVersion]));

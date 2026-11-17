@@ -19,6 +19,7 @@ import {
   secondaryImage,
   thirdPartyScript,
 } from "../../core/tests/helpers/synthetic-har";
+import { readRecording } from "../../core/tests/helpers/recordings";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ESC = "\u001B";
@@ -267,15 +268,7 @@ describe("TuiApp — a flow", () => {
   });
 
   it("shows the protocol and connections per host, within 170 columns on a real recording", () => {
-    const har = parseHarJson(
-      readFileSync(
-        join(
-          __dirname,
-          "../../../fixtures/webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"
-        ),
-        "utf8"
-      )
-    );
+    const har = parseHarJson(readRecording("cold"));
     const flow = generateFlow([{ name: "Cold", har }]);
     // The test terminal is 100 columns wide: render the hosts panel at 170 directly.
     const rows = hostsRegion(flow, 0, 170).lines.map(lineText);

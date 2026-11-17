@@ -6,6 +6,7 @@ import { parseHarJson } from "../src/parsers/har-parser.js";
 import { analyzeNetwork } from "../src/analysis/network-report.js";
 import type { HarEntry, NetworkReport } from "../src/types.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const fixture = (path: string) => parseHarJson(readFileSync(join(__dirname, path), "utf8"));
@@ -258,12 +259,10 @@ describe("analyzeNetwork — severities", () => {
 });
 
 describe("analyzeNetwork — the webperf-snippets recordings", () => {
-  const recording = (name: string) => fixture(`../../../fixtures/${name}`);
+  const recording = (name: Recording) => parseHarJson(readRecording(name));
 
   it("finds the nine resources the disable-cache run downloaded twice", () => {
-    const report = analyzeNetwork(
-      recording("webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har")
-    );
+    const report = analyzeNetwork(recording("cold"));
 
     expect(report.duplicates).toHaveLength(9);
     expect(report.duplicates.every((d) => d.fetches === 2 && d.cacheBypassed)).toBe(true);
@@ -274,9 +273,7 @@ describe("analyzeNetwork — the webperf-snippets recordings", () => {
   });
 
   it("finds none in the run with the cache on, which served the repeats from disk", () => {
-    const report = analyzeNetwork(
-      recording("webperf-snippets.nucliweb.net_Cache-20260519T123746.har")
-    );
+    const report = analyzeNetwork(recording("warm"));
 
     expect(report.duplicates).toEqual([]);
   });

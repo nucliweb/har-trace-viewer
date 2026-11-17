@@ -24,6 +24,7 @@ import {
   thirdPartyScript,
 } from "./helpers/synthetic-har.js";
 import type { DiagramStep, Flow, HarEntry, ParsedHar } from "../src/types.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const harPath = join(__dirname, "fixtures/webperf-snippets.har.fixture.json");
@@ -971,17 +972,14 @@ describe("normalizeFlow", () => {
 });
 
 // The two real recordings of the root fixtures: same site, without and with browser cache.
-const rootFixtures = join(__dirname, "../../../fixtures");
-function loadRootHar(name: "Disable-Cache-20260519T123602" | "Cache-20260519T123746") {
-  return parseHarJson(
-    readFileSync(join(rootFixtures, `webperf-snippets.nucliweb.net_${name}.har`), "utf8")
-  );
+function loadRootHar(name: Recording) {
+  return parseHarJson(readRecording(name));
 }
 
 function recordedTwoPageFlow(): Flow {
   return generateFlow([
-    { name: "Disable cache", har: loadRootHar("Disable-Cache-20260519T123602") },
-    { name: "Cache", har: loadRootHar("Cache-20260519T123746") },
+    { name: "Disable cache", har: loadRootHar("cold") },
+    { name: "Cache", har: loadRootHar("warm") },
   ]);
 }
 
@@ -1926,7 +1924,7 @@ describe("generateFlow — browser cache node", () => {
   });
 
   it("reads the recorded warm-cache visit: the secondary step reads its hits from the cache", () => {
-    const flow = generateFlow([{ name: "Cache", har: loadRootHar("Cache-20260519T123746") }]);
+    const flow = generateFlow([{ name: "Cache", har: loadRootHar("warm") }]);
     const cache = flow.pageAnalyses[0].nodes.find((n) => n.id === "cache")!;
     const secondary = flow.steps.find((s) => s.kind === "secondary")!;
 

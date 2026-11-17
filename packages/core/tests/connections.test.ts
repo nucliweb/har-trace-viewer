@@ -1,15 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { parseHarJson } from "../src/parsers/har-parser.js";
 import { analyzeConnections } from "../src/analysis/connections.js";
 import type { ConnectionsReport, HarEntry, ParsedHar } from "../src/types.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const recording = (name: string) =>
-  parseHarJson(readFileSync(join(__dirname, `../../../fixtures/${name}`), "utf8"));
+const recording = (name: Recording) => parseHarJson(readRecording(name));
 
 const NEW_CONNECTION = { dns: 5, connect: 30, ssl: 15, send: 1, wait: 20, receive: 5, blocked: 0 };
 
@@ -238,9 +234,7 @@ describe("analyzeConnections — recommendations", () => {
 
 describe("analyzeConnections — Chrome recordings of webperf-snippets", () => {
   it("finds the cold load on HTTP/2 and HTTP/3, one connection per host", () => {
-    const report = analyzeConnections(
-      recording("webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har")
-    );
+    const report = analyzeConnections(recording("cold"));
     expect(
       report.hosts.map((h) => [h.host, h.protocol, h.requests, h.connections, h.tcpHandshakes])
     ).toEqual([
@@ -259,9 +253,7 @@ describe("analyzeConnections — Chrome recordings of webperf-snippets", () => {
   });
 
   it("finds the warm load's few requests on the same protocols, too few to judge", () => {
-    const report = analyzeConnections(
-      recording("webperf-snippets.nucliweb.net_Cache-20260519T123746.har")
-    );
+    const report = analyzeConnections(recording("warm"));
     expect(
       report.hosts.map((h) => [h.host, h.protocol, h.requests, h.connections, h.tcpHandshakes])
     ).toEqual([

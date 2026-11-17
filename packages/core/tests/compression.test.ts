@@ -1,15 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { parseHarJson } from "../src/parsers/har-parser.js";
 import { analyzeCompression } from "../src/analysis/compression.js";
 import type { CompressionReport, HarEntry, ParsedHar } from "../src/types.js";
 import { makeEntry, makeHar } from "./helpers/synthetic-har.js";
+import { readRecording, type Recording } from "./helpers/recordings.js";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const recording = (name: string) =>
-  parseHarJson(readFileSync(join(__dirname, `../../../fixtures/${name}`), "utf8"));
+const recording = (name: Recording) => parseHarJson(readRecording(name));
 
 // A page whose document is a 20 KB HTML compressed with Brotli to 5 KB, plus the given entries.
 function page(entries: HarEntry[]): ParsedHar {
@@ -273,9 +269,7 @@ describe("analyzeCompression — a well-compressed page", () => {
 
 describe("analyzeCompression — Chrome recordings of webperf-snippets", () => {
   it("finds every text response of the cold load in Brotli or Zstandard and one AVIF image", () => {
-    const report = analyzeCompression(
-      recording("webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har")
-    );
+    const report = analyzeCompression(recording("cold"));
     expect(report.byType).toEqual([
       {
         type: "js",
@@ -314,9 +308,7 @@ describe("analyzeCompression — Chrome recordings of webperf-snippets", () => {
   });
 
   it("judges nothing on the warm load, whose downloads are a 304 and two beacons", () => {
-    const report = analyzeCompression(
-      recording("webperf-snippets.nucliweb.net_Cache-20260519T123746.har")
-    );
+    const report = analyzeCompression(recording("warm"));
     expect(report.byType).toEqual([
       { type: "json", requests: 1, uncompressedBytes: 2, wireBytes: 286, encodings: { none: 1 } },
     ]);

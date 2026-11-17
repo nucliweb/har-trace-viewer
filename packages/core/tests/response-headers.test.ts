@@ -11,25 +11,21 @@ import {
 import { generateFlow } from "../src/steps/step-generator.js";
 import { getStepCacheResources, getStepResources } from "../src/steps/step-resources.js";
 import type { Flow, ParsedHar } from "../src/types.js";
+import { readRecording } from "./helpers/recordings.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 type RawHar = Parameters<typeof parseHar>[0];
 
+// Each fixture's HAR as JSON text.
 const FIXTURES = {
-  chrome: join(__dirname, "fixtures/webperf-snippets.har.fixture.json"),
-  noCache: join(
-    __dirname,
-    "../../../fixtures/webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"
-  ),
-  cache: join(
-    __dirname,
-    "../../../fixtures/webperf-snippets.nucliweb.net_Cache-20260519T123746.har"
-  ),
+  chrome: () => readFileSync(join(__dirname, "fixtures/webperf-snippets.har.fixture.json"), "utf8"),
+  noCache: () => readRecording("cold"),
+  cache: () => readRecording("warm"),
 };
 
-function loadRaw(path: string): RawHar {
-  return JSON.parse(readFileSync(path, "utf8")) as RawHar;
+function loadRaw(read: () => string): RawHar {
+  return JSON.parse(read()) as RawHar;
 }
 
 // Test-only path: the same parse with every response header restored, as the
@@ -147,9 +143,9 @@ describe("parsed HAR response headers", () => {
     expect(names.has("x-vercel-cache")).toBe(true);
   });
 
-  for (const [name, path] of Object.entries(FIXTURES)) {
+  for (const [name, read] of Object.entries(FIXTURES)) {
     it(`leave detection and cache analysis unchanged on the ${name} fixture`, () => {
-      const raw = loadRaw(path);
+      const raw = loadRaw(read);
       const filtered = parseHar(raw);
       const unfiltered = parseUnfiltered(raw);
       expect(JSON.stringify(unfiltered).length).toBeGreaterThan(JSON.stringify(filtered).length);

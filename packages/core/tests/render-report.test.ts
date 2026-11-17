@@ -7,17 +7,10 @@ import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { analyzeRender } from "../src/analysis/render-report.js";
 import { generateFlow } from "../src/steps/step-generator.js";
 import { makeHar } from "./helpers/synthetic-har.js";
+import { readRecording } from "./helpers/recordings.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const har = parseHarJson(
-  readFileSync(
-    join(
-      __dirname,
-      "../../../fixtures/webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"
-    ),
-    "utf8"
-  )
-);
+const har = parseHarJson(readRecording("cold"));
 const trace = parseTraceJson(
   readFileSync(join(__dirname, "fixtures/webperf-snippets-render.trace.fixture.json"), "utf8")
 );

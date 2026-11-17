@@ -1,7 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { redactHar, redactFlow, redactFlows, describeRedaction } from "../src/analysis/redact.js";
 import { parseHarPages, parseHarJson } from "../src/parsers/har-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
@@ -18,13 +15,9 @@ import {
   GTAG_URL,
   JWT_HEADER,
 } from "./helpers/secret-har.js";
+import { RECORDINGS, readRecording, type Recording } from "./helpers/recordings.js";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const FIXTURES = join(__dirname, "../../../fixtures");
-const REAL_HARS = [
-  "webperf-snippets.nucliweb.net_Cache-20260519T123746.har",
-  "webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har",
-];
+const REAL_HARS: Recording[] = ["warm", "cold"];
 
 type RawHar = ReturnType<typeof secretHar>;
 type RawEntry = RawHar["log"]["entries"][number];
@@ -349,8 +342,9 @@ describe("redactHar", () => {
 });
 
 describe("redactHar on real recordings", () => {
-  for (const file of REAL_HARS) {
-    const json = readFileSync(join(FIXTURES, file), "utf8");
+  for (const recording of REAL_HARS) {
+    const file = RECORDINGS[recording];
+    const json = readRecording(recording);
 
     it(`counts what it redacts in ${file}`, () => {
       const { report } = redactHar(JSON.parse(json));

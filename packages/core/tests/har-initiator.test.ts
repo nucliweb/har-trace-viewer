@@ -1,15 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { parseHar, parseHarJson } from "../src/parsers/har-parser.js";
 import { firefoxEntry, firefoxHar } from "./helpers/firefox-har.js";
-
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const chromeHarPath = join(
-  __dirname,
-  "../../../fixtures/webperf-snippets.nucliweb.net_Disable-Cache-20260519T123602.har"
-);
+import { readRecording } from "./helpers/recordings.js";
 
 describe("parseHar — request initiators", () => {
   const withInitiator = (initiator: unknown) => {
@@ -58,7 +50,7 @@ describe("parseHar — request initiators", () => {
   });
 
   it("reads Chrome's initiators from a real HAR", () => {
-    const har = parseHarJson(readFileSync(chromeHarPath, "utf8"));
+    const har = parseHarJson(readRecording("cold"));
     const byUrl = (part: string) => har.entries.find((e) => e.url.includes(part))!;
 
     expect(har.documentEntry.initiator).toEqual({ type: "other" });

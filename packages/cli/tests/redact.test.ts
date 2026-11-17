@@ -13,13 +13,11 @@ import {
   HEADER_SECRETS,
   JWT_HEADER,
 } from "../../core/tests/helpers/secret-har";
+import { recordingPath } from "../../core/tests/helpers/recordings";
 
 const CLI_ROOT = resolve(__dirname, "..");
 const DIST_ENTRY = join(CLI_ROOT, "dist", "index.js");
-const REAL_HAR = resolve(
-  CLI_ROOT,
-  "../../fixtures/webperf-snippets.nucliweb.net_Cache-20260519T123746.har"
-);
+const REAL_HAR = recordingPath("warm");
 
 const tempDirs: string[] = [];
 function makeTempDir(): string {
