@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-18
+
 ### Added
 
 - Group the steps of each page in the step track of a flow of several pages: a mark (P1, P2…) leads each page's steps, and each step's tab names its page.
@@ -451,7 +453,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.23.0...v0.24.0
