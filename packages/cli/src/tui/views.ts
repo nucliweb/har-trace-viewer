@@ -3,6 +3,8 @@ import {
   SCRIPT_PARTY_LABEL,
   THIRD_PARTY_CATEGORY_LABEL,
   analyzeHops,
+  pageAt,
+  stepAt,
   plural,
   protocolsInUse,
   analyzeThirdParties,
@@ -193,6 +195,7 @@ function mainThreadPanel(report: MainThreadReport, width: number): Line[] {
 export function overviewRegion(flow: Flow, pageIndex: number, width: number): Line[] {
   const summary = summarizeFlowMetrics(flow)[pageIndex];
   const page = flow.pages[pageIndex];
+  if (!summary) return [];
   const shown = COMPARED_METRICS.filter(
     (metric) => !page || listsMetric(metric.key, metric.value(summary), page)
   );
@@ -259,7 +262,7 @@ export function compareOverviewRegion(comparison: FlowComparison, width: number)
     caveats.forEach((caveat, i) => {
       const [first, ...rest] = wrap(caveat.text, width - 8, "    ");
       notes.push(
-        [seg(`[${i + 1}] `, { color: "yellow" }), seg(first[0].text.trimStart())],
+        [seg(`[${i + 1}] `, { color: "yellow" }), seg(first?.[0]?.text.trimStart() ?? "")],
         ...rest
       );
     });
@@ -337,7 +340,7 @@ function stepListRows(titles: string[], selected: number, width: number, maxRows
 }
 
 function stepDetailRows(flow: Flow, stepIndex: number, width: number): Line[] {
-  const step = flow.steps[stepIndex];
+  const step = stepAt(flow, stepIndex);
   const rows: Line[] = [[seg(step.title, { bold: true })]];
   if (flow.pages.length > 1) rows.push([seg(pageLabel(flow, step.pageIndex), { dim: true })]);
   rows.push(
@@ -412,9 +415,9 @@ export function pairStepsRegion(
 ): Line[] {
   const listWidth = width < SIDE_BY_SIDE_MIN ? width : LIST_WIDTH;
   const detailWidth = (width < SIDE_BY_SIDE_MIN ? width : width - listWidth - 1) - 4;
-  const titles = pairs.map((p) => (p.a !== undefined ? a.steps[p.a] : b.steps[p.b!]).title);
-  const stepA = a.steps[views.a.index];
-  const stepB = b.steps[views.b.index];
+  const titles = pairs.map((p) => (p.a !== undefined ? stepAt(a, p.a) : stepAt(b, p.b!)).title);
+  const stepA = stepAt(a, views.a.index);
+  const stepB = stepAt(b, views.b.index);
   const side = (tag: "A" | "B", step: DiagramStep, current: boolean): Line => [
     seg(`${tag}  `, { bold: true, color: tag === "A" ? "cyan" : "yellow" }),
     seg(step.title, current ? { bold: true } : { dim: true }),
@@ -476,7 +479,7 @@ function connectionCost(hop: HostHop): string {
 }
 
 const thirdPartiesOf = (flow: Flow, pageIndex: number): ThirdPartyReport => {
-  const { har, trace } = flow.pages[pageIndex];
+  const { har, trace } = pageAt(flow, pageIndex);
   return flow.pageAnalyses[pageIndex]?.thirdPartyReport ?? analyzeThirdParties(har, trace);
 };
 
@@ -561,7 +564,7 @@ export function hostsRegion(
   width: number,
   offset = 0
 ): ColumnsRegion {
-  const { har } = flow.pages[pageIndex];
+  const { har } = pageAt(flow, pageIndex);
   const hops = analyzeHops(har, har.documentEntry.url);
   const protocols = protocolsInUse(har);
   return stackColumns([
@@ -956,10 +959,10 @@ export function cacheRegion(
     const widths = [third, third, width - 2 * third - 2];
     const minHeight = Math.max(...panels.map((p) => p.body.length)) + 2;
     lines = hstack(
-      panels.map((p, i) => ({
-        lines: panel(p.title, p.body, widths[i], { minHeight }),
-        width: widths[i],
-      }))
+      panels.map((p, i) => {
+        const panelWidth = widths[i] ?? third;
+        return { lines: panel(p.title, p.body, panelWidth, { minHeight }), width: panelWidth };
+      })
     );
   } else {
     lines = panels.flatMap((p) => panel(p.title, p.body, width));

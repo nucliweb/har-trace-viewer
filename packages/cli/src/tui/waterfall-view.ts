@@ -142,7 +142,7 @@ function headerLine(layout: Layout): Line {
     const col = column(t, layout);
     const label = formatMs(t);
     if (col < free || col + label.length > layout.bar) continue;
-    for (let i = 0; i < label.length; i++) axis[col + i] = label[i];
+    [...label].forEach((char, i) => (axis[col + i] = char));
     free = col + label.length + 1;
   }
   return [seg(labels, { dim: true }), seg(axis.join(""), { dim: true })];
@@ -311,10 +311,10 @@ export function listView(
         title,
         length - 2,
         (i) => {
-          if (i < head.length) return head[i];
+          if (i < head.length) return head[i] ?? [];
           if (i < head.length + rows)
             return count === 0 ? empty : rowAt(i - head.length, i - head.length === cursor);
-          return tail[i - head.length - rows];
+          return tail[i - head.length - rows] ?? [];
         },
         width,
         [from, to],
@@ -361,7 +361,10 @@ export function waterfallList(
         axisLine(marks, layout),
       ],
       count: rows.length,
-      rowAt: (i, selected) => rowLine(rows[i], layout, marks, selected),
+      rowAt: (i, selected) => {
+        const row = rows[i];
+        return row ? rowLine(row, layout, marks, selected) : [];
+      },
       empty: [seg("No request matches", { dim: true })],
       tail: [
         BLANK,

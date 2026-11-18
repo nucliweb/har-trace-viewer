@@ -213,9 +213,12 @@ export function parseArgs(argv: string[]): Args {
   let checkFormat: CheckFormat | undefined;
   let checkOutput: string | undefined;
   const compareArg = () => (compareWith ??= { har: "" });
-  const lastPage = () => {
-    if (pages.length === 0) pages.push({ name: "Page 1", har: "" });
-    return pages[pages.length - 1];
+  const lastPage = (): PageArg => {
+    const last = pages.at(-1);
+    if (last) return last;
+    const first: PageArg = { name: "Page 1", har: "" };
+    pages.push(first);
+    return first;
   };
   const jsonGiven = new Map<PageArg, string[]>();
   // A file given without its flag: a HAR by its extension, a trace by its own.

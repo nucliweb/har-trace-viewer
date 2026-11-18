@@ -12,9 +12,14 @@ interface ResourcesViewState extends FilterState {
   cursor?: number;
 }
 
+interface CycleSort {
+  key: ResourceSortKey;
+  direction: ResourceSort["direction"];
+}
+
 // The columns s cycles through, each with the direction it starts in: the measures largest
-// first, the names and categories in their order.
-export const SORT_CYCLE: { key: ResourceSortKey; direction: ResourceSort["direction"] }[] = [
+// first, the names and categories in their order. Never empty: its first sort is the default.
+export const SORT_CYCLE: [CycleSort, ...CycleSort[]] = [
   { key: "start", direction: "asc" },
   { key: "size", direction: "desc" },
   { key: "time", direction: "desc" },
@@ -45,7 +50,7 @@ const SORT_LABEL: Record<ResourceSortKey, string> = {
 /** The sort after `current` in the cycle, in the direction that column starts in. */
 export function nextSort(current: ResourceSort): ResourceSort {
   const index = SORT_CYCLE.findIndex((s) => s.key === current.key);
-  return { ...SORT_CYCLE[(index + 1) % SORT_CYCLE.length] };
+  return { ...(SORT_CYCLE[(index + 1) % SORT_CYCLE.length] ?? SORT_CYCLE[0]) };
 }
 
 const sortLabel = (sort: ResourceSort) =>
@@ -122,7 +127,10 @@ const widthsOf = new WeakMap<WaterfallRow[], { nameWidth: number; widths: number
 function columnWidths(rows: WaterfallRow[], nameWidth: number): number[] {
   const kept = widthsOf.get(rows);
   if (kept && kept.nameWidth === nameWidth) return kept.widths;
-  const widths = tableWidths(HEADER, rows.length, (i) => cellWidths(rows[i], nameWidth));
+  const widths = tableWidths(HEADER, rows.length, (i) => {
+    const row = rows[i];
+    return row ? cellWidths(row, nameWidth) : [];
+  });
   widthsOf.set(rows, { nameWidth, widths });
   return widths;
 }
@@ -170,7 +178,9 @@ export function resourcesList(
       ],
       count: rows.length,
       rowAt: (i, selected) => {
-        const line = tableRow(rowCells(rows[i], nameWidth), widths, ALIGNS);
+        const row = rows[i];
+        if (!row) return [];
+        const line = tableRow(rowCells(row, nameWidth), widths, ALIGNS);
         return selected ? line.map((s) => ({ ...s, inverse: true })) : line;
       },
       empty: [seg("No request matches", { dim: true })],

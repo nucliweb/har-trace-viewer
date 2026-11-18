@@ -35,9 +35,10 @@ const ASSET_MIME: Record<string, string> = {
 /** Replaces `url(...)` references to local asset files with base64 data URIs. */
 function inlineCssUrls(css: string, cssDir: string): string {
   return css.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/g, (match, _quote, ref: string) => {
-    const mime = ASSET_MIME[extname(ref.split(/[?#]/)[0]).toLowerCase()];
+    const [file = ref] = ref.split(/[?#]/);
+    const mime = ASSET_MIME[extname(file).toLowerCase()];
     if (!mime || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(ref)) return match;
-    const data = readFileSync(join(cssDir, ref.split(/[?#]/)[0]));
+    const data = readFileSync(join(cssDir, file));
     return `url(data:${mime};base64,${data.toString("base64")})`;
   });
 }

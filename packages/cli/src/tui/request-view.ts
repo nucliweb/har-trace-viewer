@@ -91,7 +91,7 @@ function grid(all: Line[], inner: number): Line[] {
 
 /** Label and value, the value broken over full lines when it is long. */
 function longFact(label: string, value: string, width: number): Line[] {
-  const [first, ...rest] = breakText(value, Math.max(1, width - LABEL));
+  const [first = "", ...rest] = breakText(value, Math.max(1, width - LABEL));
   return [kv(label, first), ...rest.map((part) => [seg(" ".repeat(LABEL)), seg(part)])];
 }
 
@@ -139,7 +139,7 @@ function initiatorLines(initiator: NonNullable<RequestDetail["initiator"]>, widt
   }
   return initiator.chain.flatMap((link, i) => {
     const at = link.lineNumber === undefined ? link.url : `${link.url}:${link.lineNumber + 1}`;
-    const [first, ...rest] = breakText(at, Math.max(1, width - LINK_TYPE - 2));
+    const [first = "", ...rest] = breakText(at, Math.max(1, width - LINK_TYPE - 2));
     const indent = seg(" ".repeat(LINK_TYPE + 2));
     return [
       [seg(`${i === 0 ? "" : "← "}${link.type}`.padEnd(LINK_TYPE + 2), { dim: true }), seg(first)],
@@ -233,7 +233,7 @@ function headerPanels(
     const kept = entry?.responseHeaders ?? {};
     const fields = Object.keys(kept)
       .sort()
-      .map((name) => ({ name, value: kept[name], masked: false }));
+      .map((name) => ({ name, value: kept[name] ?? "", masked: false }));
     return panel(
       `Response headers · ${fields.length}`,
       [

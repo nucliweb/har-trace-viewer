@@ -71,7 +71,12 @@ export function createMouseParser(): MouseParser {
         const rest = input.slice(esc);
         const match = REPORT.exec(rest);
         if (match) {
-          const found = toEvent(Number(match[1]), Number(match[2]), Number(match[3]), match[4]);
+          const found = toEvent(
+            Number(match[1]),
+            Number(match[2]),
+            Number(match[3]),
+            match[4] ?? ""
+          );
           if (found) events.push(found);
           i = esc + match[0].length;
         } else if (INTRO.startsWith(rest) || (PARTIAL.test(rest) && rest.length <= MAX_HELD)) {

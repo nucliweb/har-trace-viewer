@@ -66,7 +66,7 @@ function parseValue(unit: BudgetUnit, raw: string): number | null {
     }
     case "bytes": {
       const m = match("b|kb|mb|gb");
-      return m ? Math.round(Number(m[1]) * BYTE_FACTORS[m[2] ?? ""]) : null;
+      return m ? Math.round(Number(m[1]) * (BYTE_FACTORS[m[2] ?? ""] ?? 1)) : null;
     }
     case "count": {
       const m = text.match(/^\d+$/);
@@ -114,8 +114,9 @@ export function parseBudgets(value: string): Budget[] {
         `Invalid --budget "${trimmed}": expected ${isDelta ? "delta:<metric><=<value>" : "<metric>=<value>"}.`
       );
     }
-    const metric = match[1].trim().toLowerCase();
-    const raw = match[2].trim();
+    const [, name = "", value = ""] = match;
+    const metric = name.trim().toLowerCase();
+    const raw = value.trim();
     if (!isBudgetMetric(metric)) {
       throw new Error(
         `Unknown --budget metric "${metric}". Valid metrics: ${BUDGET_METRICS.join(", ")}.`
@@ -226,14 +227,16 @@ export function evaluateDeltas(
   budgets: Budget[],
   { strict }: { strict: boolean }
 ): BudgetResult[] {
-  return a.slice(0, b.length).flatMap((pageA, i) =>
-    budgets
+  return a.flatMap((pageA, i) => {
+    const pageB = b[i];
+    if (!pageB) return [];
+    return budgets
       .filter((budget) => budget.delta)
       .map(({ metric, limit, delta }): BudgetResult => {
         const baseline = pageA.values[metric];
-        const candidate = b[i].values[metric];
+        const candidate = pageB.values[metric];
         const base = {
-          page: `A: ${pageA.page} vs B: ${b[i].page}`,
+          page: `A: ${pageA.page} vs B: ${pageB.page}`,
           metric,
           limit,
           baseline,
@@ -257,8 +260,8 @@ export function evaluateDeltas(
         }
         const percent = (worse / baseline) * 100;
         return { ...base, actual: percent, passed: percent <= limit };
-      })
-  );
+      });
+  });
 }
 
 /** A finding at the --fail-on severity or worse, and the page it belongs to. */
@@ -367,7 +370,7 @@ function columns(rows: string[][]): string[] {
     []
   );
   return rows.map((row) =>
-    `  ${row.map((cell, i) => (i === row.length - 1 ? cell : cell.padEnd(widths[i]))).join("  ")}`.trimEnd()
+    `  ${row.map((cell, i) => (i === row.length - 1 ? cell : cell.padEnd(widths[i] ?? 0))).join("  ")}`.trimEnd()
   );
 }
 
@@ -376,7 +379,10 @@ const status = (passed: boolean) => (passed ? "pass" : "FAIL");
 const signed = (text: string, value: number) => `${value < 0 ? "-" : "+"}${text}`;
 
 /** The row of a budget in the text table: status, page, metric, actual, limit and a note. */
-export function budgetRow(b: BudgetResult): string[] {
+/** Status, page, metric, actual, limit and note. */
+type BudgetRow = [string, string, string, string, string, string];
+
+export function budgetRow(b: BudgetResult): BudgetRow {
   if (!b.mode) {
     return [
       status(b.passed),

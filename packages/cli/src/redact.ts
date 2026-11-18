@@ -26,8 +26,9 @@ export function parseRedactArgs(argv: string[]): RedactArgs {
     allowPositionals: true,
     strict: true,
   });
-  if (positionals.length !== 1) throw new Error("htv redact needs one HAR file");
   const [input] = positionals;
+  if (positionals.length !== 1 || input === undefined)
+    throw new Error("htv redact needs one HAR file");
   const output = values.output ?? "";
   if (output && resolve(output) === resolve(input)) {
     throw new Error(`The redacted HAR would overwrite ${input}: pick another --output`);
@@ -65,8 +66,10 @@ export function maskReportHosts({ flow, compare }: Report): { report: Report; no
     hosts: "mask",
     secrets: false,
   });
+  const [masked, maskedCompare] = flows;
+  if (!masked) throw new Error("Masking the hosts returned no flow");
   return {
-    report: flows.length === 2 ? { flow: flows[0], compare: flows[1] } : { flow: flows[0] },
+    report: maskedCompare ? { flow: masked, compare: maskedCompare } : { flow: masked },
     note: `Masked ${pluralCount(report.hosts, "third-party host")} in the report.`,
   };
 }

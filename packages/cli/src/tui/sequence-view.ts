@@ -57,12 +57,12 @@ function connectionNote(sequence: RequestSequence, har: ParsedHar): string | nul
       : `Opens a new connection; ${more} more ${more === 1 ? "request reuses" : "requests reuse"} it.`;
   }
   if (connection.kind !== "reused") return null;
-  const reused =
-    connection.openedBy !== null
-      ? `Reuses the connection ${shortUrl(har.entries[connection.openedBy].url)} opened: ${NO_SETUP}`
-      : connection.id !== null
-        ? `Reuses a connection opened before the recording started: ${NO_SETUP}`
-        : `Reuses an open connection: ${NO_SETUP}`;
+  const opener = connection.openedBy === null ? undefined : har.entries[connection.openedBy];
+  const reused = opener
+    ? `Reuses the connection ${shortUrl(opener.url)} opened: ${NO_SETUP}`
+    : connection.id !== null
+      ? `Reuses a connection opened before the recording started: ${NO_SETUP}`
+      : `Reuses an open connection: ${NO_SETUP}`;
   return connection.requests > 1 ? `${reused} ${connection.requests} requests share it.` : reused;
 }
 

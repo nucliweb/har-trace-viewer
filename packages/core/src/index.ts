@@ -7,6 +7,7 @@ export * from "./inference/node-detector.js";
 export * from "./inference/cache-analyzer.js";
 export * from "./inference/pops.js";
 export * from "./steps/step-generator.js";
+export * from "./steps/flow-access.js";
 export * from "./utils/domain.js";
 export * from "./utils/extent.js";
 export * from "./steps/expand-page-flows.js";

@@ -98,7 +98,7 @@ export function table(header: string[], rows: Cell[][], aligns: Align[] = []): L
 export function tableRow(cells: Cell[], widths: number[], aligns: Align[] = []): Line {
   return cells.flatMap((cell, i) => {
     const segment = toSegment(cell);
-    const padded = { ...segment, text: pad(segment.text, widths[i], aligns[i] ?? "left") };
+    const padded = { ...segment, text: pad(segment.text, widths[i] ?? 0, aligns[i] ?? "left") };
     return i === 0 ? [padded] : [seg("  "), padded];
   });
 }
@@ -116,7 +116,7 @@ export function tableWidths(
   const widths = header.map(textWidth);
   for (let row = 0; row < count; row++) {
     widthsAt(row).forEach((width, column) => {
-      if (width > widths[column]) widths[column] = width;
+      if (width > (widths[column] ?? 0)) widths[column] = width;
     });
   }
   return widths;
@@ -138,7 +138,7 @@ export function scrollTable(
     maxOf(rows.map((row) => toSegment(row[i] ?? "").text).map(textWidth), textWidth(title))
   );
   const span = (columns: number[]) =>
-    columns.reduce((sum, i) => sum + widths[i], 0) + 2 * (columns.length - 1);
+    columns.reduce((sum, i) => sum + (widths[i] ?? 0), 0) + 2 * (columns.length - 1);
   const rest = widths.map((_, i) => i).slice(1);
   if (span([0, ...rest]) <= width) {
     return { lines: table(header, rows, aligns), offset: 0, maxOffset: 0 };
@@ -151,7 +151,11 @@ export function scrollTable(
     if (shown.length > 1 && span([...shown, i]) > width) break;
     shown.push(i);
   }
-  const pick = <T>(cells: T[]) => shown.map((i) => cells[i]);
+  const pick = <T>(cells: T[]) =>
+    shown.flatMap((i) => {
+      const cell = cells[i];
+      return cell === undefined ? [] : [cell];
+    });
   const right = rest.length - start - (shown.length - 1);
   const more = (n: number) => `${n} more ${n === 1 ? "column" : "columns"}`;
   const note = [start > 0 ? `◂ ${more(start)}` : null, right > 0 ? `${more(right)} ▸` : null]
@@ -173,7 +177,7 @@ export function breakText(text: string, width: number): string[] {
   let rest = text;
   while (textWidth(rest) > width) {
     // A character wider than the line still takes one, so that the loop ends.
-    const head = cut(rest, width) || [...graphemes.segment(rest)][0].segment;
+    const head = cut(rest, width) || ([...graphemes.segment(rest)][0]?.segment ?? rest);
     out.push(head);
     rest = rest.slice(head.length);
   }

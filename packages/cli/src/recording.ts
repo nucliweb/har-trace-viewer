@@ -155,17 +155,18 @@ export async function adoptMisnamedHars(
         `Page "${page.name}" has ${files.length} .json files (${files.join(", ")}): give one HAR and one trace per page, or start another page with --page.`
       );
     }
-    const found = await Promise.all(files.map(classify));
-    for (const one of found) if (one.kind === null) throw one.error;
-    const kinds = found.map((one) => one.kind);
-    if (kinds[0] === kinds[1]) {
-      const noun = RECORDING_NOUN[kinds[0] as RecordingKind];
+    // The arguments give a page its .json files from two on, and more than two failed above.
+    const [first, second] = files;
+    if (first === undefined || second === undefined) continue;
+    const [a, b] = await Promise.all([classify(first), classify(second)]);
+    if (a.kind === null) throw a.error;
+    if (b.kind === null) throw b.error;
+    if (a.kind === b.kind) {
+      const noun = RECORDING_NOUN[a.kind];
       throw new Error(
-        `${files[0]} is ${noun} and ${files[1]} is ${noun} too: a page takes one HAR and one trace, e.g. htv page.har trace.json.`
+        `${first} is ${noun} and ${second} is ${noun} too: a page takes one HAR and one trace, e.g. htv page.har trace.json.`
       );
     }
-    const harAt = kinds.indexOf("har");
-    page.har = files[harAt];
-    page.trace = files[1 - harAt];
+    [page.har, page.trace] = a.kind === "har" ? [first, second] : [second, first];
   }
 }

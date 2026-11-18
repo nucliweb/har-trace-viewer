@@ -12,7 +12,7 @@ const ESCAPES: Record<string, string> = {
  * the output equals the input.
  */
 export function serializeFlowForHtml(flow: unknown): string {
-  return JSON.stringify(flow).replace(/[<>&\u2028\u2029]/g, (ch) => ESCAPES[ch]);
+  return JSON.stringify(flow).replace(/[<>&\u2028\u2029]/g, (ch) => ESCAPES[ch] ?? ch);
 }
 
 /** Script tags embedding the flow and, for a comparison report, the second flow (B). */

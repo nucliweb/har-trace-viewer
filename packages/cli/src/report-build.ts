@@ -87,7 +87,8 @@ const RUN_METRIC_LABELS: Record<RunMetric, string> = {
   browserCacheHitRatio: "browser cache hit ratio",
 };
 
-const pageId = (page: PageFlow) => page.har.pages[0].id;
+// A HAR without pages has no page id; it is no WebPageTest run either.
+const pageId = (page: PageFlow) => page.har.pages[0]?.id ?? "";
 
 /**
  * Keeps the runs of a WebPageTest HAR that --runs asks for. A median page is named after the
@@ -115,7 +116,10 @@ function keepRuns(
 
   const summaries = summarizeFlowMetrics(generateFlow(pages));
   const groups = groupRuns(
-    pages.map((flow, i) => ({ id: pageId(flow), metrics: summaries[i], flow }))
+    pages.flatMap((flow, i) => {
+      const metrics = summaries[i];
+      return metrics ? [{ id: pageId(flow), metrics, flow }] : [];
+    })
   ).filter((group) => group.runs.length > 1);
   if (groups.length === 0) return { pages, notes: [] };
 
@@ -160,22 +164,25 @@ async function comparisonSides(
   args: Args
 ): Promise<[PageFlow, PageFlow] | null> {
   if (args.compare) {
-    if (pageFlows.length !== 2) {
+    const [a, b] = pageFlows;
+    if (pageFlows.length !== 2 || !a || !b) {
       throw new Error(
         `--compare needs exactly two pages; got ${pageFlows.length}. Pick two with --select (e.g. --select page_1_0_1,page_1_1_1) or pass two --page.`
       );
     }
-    return [pageFlows[0], pageFlows[1]];
+    return [a, b];
   }
   if (!args.compareWith) return null;
   const other = await readPageFlows(args.compareWith);
-  if (pageFlows.length !== 1 || other.length !== 1) {
+  const [a] = pageFlows;
+  const [b] = other;
+  if (pageFlows.length !== 1 || other.length !== 1 || !a || !b) {
     const side = pageFlows.length !== 1 ? `A has ${pageFlows.length}` : `B has ${other.length}`;
     throw new Error(
       `--compare-with needs one page on each side; ${side}. Pick one with --select or --compare-select.`
     );
   }
-  return [pageFlows[0], other[0]];
+  return [a, b];
 }
 
 /**
@@ -232,7 +239,8 @@ export async function buildReport(args: Args): Promise<Report> {
   for (const f of compare ? [flow, compare] : [flow]) {
     f.pages.forEach((page, i) => {
       const spread = spreads.get(page);
-      if (spread) f.pageAnalyses[i].runSpread = spread;
+      const analysis = f.pageAnalyses[i];
+      if (spread && analysis) analysis.runSpread = spread;
     });
   }
 

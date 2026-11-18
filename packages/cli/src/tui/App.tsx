@@ -10,6 +10,7 @@ import {
   parseResourceQuery,
   sortWaterfallRows,
   stepAtPair,
+  pageAt,
 } from "@htv/core";
 import type { Flow, ResourceSort, Waterfall, WaterfallAxis, WaterfallParty } from "@htv/core";
 import { findingsRegion, hasHiddenEvidence } from "./findings-view.js";
@@ -63,7 +64,7 @@ type Side = "a" | "b";
 // The party filter of the waterfall, cycled with f.
 const PARTIES: (WaterfallParty | null)[] = [null, "first", "third"];
 const nextParty = (party: WaterfallParty | null) =>
-  PARTIES[(PARTIES.indexOf(party) + 1) % PARTIES.length];
+  PARTIES[(PARTIES.indexOf(party) + 1) % PARTIES.length] ?? null;
 
 // The request under the cursor: its entry, null until the cursor moves, and its row.
 interface Cursor {
@@ -245,7 +246,7 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   const [mouseOn, setMouseOn] = useState(mouse?.enabled ?? false);
 
   const names = useMemo(
-    () => ({ a: flow.pages[0].name, b: compare?.pages[0].name ?? "" }),
+    () => ({ a: flow.pages[0]?.name ?? "", b: compare?.pages[0]?.name ?? "" }),
     [flow, compare]
   );
   const findings = useMemo(
@@ -261,13 +262,13 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   const width = Math.max(MIN_COLUMNS, size.columns);
   const narrow = width < 100;
   const viewport = Math.max(1, size.rows - HEADER_LINES - STATUS_LINES);
-  const current = TABS[tab];
+  const current = TABS[tab] ?? TABS[0];
   // The tabs that list the page's requests, which share the filter, the party and the cursor.
   const listing = current === "Waterfall" || current === "Resources";
 
   // The page the waterfall and the resources show: the current page, or the side picked in a
   // comparison.
-  const shownPage = compare ? (side === "a" ? flow : compare).pages[0] : flow.pages[page];
+  const shownPage = compare ? pageAt(side === "a" ? flow : compare, 0) : pageAt(flow, page);
   const waterfall = useMemo(() => (listing ? waterfallOf(shownPage) : null), [listing, shownPage]);
   const hasDocument = useMemo(() => pageDocument(shownPage.har) !== null, [shownPage]);
   const filtered = useMemo(() => {
@@ -360,8 +361,10 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
       case "Cache & network": {
         const shown = compare ? (side === "a" ? flow : compare) : flow;
         const pageIndex = compare ? 0 : page;
-        const { cacheReport, networkReport } = shown.pageAnalyses[pageIndex];
-        const shownHasDocument = pageDocument(shown.pages[pageIndex].har) !== null;
+        const analysis = shown.pageAnalyses[pageIndex];
+        if (!analysis) return regionOf([]);
+        const { cacheReport, networkReport } = analysis;
+        const shownHasDocument = pageDocument(pageAt(shown, pageIndex).har) !== null;
         return regionOf(
           cacheRegion(cacheReport, width, networkReport, { hasDocument: shownHasDocument })
         );
@@ -418,7 +421,9 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   const moveCursor = (target: number, scrollBy = 0) => {
     if (rowCount === 0) return;
     const index = Math.min(rowCount - 1, Math.max(0, target));
-    setCursor({ entry: listRows[index].entryIndex, index });
+    const row = listRows[index];
+    if (!row) return;
+    setCursor({ entry: row.entryIndex, index });
     const from = Math.min(maxScroll, Math.max(0, offset + scrollBy));
     setScroll(index === rowCount - 1 ? maxScroll : follow(index, from));
   };
@@ -456,7 +461,9 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   };
   const stepRequest = (delta: number) => {
     const index = Math.min(rowCount - 1, Math.max(0, cursorIndex + delta));
-    setCursor({ entry: listRows[index].entryIndex, index });
+    const row = listRows[index];
+    if (!row) return;
+    setCursor({ entry: row.entryIndex, index });
     setScroll(0);
   };
   const moveColumns = (delta: number) => {
@@ -581,8 +588,9 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
     const onScreen = event.y - HEADER_LINES - 1;
     if (onScreen < pinned || onScreen >= viewport) return;
     const index = pinned + offset + (onScreen - pinned) - listView.firstRow;
-    if (index < 0 || index >= rowCount) return;
-    setCursor({ entry: listRows[index].entryIndex, index });
+    const row = listRows[index];
+    if (!row) return;
+    setCursor({ entry: row.entryIndex, index });
     setScroll(offset);
   };
   // Events of a wheel that turns faster than the screen draws add up and apply in one render.
