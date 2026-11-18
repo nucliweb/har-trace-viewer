@@ -20,7 +20,9 @@ const inLanguage = (messages: Messages, children: ReactNode) => (
   <MessagesContext.Provider value={messages}>{children}</MessagesContext.Provider>
 );
 
-// Each toolbar drawer: the toggle that opens it and the ✕ that closes it.
+// Each toolbar drawer: the toggle that opens it and the ✕ that closes it. One test a drawer:
+// rendering a drawer is the bulk of such a test, and on a busy machine with coverage six in one
+// test outgrew the 5 s a test may take.
 const DRAWERS: [RegExp, string][] = [
   [/^Toggle findings/, "Close findings"],
   [/^Toggle waterfall$/, "Close waterfall"],
@@ -34,22 +36,20 @@ const DRAWERS: [RegExp, string][] = [
 beforeAll(loadOnDemandModules);
 
 describe("drawers and the keyboard (A-01)", () => {
-  it("closing a drawer with its ✕ hands the focus back to its toggle", async () => {
-    const user = userEvent.setup();
-    render(<DiagramView flow={flow} />);
-    for (const [toggle, close] of DRAWERS) {
+  for (const [toggle, close] of DRAWERS) {
+    it(`closing a drawer with its ✕ hands the focus back to its toggle: ${close}`, async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
       const button = screen.getByRole("button", { name: toggle });
       await user.click(button);
       await user.click(await screen.findByRole("button", { name: close }));
       expect(screen.queryByRole("button", { name: close })).not.toBeInTheDocument();
       expect(button).toHaveFocus();
-    }
-  });
+    });
 
-  it("Escape closes the open drawer and hands the focus back to its toggle", async () => {
-    const user = userEvent.setup();
-    render(<DiagramView flow={flow} />);
-    for (const [toggle, close] of DRAWERS) {
+    it(`Escape closes the open drawer and hands the focus back to its toggle: ${close}`, async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
       const button = screen.getByRole("button", { name: toggle });
       await user.click(button);
       // From inside the drawer as well as from the toolbar.
@@ -57,8 +57,8 @@ describe("drawers and the keyboard (A-01)", () => {
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("button", { name: close })).not.toBeInTheDocument();
       expect(button).toHaveFocus();
-    }
-  });
+    });
+  }
 
   it("the resource list closes the same way, back to its button", async () => {
     const user = userEvent.setup();
@@ -213,17 +213,18 @@ describe("the diagram as an image of the step (A-07)", () => {
 });
 
 describe("toolbar toggles report their state (A-09)", () => {
-  it("every drawer toggle of the diagram says whether its drawer is open", async () => {
-    const user = userEvent.setup();
-    render(<DiagramView flow={flow} />);
-    for (const [toggle] of DRAWERS) {
+  for (const [toggle, close] of DRAWERS) {
+    it(`every drawer toggle of the diagram says whether its drawer is open: ${close}`, async () => {
+      const user = userEvent.setup();
+      render(<DiagramView flow={flow} />);
       const button = screen.getByRole("button", { name: toggle });
       expect(button).toHaveAttribute("aria-expanded", "false");
       await user.click(button);
       expect(button).toHaveAttribute("aria-expanded", "true");
       await user.click(button);
-    }
-  });
+      expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+  }
 });
 
 describe("the waterfall tooltip can be dismissed (A-08)", () => {

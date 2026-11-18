@@ -31,37 +31,47 @@ describe("DiagramView in Spanish", () => {
     expect(screen.getByRole("combobox", { name: "Velocidad de reproducción" })).toBeInTheDocument();
   });
 
-  it("opens each drawer under its Spanish name", async () => {
-    const user = userEvent.setup();
-    render(inLanguage(es, <DiagramView flow={flow} />));
-    const drawers: [string, string][] = [
-      ["Mostrar u ocultar los hallazgos", "Cerrar los hallazgos"],
-      ["Mostrar u ocultar la cascada", "Cerrar la cascada"],
-      ["Mostrar u ocultar los saltos", "Cerrar los saltos"],
-      ["Mostrar u ocultar el resumen de métricas", "Cerrar el resumen de métricas"],
-      ["Mostrar u ocultar el análisis de caché", "Cerrar el análisis de caché"],
-      ["Mostrar u ocultar el panel de análisis", "Cerrar el panel de análisis"],
-    ];
-    for (const [toggle, close] of drawers) {
+  // One test a drawer: on a busy machine with coverage, rendering six in one test outgrew the 5 s
+  // a test may take.
+  const drawers: [string, string][] = [
+    ["Mostrar u ocultar los hallazgos", "Cerrar los hallazgos"],
+    ["Mostrar u ocultar la cascada", "Cerrar la cascada"],
+    ["Mostrar u ocultar los saltos", "Cerrar los saltos"],
+    ["Mostrar u ocultar el resumen de métricas", "Cerrar el resumen de métricas"],
+    ["Mostrar u ocultar el análisis de caché", "Cerrar el análisis de caché"],
+    ["Mostrar u ocultar el panel de análisis", "Cerrar el panel de análisis"],
+  ];
+  for (const [toggle, close] of drawers) {
+    it(`opens each drawer under its Spanish name: ${toggle}`, async () => {
+      const user = userEvent.setup();
+      render(inLanguage(es, <DiagramView flow={flow} />));
       await user.click(screen.getByRole("button", { name: new RegExp(`^${toggle}`) }));
       await user.click(await screen.findByRole("button", { name: close }));
-    }
-  });
+      expect(screen.queryByRole("button", { name: close })).not.toBeInTheDocument();
+    });
+  }
 
-  it("speaks Spanish inside the drawers", async () => {
+  it("speaks Spanish inside the waterfall", async () => {
     const user = userEvent.setup();
     render(inLanguage(es, <DiagramView flow={flow} />));
-
     await user.click(screen.getByRole("button", { name: "Mostrar u ocultar la cascada" }));
     expect(
       await screen.findByRole("searchbox", { name: "Filtrar las peticiones" })
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Tabla" })).toBeInTheDocument();
+  });
 
+  it("speaks Spanish inside the hops", async () => {
+    const user = userEvent.setup();
+    render(inLanguage(es, <DiagramView flow={flow} />));
     await user.click(screen.getByRole("button", { name: "Mostrar u ocultar los saltos" }));
     const hops = await screen.findByRole("table", { name: "Saltos por host" });
     expect(within(hops).getByRole("columnheader", { name: "Proveedor" })).toBeInTheDocument();
+  });
 
+  it("speaks Spanish inside the cache analysis", async () => {
+    const user = userEvent.setup();
+    render(inLanguage(es, <DiagramView flow={flow} />));
     await user.click(
       screen.getByRole("button", { name: "Mostrar u ocultar el análisis de caché" })
     );

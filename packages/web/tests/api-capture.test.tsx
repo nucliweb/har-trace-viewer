@@ -21,7 +21,7 @@ beforeAll(loadOnDemandModules);
 describe.each(captures)("an API capture %s", (_name, make) => {
   const flow = make();
 
-  it("walks every step and opens every drawer without nonsense text", async () => {
+  it("walks every step without nonsense text", async () => {
     const user = userEvent.setup();
     const { container } = render(<DiagramView flow={flow} />);
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
@@ -30,12 +30,21 @@ describe.each(captures)("an API capture %s", (_name, make) => {
       await user.click(screen.getByRole("tab", { name: new RegExp(`^Step ${i + 1}:`) }));
       expect(container.textContent).not.toMatch(NONSENSE);
     }
-    for (const name of DRAWERS) {
+  });
+
+  // One test a drawer: on a busy machine with coverage, rendering all of them in one test outgrew
+  // the 5 s a test may take.
+  for (const name of DRAWERS) {
+    it(`opens the ${name.source} drawer on the last step without nonsense text`, async () => {
+      const user = userEvent.setup();
+      const { container } = render(<DiagramView flow={flow} />);
+      const last = new RegExp(`^Step ${flow.steps.length}:`);
+      await user.click(screen.getByRole("tab", { name: last }));
       await user.click(screen.getByRole("button", { name }));
       expect(container.textContent).not.toMatch(NONSENSE);
       expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
-    }
-  });
+    });
+  }
 
   it("shows no TTFB badge and n/a for the document metrics", async () => {
     const user = userEvent.setup();
