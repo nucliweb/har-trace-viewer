@@ -263,7 +263,9 @@ describe("buildWaterfall", () => {
     const elapsed = performance.now() - started;
 
     expect(waterfall.rows).toHaveLength(10_001);
-    expect(elapsed).toBeLessThan(500);
+    // It takes about 70 ms; a quadratic pass over 10 000 rows takes seconds.
+    // The wide margin keeps a loaded machine running coverage from failing it.
+    expect(elapsed).toBeLessThan(2000);
   });
 });
 
