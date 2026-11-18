@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Added
+
+- Group the steps of each page in the step track of a flow of several pages: a mark (P1, P2…) leads each page's steps, and each step's tab names its page.
+
 ## [0.26.0] - 2026-11-18
 
 ### Added

@@ -172,3 +172,52 @@ describe("StepPanel — the page of the step in a flow of several pages", () => 
     expect(screen.queryByTestId("step-page")).not.toBeInTheDocument();
   });
 });
+
+describe("StepTrack — the steps grouped by page in a flow of several pages", () => {
+  const twoPages = makeTwoPageFlow();
+  const firstOfPage2 = twoPages.steps.findIndex((s) => s.pageIndex === 1);
+  const track = () => screen.getByRole("tablist", { name: "Steps" });
+  // The track as it reads: a page mark, then the tabs of that page.
+  const sequence = () =>
+    [...track().children].map((el) =>
+      el.getAttribute("role") === "tab" ? "tab" : (el.textContent ?? "")
+    );
+
+  it("leads the steps of each page with its page", () => {
+    render(<DiagramView flow={twoPages} />);
+    const tabs = twoPages.steps.map(() => "tab");
+    expect(sequence()).toEqual([
+      "P1",
+      ...tabs.slice(0, firstOfPage2),
+      "P2",
+      ...tabs.slice(firstOfPage2),
+    ]);
+  });
+
+  it("says the page of each step in the name of its tab, and keeps the marks out of it", () => {
+    render(<DiagramView flow={twoPages} />);
+    expect(screen.getByRole("tab", { name: /^Step 1: .+, Page 1 of 2$/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: new RegExp(`^Step ${firstOfPage2 + 1}: .+, Page 2 of 2$`) })
+    ).toBeInTheDocument();
+    for (const mark of screen.getAllByText(/^P\d$/)) {
+      expect(mark).toHaveAttribute("aria-hidden", "true");
+      expect(mark).toHaveAttribute("title", expect.stringMatching(/^Page \d of 2 · /));
+    }
+  });
+
+  it("speaks the language of the interface", () => {
+    render(
+      <MessagesContext.Provider value={es}>
+        <DiagramView flow={twoPages} />
+      </MessagesContext.Provider>
+    );
+    expect(screen.getByRole("tab", { name: /^Paso 1: .+, Página 1 de 2$/ })).toBeInTheDocument();
+  });
+
+  it("has no page marks in a flow of one page", () => {
+    render(<DiagramView flow={makeFlow()} />);
+    expect(sequence().every((item) => item === "tab")).toBe(true);
+    expect(screen.getByRole("tab", { name: /^Step 1: [^,]+$/ })).toBeInTheDocument();
+  });
+});

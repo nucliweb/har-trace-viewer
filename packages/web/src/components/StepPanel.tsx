@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { pageAt, stepAt } from "@htv/core";
 import type { Flow, HarEntry } from "@htv/core";
@@ -57,18 +57,31 @@ function ResourceListIcon() {
   );
 }
 
+/** The pages of a flow of several pages: the page of each step, and each page's name. */
+interface TrackPages {
+  ofStep: number[];
+  names: string[];
+}
+
 interface StepTrackProps {
   /** One accessible label per step, e.g. its title. */
   labels: string[];
   stepIndex: number;
   goTo: (index: number) => void;
+  /** Groups the steps by page, each group led by a mark of its page. */
+  pages?: TrackPages;
 }
 
-/** One numbered tab per step; arrow keys, Home and End move the selection inside the tablist. */
-export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
+/**
+ * One numbered tab per step; arrow keys, Home and End move the selection inside the tablist.
+ * In a flow of several pages, a mark (P1, P2…) leads the steps of each page and each tab names
+ * its page; the marks are for the eye, the tabs stay one list for the keyboard.
+ */
+export function StepTrack({ labels, stepIndex, goTo, pages }: StepTrackProps) {
   const t = useMessages().steps;
   const total = labels.length;
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const pageNames = pages?.names ?? [];
 
   // Arrow keys inside the tablist move the selection (same as the global shortcut) and focus follows.
   const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -94,23 +107,38 @@ export function StepTrack({ labels, stepIndex, goTo }: StepTrackProps) {
     <div className={styles.track} role="tablist" aria-label={t.track} onKeyDown={onTabKeyDown}>
       {labels.map((label, i) => {
         const status = i < stepIndex ? "done" : i === stepIndex ? "active" : "pending";
+        const page = pages?.ofStep[i];
+        const pageName = page === undefined ? null : t.page(page + 1, pageNames.length);
+        const startsPage = page !== undefined && (i === 0 || pages?.ofStep[i - 1] !== page);
         return (
-          <button
-            key={i}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            id={`step-tab-${i}`}
-            role="tab"
-            aria-selected={i === stepIndex}
-            aria-controls="step-panel"
-            tabIndex={i === stepIndex ? 0 : -1}
-            aria-label={t.tab(i + 1, label)}
-            className={`${styles.trackDot} ${styles[status]}`}
-            onClick={() => goTo(i)}
-          >
-            {i < stepIndex ? "✓" : i + 1}
-          </button>
+          <Fragment key={i}>
+            {startsPage && (
+              <span
+                className={
+                  i === 0 ? styles.trackPage : `${styles.trackPage} ${styles.trackPageNext}`
+                }
+                aria-hidden="true"
+                title={`${pageName} · ${pageNames[page] ?? ""}`}
+              >
+                P{page + 1}
+              </span>
+            )}
+            <button
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              id={`step-tab-${i}`}
+              role="tab"
+              aria-selected={i === stepIndex}
+              aria-controls="step-panel"
+              tabIndex={i === stepIndex ? 0 : -1}
+              aria-label={pageName ? `${t.tab(i + 1, label)}, ${pageName}` : t.tab(i + 1, label)}
+              className={`${styles.trackDot} ${styles[status]}`}
+              onClick={() => goTo(i)}
+            >
+              {i < stepIndex ? "✓" : i + 1}
+            </button>
+          </Fragment>
         );
       })}
     </div>
@@ -209,7 +237,16 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
         {t.live(stepIndex + 1, total, step.title)}
       </div>
 
-      <StepTrack labels={flow.steps.map((s) => s.title)} stepIndex={stepIndex} goTo={goTo} />
+      <StepTrack
+        labels={flow.steps.map((s) => s.title)}
+        stepIndex={stepIndex}
+        goTo={goTo}
+        pages={
+          flow.pages.length > 1
+            ? { ofStep: flow.steps.map((s) => s.pageIndex), names: flow.pages.map((p) => p.name) }
+            : undefined
+        }
+      />
 
       {/* Info card */}
       <div

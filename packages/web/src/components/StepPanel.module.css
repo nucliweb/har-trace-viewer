@@ -54,6 +54,23 @@
   background: color-mix(in srgb, var(--color-green) 8%, transparent);
 }
 
+/* In a flow of several pages, the mark of a page leads its steps; a rule parts it from the
+   steps of the page before. */
+.trackPage {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  color: var(--color-muted);
+  font-size: var(--fs-meta);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.trackPageNext {
+  padding-left: var(--space-sm);
+  border-left: 1px solid var(--color-border2);
+}
+
 /* Info card */
 .info {
   display: flex;
