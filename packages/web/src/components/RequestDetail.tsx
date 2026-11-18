@@ -97,7 +97,7 @@ function Timing({ row }: { row: WaterfallRow }) {
     <dl className={styles.timing}>
       {PHASES.map((key, i) => {
         const ms = row.phases[key];
-        const from = total > 0 ? (starts[i] / total) * 100 : 0;
+        const from = total > 0 ? ((starts[i] ?? 0) / total) * 100 : 0;
         const width = total > 0 && ms ? (ms / total) * 100 : 0;
         return (
           <div key={key} className={styles.phaseRow}>
@@ -153,7 +153,7 @@ export function RequestDetail({
   const { initiator, sizes, cache, headers } = detail;
   const kept: HeaderField[] = Object.keys(entry.responseHeaders)
     .sort()
-    .map((name) => ({ name, value: entry.responseHeaders[name], masked: false }));
+    .map((name) => ({ name, value: entry.responseHeaders[name] ?? "", masked: false }));
   const response = headers?.response ?? kept;
   const copyButton = (fields: HeaderField[], label: string, done: string) =>
     fields.length > 0 && (

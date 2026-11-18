@@ -68,7 +68,9 @@ export const formatSort = (sort: ResourceSort): string => `${sort.key}.${sort.di
 function parseSort(value: string | null): ResourceSort | undefined {
   const [key, direction, ...rest] = (value ?? "").split(".");
   if (rest.length > 0 || (direction !== "asc" && direction !== "desc")) return undefined;
-  return key in SORT_KEYS ? { key: key as ResourceSortKey, direction } : undefined;
+  return key !== undefined && key in SORT_KEYS
+    ? { key: key as ResourceSortKey, direction }
+    : undefined;
 }
 
 /** Reads a hash or query string; what is unknown or malformed is left out. */

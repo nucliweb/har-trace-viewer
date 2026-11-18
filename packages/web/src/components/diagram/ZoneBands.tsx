@@ -30,7 +30,8 @@ export function ZoneBands({
   labelScale = 1,
 }: Props) {
   // The client zone (China behind the GFW) hosts the browser cache sub-zone.
-  const client = zones[0];
+  const [client] = zones;
+  if (!client) return null;
   const clientWidth = client.x1 - client.x0;
   const clientCentre = client.x0 + clientWidth / 2;
   const fontSize = FONT_SIZE * labelScale;

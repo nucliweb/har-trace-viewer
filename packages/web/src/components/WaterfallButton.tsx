@@ -12,13 +12,13 @@ export function WaterfallButton({
   /** Marks the button as the toggle of this drawer, which hands the focus back to it on close. */
   drawer?: string;
   onClick: () => void;
-  className: string;
-  activeClassName: string;
+  className?: string;
+  activeClassName?: string;
 }) {
   const t = useMessages().waterfall;
   return (
     <button
-      className={`${className} ${active ? activeClassName : ""}`}
+      className={[className, active ? activeClassName : null].filter(Boolean).join(" ")}
       onClick={onClick}
       data-drawer={drawer}
       aria-label={t.toggle}

@@ -459,6 +459,7 @@ function Table({
             );
           }
           const row = rows[item.index];
+          if (!row) return null;
           return (
             <Fragment key={row.entryIndex}>
               <tr data-index={item.index} aria-rowindex={aria(rowIndex(item.index))}>
@@ -917,6 +918,7 @@ export function WaterfallPanel({
                   );
                 }
                 const row = rows[item.index];
+                if (!row) return null;
                 return (
                   <Row
                     key={row.entryIndex}

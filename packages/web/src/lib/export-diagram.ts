@@ -74,16 +74,17 @@ function inlineComputedStyles(
   const originals = [source, ...Array.from(source.querySelectorAll("*"))];
   const copies = [clone, ...Array.from(clone.querySelectorAll("*"))];
   originals.forEach((original, i) => {
+    const copy = copies[i];
+    if (!copy) return;
     const computed = getCS(original);
     const declarations: string[] = [];
     for (const prop of INLINED_PROPERTIES) {
       const value = computed.getPropertyValue(prop);
       if (value && value !== DEFAULT_VALUES[prop]) {
         declarations.push(`${prop}:${value}`);
-        copies[i].removeAttribute(prop); // the inlined style replaces var() presentation attributes
+        copy.removeAttribute(prop); // the inlined style replaces var() presentation attributes
       }
     }
-    const copy = copies[i];
     copy.removeAttribute("class");
     if (declarations.length > 0) copy.setAttribute("style", declarations.join(";"));
   });
@@ -101,6 +102,7 @@ function badgeNodes(badges: ExportBadge[], width: number): SVGGElement {
   const y = -BADGE_BAND + (BADGE_BAND - BADGE_HEIGHT) / 2;
   badges.forEach((badge, i) => {
     const size = sizes[i];
+    if (!size) return;
     const g = document.createElementNS(SVG_NS, "g");
     g.setAttribute("opacity", String(badge.opacity));
     const rect = document.createElementNS(SVG_NS, "rect");
@@ -148,7 +150,9 @@ export function serializeDiagramSvg(svg: SVGSVGElement, options: SerializeOption
     .querySelectorAll("animateMotion, animate, animateTransform, set")
     .forEach((el) => el.remove());
 
-  const [minX, minY, vbWidth, vbHeight] = (svg.getAttribute("viewBox") ?? "0 0 800 600")
+  const [minX = 0, minY = 0, vbWidth = 800, vbHeight = 600] = (
+    svg.getAttribute("viewBox") ?? "0 0 800 600"
+  )
     .trim()
     .split(/[\s,]+/)
     .map(Number);

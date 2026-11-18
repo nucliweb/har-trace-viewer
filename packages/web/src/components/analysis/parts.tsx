@@ -49,7 +49,7 @@ export function Table<T>({
   labelledBy,
   caption,
 }: TableProps<T> & { labelledBy?: string; caption?: string }) {
-  const num = (column: number) => (head[column].num ? styles.num : undefined);
+  const num = (column: number) => (head[column]?.num ? styles.num : undefined);
   return (
     <div className={styles.scroll}>
       <table className={styles.table} aria-labelledby={labelledBy}>

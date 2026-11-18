@@ -4,7 +4,10 @@ import {
   compareFlows,
   compareStepMetrics,
   formatDelta,
+  pageAnalysisAt,
+  pageAt,
   pageDocument,
+  stepAt,
   stepAtPair,
 } from "@htv/core";
 import type { DiagramStep, Flow, FlowComparison, MetricDelta, StepPair } from "@htv/core";
@@ -83,9 +86,9 @@ function DiagramPane({ side, view }: { side: Side; view: SideView }) {
   const inPane = useCallback(() => [paneRef.current], []);
   useEscapeToClose(drawer !== null, closeDrawer, inPane);
   const findings = useMemo(() => collectFindings(flow, { side }), [flow, side]);
-  const step = flow.steps[stepIndex];
-  const analysis = flow.pageAnalyses[step.pageIndex];
-  const page = flow.pages[step.pageIndex];
+  const step = stepAt(flow, stepIndex);
+  const analysis = pageAnalysisAt(flow, step.pageIndex);
+  const page = pageAt(flow, step.pageIndex);
   const historicalPaths = useMemo(
     () => computeHistoricalPaths(flow.steps, stepIndex),
     [flow.steps, stepIndex]
@@ -223,7 +226,7 @@ function PairInfo({
                 </span>
               ) : (
                 <span className={styles.missing}>
-                  {t.missing(view.flow.steps[view.stepIndex].title)}
+                  {t.missing(stepAt(view.flow, view.stepIndex).title)}
                 </span>
               )}
             </div>
@@ -297,7 +300,7 @@ function Headline({ comparison }: { comparison: FlowComparison }) {
 }
 
 const pairLabel = (pair: StepPair, a: Flow, b: Flow) =>
-  (pair.a !== undefined ? a.steps[pair.a] : b.steps[pair.b!]).title;
+  (pair.a !== undefined ? stepAt(a, pair.a) : stepAt(b, pair.b!)).title;
 
 /**
  * Two flows stacked, A on top and B below, driven by one step track: each position shows the
@@ -338,7 +341,7 @@ export function CompareView({ a, b }: Props) {
 
   const sideView = (flow: Flow, side: Side): SideView => {
     const { index, current } = stepAtPair(pairs, pairIndex, side);
-    return { flow, name: flow.pages[0].name, stepIndex: index, current };
+    return { flow, name: pageAt(flow, 0).name, stepIndex: index, current };
   };
   const views: Record<Side, SideView> = { a: sideView(a, "a"), b: sideView(b, "b") };
 
@@ -376,7 +379,7 @@ export function CompareView({ a, b }: Props) {
             <ExportMenu flow={a} compare={b} />
           </div>
           <div className={stepStyles.visuallyHidden} aria-live="polite" aria-atomic="true">
-            {messages.steps.live(pairIndex + 1, pairs.length, labels[pairIndex])}
+            {messages.steps.live(pairIndex + 1, pairs.length, labels[pairIndex] ?? "")}
           </div>
           <StepTrack labels={labels} stepIndex={pairIndex} goTo={nav.goTo} />
           <PairInfo views={views} pairIndex={pairIndex} total={pairs.length} />

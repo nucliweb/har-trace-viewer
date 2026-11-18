@@ -34,15 +34,14 @@ export function BadgeRow({ steps, pageIndex, stepIndex, className }: Props) {
 
   const revealedTypes = useMemo(() => {
     const types = new Set<string>();
-    for (let i = 0; i <= stepIndex; i++) {
-      const { badge, pageIndex: stepPage } = steps[i];
+    for (const { badge, pageIndex: stepPage } of steps.slice(0, stepIndex + 1)) {
       if (badge && stepPage === pageIndex) types.add(badge.type);
     }
     return types;
   }, [steps, stepIndex, pageIndex]);
 
   if (allBadges.length === 0) return null;
-  const currentBadgeType = steps[stepIndex].badge?.type;
+  const currentBadgeType = steps[stepIndex]?.badge?.type;
 
   return (
     <div className={className ? `${styles.badgeRow} ${className}` : styles.badgeRow}>

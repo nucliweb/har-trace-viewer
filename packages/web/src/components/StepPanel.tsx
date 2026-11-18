@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
+import { pageAt, stepAt } from "@htv/core";
 import type { Flow, HarEntry } from "@htv/core";
 import type { DiagramState, Speed, StepNavigation } from "../hooks/useDiagramState.js";
 import { useCoreLang, useMessages } from "../i18n/context.js";
@@ -180,7 +181,7 @@ function pageAddress(url: string): string {
  */
 function StepPage({ flow, pageIndex }: { flow: Flow; pageIndex: number }) {
   const t = useMessages().steps;
-  const page = flow.pages[pageIndex];
+  const page = pageAt(flow, pageIndex);
   const url = page.har.documentEntry.url;
   const address = pageAddress(url);
   return (
@@ -199,7 +200,7 @@ export function StepPanel({ state, resources, resourcesOpen, onToggleResources }
   const t = useMessages().steps;
   const lang = useCoreLang();
   const { flow, stepIndex, goTo } = state;
-  const step = flow.steps[stepIndex];
+  const step = stepAt(flow, stepIndex);
   const total = flow.steps.length;
 
   return (

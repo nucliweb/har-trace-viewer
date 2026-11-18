@@ -113,7 +113,7 @@ export function useLocale(): LocaleState {
     [shown]
   );
   const cycleLocale = useCallback(
-    () => setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]),
+    () => setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length] ?? "en"),
     [locale, setLocale]
   );
 

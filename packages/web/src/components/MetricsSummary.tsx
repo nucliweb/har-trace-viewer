@@ -72,9 +72,9 @@ const rows = (t: Messages["metrics"]): Row[] => [
 ];
 
 export const RATING_CLASS: Record<MetricRating, string> = {
-  good: styles.good,
-  "needs-improvement": styles.warn,
-  poor: styles.poor,
+  good: styles.good ?? "",
+  "needs-improvement": styles.warn ?? "",
+  poor: styles.poor ?? "",
   none: "",
 };
 
@@ -140,7 +140,7 @@ export function MetricsSummary({ flow, onClose }: Props) {
   const pages = useMemo(() => summarizeFlowMetrics(flow), [flow]);
   const mainThreads = flow.pageAnalyses.flatMap((analysis, i) =>
     analysis.mainThreadReport
-      ? [{ report: analysis.mainThreadReport, label: pageLabel(i + 1, pages[i].name) }]
+      ? [{ report: analysis.mainThreadReport, label: pageLabel(i + 1, pages[i]?.name ?? "") }]
       : []
   );
 

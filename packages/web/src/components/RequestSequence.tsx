@@ -39,12 +39,12 @@ function connectionNote(sequence: Sequence, har: ParsedHar, s: Messages): string
   const { connection } = sequence;
   if (connection.kind === "new") return s.connection.new(connection.requests - 1);
   if (connection.kind !== "reused") return null;
-  const reused =
-    connection.openedBy !== null
-      ? s.connection.reusedFrom(shortUrl(har.entries[connection.openedBy].url))
-      : connection.id !== null
-        ? s.connection.reusedBefore
-        : s.connection.reused;
+  const opener = connection.openedBy === null ? undefined : har.entries[connection.openedBy];
+  const reused = opener
+    ? s.connection.reusedFrom(shortUrl(opener.url))
+    : connection.id !== null
+      ? s.connection.reusedBefore
+      : s.connection.reused;
   return connection.requests > 1 ? `${reused} ${s.connection.shared(connection.requests)}` : reused;
 }
 

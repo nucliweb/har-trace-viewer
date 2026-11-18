@@ -1,4 +1,11 @@
-import { markdownReport, mermaidReport, pluralCount, redactFlows, requestsCsv } from "@htv/core";
+import {
+  markdownReport,
+  mermaidReport,
+  pageAt,
+  pluralCount,
+  redactFlows,
+  requestsCsv,
+} from "@htv/core";
 import type { Flow } from "@htv/core";
 import { slugify } from "./export-diagram.js";
 
@@ -18,7 +25,9 @@ const BUILDERS: Record<TextExport, (flow: Flow, compare?: Flow) => string> = {
 };
 
 export function textExportFilename(flow: Flow, compare: Flow | undefined, kind: TextExport) {
-  const names = [flow, compare].filter((f) => f !== undefined).map((f) => slugify(f.pages[0].name));
+  const names = [flow, compare]
+    .filter((f) => f !== undefined)
+    .map((f) => slugify(pageAt(f, 0).name));
   return `htv-${names.join("-vs-")}.${TEXT_EXPORTS[kind].extension}`;
 }
 
@@ -40,7 +49,8 @@ export function textExport(
     flows = masked.flows;
     summary = pluralCount(masked.report.hosts, "host");
   }
-  const blob = new Blob([BUILDERS[kind](flows[0], flows[1])], {
+  const [first = flow, second] = flows;
+  const blob = new Blob([BUILDERS[kind](first, second)], {
     type: `${TEXT_EXPORTS[kind].mime};charset=utf-8`,
   });
   return { blob, summary };

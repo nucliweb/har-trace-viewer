@@ -47,9 +47,9 @@ const UNITS = Object.fromEntries(COMPARED_METRICS.map((m) => [m.key, m.unit])) a
 
 /** B against A: better reads like a good rating, worse like a poor one. */
 export const DELTA_CLASS: Record<DeltaRating, string> = {
-  better: metricsStyles.good,
-  worse: metricsStyles.poor,
-  same: styles.same,
+  better: metricsStyles.good ?? "",
+  worse: metricsStyles.poor ?? "",
+  same: styles.same ?? "",
   none: "",
 };
 

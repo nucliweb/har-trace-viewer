@@ -344,20 +344,26 @@ export function RequestDeltas({ requests }: { requests: PageRequestComparison })
               </tr>
             </thead>
             <tbody ref={setList}>
-              {items.map((item) =>
-                item.kind === "gap" ? (
-                  <tr key={item.key} className={styles.gap} aria-hidden="true">
-                    <td colSpan={COLUMNS.length + 1} style={{ height: item.height }} />
-                  </tr>
-                ) : (
-                  <RequestRow
-                    key={`${rows[item.index].kind}:${rows[item.index].shown.entryIndex}`}
-                    row={rows[item.index]}
-                    index={item.index}
-                    ariaRow={aria(item.index + 2)}
-                  />
-                )
-              )}
+              {items.map((item) => {
+                if (item.kind === "gap") {
+                  return (
+                    <tr key={item.key} className={styles.gap} aria-hidden="true">
+                      <td colSpan={COLUMNS.length + 1} style={{ height: item.height }} />
+                    </tr>
+                  );
+                }
+                const row = rows[item.index];
+                return (
+                  row && (
+                    <RequestRow
+                      key={`${row.kind}:${row.shown.entryIndex}`}
+                      row={row}
+                      index={item.index}
+                      ariaRow={aria(item.index + 2)}
+                    />
+                  )
+                );
+              })}
             </tbody>
           </table>
         )}

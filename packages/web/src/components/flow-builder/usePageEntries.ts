@@ -34,7 +34,11 @@ export function pageEntriesReducer(
       const target = action.index + action.delta;
       if (target < 0 || target >= state.pages.length) return state;
       const pages = [...state.pages];
-      [pages[action.index], pages[target]] = [pages[target], pages[action.index]];
+      const moved = pages[action.index];
+      const other = pages[target];
+      if (!moved || !other) return state;
+      pages[action.index] = other;
+      pages[target] = moved;
       return { ...state, pages };
     }
     case "add":

@@ -241,16 +241,24 @@ function zoneRegions(
 }
 
 function zones(nodes: DiagramNode[], options: LayoutOptions, edges: number[]): Zone[] {
-  return zoneRegions(nodes, options).map(({ id, region }, i) => ({
-    id,
-    label: region === THIRD_PARTIES_ZONE ? "3RD PARTIES" : zoneLabel(region),
-    x0: edges[i],
-    x1: edges[i + 1],
-    color:
-      region === THIRD_PARTIES_ZONE
-        ? "var(--color-node-third-parties)"
-        : (ZONE_COLORS[region] ?? "var(--color-cyan)"),
-  }));
+  return zoneRegions(nodes, options).flatMap(({ id, region }, i) => {
+    // A zone spans from its edge to the next: there is one edge more than zones.
+    const x0 = edges[i];
+    const x1 = edges[i + 1];
+    if (x0 === undefined || x1 === undefined) return [];
+    return [
+      {
+        id,
+        label: region === THIRD_PARTIES_ZONE ? "3RD PARTIES" : zoneLabel(region),
+        x0,
+        x1,
+        color:
+          region === THIRD_PARTIES_ZONE
+            ? "var(--color-node-third-parties)"
+            : (ZONE_COLORS[region] ?? "var(--color-cyan)"),
+      },
+    ];
+  });
 }
 
 function nodeY(kind: NodeKind, columns: LayoutSpec["columns"]): number {
@@ -286,12 +294,11 @@ function positions(
     }
     const cx = columns[kind];
     if (cx === undefined) continue;
-    const stackIndex = clusters.indexOf(node);
-    const cy = stackIndex >= 0 ? stackYs[stackIndex] : nodeY(kind, columns);
+    const stackY = stackYs[clusters.indexOf(node)];
     result[node.id] =
-      stackIndex >= 0
-        ? { cx, cy, present: node.present, captionRight: true }
-        : { cx, cy, present: node.present };
+      stackY !== undefined
+        ? { cx, cy: stackY, present: node.present, captionRight: true }
+        : { cx, cy: nodeY(kind, columns), present: node.present };
   }
   return result;
 }
@@ -346,9 +353,11 @@ function scaledColumns(
   for (const [kind, cx] of Object.entries(columns) as [NodeKind, number][]) {
     const i = Math.max(
       0,
-      from.findIndex((edge, j) => j < from.length - 1 && cx >= edge && cx < from[j + 1])
+      from.findIndex((edge, j) => cx >= edge && cx < (from[j + 1] ?? -Infinity))
     );
-    result[kind] = round(to[i] + ((cx - from[i]) / (from[i + 1] - from[i])) * (to[i + 1] - to[i]));
+    const [lo, hi, toLo, toHi] = [from[i], from[i + 1], to[i], to[i + 1]];
+    if (lo === undefined || hi === undefined || toLo === undefined || toHi === undefined) continue;
+    result[kind] = round(toLo + ((cx - lo) / (hi - lo)) * (toHi - toLo));
   }
   return result;
 }
@@ -457,7 +466,8 @@ export function layout(
 ): Layout {
   const spec = LAYOUTS[layoutId(options)];
   const edges = scaledEdges(spec.bounds, width);
-  const clientZoneEnd = edges[1];
+  // The edges run from 0 to the width, the client zone first.
+  const clientZoneEnd = edges[1] ?? width;
   const cacheSubzoneY = options.hasThirdPartyZone ? CLUSTER_CACHE_SUBZONE_Y : CACHE_SUBZONE_Y;
   const nodePositions = positions(
     nodes,
@@ -477,8 +487,9 @@ export function layout(
   });
   // Label slots: side by side from the end of the client zone, along the dip.
   const fans = new Map<PathId, ClusterFan>();
-  if (stacked.length > 0) {
-    const { x0, x1 } = anchors(stacked[0].from, stacked[0].to, stacked[0].path);
+  const [first] = stacked;
+  if (first) {
+    const { x0, x1 } = anchors(first.from, first.to, first.path);
     const start = clientZoneEnd;
     const slot = (x0 + CLUSTER_LABEL_SLOTS_END * (x1 - x0) - start) / stacked.length;
     const sideBySide = slot >= 2 * CLUSTER_LABEL.halfWidth + CLUSTER_LABEL.clearance;
@@ -492,7 +503,8 @@ export function layout(
     }));
     const shapes = solveClusterFan(clusterPaths, nodePositions, clientZoneEnd);
     clusterPaths.forEach(({ path, labelX }, i) => {
-      fans.set(path.id, { shape: shapes[i], labelX });
+      const shape = shapes[i];
+      if (shape) fans.set(path.id, { shape, labelX });
     });
   }
   const pathGeometries: Partial<Record<PathId, PathGeometry>> = {};

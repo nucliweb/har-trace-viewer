@@ -2,6 +2,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import type { CSSProperties } from "react";
 import {
   analyzeHops,
+  pageAnalysisAt,
+  pageAt,
+  stepAt,
   protocolsInUse,
   collectFindings,
   getStepCacheResources,
@@ -61,22 +64,16 @@ export function DiagramView({ flow }: Props) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const toolbarBottom = useBottomEdge(toolbarRef);
   const { stepIndex } = state;
-  const step = flow.steps[stepIndex];
+  const step = stepAt(flow, stepIndex);
   const { pageIndex } = step;
   // Steps reference their page entries by index: resolve them once per step.
-  const resources = useMemo(() => getStepResources(flow, flow.steps[stepIndex]), [flow, stepIndex]);
-  const cacheResources = useMemo(
-    () => getStepCacheResources(flow, flow.steps[stepIndex]),
-    [flow, stepIndex]
-  );
-  const inferredCacheHits = useMemo(
-    () => getStepInferredCacheHits(flow, flow.steps[stepIndex]),
-    [flow, stepIndex]
-  );
+  const resources = useMemo(() => getStepResources(flow, step), [flow, step]);
+  const cacheResources = useMemo(() => getStepCacheResources(flow, step), [flow, step]);
+  const inferredCacheHits = useMemo(() => getStepInferredCacheHits(flow, step), [flow, step]);
   const hasCacheList = cacheResources.length + inferredCacheHits.length > 0;
   // Indexing keeps the analysis reference stable while the user stays on a page.
-  const analysis = flow.pageAnalyses[pageIndex];
-  const page = flow.pages[pageIndex];
+  const analysis = pageAnalysisAt(flow, pageIndex);
+  const page = pageAt(flow, pageIndex);
   // Every drawer docks on the right, so only one is open at a time: none hides behind another.
   // A link names the drawer to open with, and follows the one that is open; leaving the view
   // takes the drawer out of the link.
@@ -133,7 +130,7 @@ export function DiagramView({ flow }: Props) {
     setListedIndex(stepIndex);
   }
   const listedStep = flow.steps[listedIndex] ?? step;
-  const listedPage = flow.pages[listedStep.pageIndex];
+  const listedPage = pageAt(flow, listedStep.pageIndex);
   const listedResources = useMemo(() => getStepResources(flow, listedStep), [flow, listedStep]);
   const hops = useMemo(() => analyzeHops(page.har, page.har.documentEntry.url), [page.har]);
   const protocols = useMemo(() => protocolsInUse(page.har), [page.har]);

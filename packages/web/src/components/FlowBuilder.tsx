@@ -73,7 +73,7 @@ export function FlowBuilder({
   // A journey of several pages keeps its controls with the option off: nothing added is hidden.
   const journeyControls = journeys || pages.length > 1;
   const pagePair = pagePairOf(pages);
-  const pickerAvailable = pages.length === 1 && (pages[0].har?.length ?? 0) > 1;
+  const pickerAvailable = pages.length === 1 && (pages[0]?.har?.length ?? 0) > 1;
   const comparing = pagePair !== null || compare.har !== null;
   const isParsing = [...pages, compare].some(isEntryParsing);
   // A trace waiting for its HAR would be dropped from the flow without a word: Generate waits.

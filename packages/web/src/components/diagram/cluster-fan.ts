@@ -123,13 +123,17 @@ function clusterObstacles(
 }
 
 // The point of a sampled curve at `x`, or its last point.
-export const pointAt = (points: { x: number; y: number }[], x: number, run: number) =>
-  points.find((p) => run * (p.x - x) >= 0) ?? points[points.length - 1];
+export function pointAt(points: { x: number; y: number }[], x: number, run: number) {
+  const point = points.find((p) => run * (p.x - x) >= 0) ?? points.at(-1);
+  if (!point) throw new Error("A sampled curve has no points");
+  return point;
+}
 
 // The height of a sampled curve at `x`, interpolated; undefined outside its run.
 function heightAt(points: { x: number; y: number }[], x: number): number | undefined {
-  for (let i = 1; i < points.length; i++) {
-    const [a, b] = [points[i - 1], points[i]];
+  for (const [i, b] of points.entries()) {
+    const a = points[i - 1];
+    if (!a) continue;
     if ((a.x - x) * (b.x - x) <= 0) {
       return a.x === b.x ? a.y : a.y + ((x - a.x) / (b.x - a.x)) * (b.y - a.y);
     }

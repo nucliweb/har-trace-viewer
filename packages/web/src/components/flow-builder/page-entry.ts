@@ -196,6 +196,7 @@ interface Generation {
 /** Two pages of a single multi-page HAR (first vs repeat view) can be compared directly. */
 export function pagePairOf(pages: PageEntry[]): [string, string] | null {
   const [first] = pages;
+  if (!first) return null;
   const pickerAvailable = pages.length === 1 && (first.har?.length ?? 0) > 1;
   return pickerAvailable && first.comparePages ? first.comparePair : null;
 }
@@ -211,8 +212,8 @@ export function buildGeneration(
   // Without a region the flow takes the one its latencies suggest.
   const options: FlowOptions = clientRegion ? { clientRegion } : {};
   const pagePair = pagePairOf(pages);
-  if (pagePair) {
-    const [first] = pages;
+  const [first] = pages;
+  if (pagePair && first) {
     const side = (id: string) =>
       expandPageFlows({
         name: first.name.trim() || fallbackName,

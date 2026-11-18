@@ -15,10 +15,10 @@ export function computeHistoricalPaths(
 ): Partial<Record<PathId, HistoricalPath>> {
   // History only covers the active page: each page has its own topology.
   const history: Partial<Record<PathId, HistoricalPath>> = {};
-  const { pageIndex } = steps[currentStepIndex];
-  for (let i = 0; i < currentStepIndex; i++) {
-    const s = steps[i];
-    if (s.pageIndex !== pageIndex) continue;
+  const current = steps[currentStepIndex];
+  if (!current) return history;
+  for (const s of steps.slice(0, currentStepIndex)) {
+    if (s.pageIndex !== current.pageIndex) continue;
     for (const pathId of s.activePaths) {
       const raw = s.pathTimings?.[pathId as PathId];
       history[pathId as PathId] = {

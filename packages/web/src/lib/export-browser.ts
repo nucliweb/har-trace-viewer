@@ -38,9 +38,10 @@ async function buildFontFaceCss(): Promise<string> {
     rules.map(async ({ rule, base }) => {
       const src = rule.style.getPropertyValue("src");
       const match = /url\(\s*(["']?)(.*?)\1\s*\)/.exec(src);
-      if (!match) return "";
+      const url = match?.[2];
+      if (!url) return "";
       try {
-        const uri = await toDataUri(new URL(match[2], base).href);
+        const uri = await toDataUri(new URL(url, base).href);
         const get = (prop: string) => rule.style.getPropertyValue(prop) || "normal";
         return `@font-face{font-family:${get("font-family")};font-style:${get("font-style")};font-weight:${get("font-weight")};src:url(${uri}) format("woff2")}`;
       } catch {

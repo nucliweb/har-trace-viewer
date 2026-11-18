@@ -64,12 +64,13 @@ export function bezier(
 ): string {
   const dx = x1 - x0;
   const dy = y1 - y0;
-  const points = [
+  const controls: [number, number][] = [
     [x0, y0],
     [x0 + (bypass?.control1X ?? CONTROL_1.x) * dx, bypass?.controlY ?? y0 + CONTROL_1.y * dy],
     [x0 + (bypass?.control2X ?? CONTROL_2.x) * dx, bypass?.controlY ?? y0 + CONTROL_2.y * dy],
     [x1, y1],
-  ].map(([x, y]) => `${round(x)},${round(y)}`);
+  ];
+  const points = controls.map(([x, y]) => `${round(x)},${round(y)}`);
   return `M ${points[0]} C ${points.slice(1).join(" ")}`;
 }
 
@@ -78,8 +79,8 @@ function cubicPoint(px: number[], py: number[], t: number) {
   const u = 1 - t;
   const w = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
   return {
-    x: w.reduce((sum, k, j) => sum + k * px[j], 0),
-    y: w.reduce((sum, k, j) => sum + k * py[j], 0),
+    x: w.reduce((sum, k, j) => sum + k * (px[j] ?? 0), 0),
+    y: w.reduce((sum, k, j) => sum + k * (py[j] ?? 0), 0),
   };
 }
 

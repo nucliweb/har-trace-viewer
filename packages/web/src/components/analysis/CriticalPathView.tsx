@@ -12,8 +12,8 @@ export function CriticalPathView({ report }: { report: RenderBlockingReport }) {
   const columns = m.waterfall.columns;
   const { source, chains } = report;
   if (source === "none") return <p>{t.unknownBlocking}</p>;
-  if (chains.length === 0) return <p>{c.noChains}</p>;
   const [deepest] = chains;
+  if (!deepest) return <p>{c.noChains}</p>;
   return (
     <>
       <p className={styles.summary}>
