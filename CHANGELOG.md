@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-18
+
 ### Added
 
 - Play and step through the sequence of a request in the web app and the HTML report: Play reveals its steps one after another, Step one at a time, and Show all brings back the whole sequence.
@@ -445,7 +447,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.22.0...v0.23.0
