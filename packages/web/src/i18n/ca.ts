@@ -746,6 +746,12 @@ export const ca: Messages = {
         browser: "Navegador",
         resolver: "Resolutor DNS",
         steps: "Passos de la petició",
+        play: "Reprodueix",
+        pause: "Posa en pausa",
+        step: "Pas",
+        showAll: "Mostra-ho tot",
+        playback: "Reprodueix la seqüència",
+        current: (n: number, total: number, label: string) => `Pas ${n} de ${total}: ${label}`,
         label: {
           queue: "A la cua",
           dns: "Consulta DNS",

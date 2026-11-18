@@ -8,8 +8,10 @@ import type {
   SequenceStepKind,
   WaterfallPhases,
 } from "@htv/core";
+import { useSequencePlayback } from "../hooks/useSequencePlayback.js";
 import { useMessages } from "../i18n/context.js";
 import styles from "./RequestSequence.module.css";
+import waterfallStyles from "./WaterfallPanel.module.css";
 
 type Actor = "browser" | "resolver" | "server";
 
@@ -85,6 +87,8 @@ function explainOf(step: SequenceStep, sequence: Sequence, s: Messages): string 
  * One request as a sequence between the browser, the DNS resolver and the server: each step
  * with when it starts, how long it took and what happens in it, drawn as an arrow between the
  * lanes. The HAR gives phases, not packets: a handshake is one step with its whole time.
+ * Play and Step reveal the steps one after another, the current one marked; the steps still to
+ * come keep their place, so the drawing does not jump.
  */
 export function RequestSequence({
   sequence,
@@ -97,6 +101,10 @@ export function RequestSequence({
 }) {
   const s = useMessages().waterfall.detail.sequence;
   const { outcome, steps, host, roundTripMs } = sequence;
+  const playback = useSequencePlayback(steps.length);
+  const { current, isPlaying } = playback;
+  const currentStep = current === null ? undefined : steps[current];
+  const control = `${waterfallStyles.chip} ${styles.control}`;
   const actors: Actor[] = steps.some((step) => step.kind === "dns")
     ? ["browser", "resolver", "server"]
     : ["browser", "server"];
@@ -120,6 +128,37 @@ export function RequestSequence({
           {note}
         </p>
       ))}
+      {steps.length > 1 && (
+        <div className={styles.controls} role="group" aria-label={s.playback}>
+          <button
+            type="button"
+            className={`${control} ${isPlaying ? waterfallStyles.chipActive : ""}`}
+            onClick={playback.togglePlay}
+          >
+            <span aria-hidden="true">{isPlaying ? "⏸ " : "▶ "}</span>
+            {isPlaying ? s.pause : s.play}
+          </button>
+          <button type="button" className={control} onClick={playback.step}>
+            {s.step}
+            <span aria-hidden="true"> ›</span>
+          </button>
+          <button
+            type="button"
+            className={control}
+            onClick={playback.reset}
+            disabled={current === null}
+          >
+            {s.showAll}
+          </button>
+        </div>
+      )}
+      {steps.length > 1 && (
+        <p role="status" className={styles.visuallyHidden}>
+          {current !== null &&
+            currentStep &&
+            s.current(current + 1, steps.length, labelOf(currentStep, sequence, entry, s))}
+        </p>
+      )}
       {steps.length > 0 && (
         <>
           <div className={styles.head} aria-hidden="true">
@@ -132,7 +171,7 @@ export function RequestSequence({
             </span>
           </div>
           <ol className={styles.steps} aria-label={s.steps}>
-            {steps.map((step) => {
+            {steps.map((step, i) => {
               const shape = SHAPES[step.kind];
               const from = at(shape.from);
               const to = shape.to ? at(shape.to) : from;
@@ -148,8 +187,15 @@ export function RequestSequence({
                   : shape.from === "server"
                     ? styles.left
                     : styles.right;
+              const state =
+                current === null || i < current ? undefined : i === current ? "current" : "pending";
               return (
-                <li key={step.kind} className={styles.step}>
+                <li
+                  key={step.kind}
+                  className={state ? `${styles.step} ${styles[state]}` : styles.step}
+                  aria-current={state === "current" ? "step" : undefined}
+                  aria-hidden={state === "pending" ? true : undefined}
+                >
                   <span className={styles.at}>{formatMs(step.atMs)}</span>
                   <span className={styles.drawing} aria-hidden="true">
                     {actors.map((actor) => (

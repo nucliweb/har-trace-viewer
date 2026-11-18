@@ -190,7 +190,8 @@ export function RequestDetail({
           wide
           title={d.sequence.title(sequence.protocol === "unknown" ? null : sequence.protocol)}
         >
-          <RequestSequence sequence={sequence} entry={entry} har={har} />
+          {/* A new request starts with its whole sequence, not where the last one stopped. */}
+          <RequestSequence key={row.entryIndex} sequence={sequence} entry={entry} har={har} />
         </Part>
         <Part title={initiator ? `${d.initiator} · ${initiator.type}` : d.initiator}>
           {initiator === null ? (

@@ -1,8 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { HarTiming } from "@htv/core";
 import { WaterfallPanel } from "../src/components/WaterfallPanel.js";
+import { SEQUENCE_STEP_MS } from "../src/hooks/useSequencePlayback.js";
 import { MessagesContext } from "../src/i18n/context.js";
 import { es } from "../src/i18n/es.js";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
@@ -162,5 +163,79 @@ describe("RequestDetail: the sequence of a request", () => {
 
     expect(within(group).getByText("Navegador")).toBeInTheDocument();
     expect(steps(group)[1]).toMatch(/Consulta DNS/);
+    expect(within(group).getByRole("button", { name: "Reproducir" })).toBeInTheDocument();
+    expect(within(group).getByRole("button", { name: "Paso" })).toBeInTheDocument();
+  });
+});
+
+describe("RequestDetail: playing the sequence", () => {
+  const button = (group: HTMLElement, name: string) => within(group).getByRole("button", { name });
+  const current = (group: HTMLElement) =>
+    within(within(group).getByRole("list"))
+      .getAllByRole("listitem")
+      .filter((li) => li.getAttribute("aria-current") === "step");
+
+  it("steps through the sequence one step at a time, then shows it whole again", async () => {
+    await open("first.js");
+    const group = sequence();
+    const user = userEvent.setup();
+
+    expect(steps(group)).toHaveLength(7);
+    expect(button(group, "Show all")).toBeDisabled();
+
+    await user.click(button(group, "Step"));
+    expect(steps(group)).toHaveLength(1);
+    expect(steps(group)[0]).toMatch(/Queued/);
+    expect(within(group).getByRole("status")).toHaveTextContent("Step 1 of 7: Queued");
+
+    await user.click(button(group, "Step"));
+    expect(steps(group)).toHaveLength(2);
+    expect(current(group)).toHaveLength(1);
+    expect(current(group)[0]).toHaveTextContent(/DNS lookup/);
+    expect(within(group).getByRole("status")).toHaveTextContent("Step 2 of 7: DNS lookup");
+
+    await user.click(button(group, "Show all"));
+    expect(steps(group)).toHaveLength(7);
+    expect(current(group)).toHaveLength(0);
+    expect(within(group).getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("plays the sequence to its last step", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await open("first.js");
+      const group = sequence();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      await user.click(button(group, "Play"));
+      expect(steps(group)).toHaveLength(1);
+      expect(button(group, "Pause")).toBeInTheDocument();
+
+      // Each step waits for the one before it to show.
+      for (let i = 0; i < 6; i++) act(() => void vi.advanceTimersByTime(SEQUENCE_STEP_MS));
+      expect(steps(group)).toHaveLength(7);
+      // The last step stays marked, and said, until the whole sequence is asked back.
+      expect(current(group)[0]).toHaveTextContent(/200 · 4\.0 KB · br/);
+      expect(within(group).getByRole("status")).toHaveTextContent("Step 7 of 7: 200 · 4.0 KB");
+      expect(button(group, "Play")).toBeInTheDocument();
+      expect(button(group, "Show all")).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("starts over on the next request opened", async () => {
+    await open("first.js");
+    const user = userEvent.setup();
+    await user.click(button(sequence(), "Step"));
+    expect(steps(sequence())).toHaveLength(1);
+
+    await user.click(within(rowNamed("second.js")).getAllByRole("button")[0]);
+    expect(steps(sequence())).toHaveLength(3);
+  });
+
+  it("offers no playback when there is a single step or none", async () => {
+    await open("logo.svg");
+    expect(within(sequence()).queryByRole("button", { name: "Play" })).not.toBeInTheDocument();
   });
 });

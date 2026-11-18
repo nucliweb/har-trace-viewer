@@ -735,6 +735,12 @@ export const en = {
         browser: "Browser",
         resolver: "DNS resolver",
         steps: "Steps of the request",
+        play: "Play",
+        pause: "Pause",
+        step: "Step",
+        showAll: "Show all",
+        playback: "Play the sequence",
+        current: (n: number, total: number, label: string) => `Step ${n} of ${total}: ${label}`,
         label: {
           queue: "Queued",
           dns: "DNS lookup",

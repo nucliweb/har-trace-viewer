@@ -99,6 +99,12 @@ test.describe("the detail of a request", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Copy URL" })).toBeFocused();
     await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Copy cURL" })).toBeFocused();
+    // The sequence's Play and Step; Show all stays out while the whole sequence shows.
+    await page.keyboard.press("Tab");
+    await expect(detail(page).getByRole("button", { name: "Play" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(detail(page).getByRole("button", { name: "Step" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Copy request headers" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -147,5 +153,29 @@ test.describe("the detail of a request", () => {
     const tag = detail(page).getByText("masked").first();
     const border = await tag.evaluate((el) => getComputedStyle(el).borderTopStyle);
     expect(border).toBe("solid");
+  });
+
+  test("plays the sequence step by step and passes axe while it plays", async ({ page }) => {
+    await openDocument(page);
+    const sequence = detail(page).getByRole("group", { name: /^Sequence/ });
+    const steps = sequence.getByRole("list").getByRole("listitem");
+    const total = await steps.count();
+    expect(total).toBeGreaterThan(1);
+
+    await sequence.getByRole("button", { name: "Step" }).click();
+    await expect(steps).toHaveCount(1);
+    await expect(sequence.getByRole("status")).toHaveText(new RegExp(`^Step 1 of ${total}: `));
+    expect(await axe(page)).toEqual([]);
+
+    await sequence.getByRole("button", { name: "Play" }).click();
+    await expect(sequence.getByRole("button", { name: "Play" })).toBeVisible({ timeout: 15_000 });
+    await expect(steps).toHaveCount(total);
+    await expect(sequence.getByRole("status")).toHaveText(
+      new RegExp(`^Step ${total} of ${total}: `)
+    );
+
+    await sequence.getByRole("button", { name: "Show all" }).click();
+    await expect(sequence.getByRole("status")).toBeEmpty();
+    await expect(sequence.getByRole("button", { name: "Show all" })).toBeDisabled();
   });
 });

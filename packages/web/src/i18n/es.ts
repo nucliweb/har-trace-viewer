@@ -739,6 +739,12 @@ export const es: Messages = {
         browser: "Navegador",
         resolver: "Resolver DNS",
         steps: "Pasos de la petición",
+        play: "Reproducir",
+        pause: "Pausar",
+        step: "Paso",
+        showAll: "Ver todo",
+        playback: "Reproducir la secuencia",
+        current: (n: number, total: number, label: string) => `Paso ${n} de ${total}: ${label}`,
         label: {
           queue: "En cola",
           dns: "Consulta DNS",

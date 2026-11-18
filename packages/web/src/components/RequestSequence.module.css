@@ -177,3 +177,76 @@
     outline: 1px solid CanvasText;
   }
 }
+
+/* Play, Step and Show all, over the lanes. */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.control:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* While it plays, the steps still to come keep their place, unseen, and the current one stands
+   out, its mark drawn from where it starts. */
+.pending {
+  visibility: hidden;
+}
+
+.current {
+  background: color-mix(in srgb, var(--color-cyan) 8%, transparent);
+}
+
+.current .right,
+.current .left,
+.current .both {
+  animation: draw 0.4s ease-out;
+}
+
+.current .dot {
+  animation: draw-dot 0.4s ease-out;
+}
+
+.current .left {
+  transform-origin: right;
+}
+
+.current .right,
+.current .both {
+  transform-origin: left;
+}
+
+@keyframes draw {
+  from {
+    scale: 0 1;
+  }
+}
+
+@keyframes draw-dot {
+  from {
+    scale: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .current .mark {
+    animation: none;
+  }
+}
