@@ -296,4 +296,41 @@ test.describe("a waterfall of ten thousand requests", () => {
       ).toEqual([]);
     });
   }
+
+  test("opens a row's tooltip above it when it would run past the bottom of the list", async ({
+    page,
+  }) => {
+    // Room above the bottom row for the whole tooltip, measured once the drawer stops moving.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openWaterfall(page);
+    await animationsSettled(page);
+    // The last row that shows whole, at the bottom edge of the scrolling list.
+    const last = await page.evaluate(() => {
+      const body = document
+        .querySelector("[data-index]")!
+        .closest<HTMLElement>("ul, ol")!.parentElement!;
+      let scroller: HTMLElement | null = body;
+      while (scroller && getComputedStyle(scroller).overflowY === "visible") {
+        scroller = scroller.parentElement;
+      }
+      const bottom = scroller!.getBoundingClientRect().bottom;
+      const rows = [...document.querySelectorAll<HTMLElement>("[data-index]")];
+      return rows.filter((row) => row.getBoundingClientRect().bottom <= bottom).at(-1)!.dataset
+        .index!;
+    });
+    await page.locator(`[data-index="${last}"] button`).first().hover();
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toBeVisible();
+
+    const fits = await tooltip.evaluate((tip) => {
+      let scroller = tip.parentElement;
+      while (scroller && getComputedStyle(scroller).overflowY === "visible") {
+        scroller = scroller.parentElement;
+      }
+      const box = scroller!.getBoundingClientRect();
+      const rect = tip.getBoundingClientRect();
+      return { top: rect.top >= box.top, bottom: rect.bottom <= box.bottom };
+    });
+    expect(fits).toEqual({ top: true, bottom: true });
+  });
 });

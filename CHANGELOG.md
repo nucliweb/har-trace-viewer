@@ -10,6 +10,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 - Play and step through the sequence of a request in the web app and the HTML report: Play reveals its steps one after another, Step one at a time, and Show all brings back the whole sequence.
 
+### Fixed
+
+- The tooltip of a waterfall row near the bottom of the list opens above the row, instead of below it where the list cut it off.
+
 ## [0.25.0] - 2026-11-18
 
 ### Added

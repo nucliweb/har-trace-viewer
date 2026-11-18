@@ -533,6 +533,12 @@
   pointer-events: none;
 }
 
+/* A row near the bottom of the list opens its tooltip above it, where the list does not cut it. */
+.tooltip[data-side="above"] {
+  top: auto;
+  bottom: calc(100% + 2px);
+}
+
 .tooltipUrl {
   overflow-wrap: anywhere;
   font-weight: 700;

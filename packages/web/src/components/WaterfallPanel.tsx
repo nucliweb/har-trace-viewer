@@ -5,10 +5,12 @@ import {
   useDeferredValue,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { tooltipSide, visibleBox } from "../lib/tooltip-side.js";
 import type { CSSProperties, Ref } from "react";
 import {
   RESOURCE_QUERY_HELP,
@@ -220,8 +222,16 @@ function Tooltip({ row, id }: { row: WaterfallRow; id: string }) {
     row.isLcpResource ? t.lcpResource : null,
     row.renderBlocking ? t.renderBlocking : null,
   ].filter(Boolean);
+  // Below its row, or above when the bottom of the list would cut it: set before it paints.
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const tip = ref.current;
+    const item = tip?.parentElement;
+    if (!tip || !item) return;
+    tip.dataset.side = tooltipSide(item.getBoundingClientRect(), tip.offsetHeight, visibleBox(tip));
+  }, [row]);
   return (
-    <span className={styles.tooltip} role="tooltip" id={id}>
+    <span ref={ref} className={styles.tooltip} role="tooltip" id={id}>
       <span className={styles.tooltipUrl}>{row.url}</span>
       {row.redirectURL && <span className={styles.tooltipMeta}>→ {row.redirectURL}</span>}
       <span className={styles.tooltipMeta}>{facts.join(" · ")}</span>
