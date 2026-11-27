@@ -47,5 +47,29 @@ export default tseslint.config(
       ...jsxA11y.flatConfigs.recommended.rules,
     },
   },
+  {
+    // The terminal UI is React (Ink): its hooks follow the same rules as the web app.
+    files: ["packages/cli/**/*.tsx"],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    plugins: { "react-hooks": reactHooks },
+    rules: { ...reactHooks.configs.flat.recommended.rules },
+  },
+  {
+    // Rules that need type information: the .mjs scripts are in no TypeScript project and skip them.
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        // projectService only looks at the nearest tsconfig.json, which in each package leaves the
+        // tests and config files (tsconfig.node.json) out; listing every project covers them all.
+        project: ["packages/*/tsconfig.json", "packages/*/tsconfig.node.json", "e2e/tsconfig.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/await-thenable": "error",
+    },
+  },
   prettier
 );

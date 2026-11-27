@@ -77,6 +77,7 @@ export function ExportMenu({
     buttonRef.current?.focus();
   };
 
+  // `run` catches every failure itself, so the clicks that start it may leave it floating.
   const run = async (extension: "svg" | "png") => {
     const container = containerRef?.current;
     const svg = container?.querySelector<SVGSVGElement>('[id="diagram-svg"]');
@@ -150,11 +151,11 @@ export function ExportMenu({
                 ref={firstItemRef}
                 role="menuitem"
                 className={styles.item}
-                onClick={() => run("svg")}
+                onClick={() => void run("svg")}
               >
                 {t.svg}
               </button>
-              <button role="menuitem" className={styles.item} onClick={() => run("png")}>
+              <button role="menuitem" className={styles.item} onClick={() => void run("png")}>
                 {t.png}
               </button>
             </>

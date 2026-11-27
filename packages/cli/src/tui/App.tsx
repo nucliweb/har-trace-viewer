@@ -596,20 +596,21 @@ export function TuiApp({ flow, compare, version, rows, columns, mouse }: Props) 
   // Events of a wheel that turns faster than the screen draws add up and apply in one render.
   const wheel = useRef(0);
   const [wheelTick, setWheelTick] = useState(0);
-  useEffect(() => {
+  const applyWheel = () => {
     const delta = wheel.current;
     wheel.current = 0;
     if (delta === 0) return;
     if (onList) moveCursor(cursorIndex + delta, delta);
     else scrollTo(offset + delta);
-    // Only a turn of the wheel applies it; the rest of what the render reads is current already.
-  }, [wheelTick]);
-  const latest = useRef(onMouse);
+  };
+  const latest = useRef({ onMouse, applyWheel });
   // Layout effect: a report that arrives right after a render must see that render's state.
   useLayoutEffect(() => {
-    latest.current = onMouse;
+    latest.current = { onMouse, applyWheel };
   });
-  useEffect(() => mouse?.subscribe((event) => latest.current(event)), [mouse]);
+  // Only a turn of the wheel applies it, with the state of the render that follows the turn.
+  useEffect(() => latest.current.applyWheel(), [wheelTick]);
+  useEffect(() => mouse?.subscribe((event) => latest.current.onMouse(event)), [mouse]);
   const scrolledLength = region.length - pinned;
   const visible = [
     ...region.at(0, pinned),

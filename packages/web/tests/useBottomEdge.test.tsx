@@ -51,7 +51,9 @@ describe("useBottomEdge", () => {
     render(<Probe onBottom={(b) => seen.push(b)} />);
 
     bottom = 161;
-    act(() => window.dispatchEvent(new Event("resize")));
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
     expect(seen.at(-1)).toBe(161);
 
     bottom = 209;

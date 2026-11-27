@@ -88,7 +88,8 @@ export function usePageEntries(messages?: Messages) {
     compare: state.compare,
     update,
     loadTrace: useCallback(
-      (id: string, file: File) => loadTraceFile(file, (patch) => update(id, patch)),
+      // loadTraceFile reports a failure through `apply`, so its promise never rejects.
+      (id: string, file: File) => void loadTraceFile(file, (patch) => update(id, patch)),
       [update]
     ),
     loadFiles: useCallback(
@@ -124,7 +125,7 @@ export function usePageEntries(messages?: Messages) {
       [updateCompare]
     ),
     loadCompareTrace: useCallback(
-      (file: File) => loadTraceFile(file, updateCompare),
+      (file: File) => void loadTraceFile(file, updateCompare),
       [updateCompare]
     ),
     resetCompare: useCallback(() => dispatch({ type: "resetCompare", entry: makeEntry() }), []),

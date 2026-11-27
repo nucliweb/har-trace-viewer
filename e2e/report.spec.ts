@@ -535,17 +535,20 @@ test("non-bundled report served over HTTP loads its relative assets without erro
   page,
 }) => {
   const root = resolve(output, "plain");
-  const server = createServer(async (req, res) => {
-    try {
-      const urlPath = new URL(req.url ?? "/", "http://localhost").pathname;
-      const file = resolve(root, "." + (urlPath === "/" ? "/index.html" : urlPath));
-      if (!file.startsWith(root)) throw new Error("outside root");
-      const body = await readFile(file);
-      const type = MIME[extname(file)] ?? "application/octet-stream";
-      res.writeHead(200, { "content-type": type }).end(body);
-    } catch {
-      res.writeHead(404).end();
-    }
+  const server = createServer((req, res) => {
+    // The try/catch covers the whole body, so this promise cannot reject.
+    void (async () => {
+      try {
+        const urlPath = new URL(req.url ?? "/", "http://localhost").pathname;
+        const file = resolve(root, "." + (urlPath === "/" ? "/index.html" : urlPath));
+        if (!file.startsWith(root)) throw new Error("outside root");
+        const body = await readFile(file);
+        const type = MIME[extname(file)] ?? "application/octet-stream";
+        res.writeHead(200, { "content-type": type }).end(body);
+      } catch {
+        res.writeHead(404).end();
+      }
+    })();
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   try {

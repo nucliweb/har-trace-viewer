@@ -663,17 +663,15 @@ export function WaterfallPanel({
     setCopyMessage(null);
   }, []);
   const copy = useCallback<OnCopy>(
-    async (row, kind) => {
-      const ok = await copyText(kind === "url" ? row.url : curlCommand(row));
-      setCopyMessage(ok ? (kind === "url" ? t.urlCopied : t.curlCopied) : t.copyFailed);
-    },
+    // copyText resolves to false instead of rejecting, so nothing is left unhandled.
+    (row, kind) =>
+      void copyText(kind === "url" ? row.url : curlCommand(row)).then((ok) =>
+        setCopyMessage(ok ? (kind === "url" ? t.urlCopied : t.curlCopied) : t.copyFailed)
+      ),
     [t]
   );
   const copyDetail = useCallback<OnCopyText>(
-    async (text, done) => {
-      const ok = await copyText(text);
-      setCopyMessage(ok ? done : t.copyFailed);
-    },
+    (text, done) => void copyText(text).then((ok) => setCopyMessage(ok ? done : t.copyFailed)),
     [t]
   );
   const searchRef = useRef<HTMLInputElement>(null);

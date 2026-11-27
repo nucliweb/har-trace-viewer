@@ -24,19 +24,22 @@ let server: ReturnType<typeof createServer>;
 let baseUrl = "";
 
 test.beforeAll(async () => {
-  server = createServer(async (req, res) => {
-    try {
-      const urlPath = new URL(req.url ?? "/", "http://localhost").pathname;
-      let file = resolve(root, "." + urlPath);
-      if (!file.startsWith(root)) throw new Error("outside root");
-      if ((await stat(file)).isDirectory()) file = join(file, "index.html");
-      const body = await readFile(file);
-      res
-        .writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" })
-        .end(body);
-    } catch {
-      res.writeHead(404).end();
-    }
+  server = createServer((req, res) => {
+    // The try/catch covers the whole body, so this promise cannot reject.
+    void (async () => {
+      try {
+        const urlPath = new URL(req.url ?? "/", "http://localhost").pathname;
+        let file = resolve(root, "." + urlPath);
+        if (!file.startsWith(root)) throw new Error("outside root");
+        if ((await stat(file)).isDirectory()) file = join(file, "index.html");
+        const body = await readFile(file);
+        res
+          .writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" })
+          .end(body);
+      } catch {
+        res.writeHead(404).end();
+      }
+    })();
   });
   await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/har-trace-viewer/`;
