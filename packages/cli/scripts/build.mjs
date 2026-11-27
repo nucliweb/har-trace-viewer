@@ -60,12 +60,18 @@ const { metafile } = await build({
     js: 'import { createRequire as __htvCreateRequire } from "node:module";\nconst require = __htvCreateRequire(import.meta.url);',
   },
   legalComments: "eof",
+  // Minified output; keepNames keeps function and class names, which the stack traces of --debug
+  // and the error output show
+  minify: true,
+  keepNames: true,
   metafile: true,
   // The TUI is a dynamic import, so splitting emits it (with Ink and React) as its own chunk next
   // to the entry; the non-interactive commands never load it. dist is inside the package files.
   splitting: true,
   outdir: dist,
-  chunkNames: "tui-[hash]",
+  // Each chunk takes the name of the module it was split from (the TUI's `run`), and the shared
+  // code that several chunks import is named `chunk`
+  chunkNames: "[name]-[hash]",
   logLevel: "info",
 });
 

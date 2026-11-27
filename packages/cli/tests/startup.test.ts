@@ -8,11 +8,12 @@ const DIST = resolve(__dirname, "..", "dist");
 const entry = readFileSync(join(DIST, "index.js"), "utf8");
 const read = (file: string) => readFileSync(join(DIST, file), "utf8");
 
-// Chunks the entry loads at startup (static imports) and the one it loads on demand.
+// Chunks the entry loads at startup (static imports) and the one it loads on demand. The chunk
+// names come from the modules they hold (the TUI's `run`), so any name is matched.
 const staticChunks = [
-  ...entry.matchAll(/^(?:import|export)[^(]*?from\s*["']\.\/(tui-[^"']+\.js)["']/gm),
+  ...entry.matchAll(/^(?:import|export)[^(]*?from\s*["']\.\/([^"']+\.js)["']/gm),
 ].map((m) => m[1]);
-const onDemand = [...entry.matchAll(/\bimport\(\s*["']\.\/(tui-[^"']+\.js)["']\s*\)/g)].map(
+const onDemand = [...entry.matchAll(/\bimport\(\s*["']\.\/([^"']+\.js)["']\s*\)/g)].map(
   (m) => m[1]
 );
 const isTui = (code: string) => code.includes("react-reconciler") && code.includes("ink-box");

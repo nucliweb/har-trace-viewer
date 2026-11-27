@@ -6,6 +6,10 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Changed
+
+- Minify the CLI bundle: the npm package takes 599 kB packed and 1.8 MB installed, down from 675 kB and 2.5 MB.
+
 ### Removed
 
 - **Breaking:** the `--redact` and `--redact=mask-hosts` flags, deprecated since 0.22.0, are unknown options. Every report masks its secrets by default; `--mask-hosts` masks the third-party hosts, and `htv redact` is unchanged.
