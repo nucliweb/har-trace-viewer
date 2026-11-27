@@ -4,7 +4,7 @@ This guide covers what you need to change the code and get a pull request merged
 
 ## Prerequisites
 
-Node.js 22 or later, as set in the `engines` field of [package.json](package.json) and in [.nvmrc](.nvmrc). CI runs the checks on Node 22, 24 and 26.
+Node.js 22 or later, as set in the `engines` field of [package.json](package.json) and in [.nvmrc](.nvmrc). CI runs the tests on Node 22, 24 and 26.
 
 ## Setup
 
@@ -12,20 +12,25 @@ Install the dependencies from the repository root with `npm ci`. npm installs ev
 
 ## Checks
 
-The `checks` job of [.github/workflows/ci.yml](.github/workflows/ci.yml) runs these scripts from the root `package.json`, in this order:
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs these scripts from the root `package.json`:
 
 1. `npm run lint`
 2. `npm run knip`
 3. `npm run format:check`
 4. `npm run typecheck`
-5. `npm run build`
-6. `npm run size`
-7. `npm run test:coverage`
-8. `npm run smoke`
+5. `npm run test:scripts`
+6. `npm run build`
+7. `npm run size`
+8. `npm run test:coverage`
+9. `npm run smoke`
 
-The `e2e` job builds the project and runs `npm run e2e` with Playwright. To run the end-to-end tests locally, install Chromium first with `npx playwright install chromium`.
+Its `static` job runs the first seven once, on Node 22. Its `tests` job builds the project, runs the tests and then the smoke check on Node 22, 24 and 26; Node 22 applies the coverage thresholds.
 
-Run the checks locally before you open a pull request.
+`npm run check` runs the nine scripts in that order and stops at the first one that fails.
+
+The `e2e` job builds the project and runs `npm run e2e` with Playwright. To run the end-to-end tests locally, install Chromium first with `npx playwright install chromium`. The end-to-end setup rebuilds the CLI when its sources changed since the last build.
+
+Run `npm run check` locally before you open a pull request.
 
 Prettier formats the whole repository. Run `npm run format` from the repository root to write the changes, and `npm run format:check` to list the files that differ. The Prettier settings are in [.prettierrc](.prettierrc), and [.editorconfig](.editorconfig) matches them.
 

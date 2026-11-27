@@ -5,34 +5,24 @@ on:
     tags: ["v*"]
 
 # One release at a time; a run in progress is left to finish, never cancelled halfway through a publish.
+# The called ci.yml keeps its own group (github.workflow holds "Release" there), so the two never share one.
 concurrency:
   group: release
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  publish:
+  # Cheap checks first, before the gates of ci.yml spend any minutes
+  preflight:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    # The npm-publish environment asks a maintainer to approve the run before it publishes.
-    environment: npm-publish
-    # contents: write lets the run create the GitHub Release for the tag
-    # id-token: the OIDC token of the run, which npm (trusted publishing) accepts instead of a
-    # stored secret
-    permissions:
-      contents: write
-      id-token: write
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The whole history, to tell whether the tagged commit is on main
           fetch-depth: 0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          # No dependency cache: this job holds the publishing token, and a cache is shared state
-      # Trusted publishing needs npm 11.5.1 or later
-      - name: Update npm
-        run: npm install -g npm@^11.5.1
       - name: Check tag matches CLI version
         run: |
           version="v$(node -p "require('./packages/cli/package.json').version")"
@@ -40,8 +30,7 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match packages/cli/package.json ($version)" >&2
             exit 1
           fi
-      # The section of CHANGELOG.md for this version becomes the notes of the GitHub Release
-      - name: Read the release notes from the changelog
+      - name: Check the changelog has a section for the version
         run: |
           version="${GITHUB_REF_NAME#v}"
           awk -v heading="## [$version]" '
@@ -60,13 +49,47 @@ jobs:
             echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main" >&2
             exit 1
           fi
+
+  # The same gates as every push to main: static checks, tests on every Node version, e2e
+  checks:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+    # A called workflow can only keep or reduce these permissions
+    permissions:
+      contents: read
+
+  publish:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The npm-publish environment asks a maintainer to approve the run before it publishes.
+    environment: npm-publish
+    # contents: write lets the run create the GitHub Release for the tag
+    # id-token: the OIDC token of the run, which npm (trusted publishing) accepts instead of a
+    # stored secret
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # No dependency cache: this job holds the publishing token, and a cache is shared state
+      # Trusted publishing needs npm 11.5.1 or later
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
+      # The section of CHANGELOG.md for this version becomes the notes of the GitHub Release
+      - name: Read the release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v heading="## [$version]" '
+            index($0, heading) == 1 { found = 1; next }
+            /^## \[/ || /^\[[^]]+\]: / { found = 0 }
+            found
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
       - run: npm ci
-      - run: npm run lint
-      - run: npm run knip
-      - run: npm run format:check
-      - run: npm run typecheck
       - run: npm run build
-      - run: npm test
       # Installs the packed tarball into a fresh project and runs the installed htv
       - run: npm run smoke
       # Trusted publishing: npm exchanges the OIDC token of this run for a short-lived one and

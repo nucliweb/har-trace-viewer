@@ -6,8 +6,12 @@
     "packages/*"
   ],
   "scripts": {
+    "bench": "npm run bench -w @htv/core --",
     "build": "npm run build -w @htv/core -w har-trace-viewer && npm run build:site -w @htv/web",
+    "check": "npm run lint && npm run knip && npm run format:check && npm run typecheck && npm run test:scripts && npm run build && npm run size && npm run test:coverage && npm run smoke",
+    "release": "node scripts/release.mjs",
     "test": "npm run test --workspaces --if-present",
+    "test:scripts": "node --test \"scripts/*.test.mjs\"",
     "test:coverage": "npm run test:coverage -w @htv/core -w @htv/web -w har-trace-viewer",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:e2e -w @htv/web",
     "smoke": "npm run smoke -w har-trace-viewer",

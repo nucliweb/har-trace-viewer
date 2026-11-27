@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureFreshBundle } from "../packages/cli/tests/helpers/fresh-bundle";
 import { secretHar, secretTrace } from "../packages/core/tests/helpers/secret-har";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,9 +78,7 @@ function generate(dir: string, extraArgs: string[], page = HOME_PAGE) {
 }
 
 export default function globalSetup() {
-  if (!existsSync(cli)) {
-    throw new Error(`${cli} not found. Run "npm run build" before "npm run e2e".`);
-  }
+  ensureFreshBundle();
   rmSync(OUTPUT, { recursive: true, force: true });
   mkdirSync(OUTPUT, { recursive: true });
   generate(resolve(OUTPUT, "bundle"), ["--bundle"]);

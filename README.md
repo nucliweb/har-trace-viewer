@@ -532,14 +532,16 @@ The site build differs from the one the CLI bundles into its reports: every URL 
 The CLI is published to npm as `har-trace-viewer` by `.github/workflows/release.yml` when a `v*` tag is pushed. The README npm shows, `packages/cli/README.md`, is written by the CLI build from this one, up to [Why htv](#why-htv) and with absolute links: edit this README, and a test fails until the build has written it again. The tag must equal `v` plus the version in `packages/cli/package.json`, otherwise the workflow fails.
 
 ```bash
-npm version <patch|minor|major> -w har-trace-viewer
-git commit -am "Release v<version>"
-git tag -a v<version> -m "v<version>"
+npm run release -- prepare <patch|minor|major|x.y.z>
+git diff
+npm run release -- tag
 git push --follow-tags
 ```
 
-[CHANGELOG.md](CHANGELOG.md) lists the changes of every version. A change adds its line under `Unreleased`; the release commit renames that section to the version with its date, and adds the compare link at the bottom of the file. The workflow publishes that section as the notes of the GitHub Release, and fails before publishing when the changelog has no section for the version.
+`prepare` runs on a clean `main` branch. It sets the version in `packages/cli/package.json` and in the `packages/cli` entry of `package-lock.json` (two lines, without `npm version`, which can rewrite unrelated lockfile entries), turns the `Unreleased` section of [CHANGELOG.md](CHANGELOG.md) into the version with its date, updates the compare links at the bottom of the file, and validates the lockfile with `npm ci --dry-run`. It refuses an empty `Unreleased` section and commits nothing. After the diff is reviewed, `tag` commits exactly those three files as `Release v<version>` and creates the annotated tag `v<version>`; it never pushes.
 
-The tag has to be annotated (`-a`): `--follow-tags` pushes annotated tags only, and a lightweight tag stays local without starting the workflow (push it with `git push origin v<version>`).
+[CHANGELOG.md](CHANGELOG.md) lists the changes of every version. A change adds its line under `Unreleased`. The tag is annotated because `--follow-tags` pushes annotated tags only: a lightweight tag stays local without starting the workflow.
+
+The workflow first checks that the tag equals `v` plus the CLI version, that the changelog has a section for it and that the tagged commit is on `main`. It then runs the CI workflow on that commit (static checks, the tests on every supported Node version and the end-to-end tests), and publishes the changelog section as the notes of the GitHub Release.
 
 The workflow publishes with npm trusted publishing: npm accepts the OIDC token of the run instead of a stored secret, and adds the provenance of the package. The package settings on npmjs.com name `nucliweb/har-trace-viewer`, the workflow `release.yml` and the environment `npm-publish` as its trusted publisher, and the `npm-publish` environment asks a maintainer to approve each run before it publishes.

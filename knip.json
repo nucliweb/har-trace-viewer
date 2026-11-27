@@ -3,7 +3,7 @@
   "ignoreBinaries": ["script"],
   "workspaces": {
     ".": {
-      "entry": ["e2e/*.ts"]
+      "entry": ["e2e/*.ts", "scripts/*.mjs"]
     },
     "packages/core": {
       "entry": ["scripts/*.mjs"],

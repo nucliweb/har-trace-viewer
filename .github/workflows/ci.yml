@@ -4,7 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets release.yml run the same gates on the commit it publishes
+  workflow_call:
 
+# In a called workflow github.workflow is the name of the caller, so a run started by release.yml
+# gets its own group and never cancels, or waits for, a run of this workflow.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -13,8 +17,32 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: checks (node ${{ matrix.node }})
+  # Results that do not depend on the Node version run once
+  static:
+    name: static
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run knip
+      - run: npm run format:check
+      - run: npm run typecheck
+      # Tests of the release script
+      - run: npm run test:scripts
+      - run: npm run build
+      # Gzip size of the site and report builds against packages/web/scripts/size-budgets.json
+      - run: npm run size
+
+  tests:
+    name: tests (node ${{ matrix.node }})
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -30,15 +58,16 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm run lint
-      - run: npm run knip
-      - run: npm run format:check
-      - run: npm run typecheck
       - run: npm run build
-      # Gzip size of the site and report builds against packages/web/scripts/size-budgets.json
-      - run: npm run size
-      # Core, web and CLI tests with coverage (the CLI tests run the built bundle)
-      - run: npm run test:coverage
+      # Core, web and CLI tests with coverage (the CLI tests run the built bundle); the coverage
+      # thresholds do not depend on the Node version, so only Node 22 enforces them
+      - name: Tests with coverage
+        if: matrix.node == 22
+        run: npm run test:coverage
+      - name: Tests
+        if: matrix.node != 22
+        run: npm test
+      # Installs the packed tarball into a fresh project and runs it on this Node
       - run: npm run smoke
 
   e2e:
