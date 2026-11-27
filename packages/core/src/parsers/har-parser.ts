@@ -664,9 +664,13 @@ function buildParsedHar(
   const [firstPage] = rawPages;
   if (!firstEntry || !firstPage) return null;
 
-  // Use the first entry's startedDateTime as origin; Chrome's page.startedDateTime
-  // can be a few ms later than the first request due to rounding.
-  const firstEntryMs = new Date(firstEntry.startedDateTime).getTime();
+  // Use the earliest entry's startedDateTime as origin, whatever the order of the entries in the
+  // file; Chrome's page.startedDateTime can be a few ms later than the first request due to
+  // rounding.
+  const firstEntryMs = entries.reduce(
+    (earliest, e) => Math.min(earliest, new Date(e.startedDateTime).getTime()),
+    new Date(firstEntry.startedDateTime).getTime()
+  );
   const pageOriginMs = new Date(firstPage.startedDateTime).getTime();
   const pageOrigin = Math.min(firstEntryMs, pageOriginMs);
 

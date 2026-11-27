@@ -6,6 +6,12 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Fixed
+
+- Start the times of a HAR whose entries are not in chronological order at its earliest entry, where the first one listed could leave requests with a negative start.
+- Word a single revalidated resource as "1 resource revalidated (304)".
+- List `mainThread` among the sources of a finding in the findings schema.
+
 ## [0.27.0] - 2026-11-18
 
 ### Added

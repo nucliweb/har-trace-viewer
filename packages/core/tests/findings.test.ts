@@ -7,7 +7,14 @@ import { parseHarJson } from "../src/parsers/har-parser.js";
 import { parseTraceJson } from "../src/parsers/trace-parser.js";
 import { generateFlow } from "../src/steps/step-generator.js";
 import { collectFindings, findingsDocument } from "../src/analysis/findings.js";
-import type { Finding, Flow, PageAnalysis, Recommendation, RunSpread } from "../src/types.js";
+import type {
+  Finding,
+  FindingSource,
+  Flow,
+  PageAnalysis,
+  Recommendation,
+  RunSpread,
+} from "../src/types.js";
 import { makeEntry, makeHar, makeTrace } from "./helpers/synthetic-har.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -390,6 +397,35 @@ describe("collectFindings — run-to-run variance", () => {
     expect(validate(findingsDocument([{ flow }], meta)), JSON.stringify(validate.errors)).toBe(
       true
     );
+  });
+});
+
+describe("collectFindings — rule ids and sources", () => {
+  const meta = { htvVersion: "9.9.9", generatedAt: "2026-11-01T00:00:00.000Z", schema: "s.json" };
+
+  it("keeps the revalidated-resources rule id for one resource and for many", () => {
+    for (const label of ["1 resource revalidated (304)", "5 resources revalidated (304)"]) {
+      const flow = withReport(brokenFlow(), "networkReport", [
+        { label, description: "Round trips.", severity: "info" },
+      ]);
+      expect(byId(collectFindings(flow), "revalidated-resources"), label).toBeDefined();
+    }
+  });
+
+  it("emits findings with the mainThread source, typed and valid against the schema", () => {
+    const flow = withReport(brokenFlow(), "mainThreadReport", [
+      { label: "Long tasks block the main thread", description: "Slow.", severity: "warning" },
+    ]);
+    const source: FindingSource | undefined = byId(collectFindings(flow), "long-tasks")?.source;
+    expect(source).toBe("mainThread");
+
+    const validate = new Ajv2020({ allErrors: true })
+      .addFormat("date-time", () => true)
+      .compile(schema);
+    expect(validate(findingsDocument([{ flow }], meta)), JSON.stringify(validate.errors)).toBe(
+      true
+    );
+    expect(schema.$defs.finding.properties.source.examples).toContain("mainThread");
   });
 });
 

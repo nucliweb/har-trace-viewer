@@ -464,6 +464,14 @@ describe("analyzeCacheForHar — revalidations", () => {
       severity: "info",
     });
   });
+
+  it("words the label for a single revalidated resource in the singular", () => {
+    const har = makeSyntheticHar([makeEntry({ status: 304 }), makeEntry()]);
+    const labels = analyzeCacheForHar(har).recommendations.map((r) => r.label);
+
+    expect(labels).toContain("1 resource revalidated (304)");
+    expect(labels).not.toContain("1 resources revalidated (304)");
+  });
 });
 
 describe("analyzeCacheForHar — versioned assets that cannot be cached", () => {

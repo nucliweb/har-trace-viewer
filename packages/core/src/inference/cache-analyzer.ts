@@ -421,7 +421,7 @@ function buildRecommendations(
   const revalidated = browser.revalidated ?? 0;
   if (revalidated > 0) {
     recs.push({
-      label: `${revalidated} resources revalidated (304)`,
+      label: `${revalidated} ${revalidated === 1 ? "resource" : "resources"} revalidated (304)`,
       description:
         "The browser had these resources cached but had to ask the server whether they changed: their lifetime had expired or Cache-Control requires revalidation. Each one costs a round trip without a download.",
       severity: "info",

@@ -118,3 +118,20 @@ describe("parseHarPages — cost on a capture of many pages", () => {
     expect(reads).toBeLessThanOrEqual(entries.length * 5);
   });
 });
+
+describe("parseHarPages — time origin", () => {
+  it("starts the times at the earliest entry when the entries are not in chronological order", () => {
+    const raw = harOf({
+      pages: [page("a", 5)],
+      entries: [
+        entry("https://x.test/late", 7, "a"),
+        entry("https://x.test/doc", 5, "a", "text/html"),
+        entry("https://x.test/early", 3, "a"),
+      ],
+    });
+
+    const starts = parseHarPages(raw)[0].entries.map((e) => e.startTime);
+    expect(Math.min(...starts)).toBe(0);
+    expect(starts.every((ms) => ms >= 0)).toBe(true);
+  });
+});

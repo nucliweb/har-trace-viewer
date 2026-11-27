@@ -171,7 +171,7 @@
         },
         "source": {
           "type": "string",
-          "description": "The report the finding comes from: cache, network, render, compression, connections, thirdParty, or metrics for the Core Web Vitals and TTFB.",
+          "description": "The report the finding comes from: cache, network, render, compression, connections, thirdParty, mainThread, or metrics for the Core Web Vitals and TTFB.",
           "examples": [
             "cache",
             "network",
@@ -179,6 +179,7 @@
             "compression",
             "connections",
             "thirdParty",
+            "mainThread",
             "metrics"
           ]
         }

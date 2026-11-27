@@ -1072,6 +1072,7 @@ export type FindingSource =
   | "compression"
   | "connections"
   | "thirdParty"
+  | "mainThread"
   | "metrics"
   | (string & {});
 
