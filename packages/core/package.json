@@ -13,6 +13,7 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
+    "bench": "node --max-old-space-size=8192 --experimental-transform-types scripts/bench.mjs",
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
