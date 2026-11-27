@@ -9,6 +9,7 @@ import {
 import type { ClientRegion, RunMetric } from "@htv/core";
 import { STDIN } from "./recording";
 import { parseBudgets, parseFailOn } from "./budget";
+import { withOptionHints } from "./unknown-option";
 import { parseCheckFormat } from "./check-format";
 import type { CheckFormat } from "./check-format";
 import type { Budget, CheckOptions, FailOnSeverity } from "./budget";
@@ -89,8 +90,6 @@ export interface Args {
   checkOutput?: string;
   /** Replaces third-party hostnames with placeholders in the report (--mask-hosts). */
   maskHosts?: boolean;
-  /** One line per deprecated option given, for stderr. */
-  deprecations?: string[];
   /** Starts the terminal report without the mouse reported; the m key turns it on. */
   noMouse?: boolean;
   /** Writes diagnostics to stderr. */
@@ -133,67 +132,53 @@ function parseRegion(value: string | undefined, flag = "--region"): ClientRegion
   throw new Error(`Invalid ${flag} "${value ?? ""}". Valid values: ${CLIENT_REGIONS.join(", ")}.`);
 }
 
-// --redact took an optional level, which node:util's parser cannot express: "=mask-hosts".
-const REDACT_WITH_LEVEL = "--redact=";
-
-const REDACT_DEPRECATION =
-  "--redact is deprecated and will be removed: every report masks its secrets already.";
-const REDACT_HOSTS_DEPRECATION =
-  "--redact=mask-hosts is deprecated and will be removed: use --mask-hosts.";
+const OPTIONS = {
+  page: { type: "string", multiple: true },
+  har: { type: "string", multiple: true },
+  trace: { type: "string", multiple: true },
+  select: { type: "string", multiple: true },
+  runs: { type: "string", multiple: true },
+  "list-pages": { type: "boolean" },
+  demo: { type: "boolean" },
+  filter: { type: "string" },
+  compare: { type: "boolean" },
+  "compare-with": { type: "string" },
+  "compare-trace": { type: "string" },
+  "compare-select": { type: "string" },
+  output: { type: "string", short: "o" },
+  format: { type: "string" },
+  bundle: { type: "boolean" },
+  region: { type: "string" },
+  "compare-region": { type: "string" },
+  budget: { type: "string", multiple: true },
+  "fail-on": { type: "string" },
+  "budget-strict": { type: "boolean" },
+  "check-format": { type: "string" },
+  "check-output": { type: "string" },
+  "mask-hosts": { type: "boolean" },
+  "no-mouse": { type: "boolean" },
+  debug: { type: "boolean" },
+  help: { type: "boolean", short: "h" },
+  version: { type: "boolean", short: "v" },
+} as const;
 
 export function parseArgs(argv: string[]): Args {
-  let maskHosts = false;
-  const deprecations: string[] = [];
-  const { tokens } = nodeParseArgs({
-    args: argv.filter((arg) => {
-      if (!arg.startsWith(REDACT_WITH_LEVEL)) return true;
-      const level = arg.slice(REDACT_WITH_LEVEL.length);
-      if (level !== "mask-hosts") {
-        throw new Error(
-          `Invalid --redact "${level}". --redact is deprecated: every report masks its secrets already; use --mask-hosts to mask third-party hosts.`
-        );
-      }
-      maskHosts = true;
-      deprecations.push(REDACT_HOSTS_DEPRECATION);
-      return false;
-    }),
-    options: {
-      page: { type: "string", multiple: true },
-      har: { type: "string", multiple: true },
-      trace: { type: "string", multiple: true },
-      select: { type: "string", multiple: true },
-      runs: { type: "string", multiple: true },
-      "list-pages": { type: "boolean" },
-      demo: { type: "boolean" },
-      filter: { type: "string" },
-      compare: { type: "boolean" },
-      "compare-with": { type: "string" },
-      "compare-trace": { type: "string" },
-      "compare-select": { type: "string" },
-      output: { type: "string", short: "o" },
-      format: { type: "string" },
-      bundle: { type: "boolean" },
-      region: { type: "string" },
-      "compare-region": { type: "string" },
-      budget: { type: "string", multiple: true },
-      "fail-on": { type: "string" },
-      "budget-strict": { type: "boolean" },
-      "check-format": { type: "string" },
-      "check-output": { type: "string" },
-      redact: { type: "boolean" },
-      "mask-hosts": { type: "boolean" },
-      "no-mouse": { type: "boolean" },
-      debug: { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-      version: { type: "boolean", short: "v" },
-    },
-    tokens: true,
-    allowPositionals: true,
-    strict: true,
-  });
+  const { tokens } = withOptionHints(
+    () =>
+      nodeParseArgs({
+        args: argv,
+        options: OPTIONS,
+        tokens: true,
+        allowPositionals: true,
+        strict: true,
+      }),
+    Object.keys(OPTIONS),
+    "htv"
+  );
 
   const pages: PageArg[] = [];
   let output = "";
+  let maskHosts = false;
   let format: OutputFormat | undefined;
   let bundle = false;
   let listPages = false;
@@ -311,9 +296,6 @@ export function parseArgs(argv: string[]): Args {
       case "check-output":
         checkOutput = value;
         break;
-      case "redact":
-        deprecations.push(REDACT_DEPRECATION);
-        break;
       case "mask-hosts":
         maskHosts = true;
         break;
@@ -350,7 +332,6 @@ export function parseArgs(argv: string[]): Args {
     ...(checkFormat ? { checkFormat } : {}),
     ...(checkOutput ? { checkOutput } : {}),
     ...(maskHosts ? { maskHosts } : {}),
-    ...(deprecations.length > 0 ? { deprecations } : {}),
     ...(noMouse ? { noMouse } : {}),
     ...(debug ? { debug } : {}),
     ...(help ? { help } : {}),

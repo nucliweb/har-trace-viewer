@@ -17,10 +17,17 @@ import {
 } from "./cli";
 import { runChecks } from "./budget";
 import { runCompletionCommand } from "./completion";
+import { splitCommand } from "./command";
 import { debug, startDebug } from "./debug";
 import { adoptMisnamedHars } from "./recording";
 import { formatCheckResult } from "./check-format";
-import { maskReportHosts, parseRedactArgs, REDACT_USAGE, runRedactCommand } from "./redact";
+import {
+  maskReportHosts,
+  parseRedactArgs,
+  REDACT_HELP,
+  REDACT_USAGE,
+  runRedactCommand,
+} from "./redact";
 import type { RedactArgs } from "./redact";
 import type { Args } from "./cli";
 
@@ -33,24 +40,27 @@ async function redactCommand(argv: string[]) {
     console.error(REDACT_USAGE);
     process.exit(1);
   }
+  if (args.help) {
+    console.log(REDACT_HELP);
+    return;
+  }
   await runRedactCommand(args);
 }
 
 async function main() {
   startDebug(process.argv.slice(2));
-  if (process.argv[2] === "completion") return runCompletionCommand(process.argv.slice(3));
-  if (process.argv[2] === "redact") return redactCommand(process.argv.slice(3));
+  const { command, rest } = splitCommand(process.argv.slice(2));
+  if (command === "completion") return runCompletionCommand(rest);
+  if (command === "redact") return redactCommand(rest);
   let args: Args;
   try {
-    args = parseArgs(process.argv.slice(2));
+    args = parseArgs(rest);
   } catch (err) {
     console.error((err as Error).message);
     debug.error(err);
     printUsage();
     process.exit(1);
   }
-
-  for (const notice of args.deprecations ?? []) console.error(notice);
 
   if (args.help) {
     console.log(HELP);

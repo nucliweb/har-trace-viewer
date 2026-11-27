@@ -242,10 +242,18 @@ export function generateCompletion(shell: Shell): string {
 }
 
 /** `htv completion <shell>`: prints the script to stdout. */
+const COMPLETION_USAGE = `Usage: htv completion <shell>, with the shell one of ${SHELLS.join(", ")}`;
+
 export function runCompletionCommand(argv: string[]): void {
+  if (argv.length === 1 && (argv[0] === "--help" || argv[0] === "-h")) {
+    console.log(
+      `${COMPLETION_USAGE}\n\nPrints a completion script for the shell: the flags, their values and the files.`
+    );
+    return;
+  }
   const shell = SHELLS.find((s) => s === argv[0]);
   if (!shell || argv.length !== 1) {
-    throw new Error(`Usage: htv completion <shell>, with the shell one of ${SHELLS.join(", ")}`);
+    throw new Error(COMPLETION_USAGE);
   }
   process.stdout.write(generateCompletion(shell));
 }

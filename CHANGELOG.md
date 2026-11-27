@@ -6,8 +6,15 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking:** the `--redact` and `--redact=mask-hosts` flags, deprecated since 0.22.0, are unknown options. Every report masks its secrets by default; `--mask-hosts` masks the third-party hosts, and `htv redact` is unchanged.
+
 ### Fixed
 
+- Print the help of `htv redact` and `htv completion` with `--help`, where it failed with "Unknown option '--help'".
+- Run a command given after `--debug` (`htv --debug redact x.har`), where it was rejected as an unexpected argument.
+- Name the closest known flag in the error for an unknown option ("Unknown option '--formt'. Did you mean '--format'?") and point at `--help`, for the report and for `htv redact`.
 - Start the times of a HAR whose entries are not in chronological order at its earliest entry, where the first one listed could leave requests with a negative start.
 - Word a single revalidated resource as "1 resource revalidated (304)".
 - List `mainThread` among the sources of a finding in the findings schema.

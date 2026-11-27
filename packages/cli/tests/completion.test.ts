@@ -16,8 +16,7 @@ const REDACT = REDACT_FLAGS.map(long);
 describe("the completion's flags", () => {
   it("cover every flag --help documents", () => {
     const documented = [...new Set(HELP.match(/--[a-z][a-z-]*/g))];
-    // The deprecated alias is named in the help, in a note; the completion does not offer it.
-    const known = new Set([...MAIN, ...REDACT, "--redact"]);
+    const known = new Set([...MAIN, ...REDACT]);
     expect(documented.filter((flag) => !known.has(flag))).toEqual([]);
   });
 

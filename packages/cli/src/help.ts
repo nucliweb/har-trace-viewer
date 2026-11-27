@@ -40,9 +40,7 @@ Output (where the report goes):
                       session, email...) or that look like a token, credentials in
                       URLs, emails, JWTs, sensitive headers, cookie values and the
                       page names. Prints the count of masked hosts on stderr.
-                      Timings, sizes and the analysis stay the same. --redact and
-                      --redact=mask-hosts are deprecated aliases (the first does
-                      nothing, the second is --mask-hosts) that print a notice.
+                      Timings, sizes and the analysis stay the same.
   htv redact <file.har[.gz]> [-o <out.har[.gz]>] [--mask-hosts]
                       Write a redacted copy of the HAR itself, still a valid HAR:
                       bodies dropped (sizes kept), cookie values masked, credential
