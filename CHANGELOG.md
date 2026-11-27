@@ -6,6 +6,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-27
+
 ### Changed
 
 - Minify the CLI bundle: the npm package takes 599 kB packed and 1.8 MB installed, down from 675 kB and 2.5 MB.
@@ -470,7 +472,8 @@ Versions 0.3.0, 0.4.0, 0.4.1 and 0.5.0 were tagged but not published to npm; the
 - Self-hosted subset fonts; bundled reports work offline.
 - HAR and trace parsing in a Web Worker.
 
-[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/nucliweb/har-trace-viewer/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/nucliweb/har-trace-viewer/compare/v0.24.0...v0.25.0
