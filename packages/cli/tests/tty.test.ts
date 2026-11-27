@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { spawn, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 
@@ -45,18 +45,38 @@ function spawnInPty(command: string[], env: Record<string, string> = {}) {
 // eslint-disable-next-line no-control-regex
 const COLOR_SGR = /\u001B\[(?:\d+;)*(?:3\d|9[0-7]|4\d|10[0-7])(?:;\d+)*m/;
 
+interface SessionState {
+  closed: boolean;
+  output: string;
+  // Resolves once `text` shows up in what the TUI drew after the first `from` characters.
+  drew: (text: string, from?: number) => Promise<void>;
+}
+
 // Starts the TUI, runs `act` once the first frame is up and returns what it drew and how it ended.
 async function session(
   env: Record<string, string>,
-  act: (child: ReturnType<typeof spawnInPty>, state: { closed: boolean }) => Promise<void> | void
+  act: (child: ReturnType<typeof spawnInPty>, state: SessionState) => Promise<void> | void
 ) {
   const child = spawnInPty(["node", DIST_ENTRY, "--page", "Home", "--har", HAR], env);
   let output = "";
   let started = false;
-  const state = { closed: false };
+  const state: SessionState = {
+    closed: false,
+    output: "",
+    drew: (text, from = 0) =>
+      vi.waitFor(
+        () => {
+          if (!state.output.slice(from).includes(text)) {
+            throw new Error(`The TUI did not draw ${JSON.stringify(text)} in:\n${state.output}`);
+          }
+        },
+        { timeout: TIMEOUT_MS / 2, interval: 5 }
+      ),
+  };
   child.stdout.setEncoding("utf8");
   child.stdout.on("data", (chunk: string) => {
     output += chunk;
+    state.output = output;
     if (!started && output.includes("q quit")) {
       started = true;
       void Promise.resolve(act(child, state));
@@ -154,8 +174,13 @@ describe("htv in a pseudo-terminal", () => {
     async () => {
       let closedAfterEsc: boolean | undefined;
       const result = await session({}, async (child, state) => {
+        // The help closes on Esc, so the status bar coming back shows the app took the Esc as a
+        // key; only then is it known that the Esc did not quit.
+        child.stdin.write("?");
+        await state.drew("close help");
+        const afterHelp = state.output.length;
         child.stdin.write("\u001B");
-        await new Promise((done) => setTimeout(done, 500));
+        await state.drew("q quit", afterHelp);
         closedAfterEsc = state.closed;
         child.stdin.write("q");
       });
@@ -185,7 +210,11 @@ describe("htv in a pseudo-terminal", () => {
       let closedAfterReports: boolean | undefined;
       const result = await session({}, async (child, state) => {
         child.stdin.write("\u001B[<65;10;10M\u001B[<0;5;5M\u001B[<0;5;5m");
-        await new Promise((done) => setTimeout(done, 400));
+        // The input is read in order: once the Waterfall tab is up, the reports before the key
+        // for it have been read too.
+        const afterStart = state.output.length;
+        child.stdin.write("2");
+        await state.drew("z axis", afterStart);
         closedAfterReports = state.closed;
         child.stdin.write("q");
       });

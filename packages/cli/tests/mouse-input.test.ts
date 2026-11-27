@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PassThrough } from "node:stream";
 import { filterMouse } from "../src/tui/mouse-input";
 import type { MouseEvent } from "../src/tui/mouse";
@@ -20,7 +20,10 @@ function fakeTerminal() {
   return source;
 }
 
-const settle = (ms = 80) => new Promise((done) => setTimeout(done, ms));
+// A write to the terminal stand-in reaches the filter before `write` returns, so what the filter
+// does at once can be checked right after it. What it does later (the held Esc) is awaited by its
+// result, never by a fixed wait.
+const until = (check: () => void) => vi.waitFor(check, { timeout: 3_000, interval: 5 });
 
 function open() {
   const source = fakeTerminal();
@@ -48,8 +51,7 @@ describe("the input of the terminal report", () => {
   it("hands on the keys and takes the mouse reports out", async () => {
     const { source, events, text, close } = open();
     source.write(`a${ESC}[<64;10;5Mb${ESC}[A`);
-    await settle();
-    expect(text()).toBe(`ab${ESC}[A`);
+    await until(() => expect(text()).toBe(`ab${ESC}[A`));
     expect(events).toEqual([{ type: "wheel-up", button: 0, x: 10, y: 5 }]);
     close();
   });
@@ -57,10 +59,10 @@ describe("the input of the terminal report", () => {
   it("joins a report split across two writes", async () => {
     const { source, events, text, close } = open();
     source.write(`${ESC}[<0;3`);
-    await settle(10);
+    expect(text()).toBe("");
+    expect(events).toEqual([]);
     source.write(`;4Mq`);
-    await settle();
-    expect(text()).toBe("q");
+    await until(() => expect(text()).toBe("q"));
     expect(events).toEqual([{ type: "press", button: 0, x: 3, y: 4 }]);
     close();
   });
@@ -68,10 +70,9 @@ describe("the input of the terminal report", () => {
   it("lets a lone Esc through after a moment, as the key it is", async () => {
     const { source, text, close } = open();
     source.write(ESC);
-    await settle(10);
+    // Held: the write has returned and nothing has been passed on yet.
     expect(text()).toBe("");
-    await settle(120);
-    expect(text()).toBe(ESC);
+    await until(() => expect(text()).toBe(ESC));
     close();
   });
 
@@ -80,16 +81,14 @@ describe("the input of the terminal report", () => {
     const bytes = Buffer.from("é");
     source.write(bytes.subarray(0, 1));
     source.write(bytes.subarray(1));
-    await settle();
-    expect(text()).toBe("é");
+    await until(() => expect(text()).toBe("é"));
     close();
   });
 
-  it("stops reading the terminal once closed", async () => {
+  it("stops reading the terminal once closed", () => {
     const { source, events, close } = open();
     close();
     source.write(`${ESC}[<64;1;1M`);
-    await settle();
     expect(events).toEqual([]);
     expect(source.listenerCount("data")).toBe(0);
   });

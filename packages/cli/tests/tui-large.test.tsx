@@ -1,9 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "ink-testing-library";
 import { generateFlow } from "@htv/core";
 import type { Flow } from "@htv/core";
 import { TuiApp } from "../src/tui/App";
 import { makeEntry, makeHar } from "../../core/tests/helpers/synthetic-har";
+import { renderTui } from "./tui-probe";
 
 // Counters over the real functions: the property under test is how much work a render does,
 // not how long it takes.
@@ -67,24 +67,15 @@ const fresh = (source: Flow): Flow => ({
   pages: source.pages.map((page) => ({ ...page })),
 });
 
-const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
-
-async function press(stdin: { write: (data: string) => void }, ...keys: string[]) {
-  for (const key of keys) {
-    stdin.write(key);
-    await tick();
-  }
-}
-
 describe("a capture of 50k requests", () => {
   it.each([
     ["Waterfall", "2"],
     ["Resources", "3"],
   ])("formats only the rows of the screen on the %s tab", async (_name, tab) => {
-    const { stdin, lastFrame, unmount } = render(
+    const { press, lastFrame, unmount } = renderTui(
       <TuiApp flow={fresh(flow)} version="0.0.0" rows={SCREEN_ROWS + 4} columns={110} />
     );
-    await press(stdin, tab);
+    await press(tab);
 
     expect(lastFrame()).toContain(`${ROWS + 1} requests`);
     expect(counts.fit).toBeLessThanOrEqual(SCREEN_BUDGET);
@@ -92,13 +83,13 @@ describe("a capture of 50k requests", () => {
   });
 
   it("builds the waterfall once and formats a screen per key on the list tabs", async () => {
-    const { stdin, lastFrame, unmount } = render(
+    const { press, lastFrame, unmount } = renderTui(
       <TuiApp flow={fresh(flow)} version="0.0.0" rows={SCREEN_ROWS + 4} columns={110} />
     );
-    await press(stdin, "2");
+    await press("2");
     const afterFirstScreen = counts.fit;
 
-    await press(stdin, DOWN, DOWN, DOWN, PAGE_DOWN, PAGE_DOWN, END, "3", DOWN, PAGE_DOWN, "2");
+    await press(DOWN, DOWN, DOWN, PAGE_DOWN, PAGE_DOWN, END, "3", DOWN, PAGE_DOWN, "2");
 
     expect(counts.buildWaterfall).toBe(1);
     // Eleven keys, each drawing at most a screen of rows.
@@ -108,10 +99,10 @@ describe("a capture of 50k requests", () => {
   });
 
   it("builds the waterfall once when the tab is left and visited again", async () => {
-    const { stdin, unmount } = render(
+    const { press, unmount } = renderTui(
       <TuiApp flow={fresh(flow)} version="0.0.0" rows={SCREEN_ROWS + 4} columns={110} />
     );
-    await press(stdin, "2", "4", "2", "7", "3");
+    await press("2", "4", "2", "7", "3");
 
     expect(counts.buildWaterfall).toBe(1);
     unmount();
